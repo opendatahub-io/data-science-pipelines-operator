@@ -8,5 +8,50 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: ds-pipelines-controller
   name: dspipeline-sample
+  namespace: test-ds-project
 spec:
-  # TODO(user): Add fields here
+  apiServer:
+    image: quay.io/modh/odh-ml-pipelines-api-server-container:v1.18.0-8
+  persistentAgent:
+    image: quay.io/modh/odh-ml-pipelines-persistenceagent-container:v1.18.0-8
+    pipelineAPIServerName: apiserver
+  scheduledWorkflow:
+    image: quay.io/modh/odh-ml-pipelines-scheduledworkflow-container:v1.18.0-8
+  viewerCRD:
+    image: quay.io/modh/odh-ml-pipelines-viewercontroller-container:v1.18.0-8
+  visualizationServer:
+    image: visualization-server
+  mlpipelineUI:
+    image: quay.io/opendatahub/odh-ml-pipelines-frontend-container:beta-ui
+    configMap: ds-pipeline-ui-configmap
+  database:
+    mariaDB: # mutually exclusive with custom
+      image: registry.redhat.io/rhel8/mariadb-103:1-188
+      username: root
+      passwordSecret:
+        name: ds-pipelines-db
+        key: password
+    customDB:
+      host: mysql.com
+      username: root
+      passwordSecret:
+        name: somesecret
+        key: somekey
+  storage:
+    minio: # mutually exclusive with custom
+      image: quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance
+      accessKeySecret:
+        name: mlpipeline-minio-artifact
+        key: accesskey
+      secretKeySecret:
+        name: mlpipeline-minio-artifact
+        key: secretkey
+    customStorage:
+      host: minio.com
+      port: 9092
+      accessKeySecret:
+        name: somesecret
+        key: somekey
+      secretKeySecret:
+        name: somesecret
+        key: somekey

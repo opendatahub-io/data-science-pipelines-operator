@@ -18,7 +18,6 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: DSPipeline is the Schema for the dspipelines API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -33,15 +32,122 @@ spec:
           metadata:
             type: object
           spec:
-            description: DSPipelineSpec defines the desired state of DSPipeline
             properties:
-              foo:
-                description: Foo is an example field of DSPipeline. Edit dspipeline_types.go
-                  to remove/update
-                type: string
+              apiServer:
+                description: APIService specifies the Kubeflow Apiserver configurations
+                properties:
+                  image:
+                    type: string
+                type: object
+              database:
+                properties:
+                  customDB:
+                    properties:
+                      host:
+                        type: string
+                      passwordSecret:
+                        properties:
+                          key:
+                            type: string
+                          name:
+                            type: string
+                        type: object
+                      port:
+                        type: integer
+                      username:
+                        type: string
+                    type: object
+                  image:
+                    type: string
+                  mariaDB:
+                    properties:
+                      image:
+                        type: string
+                      passwordSecret:
+                        properties:
+                          key:
+                            type: string
+                          name:
+                            type: string
+                        type: object
+                      username:
+                        type: string
+                    type: object
+                type: object
+              mlpipelineUI:
+                properties:
+                  configMap:
+                    type: string
+                  image:
+                    type: string
+                type: object
+              persistentAgent:
+                properties:
+                  image:
+                    type: string
+                  pipelineAPIServerName:
+                    type: string
+                type: object
+              scheduledWorkflow:
+                properties:
+                  image:
+                    type: string
+                type: object
+              storage:
+                properties:
+                  customStorage:
+                    properties:
+                      accessKeySecret:
+                        properties:
+                          key:
+                            type: string
+                          name:
+                            type: string
+                        type: object
+                      host:
+                        type: string
+                      port:
+                        type: integer
+                      secretKeySecret:
+                        properties:
+                          key:
+                            type: string
+                          name:
+                            type: string
+                        type: object
+                    type: object
+                  minio:
+                    properties:
+                      accessKeySecret:
+                        properties:
+                          key:
+                            type: string
+                          name:
+                            type: string
+                        type: object
+                      image:
+                        type: string
+                      secretKeySecret:
+                        properties:
+                          key:
+                            type: string
+                          name:
+                            type: string
+                        type: object
+                    type: object
+                type: object
+              viewerCRD:
+                properties:
+                  image:
+                    type: string
+                type: object
+              visualizationServer:
+                properties:
+                  image:
+                    type: string
+                type: object
             type: object
           status:
-            description: DSPipelineStatus defines the observed state of DSPipeline
             type: object
         type: object
     served: true

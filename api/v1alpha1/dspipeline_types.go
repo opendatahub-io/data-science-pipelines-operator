@@ -20,28 +20,92 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
-// DSPipelineSpec defines the desired state of DSPipeline
 type DSPipelineSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of DSPipeline. Edit dspipeline_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// APIService specifies the Kubeflow Apiserver configurations
+	APIServer           `json:"apiServer,omitempty" validation:"Required"`
+	PersistentAgent     `json:"persistentAgent,omitempty"`
+	ScheduledWorkflow   `json:"scheduledWorkflow,omitempty"`
+	ViewerCRD           `json:"viewerCRD,omitempty"`
+	VisualizationServer `json:"visualizationServer,omitempty"`
+	Database            `json:"database,omitempty"`
+	Storage             `json:"storage,omitempty"`
+	MlPipelineUI        `json:"mlpipelineUI,omitempty"`
 }
 
-// DSPipelineStatus defines the observed state of DSPipeline
+type APIServer struct {
+	Image string `json:"image,omitempty"`
+}
+
+type PersistentAgent struct {
+	Image                 string `json:"image,omitempty"`
+	PipelineAPIServerName string `json:"pipelineAPIServerName,omitempty"`
+}
+
+type ScheduledWorkflow struct {
+	Image string `json:"image,omitempty"`
+}
+
+type ViewerCRD struct {
+	Image string `json:"image,omitempty"`
+}
+
+type VisualizationServer struct {
+	Image string `json:"image,omitempty"`
+}
+
+type Database struct {
+	Image    string `json:"image,omitempty"`
+	MariaDB  `json:"mariaDB,omitempty"`
+	CustomDB `json:"customDB,omitempty"`
+}
+
+type MariaDB struct {
+	Image          string         `json:"image,omitempty"`
+	Username       string         `json:"username,omitempty"`
+	PasswordSecret SecretKeyValue `json:"passwordSecret,omitempty"`
+}
+
+type CustomDB struct {
+	Host           string         `json:"host,omitempty"`
+	Port           int            `json:"port,omitempty"`
+	Username       string         `json:"username,omitempty"`
+	PasswordSecret SecretKeyValue `json:"passwordSecret,omitempty"`
+}
+
+type Storage struct {
+	Minio         `json:"minio,omitempty"`
+	CustomStorage `json:"customStorage,omitempty"`
+}
+
+type Minio struct {
+	Image           string         `json:"image,omitempty"`
+	AccessKeySecret SecretKeyValue `json:"accessKeySecret,omitempty"`
+	SecretKeySecret SecretKeyValue `json:"secretKeySecret,omitempty"`
+}
+
+type CustomStorage struct {
+	Host            string         `json:"host,omitempty"`
+	Port            int            `json:"port,omitempty"`
+	AccessKeySecret SecretKeyValue `json:"accessKeySecret,omitempty"`
+	SecretKeySecret SecretKeyValue `json:"secretKeySecret,omitempty"`
+}
+
+type MlPipelineUI struct {
+	Image         string `json:"image,omitempty"`
+	ConfigMapName string `json:"configMap,omitempty"`
+}
+
 type DSPipelineStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+}
+
+type SecretKeyValue struct {
+	Name string `json:"name,omitempty"`
+	Key  string `json:"key,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// DSPipeline is the Schema for the dspipelines API
 type DSPipeline struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -52,7 +116,6 @@ type DSPipeline struct {
 
 //+kubebuilder:object:root=true
 
-// DSPipelineList contains a list of DSPipeline
 type DSPipelineList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
