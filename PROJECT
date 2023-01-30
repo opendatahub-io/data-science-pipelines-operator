@@ -1,0 +1,19 @@
+domain: opendatahub.io
+layout:
+- go.kubebuilder.io/v3
+plugins:
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
+projectName: ds-pipelines-controller
+repo: github.com/opendatahub-io/ds-pipelines-controller
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: opendatahub.io
+  group: dspipelines.io
+  kind: DSPipeline
+  path: github.com/opendatahub-io/ds-pipelines-controller/api/v1alpha1
+  version: v1alpha1
+version: "3"

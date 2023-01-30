@@ -1,0 +1,12 @@
+apiVersion: dspipelines.io.opendatahub.io/v1alpha1
+kind: DSPipeline
+metadata:
+  labels:
+    app.kubernetes.io/name: dspipeline
+    app.kubernetes.io/instance: dspipeline-sample
+    app.kubernetes.io/part-of: ds-pipelines-controller
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: ds-pipelines-controller
+  name: dspipeline-sample
+spec:
+  # TODO(user): Add fields here
