@@ -12,7 +12,7 @@ resources:
     namespaced: true
   controller: true
   domain: opendatahub.io
-  group: dspipelines.io
+  group: dspipelines
   kind: DSPipeline
   path: github.com/opendatahub-io/ds-pipelines-controller/api/v1alpha1
   version: v1alpha1

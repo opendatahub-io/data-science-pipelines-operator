@@ -1,0 +1,120 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{.Name}}
+  namespace: {{.Namespace}}
+spec:
+  selector:
+    matchLabels:
+      app: ds-pipeline
+      application-crd-id: data-science-pipelines
+  template:
+    metadata:
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+      labels:
+        app: ds-pipeline
+        application-crd-id: data-science-pipelines
+    spec:
+      containers:
+        - env:
+            - name: POD_NAMESPACE
+              value: "{{.Namespace}}"
+            - name: DBCONFIG_USER
+              value: "{{.DBUser}}"
+            - name: DBCONFIG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: "{{.DBPasswordSecretKey}}"
+                  name: "{{.DBPasswordSecret}}"
+            - name: DBCONFIG_DBNAME
+              value: "{{.DBName}}"
+            - name: DBCONFIG_HOST
+              value: "{{.DBHost}}"
+            - name: DBCONFIG_PORT
+              value: "{{.DBPort}}"
+            - name: PIPELINE_RUNTIME
+              value: "{{.PipelineRuntime}}"
+            - name: ARTIFACT_BUCKET
+              value: "{{.ArtifactBucket}}"
+            - name: ARTIFACT_ENDPOINT
+              value: "{{.ArtifactEndpoint}}"
+            - name: ARTIFACT_SCRIPT
+              valueFrom:
+                configMapKeyRef:
+                  key: "{{ .ArtifactScriptConfigMapKey }}"
+                  name: "{{ .ArtifactScriptConfigMapName }}"
+            - name: ARTIFACT_IMAGE
+              value: "{{.ArtifactImage}}"
+            - name: INJECT_DEFAULT_SCRIPT
+              value: "{{.InjectDefaultScript}}"
+            - name: APPLY_TEKTON_CUSTOM_RESOURCE
+              value: "{{.ApplyTektonCustomResource}}"
+            - name: TERMINATE_STATUS
+              value: "{{.TerminateStatus}}"
+            - name: AUTO_UPDATE_PIPELINE_DEFAULT_VERSION
+              value: "{{.AutoUpdatePipelineDefaultVersion}}"
+            - name: DBCONFIG_CONMAXLIFETIMESEC
+              value: "{{.DBConfigCONMAXLifetimeSec}}"
+            - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_HOST
+              value: "{{.VisualizationServerServiceHost}}"
+            - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
+              value: "{{.VisualizaionServerServicePort}}"
+            - name: OBJECTSTORECONFIG_BUCKETNAME
+              value: "{{.ObjectStoreConfigBucketName}}"
+            - name: OBJECTSTORECONFIG_ACCESSKEY
+              valueFrom:
+                secretKeyRef:
+                  key: "{{.AccessKeySecretKey}}"
+                  name: "{{.S3CredentialsSecretName}}"
+            - name: OBJECTSTORECONFIG_SECRETACCESSKEY
+              valueFrom:
+                secretKeyRef:
+                  key: "{{.SecretKey}}"
+                  name: "{{.S3CredentialsSecretName}}"
+            - name: OBJECTSTORECONFIG_SECURE
+              value: "{{.ObjectStoreConfigSecure}}"
+            - name: MINIO_SERVICE_SERVICE_HOST
+              value: "{{.MinioServiceServiceHost}}"
+            - name: MINIO_SERVICE_SERVICE_PORT
+              value: "{{.MinioServiceServicePort}}"
+          image: api-server
+          imagePullPolicy: Always
+          name: ds-pipeline-api-server
+          ports:
+            - containerPort: 8888
+              name: http
+            - containerPort: 8887
+              name: grpc
+          livenessProbe:
+            exec:
+              command:
+                - wget
+                - -q
+                - -S
+                - -O
+                - '-'
+                - http://localhost:8888/apis/v1beta1/healthz
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+          readinessProbe:
+            exec:
+              command:
+                - wget
+                - -q
+                - -S
+                - -O
+                - '-'
+                - http://localhost:8888/apis/v1beta1/healthz
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+          resources:
+            requests:
+              cpu: 250m
+              memory: 500Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+      serviceAccountName: {{.ServiceAccountName}}

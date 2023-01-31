@@ -18,11 +18,12 @@ package controllers
 
 import (
 	"context"
+	"github.com/go-logr/logr"
 
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	dspipelinesiov1alpha1 "github.com/opendatahub-io/ds-pipelines-controller/api/v1alpha1"
 )
@@ -31,16 +32,32 @@ import (
 type DSPipelineReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	Log    logr.Logger
 }
 
-//+kubebuilder:rbac:groups=dspipelines.io.opendatahub.io,resources=dspipelines,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=dspipelines.io.opendatahub.io,resources=dspipelines/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=dspipelines.io.opendatahub.io,resources=dspipelines/finalizers,verbs=update
+//+kubebuilder:rbac:groups=dspipelines.opendatahub.io,resources=dspipelines,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=dspipelines.opendatahub.io,resources=dspipelines/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=dspipelines.opendatahub.io,resources=dspipelines/finalizers,verbs=update
 
 func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	log := r.Log.WithValues("namespace", req.Namespace)
 
-	// TODO(user): your logic here
+	log.V(1).Info("DSPipeline Reconciler called.")
+
+	dspipeline := &dspipelinesiov1alpha1.DSPipeline{}
+	err := r.Get(ctx, req.NamespacedName, dspipeline)
+	if err != nil && apierrs.IsNotFound(err) {
+		log.Info("Stop DSPipeline reconciliation")
+		return ctrl.Result{}, nil
+	} else if err != nil {
+		log.Error(err, "Unable to fetch the DSPipeline")
+		return ctrl.Result{}, err
+	}
+
+	err = r.ReconcileAPIServer(dspipeline, ctx)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
 }

@@ -1,5 +1,5 @@
 resources:
-- bases/dspipelines.io.opendatahub.io_dspipelines.yaml
+- bases/dspipelines.opendatahub.io_dspipelines.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 configurations:

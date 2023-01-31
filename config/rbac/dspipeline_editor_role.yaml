@@ -12,7 +12,7 @@ metadata:
   name: dspipeline-editor-role
 rules:
 - apiGroups:
-  - dspipelines.io.opendatahub.io
+  - dspipelines.opendatahub.io
   resources:
   - dspipelines
   verbs:
@@ -24,7 +24,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - dspipelines.io.opendatahub.io
+  - dspipelines.opendatahub.io
   resources:
   - dspipelines/status
   verbs:

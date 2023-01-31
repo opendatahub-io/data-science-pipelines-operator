@@ -1,4 +1,4 @@
-apiVersion: dspipelines.io.opendatahub.io/v1alpha1
+apiVersion: dspipelines.opendatahub.io/v1alpha1
 kind: DSPipeline
 metadata:
   labels:
@@ -11,7 +11,11 @@ metadata:
   namespace: test-ds-project
 spec:
   apiServer:
-    image: quay.io/modh/odh-ml-pipelines-api-server-container:v1.18.0-8
+    artifactScriptConfigMap:
+        name: artifact-script
+        key: "script.yaml"
+    apiServerImage: quay.io/modh/odh-ml-pipelines-api-server-container:v1.18.0-8
+    artifactImage: quay.io/modh/odh-ml-pipelines-artifact-manager-container:v1.18.0-8
   persistentAgent:
     image: quay.io/modh/odh-ml-pipelines-persistenceagent-container:v1.18.0-8
     pipelineAPIServerName: apiserver
@@ -28,30 +32,31 @@ spec:
     mariaDB: # mutually exclusive with custom
       image: registry.redhat.io/rhel8/mariadb-103:1-188
       username: root
+      pipelineDBName: randomDBName
       passwordSecret:
         name: ds-pipelines-db
         key: password
     customDB:
       host: mysql.com
+      port: "8888"
       username: root
+      pipelineDBName: randomDBName
       passwordSecret:
         name: somesecret
         key: somekey
   storage:
     minio: # mutually exclusive with custom
       image: quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance
-      accessKeySecret:
-        name: mlpipeline-minio-artifact
-        key: accesskey
-      secretKeySecret:
-        name: mlpipeline-minio-artifact
-        key: secretkey
+      bucket: mlpipeline
+      s3CredentialsSecret:
+        secretName: somesecret
+        accessKey: somekey
+        secretKey: somekey
     customStorage:
       host: minio.com
-      port: 9092
-      accessKeySecret:
-        name: somesecret
-        key: somekey
-      secretKeySecret:
-        name: somesecret
-        key: somekey
+      port: "9092"
+      bucket: mlpipeline
+      s3CredentialsSecret: 
+        secretName: somesecret
+        accessKey: somekey
+        secretKey: somekey

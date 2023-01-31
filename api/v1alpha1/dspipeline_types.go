@@ -20,6 +20,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Todo: Add validation
+
 type DSPipelineSpec struct {
 	// APIService specifies the Kubeflow Apiserver configurations
 	APIServer           `json:"apiServer,omitempty" validation:"Required"`
@@ -33,7 +35,14 @@ type DSPipelineSpec struct {
 }
 
 type APIServer struct {
-	Image string `json:"image,omitempty"`
+	Image                   string `json:"apiServerImage,omitempty"`
+	ArtifactImage           string `json:"artifactImage,omitempty"`
+	ArtifactScriptConfigMap `json:"artifactScriptConfigMap,omitempty"`
+}
+
+type ArtifactScriptConfigMap struct {
+	Name string `json:"name,omitempty"`
+	Key  string `json:"key,omitempty"`
 }
 
 type PersistentAgent struct {
@@ -63,12 +72,14 @@ type MariaDB struct {
 	Image          string         `json:"image,omitempty"`
 	Username       string         `json:"username,omitempty"`
 	PasswordSecret SecretKeyValue `json:"passwordSecret,omitempty"`
+	DBName         string         `json:"pipelineDBName,omitempty"`
 }
 
 type CustomDB struct {
 	Host           string         `json:"host,omitempty"`
-	Port           int            `json:"port,omitempty"`
+	Port           string         `json:"port,omitempty"`
 	Username       string         `json:"username,omitempty"`
+	DBName         string         `json:"pipelineDBName,omitempty"`
 	PasswordSecret SecretKeyValue `json:"passwordSecret,omitempty"`
 }
 
@@ -78,16 +89,16 @@ type Storage struct {
 }
 
 type Minio struct {
-	Image           string         `json:"image,omitempty"`
-	AccessKeySecret SecretKeyValue `json:"accessKeySecret,omitempty"`
-	SecretKeySecret SecretKeyValue `json:"secretKeySecret,omitempty"`
+	Image              string `json:"image,omitempty"`
+	Bucket             string `json:"bucket,omitempty"`
+	s3CredentialSecret `json:"s3CredentialsSecret,omitempty"`
 }
 
 type CustomStorage struct {
-	Host            string         `json:"host,omitempty"`
-	Port            int            `json:"port,omitempty"`
-	AccessKeySecret SecretKeyValue `json:"accessKeySecret,omitempty"`
-	SecretKeySecret SecretKeyValue `json:"secretKeySecret,omitempty"`
+	Host               string `json:"host,omitempty"`
+	Port               string `json:"port,omitempty"`
+	Bucket             string `json:"bucket,omitempty"`
+	s3CredentialSecret `json:"s3CredentialsSecret,omitempty"`
 }
 
 type MlPipelineUI struct {
@@ -96,6 +107,12 @@ type MlPipelineUI struct {
 }
 
 type DSPipelineStatus struct {
+}
+
+type s3CredentialSecret struct {
+	SecretName string `json:"secretName,omitempty"`
+	AccessKey  string `json:"accessKey,omitempty"`
+	SecretKey  string `json:"secretKey,omitempty"`
 }
 
 type SecretKeyValue struct {

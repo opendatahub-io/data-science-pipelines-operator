@@ -12,7 +12,7 @@ metadata:
   name: dspipeline-viewer-role
 rules:
 - apiGroups:
-  - dspipelines.io.opendatahub.io
+  - dspipelines.opendatahub.io
   resources:
   - dspipelines
   verbs:
@@ -20,7 +20,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - dspipelines.io.opendatahub.io
+  - dspipelines.opendatahub.io
   resources:
   - dspipelines/status
   verbs:

@@ -5,9 +5,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.10.0
   creationTimestamp: null
-  name: dspipelines.dspipelines.io.opendatahub.io
+  name: dspipelines.dspipelines.opendatahub.io
 spec:
-  group: dspipelines.io.opendatahub.io
+  group: dspipelines.opendatahub.io
   names:
     kind: DSPipeline
     listKind: DSPipelineList
@@ -36,8 +36,17 @@ spec:
               apiServer:
                 description: APIService specifies the Kubeflow Apiserver configurations
                 properties:
-                  image:
+                  apiServerImage:
                     type: string
+                  artifactImage:
+                    type: string
+                  artifactScriptConfigMap:
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        type: string
+                    type: object
                 type: object
               database:
                 properties:
@@ -52,8 +61,10 @@ spec:
                           name:
                             type: string
                         type: object
+                      pipelineDBName:
+                        type: string
                       port:
-                        type: integer
+                        type: string
                       username:
                         type: string
                     type: object
@@ -70,6 +81,8 @@ spec:
                           name:
                             type: string
                         type: object
+                      pipelineDBName:
+                        type: string
                       username:
                         type: string
                     type: object
@@ -97,41 +110,35 @@ spec:
                 properties:
                   customStorage:
                     properties:
-                      accessKeySecret:
-                        properties:
-                          key:
-                            type: string
-                          name:
-                            type: string
-                        type: object
+                      bucket:
+                        type: string
                       host:
                         type: string
                       port:
-                        type: integer
-                      secretKeySecret:
+                        type: string
+                      s3CredentialsSecret:
                         properties:
-                          key:
+                          accessKey:
                             type: string
-                          name:
+                          secretKey:
+                            type: string
+                          secretName:
                             type: string
                         type: object
                     type: object
                   minio:
                     properties:
-                      accessKeySecret:
-                        properties:
-                          key:
-                            type: string
-                          name:
-                            type: string
-                        type: object
+                      bucket:
+                        type: string
                       image:
                         type: string
-                      secretKeySecret:
+                      s3CredentialsSecret:
                         properties:
-                          key:
+                          accessKey:
                             type: string
-                          name:
+                          secretKey:
+                            type: string
+                          secretName:
                             type: string
                         type: object
                     type: object
