@@ -1,20 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{.Name}}
+  name: ds-pipeline-{{.Name}}
   namespace: {{.Namespace}}
 spec:
   selector:
     matchLabels:
-      app: ds-pipeline
-      application-crd-id: data-science-pipelines
+      app: ds-pipeline-{{.Name}}
+      component: data-science-pipelines
   template:
     metadata:
-      annotations:
-        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
       labels:
-        app: ds-pipeline
-        application-crd-id: data-science-pipelines
+        app: ds-pipeline-{{.Name}}
+        component: data-science-pipelines
     spec:
       containers:
         - env:
@@ -78,7 +76,7 @@ spec:
               value: "{{.MinioServiceServiceHost}}"
             - name: MINIO_SERVICE_SERVICE_PORT
               value: "{{.MinioServiceServicePort}}"
-          image: api-server
+          image: {{.ApiServerImage}}
           imagePullPolicy: Always
           name: ds-pipeline-api-server
           ports:
@@ -117,4 +115,4 @@ spec:
             limits:
               cpu: 500m
               memory: 1Gi
-      serviceAccountName: {{.ServiceAccountName}}
+      serviceAccountName: ds-pipeline-{{.Name}}

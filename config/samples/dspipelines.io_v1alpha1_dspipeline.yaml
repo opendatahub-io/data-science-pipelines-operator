@@ -7,13 +7,14 @@ metadata:
     app.kubernetes.io/part-of: ds-pipelines-controller
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: ds-pipelines-controller
-  name: dspipeline-sample
+  name: sample
   namespace: test-ds-project
 spec:
   apiServer:
+    # optional (default is: ds-pipeline-artifact-script-${metadata.name} / artifact_script)
     artifactScriptConfigMap:
-        name: artifact-script
-        key: "script.yaml"
+      name: ds-pipeline-artifact-script-sample
+      key: "artifact_script"
     apiServerImage: quay.io/modh/odh-ml-pipelines-api-server-container:v1.18.0-8
     artifactImage: quay.io/modh/odh-ml-pipelines-artifact-manager-container:v1.18.0-8
   persistentAgent:
@@ -36,14 +37,14 @@ spec:
       passwordSecret:
         name: ds-pipelines-db
         key: password
-    customDB:
-      host: mysql.com
-      port: "8888"
-      username: root
-      pipelineDBName: randomDBName
-      passwordSecret:
-        name: somesecret
-        key: somekey
+#    customDB:
+#      host: mysql.com
+#      port: "8888"
+#      username: root
+#      pipelineDBName: randomDBName
+#      passwordSecret:
+#        name: somesecret
+#        key: somekey
   storage:
     minio: # mutually exclusive with custom
       image: quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance
