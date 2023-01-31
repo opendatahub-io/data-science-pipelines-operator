@@ -2,9 +2,9 @@ package controllers
 
 import (
 	"context"
-	ctrl "sigs.k8s.io/controller-runtime"
+	dspipelinesiov1alpha1 "github.com/opendatahub-io/ds-pipelines-controller/api/v1alpha1"
 )
 
-func (r *DSPipelineReconciler) ReconcileDatabase(ctx context.Context, req ctrl.Request) error {
+func (r *DSPipelineReconciler) ReconcileDatabase(dsp *dspipelinesiov1alpha1.DSPipeline, req context.Context, params *DSPipelineParams) error {
 	return nil
 }

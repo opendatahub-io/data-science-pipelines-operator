@@ -83,7 +83,7 @@ func main() {
 		Scheme: mgr.GetScheme(),
 		Log:    ctrl.Log,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "DSPipeline")
+		setupLog.Error(err, "unable to create controller", "controller", "DSPipelineParams")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

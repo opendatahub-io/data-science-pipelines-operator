@@ -1,0 +1,14 @@
+kind: ImageStream
+apiVersion: image.openshift.io/v1
+metadata:
+  name: visualization-server
+  namespace: {{.Namespace}}
+  labels:
+    component: data-science-pipelines
+spec:
+  lookupPolicy:
+    local: true
+  tags:
+  - name: "1.3.1"
+    referencePolicy:
+      type: Local

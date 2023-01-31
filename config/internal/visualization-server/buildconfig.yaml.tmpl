@@ -1,0 +1,40 @@
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: visualization-server
+  namespace: {{.Namespace}}
+  labels:
+    component: data-science-pipelines
+spec:
+  output:
+    to: 
+      kind: ImageStreamTag
+      name: 'visualization-server:1.3.1'
+  resources:
+    limits:
+      cpu: "4"
+      memory: 8Gi
+    requests:
+      cpu: "4"
+      memory: 8Gi
+  completionDeadlineSeconds: 1800
+  successfulBuildsHistoryLimit: 1
+  failedBuildsHistoryLimit: 1
+  strategy:
+    type: Docker
+    dockerStrategy:
+      from:
+        kind: ImageStreamTag
+        name: 'tensorflow:py3.8-cuda-11.4.2-2'
+      dockerfilePath: backend/Dockerfile.visualization
+  postCommit: {}
+  source:
+    type: Git
+    git:
+      uri: "https://github.com/red-hat-data-services/data-science-pipelines"
+      ref: master
+  runPolicy: Serial
+  triggers:
+    - type: ConfigChange
+    - type: ImageChange
+      imageChange: {}

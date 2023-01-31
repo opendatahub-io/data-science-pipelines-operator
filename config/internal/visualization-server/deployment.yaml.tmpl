@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ds-pipeline-visualizationserver-{{.Name}}
+  namespace: {{.Namespace}}
+  annotations:
+    alpha.image.policy.openshift.io/resolve-names: 'visualization-server:1.3.1'
+    image.openshift.io/triggers: >-
+      [{"from":{"kind":"ImageStreamTag","name":"visualization-server:1.3.1"},"fieldPath":"spec.template.spec.containers[?(@.name==\"ds-pipeline-visualizationserver\")].image"}]
+  labels:
+    app: ds-pipeline-visualizationserver-{{.Name}}
+    component: data-science-pipelines
+spec:
+  selector:
+    matchLabels:
+      app: ds-pipeline-visualizationserver-{{.Name}}
+      component: data-science-pipelines
+  template:
+    metadata:
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+      labels:
+        app: ds-pipeline-visualizationserver-{{.Name}}
+        component: data-science-pipelines
+    spec:
+      initContainers:
+        - name: image-checker
+          image: 'quay.io/modh/odh-deployer:v1.15.0-10-rhods'
+          command:
+            - sh
+            - '-c'
+            - |
+              while :
+              do
+                TEST=$(oc get istag visualization-server:1.3.1 | wc -l)
+
+                if [[ $TEST -gt 0 ]]; then
+                  break
+                fi
+                echo "Image is not built yet, please wait..."
+                sleep 30
+              done
+      containers:
+        - image: visualization-server
+          imagePullPolicy: Always
+          name: ds-pipeline-visualizationserver
+          ports:
+            - containerPort: 8888
+              name: http
+          livenessProbe:
+            exec:
+              command:
+                - wget
+                - -q
+                - -S
+                - -O
+                - '-'
+                - http://localhost:8888/
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 2
+          readinessProbe:
+            exec:
+              command:
+                - wget
+                - -q
+                - -S
+                - -O
+                - '-'
+                - http://localhost:8888/
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+          resources:
+            requests:
+              cpu: 30m
+              memory: 500Mi
+            limits:
+              cpu: 250m
+              memory: 1Gi
+      serviceAccountName: ds-pipeline-visualizationserver-{{.Name}}

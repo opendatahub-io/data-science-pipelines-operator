@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ds-pipeline-scheduledworkflow-{{.Name}}
+  namespace: {{.Namespace}}
+  labels:
+    app: ds-pipeline-scheduledworkflow-{{.Name}}
+    component: data-science-pipelines
+

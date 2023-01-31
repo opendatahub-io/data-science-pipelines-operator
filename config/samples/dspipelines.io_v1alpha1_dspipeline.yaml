@@ -37,14 +37,14 @@ spec:
       passwordSecret:
         name: ds-pipelines-db
         key: password
-#    customDB:
-#      host: mysql.com
-#      port: "8888"
-#      username: root
-#      pipelineDBName: randomDBName
-#      passwordSecret:
-#        name: somesecret
-#        key: somekey
+    customDB:
+      host: mysql.com
+      port: "8888"
+      username: root
+      pipelineDBName: randomDBName
+      passwordSecret:
+        name: somesecret
+        key: somekey
   storage:
     minio: # mutually exclusive with custom
       image: quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance

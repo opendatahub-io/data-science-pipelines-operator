@@ -2,9 +2,9 @@ package controllers
 
 import (
 	"context"
-	ctrl "sigs.k8s.io/controller-runtime"
+	dspipelinesiov1alpha1 "github.com/opendatahub-io/ds-pipelines-controller/api/v1alpha1"
 )
 
-func (r *DSPipelineReconciler) ReconcilePersistenceAgent(ctx context.Context, req ctrl.Request) error {
+func (r *DSPipelineReconciler) ReconcilePersistenceAgent(dsp *dspipelinesiov1alpha1.DSPipeline, req context.Context, params *DSPipelineParams) error {
 	return nil
 }

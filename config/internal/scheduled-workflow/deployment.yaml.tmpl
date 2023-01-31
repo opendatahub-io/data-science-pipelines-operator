@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ds-pipeline-scheduledworkflow-{{.Name}}
+  namespace: {{.Namespace}}
+  labels:
+    app: ds-pipeline-scheduledworkflow-{{.Name}}
+    component: data-science-pipelines
+spec:
+  selector:
+    matchLabels:
+      app: ds-pipeline-scheduledworkflow-{{.Name}}
+      component: data-science-pipelines
+  template:
+    metadata:
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+      labels:
+        app: ds-pipeline-scheduledworkflow-{{.Name}}
+        component: data-science-pipelines
+    spec:
+      containers:
+        - env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: CRON_SCHEDULE_TIMEZONE
+              valueFrom:
+                configMapKeyRef:
+                  key: cronScheduleTimezone
+                  name: $(pipeline_install_configuration)
+          image: scheduledworkflow
+          imagePullPolicy: IfNotPresent
+          name: ds-pipeline-scheduledworkflow
+          livenessProbe:
+            exec:
+              command:
+                - test
+                - -x
+                - controller
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 2
+          readinessProbe:
+            exec:
+              command:
+                - test
+                - -x
+                - controller
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+          resources:
+            requests:
+              cpu: 120m
+              memory: 100Mi
+            limits:
+              cpu: 250m
+              memory: 250Mi
+      serviceAccountName: ds-pipeline-scheduledworkflow-{{.Name}}

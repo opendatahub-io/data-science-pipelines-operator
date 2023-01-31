@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ds-pipeline-viewer-crd-{{.Name}}
+  namespace: {{.Namespace}}
+  labels:
+    app: ds-pipeline-viewer-crd-{{.Name}}
+    component: data-science-pipelines
+spec:
+  selector:
+    matchLabels:
+      app: ds-pipeline-viewer-crd-{{.Name}}
+      component: data-science-pipelines
+  template:
+    metadata:
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+      labels:
+        app: ds-pipeline-viewer-crd-{{.Name}}
+        component: data-science-pipelines
+    spec:
+      containers:
+        - env:
+            - name: MAX_NUM_VIEWERS
+              value: "50"
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: MINIO_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          image: viewer-crd-controller
+          imagePullPolicy: Always
+          name: ds-pipeline-viewer-crd
+          livenessProbe:
+            exec:
+              command:
+                - test
+                - -x
+                - controller
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 2
+          readinessProbe:
+            exec:
+              command:
+                - test
+                - -x
+                - controller
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+          resources:
+            requests:
+              cpu: 120m
+              memory: 100Mi
+            limits:
+              cpu: 250m
+              memory: 500Mi
+      serviceAccountName: ds-pipeline-viewer-crd-{{.Name}}

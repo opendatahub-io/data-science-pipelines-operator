@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// DSPipelineReconciler reconciles a DSPipeline object
+// DSPipelineReconciler reconciles a DSPipelineParams object
 type DSPipelineReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
@@ -42,19 +42,80 @@ type DSPipelineReconciler struct {
 func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("namespace", req.Namespace)
 
-	log.V(1).Info("DSPipeline Reconciler called.")
+	log.V(1).Info("DSPipelineParams Reconciler called.")
+
+	params := &DSPipelineParams{}
 
 	dspipeline := &dspipelinesiov1alpha1.DSPipeline{}
 	err := r.Get(ctx, req.NamespacedName, dspipeline)
 	if err != nil && apierrs.IsNotFound(err) {
-		log.Info("Stop DSPipeline reconciliation")
+		log.Info("Stop DSPipelineParams reconciliation")
 		return ctrl.Result{}, nil
 	} else if err != nil {
-		log.Error(err, "Unable to fetch the DSPipeline")
+		log.Error(err, "Unable to fetch the DSPipelineParams")
 		return ctrl.Result{}, err
 	}
 
-	err = r.ReconcileAPIServer(dspipeline, ctx)
+	err = params.ExtractParams(dspipeline)
+	if err != nil {
+		log.Error(err, "Unable to parse CR spec, "+
+			"failed to reconcile, ensure CR is well formed")
+		return ctrl.Result{}, err
+	}
+
+	usingCustomDB, err := params.UsingCustomDB(dspipeline)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	usingCustomStorage, err := params.UsingCustomStorage(dspipeline)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if !usingCustomStorage {
+		err := r.ReconcileStorage(dspipeline, ctx, params)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	if !usingCustomDB {
+		err = r.ReconcileDatabase(dspipeline, ctx, params)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	// TODO: Ensure db/storage (if deploying custom) are running before
+	// deploying dsp stack
+
+	err = r.ReconcileAPIServer(dspipeline, ctx, params)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	err = r.ReconcileUI(dspipeline, ctx, params)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	err = r.ReconcilePersistenceAgent(dspipeline, ctx, params)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	err = r.ReconcileScheduledWorkflow(dspipeline, ctx, params)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	err = r.ReconcileViewerCRD(dspipeline, ctx, params)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	err = r.ReconcileVisualizationServer(dspipeline, ctx, params)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
