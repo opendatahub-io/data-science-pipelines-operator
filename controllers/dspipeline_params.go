@@ -65,6 +65,8 @@ type DSPipelineParams struct {
 	ScheduledWorkflowImage           string
 	VisualizationServerImage         string
 	ViewerCrdImage                   string
+	CronScheduleTimezone             string
+	MLPipelineUIImage                string
 }
 
 func passwordGen(n int) string {
@@ -116,6 +118,11 @@ func (r *DSPipelineParams) ExtractParams(dsp *dspipelinesiov1alpha1.DSPipeline) 
 	r.VisualizaionServerServicePort = "8888"
 	r.PersistenceAgentImage = dsp.Spec.PersistentAgent.Image
 	r.ApiServerServiceName = fmt.Sprintf("%s-%s", defaultDSPServicePrefix, r.Name)
+	r.ScheduledWorkflowImage = dsp.Spec.ScheduledWorkflow.Image
+	r.ViewerCrdImage = dsp.Spec.ViewerCRD.Image
+	r.VisualizationServerImage = dsp.Spec.VisualizationServer.Image
+	r.CronScheduleTimezone = "UTC"
+	r.MLPipelineUIImage = dsp.Spec.MlPipelineUI.Image
 
 	if dsp.Spec.APIServer.ArtifactScriptConfigMap != (dspipelinesiov1alpha1.ArtifactScriptConfigMap{}) {
 		r.ArtifactScriptConfigMapName = dsp.Spec.APIServer.ArtifactScriptConfigMap.Name

@@ -23,6 +23,7 @@ import (
 	mf "github.com/manifestival/manifestival"
 	"github.com/opendatahub-io/ds-pipelines-controller/controllers/config"
 	v1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	dspipelinesiov1alpha1 "github.com/opendatahub-io/ds-pipelines-controller/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -31,6 +32,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+const finalizerName = "dspipelines.opendatahub.io/finalizer"
 
 // DSPipelineReconciler reconciles a DSPipelineParams object
 type DSPipelineReconciler struct {
@@ -54,6 +57,40 @@ func (r *DSPipelineReconciler) Apply(owner mf.Owner, params *DSPipelineParams, t
 	}
 
 	if err = tmplManifest.Apply(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *DSPipelineReconciler) ApplyWithoutOwner(params *DSPipelineParams, template string, fns ...mf.Transformer) error {
+	tmplManifest, err := config.Manifest(r.Client, template, params)
+	if err != nil {
+		return fmt.Errorf("error loading template yaml: %w", err)
+	}
+
+	tmplManifest, err = tmplManifest.Transform(fns...)
+	if err != nil {
+		return err
+	}
+
+	if err = tmplManifest.Apply(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *DSPipelineReconciler) DeleteResource(params *DSPipelineParams, template string, fns ...mf.Transformer) error {
+	tmplManifest, err := config.Manifest(r.Client, template, params)
+	if err != nil {
+		return fmt.Errorf("error loading template yaml: %w", err)
+	}
+
+	tmplManifest, err = tmplManifest.Transform(fns...)
+	if err != nil {
+		return err
+	}
+
+	if err = tmplManifest.Delete(); err != nil {
 		return err
 	}
 	return nil
@@ -85,6 +122,28 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		log.Error(err, "Unable to parse CR spec, "+
 			"failed to reconcile, ensure CR is well formed")
 		return ctrl.Result{}, err
+	}
+
+	if dspipeline.ObjectMeta.DeletionTimestamp.IsZero() {
+		if !controllerutil.ContainsFinalizer(dspipeline, finalizerName) {
+			controllerutil.AddFinalizer(dspipeline, finalizerName)
+			if err := r.Update(ctx, dspipeline); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+	} else {
+		if controllerutil.ContainsFinalizer(dspipeline, finalizerName) {
+			if err := r.cleanUpResources(dspipeline, params); err != nil {
+				return ctrl.Result{}, err
+			}
+			controllerutil.RemoveFinalizer(dspipeline, finalizerName)
+			if err := r.Update(ctx, dspipeline); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+
+		// Stop reconciliation as the item is being deleted
+		return ctrl.Result{}, nil
 	}
 
 	usingCustomDB, err := params.UsingCustomDB(dspipeline)
@@ -124,22 +183,22 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
-	err = r.ReconcileScheduledWorkflow(dspipeline, ctx, params)
+	err = r.ReconcileScheduledWorkflow(dspipeline, params)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	err = r.ReconcileUI(dspipeline, ctx, params)
+	err = r.ReconcileUI(dspipeline, params)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	err = r.ReconcileViewerCRD(dspipeline, ctx, params)
+	err = r.ReconcileViewerCRD(dspipeline, params)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	err = r.ReconcileVisualizationServer(dspipeline, ctx, params)
+	err = r.ReconcileVisualizationServer(dspipeline, params)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -157,4 +216,19 @@ func (r *DSPipelineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&v1.ConfigMap{}).
 		Owns(&v1.ServiceAccount{}).
 		Complete(r)
+}
+
+// Clean Up any resources not handled by garbage collection like Cluster Resources
+func (r *DSPipelineReconciler) cleanUpResources(dsp *dspipelinesiov1alpha1.DSPipeline, params *DSPipelineParams) error {
+	err := r.CleanUpPersistenceAgent(dsp, params)
+	if err != nil {
+		return err
+	}
+
+	err = r.CleanUpScheduledWorkflow(dsp, params)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -41,7 +41,7 @@ spec:
                 sleep 30
               done
       containers:
-        - image: visualization-server
+        - image: "{{.VisualizationServerImage}}"
           imagePullPolicy: Always
           name: ds-pipeline-visualizationserver
           ports:

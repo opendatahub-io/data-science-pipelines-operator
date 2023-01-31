@@ -22,15 +22,10 @@ spec:
       containers:
         - env:
             - name: NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
+              value: "{{.Namespace}}"
             - name: CRON_SCHEDULE_TIMEZONE
-              valueFrom:
-                configMapKeyRef:
-                  key: cronScheduleTimezone
-                  name: $(pipeline_install_configuration)
-          image: scheduledworkflow
+              value: "{{.CronScheduleTimezone}}"
+          image: "{{.ScheduledWorkflowImage}}"
           imagePullPolicy: IfNotPresent
           name: ds-pipeline-scheduledworkflow
           livenessProbe:
