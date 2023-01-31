@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: ds-pipeline-{{.Name}}
+  name: {{.ApiServerServiceName}}
   namespace: {{.Namespace}}
   labels:
     app: ds-pipeline-{{.Name}}
@@ -11,7 +11,7 @@ spec:
     - name: http
       port: 8888
       protocol: TCP
-      targetPort: https-oauth
+      targetPort: http
   selector:
     app: ds-pipeline-{{.Name}}
     component: data-science-pipelines

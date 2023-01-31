@@ -5,7 +5,7 @@ import (
 	dspipelinesiov1alpha1 "github.com/opendatahub-io/ds-pipelines-controller/api/v1alpha1"
 )
 
-var templates = []string{
+var apiServerTemplates = []string{
 	"config/internal/apiserver/artifact_script.yaml.tmpl",
 	"config/internal/apiserver/role_ds-pipeline.yaml.tmpl",
 	"config/internal/apiserver/role_pipeline-runner.yaml.tmpl",
@@ -20,11 +20,13 @@ var templates = []string{
 func (r *DSPipelineReconciler) ReconcileAPIServer(dsp *dspipelinesiov1alpha1.DSPipeline, req context.Context, params *DSPipelineParams) error {
 	r.Log.Info("Applying APIServer Resources")
 
-	for _, template := range templates {
+	for _, template := range apiServerTemplates {
 		err := r.Apply(dsp, params, template)
 		if err != nil {
 			return err
 		}
 	}
+
+	r.Log.Info("Finished applying APIServer Resources")
 	return nil
 }

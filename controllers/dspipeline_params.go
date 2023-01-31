@@ -15,10 +15,10 @@ const (
 	defaultMinioPort                  = "9000"
 	defaultArtifactScriptConfigMap    = "ds-pipeline-artifact-script-sample"
 	defaultArtifactScriptConfigMapKey = "artifact_script"
+	defaultDSPServicePrefix           = "ds-pipeline"
 )
 
 type DSPipelineParams struct {
-	ServiceName                      string
 	Name                             string
 	Namespace                        string
 	Owner                            mf.Owner
@@ -60,6 +60,11 @@ type DSPipelineParams struct {
 	MinioImage                       string
 	DBServiceName                    string
 	MinioServiceName                 string
+	PersistenceAgentImage            string
+	ApiServerServiceName             string
+	ScheduledWorkflowImage           string
+	VisualizationServerImage         string
+	ViewerCrdImage                   string
 }
 
 func passwordGen(n int) string {
@@ -91,7 +96,6 @@ func (r *DSPipelineParams) UsingCustomStorage(dsp *dspipelinesiov1alpha1.DSPipel
 }
 
 func (r *DSPipelineParams) ExtractParams(dsp *dspipelinesiov1alpha1.DSPipeline) error {
-	r.ServiceName = dsp.Name
 	r.Name = dsp.Name
 	r.Namespace = dsp.Namespace
 	r.Owner = dsp
@@ -110,6 +114,8 @@ func (r *DSPipelineParams) ExtractParams(dsp *dspipelinesiov1alpha1.DSPipeline) 
 	r.DBConfigCONMAXLifetimeSec = "120"
 	r.VisualizationServerServiceHost = "ds-pipeline-visualizationserver"
 	r.VisualizaionServerServicePort = "8888"
+	r.PersistenceAgentImage = dsp.Spec.PersistentAgent.Image
+	r.ApiServerServiceName = fmt.Sprintf("%s-%s", defaultDSPServicePrefix, r.Name)
 
 	if dsp.Spec.APIServer.ArtifactScriptConfigMap != (dspipelinesiov1alpha1.ArtifactScriptConfigMap{}) {
 		r.ArtifactScriptConfigMapName = dsp.Spec.APIServer.ArtifactScriptConfigMap.Name

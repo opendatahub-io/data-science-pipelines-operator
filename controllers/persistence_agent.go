@@ -1,10 +1,28 @@
 package controllers
 
 import (
-	"context"
 	dspipelinesiov1alpha1 "github.com/opendatahub-io/ds-pipelines-controller/api/v1alpha1"
 )
 
-func (r *DSPipelineReconciler) ReconcilePersistenceAgent(dsp *dspipelinesiov1alpha1.DSPipeline, req context.Context, params *DSPipelineParams) error {
+var persistenceAgentTemplates = []string{
+	"config/internal/persistence-agent/deployment.yaml.tmpl",
+	"config/internal/persistence-agent/sa.yaml.tmpl",
+}
+
+// TODO : PersistenceAgent needs cluster rbac to list tekton resources
+
+func (r *DSPipelineReconciler) ReconcilePersistenceAgent(dsp *dspipelinesiov1alpha1.DSPipeline,
+	params *DSPipelineParams) error {
+
+	r.Log.Info("Applying PersistenceAgent Resources")
+
+	for _, template := range persistenceAgentTemplates {
+		err := r.Apply(dsp, params, template)
+		if err != nil {
+			return err
+		}
+	}
+
+	r.Log.Info("Finished applying PersistenceAgent Resources")
 	return nil
 }

@@ -112,24 +112,24 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	// TODO: Ensure db/storage (if deploying custom) are running before
-	// deploying dsp stack
+	// Use status fields to conditionally deploy
 
 	err = r.ReconcileAPIServer(dspipeline, ctx, params)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	err = r.ReconcileUI(dspipeline, ctx, params)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	err = r.ReconcilePersistenceAgent(dspipeline, ctx, params)
+	err = r.ReconcilePersistenceAgent(dspipeline, params)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
 	err = r.ReconcileScheduledWorkflow(dspipeline, ctx, params)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	err = r.ReconcileUI(dspipeline, ctx, params)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
