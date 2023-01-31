@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio-{{.Name}}
+  namespace: {{.Namespace}}
+  labels:
+    app: minio-{{.Name}}
+    component: data-science-pipelines
+spec:
+  selector:
+    matchLabels:
+      app: minio-{{.Name}}
+      component: data-science-pipelines
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: minio-{{.Name}}
+        component: data-science-pipelines
+    spec:
+      containers:
+        - args:
+            - server
+            - /data
+          env:
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: "{{.AccessKeySecretKey}}"
+                  name: "{{.S3CredentialsSecretName}}"
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: "{{.SecretKey}}"
+                  name: "{{.S3CredentialsSecretName}}"
+          image: minio
+          name: minio
+          ports:
+            - containerPort: 9000
+          livenessProbe:
+            tcpSocket:
+              port: 9000
+            initialDelaySeconds: 30
+            timeoutSeconds: 1
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              port: 9000
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 20m
+              memory: 100Mi
+            limits:
+              cpu: 250m
+              memory: 1Gi
+          volumeMounts:
+            - mountPath: /data
+              name: data
+              subPath: minio
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: minio-{{.Name}}
