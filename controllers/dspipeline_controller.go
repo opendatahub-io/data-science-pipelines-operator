@@ -18,7 +18,11 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"github.com/go-logr/logr"
+	mf "github.com/manifestival/manifestival"
+	"github.com/opendatahub-io/ds-pipelines-controller/controllers/config"
+	v1 "k8s.io/api/core/v1"
 
 	dspipelinesiov1alpha1 "github.com/opendatahub-io/ds-pipelines-controller/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -33,6 +37,26 @@ type DSPipelineReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 	Log    logr.Logger
+}
+
+func (r *DSPipelineReconciler) Apply(owner mf.Owner, params *DSPipelineParams, template string, fns ...mf.Transformer) error {
+	tmplManifest, err := config.Manifest(r.Client, template, params)
+	if err != nil {
+		return fmt.Errorf("error loading template yaml: %w", err)
+	}
+	tmplManifest, err = tmplManifest.Transform(
+		mf.InjectOwner(owner),
+	)
+
+	tmplManifest, err = tmplManifest.Transform(fns...)
+	if err != nil {
+		return err
+	}
+
+	if err = tmplManifest.Apply(); err != nil {
+		return err
+	}
+	return nil
 }
 
 //+kubebuilder:rbac:groups=dspipelines.opendatahub.io,resources=dspipelines,verbs=get;list;watch;create;update;patch;delete
@@ -74,14 +98,14 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	if !usingCustomStorage {
-		err := r.ReconcileStorage(dspipeline, ctx, params)
+		err := r.ReconcileStorage(dspipeline, ctx, req, params)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 
 	if !usingCustomDB {
-		err = r.ReconcileDatabase(dspipeline, ctx, params)
+		err = r.ReconcileDatabase(dspipeline, ctx, req, params)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -128,5 +152,9 @@ func (r *DSPipelineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&dspipelinesiov1alpha1.DSPipeline{}).
 		Owns(&appsv1.Deployment{}).
+		Owns(&v1.Secret{}).
+		Owns(&v1.Service{}).
+		Owns(&v1.ConfigMap{}).
+		Owns(&v1.ServiceAccount{}).
 		Complete(r)
 }

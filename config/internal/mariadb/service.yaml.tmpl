@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: mariadb-{{.Name}}
+  name: {{.DBServiceName}}
   namespace: {{.Namespace}}
   labels:
     app: mariadb-{{.Name}}
@@ -12,5 +12,5 @@ spec:
       protocol: TCP
       targetPort: 3306
   selector:
-    app: mariadb
-    application-crd-id: data-science-pipelines
+    app: mariadb-{{.Name}}
+    component: data-science-pipelines

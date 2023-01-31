@@ -32,32 +32,32 @@ spec:
   database:
     mariaDB: # mutually exclusive with custom
       image: registry.redhat.io/rhel8/mariadb-103:1-188
-      username: root
+      username: mlpipeline
       pipelineDBName: randomDBName
       passwordSecret:
-        name: ds-pipelines-db
+        name: ds-pipelines-db-sample
         key: password
-    customDB:
-      host: mysql.com
-      port: "8888"
-      username: root
-      pipelineDBName: randomDBName
-      passwordSecret:
-        name: somesecret
-        key: somekey
+#    customDB:
+#      host: mysql.com
+#      port: "8888"
+#      username: root
+#      pipelineDBName: randomDBName
+#      passwordSecret:
+#        name: somesecret
+#        key: somekey
   storage:
     minio: # mutually exclusive with custom
       image: quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance
       bucket: mlpipeline
       s3CredentialsSecret:
-        secretName: somesecret
-        accessKey: somekey
-        secretKey: somekey
-    customStorage:
-      host: minio.com
-      port: "9092"
-      bucket: mlpipeline
-      s3CredentialsSecret: 
-        secretName: somesecret
-        accessKey: somekey
-        secretKey: somekey
+        secretName: somesecret-sample
+        accessKey: accesskey
+        secretKey: secretkey
+#    customStorage:
+#      host: minio.com
+#      port: "9092"
+#      bucket: mlpipeline
+#      s3CredentialsSecret:
+#        secretName: somesecret-db-sample
+#        accessKey: somekey
+#        secretKey: somekey

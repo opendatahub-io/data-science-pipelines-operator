@@ -34,7 +34,7 @@ spec:
                 secretKeyRef:
                   key: "{{.SecretKey}}"
                   name: "{{.S3CredentialsSecretName}}"
-          image: minio
+          image: "{{.MinioImage}}"
           name: minio
           ports:
             - containerPort: 9000

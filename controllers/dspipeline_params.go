@@ -4,12 +4,14 @@ import (
 	"fmt"
 	mf "github.com/manifestival/manifestival"
 	dspipelinesiov1alpha1 "github.com/opendatahub-io/ds-pipelines-controller/api/v1alpha1"
+	"math/rand"
+	"time"
 )
 
 const (
-	defaultDBHost                     = "mysql"
+	defaultDBHostPrefix               = "mariadb"
 	defaultDBHostPort                 = "3306"
-	defaultMinioHost                  = "minio-service.redhat-ods-applications.svc.cluster.local"
+	defaultMinioHostPrefix            = "minio"
 	defaultMinioPort                  = "9000"
 	defaultArtifactScriptConfigMap    = "ds-pipeline-artifact-script-sample"
 	defaultArtifactScriptConfigMapKey = "artifact_script"
@@ -52,6 +54,22 @@ type DSPipelineParams struct {
 	DBName                           string
 	DBHost                           string
 	DBPort                           string
+	DBPassword                       string
+	SecretKeyVal                     string
+	AccessKey                        string
+	MinioImage                       string
+	DBServiceName                    string
+	MinioServiceName                 string
+}
+
+func passwordGen(n int) string {
+	rand.Seed(time.Now().UnixNano())
+	var chars = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890")
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = chars[rand.Intn(len(chars))]
+	}
+	return string(b)
 }
 
 func (r *DSPipelineParams) UsingCustomDB(dsp *dspipelinesiov1alpha1.DSPipeline) (bool, error) {
@@ -120,7 +138,9 @@ func (r *DSPipelineParams) ExtractParams(dsp *dspipelinesiov1alpha1.DSPipeline) 
 		r.DBName = mariaDB.DBName
 		r.DBPasswordSecretKey = mariaDB.PasswordSecret.Key
 		r.DBPasswordSecret = mariaDB.PasswordSecret.Name
-		r.DBHost = defaultDBHost
+		r.DBPassword = passwordGen(12)
+		r.DBServiceName = defaultDBHostPrefix + "-" + r.Name
+		r.DBHost = fmt.Sprintf("%s.%s.svc.cluster.local", r.DBServiceName, r.Namespace)
 		r.DBPort = defaultDBHostPort
 	}
 
@@ -145,10 +165,14 @@ func (r *DSPipelineParams) ExtractParams(dsp *dspipelinesiov1alpha1.DSPipeline) 
 		r.S3CredentialsSecretName = storage.SecretName
 		r.AccessKeySecretKey = storage.AccessKey
 		r.SecretKey = storage.SecretKey
-		r.MinioServiceServiceHost = defaultMinioHost
+		r.MinioServiceName = defaultMinioHostPrefix + "-" + r.Name
+		r.MinioServiceServiceHost = fmt.Sprintf("%s.%s.svc.cluster.local", r.MinioServiceName, r.Namespace)
 		r.MinioServiceServicePort = defaultMinioPort
+		r.MinioImage = dsp.Spec.Minio.Image
 		r.ArtifactBucket = storage.Bucket
-		r.ArtifactEndpoint = defaultMinioHost + ":" + defaultMinioPort
+		r.ArtifactEndpoint = defaultMinioHostPrefix + "-" + r.Name + ":" + defaultMinioPort
+		r.SecretKeyVal = passwordGen(12)
+		r.AccessKey = passwordGen(12)
 	}
 
 	return nil
