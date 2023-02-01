@@ -21,13 +21,15 @@ spec:
     spec:
       containers:
         - env:
-            - name: NAMESPACE
-              value: "{{.Namespace}}"
             - name: CRON_SCHEDULE_TIMEZONE
               value: "{{.CronScheduleTimezone}}"
           image: "{{.ScheduledWorkflowImage}}"
           imagePullPolicy: IfNotPresent
           name: ds-pipeline-scheduledworkflow
+          command:
+            - controller
+            - "--logtostderr=true"
+            - "--namespace={{.Namespace}}"
           livenessProbe:
             exec:
               command:

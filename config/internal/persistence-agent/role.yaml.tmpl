@@ -1,9 +1,10 @@
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: Role
 metadata:
-  name: ds-pipeline-scheduledworkflow-{{.Name}}
+  name: ds-pipeline-persistenceagent-{{.Name}}
+  namespace: {{.Namespace}}
   labels:
-    app: ds-pipeline-scheduledworkflow-{{.Name}}
+    app: ds-pipeline-persistenceagent-{{.Name}}
     component: data-science-pipelines
 rules:
   - apiGroups:

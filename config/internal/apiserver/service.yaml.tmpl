@@ -12,6 +12,10 @@ spec:
       port: 8888
       protocol: TCP
       targetPort: http
+    - name: grpc
+      port: 8887
+      protocol: TCP
+      targetPort: 8887
   selector:
     app: ds-pipeline-{{.Name}}
     component: data-science-pipelines

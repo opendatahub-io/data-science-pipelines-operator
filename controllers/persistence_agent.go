@@ -7,11 +7,8 @@ import (
 var persistenceAgentTemplates = []string{
 	"config/internal/persistence-agent/deployment.yaml.tmpl",
 	"config/internal/persistence-agent/sa.yaml.tmpl",
-}
-
-var persistenceAgentClusterScopedTemplates = []string{
-	"config/internal/persistence-agent/clusterrole.yaml.tmpl",
-	"config/internal/persistence-agent/clusterrolebinding.yaml.tmpl",
+	"config/internal/persistence-agent/role.yaml.tmpl",
+	"config/internal/persistence-agent/rolebinding.yaml.tmpl",
 }
 
 func (r *DSPipelineReconciler) ReconcilePersistenceAgent(dsp *dspipelinesiov1alpha1.DSPipeline,
@@ -26,24 +23,6 @@ func (r *DSPipelineReconciler) ReconcilePersistenceAgent(dsp *dspipelinesiov1alp
 		}
 	}
 
-	// Namespace resource should not own a cluster scoped resource
-	for _, template := range persistenceAgentClusterScopedTemplates {
-		err := r.ApplyWithoutOwner(params, template)
-		if err != nil {
-			return err
-		}
-	}
-
 	r.Log.Info("Finished applying PersistenceAgent Resources")
-	return nil
-}
-
-func (r *DSPipelineReconciler) CleanUpPersistenceAgent(params *DSPipelineParams) error {
-	for _, template := range persistenceAgentClusterScopedTemplates {
-		err := r.DeleteResource(params, template)
-		if err != nil {
-			return err
-		}
-	}
 	return nil
 }

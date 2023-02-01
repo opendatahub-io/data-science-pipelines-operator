@@ -38,7 +38,7 @@ spec:
         name: ds-pipelines-db-sample
         key: password
 #    customDB:
-#      host: mysql.com
+#      host: mysql:3306
 #      port: "8888"
 #      username: root
 #      pipelineDBName: randomDBName

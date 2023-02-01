@@ -103,7 +103,7 @@ spec:
             timeoutSeconds: 2
           readinessProbe:
             exec:
-              command:
+              command: # wget -q -S -O - http://localhost:8888/apis/v1beta1/healthz
                 - wget
                 - -q
                 - -S

@@ -23,8 +23,10 @@ import (
 	mf "github.com/manifestival/manifestival"
 	dspipelinesiov1alpha1 "github.com/opendatahub-io/ds-pipelines-controller/api/v1alpha1"
 	"github.com/opendatahub-io/ds-pipelines-controller/controllers/config"
+	routev1 "github.com/openshift/api/route/v1"
 	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -212,48 +214,24 @@ func (r *DSPipelineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&dspipelinesiov1alpha1.DSPipeline{}).
 		Owns(&appsv1.Deployment{}).
-		Owns(&v1.Secret{}).
-		Owns(&v1.Service{}).
-		Owns(&v1.ConfigMap{}).
-		Owns(&v1.ServiceAccount{}).
-		// TODO: For debugging
-		//WithEventFilter(predicate.Funcs{
-		//	DeleteFunc: func(e event.DeleteEvent) bool {
-		//		if e.Object.GetNamespace() != "test-ds-project" {
-		//			return false
-		//		}
-		//		return true
-		//	},
-		//	UpdateFunc: func(updateEvent event.UpdateEvent) bool {
-		//		if updateEvent.ObjectNew.GetNamespace() != "test-ds-project" {
-		//			return false
-		//		}
-		//		return true
-		//	},
-		//	CreateFunc: func(createEvent event.CreateEvent) bool {
-		//		if createEvent.Object.GetNamespace() != "test-ds-project" {
-		//			return false
-		//		}
-		//		return true
-		//	},
-		//	GenericFunc: func(genericEvent event.GenericEvent) bool {
-		//		if genericEvent.Object.GetNamespace() != "test-ds-project" {
-		//			return false
-		//		}
-		//		return true
-		//	},
-		//}).
+		Owns(&corev1.Secret{}).
+		Owns(&corev1.ConfigMap{}).
+		Owns(&corev1.Service{}).
+		Owns(&corev1.ServiceAccount{}).
+		Owns(&rbacv1.Role{}).
+		Owns(&rbacv1.RoleBinding{}).
+		Owns(&corev1.PersistentVolumeClaim{}).
+		Owns(&routev1.Route{}).
+		// Visualization Server Build watchers
+		//Owns(&buildv1.BuildConfig{}).
+		//Owns(&imagev1.ImageStream{}).
+		// TODO: Add watcher for ui cluster rbac since it has no owner
 		Complete(r)
 }
 
 // Clean Up any resources not handled by garbage collection, like Cluster Resources
 func (r *DSPipelineReconciler) cleanUpResources(dsp *dspipelinesiov1alpha1.DSPipeline, ctx context.Context, req ctrl.Request, params *DSPipelineParams) error {
-	err := r.CleanUpPersistenceAgent(params)
-	if err != nil {
-		return err
-	}
-
-	err = r.CleanUpScheduledWorkflow(params)
+	err := r.CleanUpUI(params)
 	if err != nil {
 		return err
 	}
@@ -262,11 +240,6 @@ func (r *DSPipelineReconciler) cleanUpResources(dsp *dspipelinesiov1alpha1.DSPip
 	//if err != nil {
 	//	return err
 	//}
-
-	err = r.CleanUpUI(params)
-	if err != nil {
-		return err
-	}
 
 	return nil
 }

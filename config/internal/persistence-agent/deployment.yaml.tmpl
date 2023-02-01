@@ -32,6 +32,9 @@ spec:
             - "--ttlSecondsAfterWorkflowFinish=86400"
             - "--numWorker=2"
             - "--mlPipelineAPIServerName={{.ApiServerServiceName}}"
+            - "--namespace={{.Namespace}}"
+            - "--mlPipelineServiceHttpPort=8888"
+            - "--mlPipelineServiceGRPCPort=8887"
           livenessProbe:
             exec:
               command:
