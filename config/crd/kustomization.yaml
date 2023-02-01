@@ -1,6 +1,8 @@
 resources:
 - bases/dspipelines.opendatahub.io_dspipelines.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
+- bases/scheduledworkflows.yaml
+- bases/viewers.yaml
 
 configurations:
 - kustomizeconfig.yaml

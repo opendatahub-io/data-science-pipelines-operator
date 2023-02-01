@@ -7,7 +7,6 @@ metadata:
     app.kubernetes.io/component: rbac
     app.kubernetes.io/created-by: ds-pipelines-controller
     app.kubernetes.io/part-of: ds-pipelines-controller
-    app.kubernetes.io/managed-by: kustomize
   name: manager-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
