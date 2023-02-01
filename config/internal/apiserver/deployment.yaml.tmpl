@@ -79,6 +79,8 @@ spec:
               value: "{{.MinioServiceServiceHost}}"
             - name: MINIO_SERVICE_SERVICE_PORT
               value: "{{.MinioServiceServicePort}}"
+            - name: DEFAULTPIPELINERUNNERSERVICEACCOUNT
+              value: "pipeline-runner-{{.Name}}"
           image: {{.ApiServerImage}}
           imagePullPolicy: Always
           name: ds-pipeline-api-server

@@ -21,16 +21,15 @@ import (
 	"fmt"
 	"github.com/go-logr/logr"
 	mf "github.com/manifestival/manifestival"
-	"github.com/opendatahub-io/ds-pipelines-controller/controllers/config"
-	v1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
 	dspipelinesiov1alpha1 "github.com/opendatahub-io/ds-pipelines-controller/api/v1alpha1"
+	"github.com/opendatahub-io/ds-pipelines-controller/controllers/config"
 	appsv1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const finalizerName = "dspipelines.opendatahub.io/finalizer"
@@ -173,7 +172,7 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// TODO: Ensure db/storage (if deploying custom) are running before
 	// Use status fields to conditionally deploy
 
-	err = r.ReconcileAPIServer(dspipeline, ctx, params)
+	err = r.ReconcileAPIServer(dspipeline, ctx, req, params)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -198,10 +197,12 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
-	err = r.ReconcileVisualizationServer(dspipeline, ctx, req, params)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+	// TODO: After the build completes, image field is replaced with sha tag
+	// Need to skip reconiliation in this case
+	//err = r.ReconcileVisualizationServer(dspipeline, ctx, req, params)
+	//if err != nil {
+	//	return ctrl.Result{}, err
+	//}
 
 	return ctrl.Result{}, nil
 }
@@ -215,22 +216,54 @@ func (r *DSPipelineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&v1.Service{}).
 		Owns(&v1.ConfigMap{}).
 		Owns(&v1.ServiceAccount{}).
+		// TODO: For debugging
+		//WithEventFilter(predicate.Funcs{
+		//	DeleteFunc: func(e event.DeleteEvent) bool {
+		//		if e.Object.GetNamespace() != "test-ds-project" {
+		//			return false
+		//		}
+		//		return true
+		//	},
+		//	UpdateFunc: func(updateEvent event.UpdateEvent) bool {
+		//		if updateEvent.ObjectNew.GetNamespace() != "test-ds-project" {
+		//			return false
+		//		}
+		//		return true
+		//	},
+		//	CreateFunc: func(createEvent event.CreateEvent) bool {
+		//		if createEvent.Object.GetNamespace() != "test-ds-project" {
+		//			return false
+		//		}
+		//		return true
+		//	},
+		//	GenericFunc: func(genericEvent event.GenericEvent) bool {
+		//		if genericEvent.Object.GetNamespace() != "test-ds-project" {
+		//			return false
+		//		}
+		//		return true
+		//	},
+		//}).
 		Complete(r)
 }
 
 // Clean Up any resources not handled by garbage collection, like Cluster Resources
 func (r *DSPipelineReconciler) cleanUpResources(dsp *dspipelinesiov1alpha1.DSPipeline, ctx context.Context, req ctrl.Request, params *DSPipelineParams) error {
-	err := r.CleanUpPersistenceAgent(dsp, params)
+	err := r.CleanUpPersistenceAgent(params)
 	if err != nil {
 		return err
 	}
 
-	err = r.CleanUpScheduledWorkflow(dsp, params)
+	err = r.CleanUpScheduledWorkflow(params)
 	if err != nil {
 		return err
 	}
 
-	err = r.CleanUpVisualizationServer(dsp, ctx, req, params)
+	//err = r.CleanUpVisualizationServer(ctx, req, params)
+	//if err != nil {
+	//	return err
+	//}
+
+	err = r.CleanUpUI(params)
 	if err != nil {
 		return err
 	}

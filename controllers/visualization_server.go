@@ -97,8 +97,8 @@ func (r *DSPipelineReconciler) ReconcileVisualizationServer(dsp *dspipelinesiov1
 	return nil
 }
 
-func (r *DSPipelineReconciler) CleanUpVisualizationServer(dsp *dspipelinesiov1alpha1.DSPipeline,
-	ctx context.Context, req ctrl.Request, params *DSPipelineParams) error {
+func (r *DSPipelineReconciler) CleanUpVisualizationServer(ctx context.Context, req ctrl.Request,
+	params *DSPipelineParams) error {
 
 	// If there are no other DSP's in this namespace, cleanup the build artifacts
 	dsPipelines := &dspipelinesiov1alpha1.DSPipelineList{}

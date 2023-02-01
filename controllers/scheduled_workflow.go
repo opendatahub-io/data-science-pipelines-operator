@@ -40,8 +40,7 @@ func (r *DSPipelineReconciler) ReconcileScheduledWorkflow(dsp *dspipelinesiov1al
 	return nil
 }
 
-func (r *DSPipelineReconciler) CleanUpScheduledWorkflow(dsp *dspipelinesiov1alpha1.DSPipeline,
-	params *DSPipelineParams) error {
+func (r *DSPipelineReconciler) CleanUpScheduledWorkflow(params *DSPipelineParams) error {
 	for _, template := range scheduledWorkflowClusterScopedTemplates {
 		err := r.DeleteResource(params, template)
 		if err != nil {

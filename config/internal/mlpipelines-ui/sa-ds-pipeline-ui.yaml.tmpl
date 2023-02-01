@@ -4,7 +4,7 @@ metadata:
   name: ds-pipeline-ui-{{.Name}}
   namespace: {{.Namespace}}
   annotations:
-    serviceaccounts.openshift.io/oauth-redirectreference.primary: '{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"ds-pipeline-ui"}}'
+    serviceaccounts.openshift.io/oauth-redirectreference.primary: '{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"ds-pipeline-ui-{{.Name}}"}}'
   labels:
     app: ds-pipeline-ui-{{.Name}}
     component: data-science-pipelines

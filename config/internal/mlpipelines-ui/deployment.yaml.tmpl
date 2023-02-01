@@ -91,7 +91,7 @@ spec:
               value: ds-pipeline-{{.Name}}
             - name: ML_PIPELINE_SERVICE_PORT
               value: '8888'
-          image: frontend
+          image: {{.MLPipelineUIImage}}
           imagePullPolicy: IfNotPresent
           livenessProbe:
             exec:
@@ -128,7 +128,7 @@ spec:
             - mountPath: /etc/config
               name: config-volume
               readOnly: true
-      serviceAccountName: ds-pipeline-ui
+      serviceAccountName: ds-pipeline-ui-{{.Name}}
       volumes:
         - configMap:
             name: ds-pipeline-ui-configmap-{{.Name}}

@@ -38,8 +38,7 @@ func (r *DSPipelineReconciler) ReconcilePersistenceAgent(dsp *dspipelinesiov1alp
 	return nil
 }
 
-func (r *DSPipelineReconciler) CleanUpPersistenceAgent(dsp *dspipelinesiov1alpha1.DSPipeline,
-	params *DSPipelineParams) error {
+func (r *DSPipelineReconciler) CleanUpPersistenceAgent(params *DSPipelineParams) error {
 	for _, template := range persistenceAgentClusterScopedTemplates {
 		err := r.DeleteResource(params, template)
 		if err != nil {

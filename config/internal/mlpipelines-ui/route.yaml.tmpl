@@ -11,7 +11,7 @@ metadata:
 spec:
   to:
     kind: Service
-    name: ds-pipeline-ui
+    name: ds-pipeline-ui-{{.Name}}
   port:
     targetPort: 8443
   tls:
