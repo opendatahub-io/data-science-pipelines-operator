@@ -1,4 +1,4 @@
-namespace: ds-pipelines-controller-system
+namespace: ds-pipelines-controller
 namePrefix: ds-pipelines-controller-
 resources:
 - ../crd
@@ -8,4 +8,4 @@ resources:
 images:
   - name: controller
     newName: quay.io/hukhan/dspipelines-controller
-    newTag: v0.0.2
+    newTag: v0.0.4

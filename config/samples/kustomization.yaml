@@ -1,4 +1,2 @@
-## Append samples you want in your CSV to this file as resources ##
 resources:
-- dspipelines_v1alpha1_dspipeline.yaml
-#+kubebuilder:scaffold:manifestskustomizesamples
+- dspipelines.io_v1alpha1_dspipeline.yaml

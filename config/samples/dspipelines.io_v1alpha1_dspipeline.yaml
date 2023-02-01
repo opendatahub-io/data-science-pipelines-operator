@@ -2,7 +2,6 @@ apiVersion: dspipelines.opendatahub.io/v1alpha1
 kind: DSPipeline
 metadata:
   name: sample
-  namespace: test-ds-project
 spec:
   apiServer:
     # optional (default is: ds-pipeline-artifact-script-${metadata.name} / artifact_script)
