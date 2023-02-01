@@ -11,7 +11,7 @@ metadata:
     app.kubernetes.io/created-by: ds-pipelines-controller
     app.kubernetes.io/part-of: ds-pipelines-controller
   name: controller-manager-metrics-monitor
-  namespace: system
+  namespace: dspipelines-controller
 spec:
   endpoints:
     - path: /metrics

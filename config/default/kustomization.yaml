@@ -4,3 +4,8 @@ resources:
 - ../crd
 - ../rbac
 - ../manager
+
+images:
+  - name: controller
+    newName: quay.io/hukhan/dspipelines-controller
+    newTag: v0.0.1

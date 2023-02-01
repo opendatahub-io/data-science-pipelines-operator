@@ -101,6 +101,30 @@ func (r *DSPipelineReconciler) DeleteResource(params *DSPipelineParams, template
 //+kubebuilder:rbac:groups=dspipelines.opendatahub.io,resources=dspipelines/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=dspipelines.opendatahub.io,resources=dspipelines/finalizers,verbs=update
 
+//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=*,resources=deployments;services,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core,resources=secrets;configmaps;services;serviceaccounts;persistentvolumes;persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core,resources=persistentvolumes;persistentvolumeclaims,verbs=*
+
+//+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles;clusterrolebindings,verbs=get;list;watch;create;update;delete
+
+//+kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=get;list;watch;create;update;patch;delete
+
+//+kubebuilder:rbac:groups=snapshot.storage.k8s.io,resources=volumesnapshots,verbs=create;delete;get
+//+kubebuilder:rbac:groups=argoproj.io,resources=workflows,verbs=*
+//+kubebuilder:rbac:groups=core,resources=pods;pods/exec;pods/log;services,verbs=*
+//+kubebuilder:rbac:groups=core;apps;extensions,resources=deployments;replicasets,verbs=*
+//+kubebuilder:rbac:groups=kubeflow.org,resources=*,verbs=*
+//+kubebuilder:rbac:groups=batch,resources=jobs,verbs=*
+//+kubebuilder:rbac:groups=machinelearning.seldon.io,resources=seldondeployments,verbs=*
+//+kubebuilder:rbac:groups=tekton.dev,resources=*,verbs=*
+//+kubebuilder:rbac:groups=custom.tekton.dev,resources=pipelineloops,verbs=*
+//+kubebuilder:rbac:groups=authorization.k8s.io,resources=subjectaccessreviews,verbs=create
+//+kubebuilder:rbac:groups=authentication.k8s.io,resources=tokenreviews,verbs=create
+//+kubebuilder:rbac:groups=image.openshift.io,resources=imagestreamtags,verbs=get
+//+kubebuilder:rbac:groups=core,resources=events,verbs=create;patch;list
+
 func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("namespace", req.Namespace)
 
@@ -218,9 +242,9 @@ func (r *DSPipelineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Service{}).
 		Owns(&corev1.ServiceAccount{}).
+		Owns(&corev1.PersistentVolumeClaim{}).
 		Owns(&rbacv1.Role{}).
 		Owns(&rbacv1.RoleBinding{}).
-		Owns(&corev1.PersistentVolumeClaim{}).
 		Owns(&routev1.Route{}).
 		// Visualization Server Build watchers
 		//Owns(&buildv1.BuildConfig{}).
