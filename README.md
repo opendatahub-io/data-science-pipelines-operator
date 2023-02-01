@@ -29,13 +29,15 @@ kustomize build . | oc -n ${DSP_Namespace_2} apply -f -
 Cleanup:
 
 ```bash
-cd ${REPO}/config/default
-kustomize build . | oc delete -f -
-oc delete project ds-pipelines-controller
+
 
 cd ${REPO}/config/samples
 kustomize build . | oc -n ${DSP_Namespace} delete -f -
 kustomize build . | oc -n ${DSP_Namespace_2} delete -f -
 oc delete project ${DSP_Namespace}
 oc delete project ${DSP_Namespace_2}
+
+cd ${REPO}/config/default
+kustomize build . | oc delete -f -
+oc delete project ds-pipelines-controller
 ```
