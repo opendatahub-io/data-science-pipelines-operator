@@ -133,7 +133,7 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	} else {
 		if controllerutil.ContainsFinalizer(dspipeline, finalizerName) {
-			if err := r.cleanUpResources(dspipeline, params); err != nil {
+			if err := r.cleanUpResources(dspipeline, ctx, req, params); err != nil {
 				return ctrl.Result{}, err
 			}
 			controllerutil.RemoveFinalizer(dspipeline, finalizerName)
@@ -198,7 +198,7 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
-	err = r.ReconcileVisualizationServer(dspipeline, params)
+	err = r.ReconcileVisualizationServer(dspipeline, ctx, req, params)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -218,14 +218,19 @@ func (r *DSPipelineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// Clean Up any resources not handled by garbage collection like Cluster Resources
-func (r *DSPipelineReconciler) cleanUpResources(dsp *dspipelinesiov1alpha1.DSPipeline, params *DSPipelineParams) error {
+// Clean Up any resources not handled by garbage collection, like Cluster Resources
+func (r *DSPipelineReconciler) cleanUpResources(dsp *dspipelinesiov1alpha1.DSPipeline, ctx context.Context, req ctrl.Request, params *DSPipelineParams) error {
 	err := r.CleanUpPersistenceAgent(dsp, params)
 	if err != nil {
 		return err
 	}
 
 	err = r.CleanUpScheduledWorkflow(dsp, params)
+	if err != nil {
+		return err
+	}
+
+	err = r.CleanUpVisualizationServer(dsp, ctx, req, params)
 	if err != nil {
 		return err
 	}

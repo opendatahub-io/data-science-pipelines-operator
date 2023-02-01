@@ -22,15 +22,11 @@ spec:
       containers:
         - env:
             - name: MAX_NUM_VIEWERS
-              value: "50"
+              value: "{{.MaxNumViewer}}"
             - name: NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
+              value: "{{.Namespace}}"
             - name: MINIO_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
+              value: "{{.Namespace}}"
           image: "{{.ViewerCrdImage}}"
           imagePullPolicy: Always
           name: ds-pipeline-viewer-crd

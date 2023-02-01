@@ -1,0 +1,26 @@
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  labels:
+    opendatahub.io/notebook-image: "true"
+  annotations:
+    opendatahub.io/notebook-image-url: "https://github.com/red-hat-data-services/notebooks/blob/main/jupyter/tensorflow/ubi8-python-3.8"
+    opendatahub.io/notebook-image-name: "TensorFlow"
+    opendatahub.io/notebook-image-desc: "Jupyter notebook image with TensorFlow libraries and dependencies to start experimenting with advanced AI/ML notebooks."
+    opendatahub.io/notebook-image-order: "50"
+  name: tensorflow
+  namespace: {{.Namespace}}
+spec:
+  lookupPolicy:
+    local: true
+  tags:
+    - annotations:
+        opendatahub.io/notebook-software: '[{"name":"Python","version":"v3.8"},{"name":"TensorFlow","version":"2.7"}]'
+        opendatahub.io/notebook-python-dependencies: '[{"name":"TensorFlow","version":"2.7"},{"name":"Tensorboard","version":"2.6"},{"name":"Boto3","version":"1.17"},{"name":"Kafka-Python","version":"2.0"},{"name":"Matplotlib","version":"3.4"},{"name":"Numpy","version":"1.19"},{"name":"Pandas","version":"1.2"},{"name":"Scikit-learn","version":"0.24"},{"name":"Scipy","version":"1.6"}]'
+        openshift.io/imported-from: quay.io/modh/cuda-notebooks
+      from:
+        kind: DockerImage
+        name: quay.io/modh/cuda-notebooks@sha256:2163ba74f602ec4b3049a88dcfa4fe0a8d0fff231090001947da66ef8e75ab9a
+      name: "py3.8-cuda-11.4.2-2"
+      referencePolicy:
+        type: Local

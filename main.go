@@ -18,6 +18,8 @@ package main
 
 import (
 	"flag"
+	buildv1 "github.com/openshift/api/build/v1"
+	imagev1 "github.com/openshift/api/image/v1"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -43,6 +45,8 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(buildv1.AddToScheme(scheme))
+	utilruntime.Must(imagev1.AddToScheme(scheme))
 
 	utilruntime.Must(dspipelinesiov1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme

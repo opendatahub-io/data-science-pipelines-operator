@@ -67,6 +67,7 @@ type DSPipelineParams struct {
 	ViewerCrdImage                   string
 	CronScheduleTimezone             string
 	MLPipelineUIImage                string
+	MaxNumViewer                     string
 }
 
 func passwordGen(n int) string {
@@ -123,6 +124,7 @@ func (r *DSPipelineParams) ExtractParams(dsp *dspipelinesiov1alpha1.DSPipeline) 
 	r.VisualizationServerImage = dsp.Spec.VisualizationServer.Image
 	r.CronScheduleTimezone = "UTC"
 	r.MLPipelineUIImage = dsp.Spec.MlPipelineUI.Image
+	r.MaxNumViewer = "50"
 
 	if dsp.Spec.APIServer.ArtifactScriptConfigMap != (dspipelinesiov1alpha1.ArtifactScriptConfigMap{}) {
 		r.ArtifactScriptConfigMapName = dsp.Spec.APIServer.ArtifactScriptConfigMap.Name
