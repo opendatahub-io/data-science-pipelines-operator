@@ -50,4 +50,3 @@ func (r *DSPipelineReconciler) CleanUpUI(params *DSPipelineParams) error {
 	}
 	return nil
 }
-
