@@ -17,8 +17,6 @@ spec:
     image: quay.io/modh/odh-ml-pipelines-scheduledworkflow-container:v1.18.0-8
   viewerCRD:
     image: quay.io/modh/odh-ml-pipelines-viewercontroller-container:v1.18.0-8
-  visualizationServer:
-    image: visualization-server
   mlpipelineUI:
     image: quay.io/opendatahub/odh-ml-pipelines-frontend-container:beta-ui
     configMap: ds-pipeline-ui-configmap

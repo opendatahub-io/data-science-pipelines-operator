@@ -148,11 +148,6 @@ spec:
                   image:
                     type: string
                 type: object
-              visualizationServer:
-                properties:
-                  image:
-                    type: string
-                type: object
             type: object
           status:
             type: object

@@ -48,8 +48,6 @@ type DSPipelineParams struct {
 	TerminateStatus                  string
 	AutoUpdatePipelineDefaultVersion string
 	DBConfigCONMAXLifetimeSec        string
-	VisualizationServerServiceHost   string
-	VisualizaionServerServicePort    string
 	ObjectStoreConfigBucketName      string
 	S3CredentialsSecretName          string
 	AccessKeySecretKey               string
@@ -131,13 +129,10 @@ func (r *DSPipelineParams) ExtractParams(dsp *dspipelinesiov1alpha1.DSPipeline) 
 	r.TerminateStatus = "Cancelled"
 	r.AutoUpdatePipelineDefaultVersion = "true"
 	r.DBConfigCONMAXLifetimeSec = "120"
-	r.VisualizationServerServiceHost = "ds-pipeline-visualizationserver"
-	r.VisualizaionServerServicePort = "8888"
 	r.PersistenceAgentImage = dsp.Spec.PersistentAgent.Image
 	r.ApiServerServiceName = fmt.Sprintf("%s-%s", defaultDSPServicePrefix, r.Name)
 	r.ScheduledWorkflowImage = dsp.Spec.ScheduledWorkflow.Image
 	r.ViewerCrdImage = dsp.Spec.ViewerCRD.Image
-	r.VisualizationServerImage = dsp.Spec.VisualizationServer.Image
 	r.CronScheduleTimezone = "UTC"
 	r.MLPipelineUIImage = dsp.Spec.MlPipelineUI.Image
 	r.MaxNumViewer = "50"

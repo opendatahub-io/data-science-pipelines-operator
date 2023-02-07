@@ -24,14 +24,13 @@ import (
 
 type DSPipelineSpec struct {
 	// APIService specifies the Kubeflow Apiserver configurations
-	APIServer           `json:"apiServer,omitempty" validation:"Required"`
-	PersistentAgent     `json:"persistentAgent,omitempty"`
-	ScheduledWorkflow   `json:"scheduledWorkflow,omitempty"`
-	ViewerCRD           `json:"viewerCRD,omitempty"`
-	VisualizationServer `json:"visualizationServer,omitempty"`
-	Database            `json:"database,omitempty"`
-	Storage             `json:"storage,omitempty"`
-	MlPipelineUI        `json:"mlpipelineUI,omitempty"`
+	APIServer         `json:"apiServer,omitempty" validation:"Required"`
+	PersistentAgent   `json:"persistentAgent,omitempty"`
+	ScheduledWorkflow `json:"scheduledWorkflow,omitempty"`
+	ViewerCRD         `json:"viewerCRD,omitempty"`
+	Database          `json:"database,omitempty"`
+	Storage           `json:"storage,omitempty"`
+	MlPipelineUI      `json:"mlpipelineUI,omitempty"`
 }
 
 type APIServer struct {
@@ -55,10 +54,6 @@ type ScheduledWorkflow struct {
 }
 
 type ViewerCRD struct {
-	Image string `json:"image,omitempty"`
-}
-
-type VisualizationServer struct {
 	Image string `json:"image,omitempty"`
 }
 
