@@ -7,5 +7,6 @@ resources:
 
 images:
   - name: controller
+    # TODO: This should be updated to point to proper upstream repository
     newName: quay.io/hukhan/dspipelines-controller
     newTag: v0.0.4
