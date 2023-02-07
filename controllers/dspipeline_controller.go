@@ -219,13 +219,6 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
-	// TODO: After the build completes, image field is replaced with sha tag
-	// Need to skip reconciliation in this case
-	//err = r.ReconcileVisualizationServer(dspipeline, ctx, req, params)
-	//if err != nil {
-	//	return ctrl.Result{}, err
-	//}
-
 	return ctrl.Result{}, nil
 }
 
@@ -242,9 +235,6 @@ func (r *DSPipelineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&rbacv1.Role{}).
 		Owns(&rbacv1.RoleBinding{}).
 		Owns(&routev1.Route{}).
-		// Visualization Server Build watchers
-		//Owns(&buildv1.BuildConfig{}).
-		//Owns(&imagev1.ImageStream{}).
 		// TODO: Add watcher for ui cluster rbac since it has no owner
 		Complete(r)
 }
@@ -255,11 +245,6 @@ func (r *DSPipelineReconciler) cleanUpResources(dsp *dspipelinesiov1alpha1.DSPip
 	if err != nil {
 		return err
 	}
-
-	//err = r.CleanUpVisualizationServer(ctx, req, params)
-	//if err != nil {
-	//	return err
-	//}
 
 	return nil
 }
