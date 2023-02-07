@@ -1,4 +1,4 @@
-An operator that provisions a namespace installation of DSP within an OCP cluster.
+An operator that allows users to provision namespaced installations of DSP within a cluster.
 
 # Quickstart
 

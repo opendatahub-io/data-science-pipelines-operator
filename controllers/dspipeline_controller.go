@@ -220,7 +220,7 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	// TODO: After the build completes, image field is replaced with sha tag
-	// Need to skip reconiliation in this case
+	// Need to skip reconciliation in this case
 	//err = r.ReconcileVisualizationServer(dspipeline, ctx, req, params)
 	//if err != nil {
 	//	return ctrl.Result{}, err

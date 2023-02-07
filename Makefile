@@ -116,11 +116,11 @@ run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
 .PHONY: podman-build
-podman-build: test ## Build podman image with the manager.
+podman-build: test ## Build container image with the manager.
 	podman build -t ${IMG} .
 
 .PHONY: podman-push
-podman-push: ## Push podman image with the manager.
+podman-push: ## Push container image with the manager.
 	podman push ${IMG}
 
 ##@ Deployment
