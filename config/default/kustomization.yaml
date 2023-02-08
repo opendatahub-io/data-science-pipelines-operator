@@ -8,5 +8,5 @@ resources:
 images:
   - name: controller
     # TODO: This should be updated to point to proper upstream repository
-    newName: quay.io/hukhan/data-science-pipelines-operator
+    newName: quay.io/opendatahub/data-science-pipelines-operator
     newTag: latest
