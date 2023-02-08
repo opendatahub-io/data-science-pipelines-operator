@@ -32,7 +32,7 @@ const (
 	storageSecretTemplate         = "config/internal/minio/secret.yaml.tmpl"
 )
 
-func (r *DSPipelineReconciler) ReconcileStorage(dsp *dspipelinesiov1alpha1.DSPipeline, ctx context.Context,
+func (r *DSPipelineReconciler) ReconcileStorage(ctx context.Context, dsp *dspipelinesiov1alpha1.DSPipeline,
 	req ctrl.Request, params *DSPipelineParams) error {
 	r.Log.Info("Applying Storage Resources")
 
