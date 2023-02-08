@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ds-pipeline-viewer-crd-{{.Name}}
+  namespace: {{.Namespace}}
+  labels:
+    app: ds-pipeline-viewer-crd-{{.Name}}
+    component: data-science-pipelines

@@ -1,0 +1,158 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.10.0
+  creationTimestamp: null
+  name: dspipelines.dspipelines.opendatahub.io
+spec:
+  group: dspipelines.opendatahub.io
+  names:
+    kind: DSPipeline
+    listKind: DSPipelineList
+    plural: dspipelines
+    singular: dspipeline
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              apiServer:
+                description: APIService specifies the Kubeflow Apiserver configurations
+                properties:
+                  apiServerImage:
+                    type: string
+                  artifactImage:
+                    type: string
+                  artifactScriptConfigMap:
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        type: string
+                    type: object
+                type: object
+              database:
+                properties:
+                  customDB:
+                    properties:
+                      host:
+                        type: string
+                      passwordSecret:
+                        properties:
+                          key:
+                            type: string
+                          name:
+                            type: string
+                        type: object
+                      pipelineDBName:
+                        type: string
+                      port:
+                        type: string
+                      username:
+                        type: string
+                    type: object
+                  image:
+                    type: string
+                  mariaDB:
+                    properties:
+                      image:
+                        type: string
+                      passwordSecret:
+                        properties:
+                          key:
+                            type: string
+                          name:
+                            type: string
+                        type: object
+                      pipelineDBName:
+                        type: string
+                      username:
+                        type: string
+                    type: object
+                type: object
+              mlpipelineUI:
+                properties:
+                  configMap:
+                    type: string
+                  image:
+                    type: string
+                type: object
+              persistentAgent:
+                properties:
+                  image:
+                    type: string
+                  pipelineAPIServerName:
+                    type: string
+                type: object
+              scheduledWorkflow:
+                properties:
+                  image:
+                    type: string
+                type: object
+              storage:
+                properties:
+                  customStorage:
+                    properties:
+                      bucket:
+                        type: string
+                      host:
+                        type: string
+                      port:
+                        type: string
+                      s3CredentialsSecret:
+                        properties:
+                          accessKey:
+                            type: string
+                          secretKey:
+                            type: string
+                          secretName:
+                            type: string
+                        type: object
+                    type: object
+                  minio:
+                    properties:
+                      bucket:
+                        type: string
+                      image:
+                        type: string
+                      s3CredentialsSecret:
+                        properties:
+                          accessKey:
+                            type: string
+                          secretKey:
+                            type: string
+                          secretName:
+                            type: string
+                        type: object
+                    type: object
+                type: object
+              viewerCRD:
+                properties:
+                  image:
+                    type: string
+                type: object
+            type: object
+          status:
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
