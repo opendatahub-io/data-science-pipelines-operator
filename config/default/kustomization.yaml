@@ -1,5 +1,5 @@
-namespace: ds-pipelines-controller
-namePrefix: ds-pipelines-controller-
+namespace: data-science-pipelines-operator
+namePrefix: data-science-pipelines-operator-
 resources:
 - ../crd
 - ../rbac
@@ -8,5 +8,5 @@ resources:
 images:
   - name: controller
     # TODO: This should be updated to point to proper upstream repository
-    newName: quay.io/hukhan/dspipelines-controller
-    newTag: v0.0.4
+    newName: quay.io/hukhan/data-science-pipelines-operator
+    newTag: v0.0.6

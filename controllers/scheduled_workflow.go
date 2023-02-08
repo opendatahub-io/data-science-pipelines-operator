@@ -17,7 +17,7 @@ limitations under the License.
 package controllers
 
 import (
-	dspipelinesiov1alpha1 "github.com/opendatahub-io/ds-pipelines-controller/api/v1alpha1"
+	dspipelinesiov1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 )
 
 var scheduledWorkflowTemplates = []string{

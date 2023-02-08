@@ -1,4 +1,4 @@
-module github.com/opendatahub-io/ds-pipelines-controller
+module github.com/opendatahub-io/data-science-pipelines-operator
 
 go 1.18
 

@@ -6,8 +6,8 @@ metadata:
     app.kubernetes.io/name: role
     app.kubernetes.io/instance: leader-election-role
     app.kubernetes.io/component: rbac
-    app.kubernetes.io/created-by: ds-pipelines-controller
-    app.kubernetes.io/part-of: ds-pipelines-controller
+    app.kubernetes.io/created-by: data-science-pipelines-operator
+    app.kubernetes.io/part-of: data-science-pipelines-operator
   name: leader-election-role
 rules:
 - apiGroups:
