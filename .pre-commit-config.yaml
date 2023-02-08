@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v3.3.0
     hooks:
       - id: trailing-whitespace
         exclude: README.md
@@ -13,7 +13,7 @@ repos:
       - id: detect-private-key
 
   - repo: https://github.com/adrienverge/yamllint.git
-    rev: v1.29.0
+    rev: v1.25.0
     hooks:
       - id: yamllint
         files: \.(yaml|yml)$
