@@ -51,6 +51,9 @@ func (r *DSPipelineReconciler) Apply(owner mf.Owner, params *DSPipelineParams, t
 	tmplManifest, err = tmplManifest.Transform(
 		mf.InjectOwner(owner),
 	)
+	if err != nil {
+		return err
+	}
 
 	tmplManifest, err = tmplManifest.Transform(fns...)
 	if err != nil {
@@ -154,7 +157,7 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	} else {
 		if controllerutil.ContainsFinalizer(dspipeline, finalizerName) {
-			if err := r.cleanUpResources(dspipeline, ctx, req, params); err != nil {
+			if err := r.cleanUpResources(ctx, req, dspipeline, params); err != nil {
 				return ctrl.Result{}, err
 			}
 			controllerutil.RemoveFinalizer(dspipeline, finalizerName)
@@ -178,14 +181,14 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	if !usingCustomStorage {
-		err := r.ReconcileStorage(dspipeline, ctx, req, params)
+		err := r.ReconcileStorage(ctx, dspipeline, req, params)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 
 	if !usingCustomDB {
-		err = r.ReconcileDatabase(dspipeline, ctx, req, params)
+		err = r.ReconcileDatabase(ctx, dspipeline, req, params)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -194,7 +197,7 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// TODO: Ensure db/storage (if deploying custom) are running before
 	// Use status fields to conditionally deploy
 
-	err = r.ReconcileAPIServer(dspipeline, ctx, req, params)
+	err = r.ReconcileAPIServer(ctx, dspipeline, req, params)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -240,7 +243,7 @@ func (r *DSPipelineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 // Clean Up any resources not handled by garbage collection, like Cluster Resources
-func (r *DSPipelineReconciler) cleanUpResources(dsp *dspipelinesiov1alpha1.DSPipeline, ctx context.Context, req ctrl.Request, params *DSPipelineParams) error {
+func (r *DSPipelineReconciler) cleanUpResources(ctx context.Context, req ctrl.Request, dsp *dspipelinesiov1alpha1.DSPipeline, params *DSPipelineParams) error {
 	err := r.CleanUpUI(params)
 	if err != nil {
 		return err

@@ -21,23 +21,23 @@ spec:
     image: quay.io/opendatahub/odh-ml-pipelines-frontend-container:beta-ui
     configMap: ds-pipeline-ui-configmap
   database:
-    mariaDB: # mutually exclusive with custom
+    mariaDB:   # mutually exclusive with custom
       image: registry.redhat.io/rhel8/mariadb-103:1-188
       username: mlpipeline
       pipelineDBName: randomDBName
       passwordSecret:
         name: ds-pipelines-db-sample
         key: password
-#    customDB:
-#      host: mysql:3306
-#      port: "8888"
-#      username: root
-#      pipelineDBName: randomDBName
-#      passwordSecret:
-#        name: somesecret
-#        key: somekey
+    # customDB:
+    #   host: mysql:3306
+    #   port: "8888"
+    #   username: root
+    #   pipelineDBName: randomDBName
+    #   passwordSecret:
+    #     name: somesecret
+    #     key: somekey
   storage:
-    minio: # mutually exclusive with custom
+    minio:  # mutually exclusive with custom
       image: quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance
       bucket: mlpipeline
       s3CredentialsSecret:

@@ -40,7 +40,7 @@ var apiServerTemplates = []string{
 const minioArtifactSecret = "config/internal/apiserver/mlpipeline-minio-artifact.yaml.tmpl"
 const minioArtifactSecretName = "mlpipeline-minio-artifact"
 
-func (r *DSPipelineReconciler) ReconcileAPIServer(dsp *dspipelinesiov1alpha1.DSPipeline, ctx context.Context, req ctrl.Request, params *DSPipelineParams) error {
+func (r *DSPipelineReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspipelinesiov1alpha1.DSPipeline, req ctrl.Request, params *DSPipelineParams) error {
 	r.Log.Info("Applying APIServer Resources")
 
 	for _, template := range apiServerTemplates {

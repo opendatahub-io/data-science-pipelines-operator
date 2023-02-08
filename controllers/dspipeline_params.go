@@ -38,7 +38,7 @@ type DSPipelineParams struct {
 	Name                             string
 	Namespace                        string
 	Owner                            mf.Owner
-	ApiServerImage                   string
+	APIServerImage                   string
 	PipelineRuntime                  string
 	StripEOF                         string
 	ArtifactScript                   string
@@ -75,7 +75,7 @@ type DSPipelineParams struct {
 	DBServiceName                    string
 	MinioServiceName                 string
 	PersistenceAgentImage            string
-	ApiServerServiceName             string
+	APIServerServiceName             string
 	ScheduledWorkflowImage           string
 	VisualizationServerImage         string
 	ViewerCrdImage                   string
@@ -116,7 +116,7 @@ func (r *DSPipelineParams) ExtractParams(dsp *dspipelinesiov1alpha1.DSPipeline) 
 	r.Name = dsp.Name
 	r.Namespace = dsp.Namespace
 	r.Owner = dsp
-	r.ApiServerImage = dsp.Spec.APIServer.Image
+	r.APIServerImage = dsp.Spec.APIServer.Image
 	r.PipelineRuntime = "tekton"
 	r.StripEOF = "true"
 	r.ObjectStoreConfigSecure = "false"
@@ -130,7 +130,7 @@ func (r *DSPipelineParams) ExtractParams(dsp *dspipelinesiov1alpha1.DSPipeline) 
 	r.AutoUpdatePipelineDefaultVersion = "true"
 	r.DBConfigCONMAXLifetimeSec = "120"
 	r.PersistenceAgentImage = dsp.Spec.PersistentAgent.Image
-	r.ApiServerServiceName = fmt.Sprintf("%s-%s", defaultDSPServicePrefix, r.Name)
+	r.APIServerServiceName = fmt.Sprintf("%s-%s", defaultDSPServicePrefix, r.Name)
 	r.ScheduledWorkflowImage = dsp.Spec.ScheduledWorkflow.Image
 	r.ViewerCrdImage = dsp.Spec.ViewerCRD.Image
 	r.CronScheduleTimezone = "UTC"

@@ -32,7 +32,7 @@ const (
 	DBServiceTemplate        = "config/internal/mariadb/service.yaml.tmpl"
 )
 
-func (r *DSPipelineReconciler) ReconcileDatabase(dsp *dspipelinesiov1alpha1.DSPipeline, ctx context.Context,
+func (r *DSPipelineReconciler) ReconcileDatabase(ctx context.Context, dsp *dspipelinesiov1alpha1.DSPipeline,
 	req ctrl.Request, params *DSPipelineParams) error {
 	r.Log.Info("Applying Database Resources")
 
