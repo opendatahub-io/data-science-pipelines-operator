@@ -4,8 +4,8 @@ layout:
 plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
-projectName: ds-pipelines-controller
-repo: github.com/opendatahub-io/ds-pipelines-controller
+projectName: data-science-pipelines-operator
+repo: github.com/opendatahub-io/data-science-pipelines-operator
 resources:
 - api:
     crdVersion: v1
@@ -14,6 +14,6 @@ resources:
   domain: opendatahub.io
   group: dspipelines
   kind: DSPipeline
-  path: github.com/opendatahub-io/ds-pipelines-controller/api/v1alpha1
+  path: github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1
   version: v1alpha1
 version: "3"

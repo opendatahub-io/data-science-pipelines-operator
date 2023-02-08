@@ -8,8 +8,8 @@ metadata:
     app.kubernetes.io/name: deployment
     app.kubernetes.io/instance: controller-manager
     app.kubernetes.io/component: manager
-    app.kubernetes.io/created-by: ds-pipelines-controller
-    app.kubernetes.io/part-of: ds-pipelines-controller
+    app.kubernetes.io/created-by: data-science-pipelines-operator
+    app.kubernetes.io/part-of: data-science-pipelines-operator
 spec:
   selector:
     matchLabels:

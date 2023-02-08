@@ -4,7 +4,7 @@ An operator that allows users to provision namespaced installations of DSP withi
 
 Deploy the operator
 ```bash
-oc new-project ds-pipelines-controller
+oc new-project data-science-pipelines-operator
 cd ${REPO}/config/default
 kustomize build . | oc apply -f -
 ```
@@ -39,5 +39,5 @@ oc delete project ${DSP_Namespace_2}
 
 cd ${REPO}/config/default
 kustomize build . | oc delete -f -
-oc delete project ds-pipelines-controller
+oc delete project data-science-pipelines-operator
 ```

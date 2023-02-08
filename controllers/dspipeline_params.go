@@ -19,7 +19,7 @@ package controllers
 import (
 	"fmt"
 	mf "github.com/manifestival/manifestival"
-	dspipelinesiov1alpha1 "github.com/opendatahub-io/ds-pipelines-controller/api/v1alpha1"
+	dspipelinesiov1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"math/rand"
 	"time"
 )
