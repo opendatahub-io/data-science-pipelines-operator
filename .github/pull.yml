@@ -1,0 +1,8 @@
+version: "1"
+rules:
+  - base: main
+    upstream: opendatahub-io:main
+    mergeMethod: none  # don't automatically merge
+    mergeUnstable: false
+label: "do-not-merge/hold"
+conflictLabel: "needs-rebase"
