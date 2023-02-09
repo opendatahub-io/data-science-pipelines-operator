@@ -21,10 +21,10 @@ import (
 )
 
 var persistenceAgentTemplates = []string{
-	"config/internal/persistence-agent/deployment.yaml.tmpl",
-	"config/internal/persistence-agent/sa.yaml.tmpl",
-	"config/internal/persistence-agent/role.yaml.tmpl",
-	"config/internal/persistence-agent/rolebinding.yaml.tmpl",
+	"persistence-agent/deployment.yaml.tmpl",
+	"persistence-agent/sa.yaml.tmpl",
+	"persistence-agent/role.yaml.tmpl",
+	"persistence-agent/rolebinding.yaml.tmpl",
 }
 
 func (r *DSPipelineReconciler) ReconcilePersistenceAgent(dsp *dspipelinesiov1alpha1.DSPipeline,

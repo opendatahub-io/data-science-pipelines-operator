@@ -25,19 +25,19 @@ import (
 )
 
 var apiServerTemplates = []string{
-	"config/internal/apiserver/artifact_script.yaml.tmpl",
-	"config/internal/apiserver/role_ds-pipeline.yaml.tmpl",
-	"config/internal/apiserver/role_pipeline-runner.yaml.tmpl",
-	"config/internal/apiserver/rolebinding_ds-pipeline.yaml.tmpl",
-	"config/internal/apiserver/rolebinding_pipeline-runner.yaml.tmpl",
-	"config/internal/apiserver/sa_ds-pipeline.yaml.tmpl",
-	"config/internal/apiserver/sa_pipeline-runner.yaml.tmpl",
-	"config/internal/apiserver/service.yaml.tmpl",
-	"config/internal/apiserver/deployment.yaml.tmpl",
+	"apiserver/artifact_script.yaml.tmpl",
+	"apiserver/role_ds-pipeline.yaml.tmpl",
+	"apiserver/role_pipeline-runner.yaml.tmpl",
+	"apiserver/rolebinding_ds-pipeline.yaml.tmpl",
+	"apiserver/rolebinding_pipeline-runner.yaml.tmpl",
+	"apiserver/sa_ds-pipeline.yaml.tmpl",
+	"apiserver/sa_pipeline-runner.yaml.tmpl",
+	"apiserver/service.yaml.tmpl",
+	"apiserver/deployment.yaml.tmpl",
 }
 
 // This is hardcoded in kfp-tekton, apiserver will always use this hardcoded secret for tekton resources
-const minioArtifactSecret = "config/internal/apiserver/mlpipeline-minio-artifact.yaml.tmpl"
+const minioArtifactSecret = "apiserver/mlpipeline-minio-artifact.yaml.tmpl"
 const minioArtifactSecretName = "mlpipeline-minio-artifact"
 
 func (r *DSPipelineReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspipelinesiov1alpha1.DSPipeline, req ctrl.Request, params *DSPipelineParams) error {

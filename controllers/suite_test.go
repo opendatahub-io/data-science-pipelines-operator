@@ -18,15 +18,23 @@ package controllers
 
 import (
 	"context"
+	"github.com/manifestival/manifestival"
+	mf "github.com/manifestival/manifestival"
+	buildv1 "github.com/openshift/api/build/v1"
+	imagev1 "github.com/openshift/api/image/v1"
+	routev1 "github.com/openshift/api/route/v1"
 	"go.uber.org/zap/zapcore"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"path/filepath"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"testing"
 	"time"
 
-	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"k8s.io/client-go/kubernetes/scheme"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -48,6 +56,13 @@ var (
 	cancel    context.CancelFunc
 )
 
+const (
+	WorkingNamespace = "default"
+	DSPCRName        = "testdsp"
+	timeout          = time.Second * 20
+	interval         = time.Millisecond * 10
+)
+
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
 
@@ -66,7 +81,7 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases")},
+		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases"), filepath.Join("..", "config", "crd", "external")},
 		ErrorIfCRDPathMissing: true,
 	}
 
@@ -76,20 +91,76 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	err = dspipelinesiov1alpha1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
-
+	// Register API objects
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme.Scheme))
+	utilruntime.Must(buildv1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(imagev1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(routev1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(dspipelinesiov1alpha1.AddToScheme(scheme.Scheme))
 	//+kubebuilder:scaffold:scheme
 
+	// Initialize Kubernetes client
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
-})
+	// Setup controller manager
+	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+		Scheme:             scheme.Scheme,
+		LeaderElection:     false,
+		MetricsBindAddress: "0",
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	err = (&DSPipelineReconciler{
+		Client:        k8sClient,
+		Log:           ctrl.Log.WithName("controllers").WithName("ds-pipelines-controller"),
+		Scheme:        scheme.Scheme,
+		TemplatesPath: "../config/internal/",
+	}).SetupWithManager(mgr)
+	Expect(err).ToNot(HaveOccurred())
+
+	// Start the manager
+	go func() {
+		defer GinkgoRecover()
+		err = mgr.Start(ctx)
+		Expect(err).ToNot(HaveOccurred(), "Failed to run manager")
+	}()
+
+}, 60)
 
 var _ = AfterSuite(func() {
+	// Give some time to allow workers to gracefully shutdown
+	time.Sleep(5 * time.Second)
 	cancel()
 	By("tearing down the test environment")
+	time.Sleep(1 * time.Second)
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })
+
+// Cleanup resources to not contaminate between tests
+var _ = AfterEach(func() {
+	inNamespace := client.InNamespace(WorkingNamespace)
+	Expect(k8sClient.DeleteAllOf(context.TODO(), &dspipelinesiov1alpha1.DSPipeline{}, inNamespace)).ToNot(HaveOccurred())
+
+})
+
+func convertToStructuredResource(path string, out interface{}, opts manifestival.Option) error {
+	m, err := mf.ManifestFrom(mf.Recursive(path), opts)
+	if err != nil {
+		return err
+	}
+	m, err = m.Transform(mf.InjectNamespace(WorkingNamespace))
+	if err != nil {
+		return err
+	}
+	if err != nil {
+		return err
+	}
+	err = scheme.Scheme.Convert(&m.Resources()[0], out, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}

@@ -1,94 +1,96 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ds-pipeline-{{.Name}}
-  namespace: {{.Namespace}}
+  name: ds-pipeline-testdsp
+  namespace: default
   labels:
-    app: ds-pipeline-{{.Name}}
+    app: ds-pipeline-testdsp
     component: data-science-pipelines
 spec:
   selector:
     matchLabels:
-      app: ds-pipeline-{{.Name}}
+      app: ds-pipeline-testdsp
       component: data-science-pipelines
   template:
     metadata:
       labels:
-        app: ds-pipeline-{{.Name}}
+        app: ds-pipeline-testdsp
         component: data-science-pipelines
     spec:
       containers:
         - env:
             - name: POD_NAMESPACE
-              value: "{{.Namespace}}"
+              value: "default"
             - name: DBCONFIG_USER
-              value: "{{.DBUser}}"
+              value: "mlpipeline"
             - name: DBCONFIG_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  key: "{{.DBPasswordSecretKey}}"
-                  name: "{{.DBPasswordSecret}}"
+                  key: "password"
+                  name: "ds-pipelines-db-testdsp"
             - name: DBCONFIG_DBNAME
-              value: "{{.DBName}}"
+              value: "randomDBName"
             - name: DBCONFIG_HOST
-              value: "{{.DBHost}}"
+              value: "mariadb-testdsp.default.svc.cluster.local"
             - name: DBCONFIG_PORT
-              value: "{{.DBPort}}"
+              value: "3306"
             - name: PIPELINE_RUNTIME
-              value: "{{.PipelineRuntime}}"
+              value: "tekton"
             - name: ARTIFACT_BUCKET
-              value: "{{.ArtifactBucket}}"
+              value: "mlpipeline"
             - name: ARTIFACT_ENDPOINT
-              value: "{{.ArtifactEndpoint}}"
+              value: "minio-testdsp:9000"
             - name: ARTIFACT_SCRIPT
               valueFrom:
                 configMapKeyRef:
-                  key: "{{ .ArtifactScriptConfigMapKey }}"
-                  name: "{{ .ArtifactScriptConfigMapName }}"
+                  key: "artifact_script"
+                  name: "ds-pipeline-artifact-script-testdsp"
             - name: ARTIFACT_IMAGE
-              value: "{{.ArtifactImage}}"
+              value: "quay.io/modh/odh-ml-pipelines-artifact-manager-container:v1.18.0-8"
             - name: INJECT_DEFAULT_SCRIPT
-              value: "{{.InjectDefaultScript}}"
+              value: "true"
             - name: APPLY_TEKTON_CUSTOM_RESOURCE
-              value: "{{.ApplyTektonCustomResource}}"
+              value: "true"
             - name: TERMINATE_STATUS
-              value: "{{.TerminateStatus}}"
+              value: "Cancelled"
             - name: AUTO_UPDATE_PIPELINE_DEFAULT_VERSION
-              value: "{{.AutoUpdatePipelineDefaultVersion}}"
+              value: "true"
             - name: DBCONFIG_CONMAXLIFETIMESEC
-              value: "{{.DBConfigCONMAXLifetimeSec}}"
+              value: "120"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_HOST
               value: "ds-pipeline-visualizationserver"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
               value: "8888"
             - name: OBJECTSTORECONFIG_BUCKETNAME
-              value: "{{.ObjectStoreConfigBucketName}}"
+              value: "mlpipeline"
             - name: OBJECTSTORECONFIG_ACCESSKEY
               valueFrom:
                 secretKeyRef:
-                  key: "{{.AccessKeySecretKey}}"
-                  name: "{{.S3CredentialsSecretName}}"
+                  key: "accesskey"
+                  name: "somesecret-testdsp"
             - name: OBJECTSTORECONFIG_SECRETACCESSKEY
               valueFrom:
                 secretKeyRef:
-                  key: "{{.SecretKey}}"
-                  name: "{{.S3CredentialsSecretName}}"
+                  key: "secretkey"
+                  name: "somesecret-testdsp"
             - name: OBJECTSTORECONFIG_SECURE
-              value: "{{.ObjectStoreConfigSecure}}"
+              value: "false"
             - name: MINIO_SERVICE_SERVICE_HOST
-              value: "{{.MinioServiceServiceHost}}"
+              value: "minio-testdsp.default.svc.cluster.local"
             - name: MINIO_SERVICE_SERVICE_PORT
-              value: "{{.MinioServiceServicePort}}"
+              value: "9000"
             - name: DEFAULTPIPELINERUNNERSERVICEACCOUNT
-              value: "pipeline-runner-{{.Name}}"
-          image: {{.APIServerImage}}
+              value: "pipeline-runner-testdsp"
+          image: quay.io/modh/odh-ml-pipelines-api-server-container:v1.18.0-8
           imagePullPolicy: Always
           name: ds-pipeline-api-server
           ports:
             - containerPort: 8888
               name: http
+              protocol: TCP
             - containerPort: 8887
               name: grpc
+              protocol: TCP
           livenessProbe:
             exec:
               command:
@@ -103,7 +105,7 @@ spec:
             timeoutSeconds: 2
           readinessProbe:
             exec:
-              command: # wget -q -S -O - http://localhost:8888/apis/v1beta1/healthz
+              command:
                 - wget
                 - -q
                 - -S
@@ -120,4 +122,4 @@ spec:
             limits:
               cpu: 500m
               memory: 1Gi
-      serviceAccountName: ds-pipeline-{{.Name}}
+      serviceAccountName: ds-pipeline-testdsp

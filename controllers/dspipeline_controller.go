@@ -39,12 +39,13 @@ const finalizerName = "dspipelines.opendatahub.io/finalizer"
 // DSPipelineReconciler reconciles a DSPipelineParams object
 type DSPipelineReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	Log    logr.Logger
+	Scheme        *runtime.Scheme
+	Log           logr.Logger
+	TemplatesPath string
 }
 
 func (r *DSPipelineReconciler) Apply(owner mf.Owner, params *DSPipelineParams, template string, fns ...mf.Transformer) error {
-	tmplManifest, err := config.Manifest(r.Client, template, params)
+	tmplManifest, err := config.Manifest(r.Client, r.TemplatesPath+template, params)
 	if err != nil {
 		return fmt.Errorf("error loading template yaml: %w", err)
 	}
@@ -67,7 +68,7 @@ func (r *DSPipelineReconciler) Apply(owner mf.Owner, params *DSPipelineParams, t
 }
 
 func (r *DSPipelineReconciler) ApplyWithoutOwner(params *DSPipelineParams, template string, fns ...mf.Transformer) error {
-	tmplManifest, err := config.Manifest(r.Client, template, params)
+	tmplManifest, err := config.Manifest(r.Client, r.TemplatesPath+template, params)
 	if err != nil {
 		return fmt.Errorf("error loading template yaml: %w", err)
 	}
@@ -84,7 +85,7 @@ func (r *DSPipelineReconciler) ApplyWithoutOwner(params *DSPipelineParams, templ
 }
 
 func (r *DSPipelineReconciler) DeleteResource(params *DSPipelineParams, template string, fns ...mf.Transformer) error {
-	tmplManifest, err := config.Manifest(r.Client, template, params)
+	tmplManifest, err := config.Manifest(r.Client, r.TemplatesPath+template, params)
 	if err != nil {
 		return fmt.Errorf("error loading template yaml: %w", err)
 	}
@@ -127,7 +128,7 @@ func (r *DSPipelineReconciler) DeleteResource(params *DSPipelineParams, template
 func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("namespace", req.Namespace)
 
-	log.V(1).Info("DSPipelineParams Reconciler called.")
+	log.V(1).Info("DSPipeline Reconciler called.")
 
 	params := &DSPipelineParams{}
 
@@ -139,6 +140,14 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	} else if err != nil {
 		log.Error(err, "Unable to fetch the DSPipelineParams")
 		return ctrl.Result{}, err
+	}
+
+	// FixMe: Hack for stubbing gvk during tests as these are not populated by test suite
+	// In production we expect these to be populated
+	if dspipeline.Kind == "" {
+		dspipeline = dspipeline.DeepCopy()
+		gvk := dspipelinesiov1alpha1.GroupVersion.WithKind("DSPipeline")
+		dspipeline.APIVersion, dspipeline.Kind = gvk.Version, gvk.Kind
 	}
 
 	err = params.ExtractParams(dspipeline)

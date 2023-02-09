@@ -1,0 +1,37 @@
+apiVersion: dspipelines.opendatahub.io/v1alpha1
+kind: DSPipeline
+metadata:
+  name: testdsp
+spec:
+  apiServer:
+    artifactScriptConfigMap:
+      name: ds-pipeline-artifact-script-testdsp
+      key: "artifact_script"
+    apiServerImage: quay.io/modh/odh-ml-pipelines-api-server-container:v1.18.0-8
+    artifactImage: quay.io/modh/odh-ml-pipelines-artifact-manager-container:v1.18.0-8
+  persistentAgent:
+    image: quay.io/modh/odh-ml-pipelines-persistenceagent-container:v1.18.0-8
+    pipelineAPIServerName: apiserver
+  scheduledWorkflow:
+    image: quay.io/modh/odh-ml-pipelines-scheduledworkflow-container:v1.18.0-8
+  viewerCRD:
+    image: quay.io/modh/odh-ml-pipelines-viewercontroller-container:v1.18.0-8
+  mlpipelineUI:
+    image: quay.io/opendatahub/odh-ml-pipelines-frontend-container:beta-ui
+    configMap: ds-pipeline-ui-configmap
+  database:
+    mariaDB:
+      image: registry.redhat.io/rhel8/mariadb-103:1-188
+      username: mlpipeline
+      pipelineDBName: randomDBName
+      passwordSecret:
+        name: ds-pipelines-db-testdsp
+        key: password
+  storage:
+    minio:
+      image: quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance
+      bucket: mlpipeline
+      s3CredentialsSecret:
+        secretName: somesecret-testdsp
+        accessKey: accesskey
+        secretKey: secretkey
