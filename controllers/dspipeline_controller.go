@@ -143,6 +143,7 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	// FixMe: Hack for stubbing gvk during tests as these are not populated by test suite
+	// https://github.com/opendatahub-io/data-science-pipelines-operator/pull/7#discussion_r1102887037
 	// In production we expect these to be populated
 	if dspipeline.Kind == "" {
 		dspipeline = dspipeline.DeepCopy()

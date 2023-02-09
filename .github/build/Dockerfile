@@ -8,6 +8,7 @@ ARG STATICCHECK_VERSION=v0.3.3
 ARG INEFFASSIGN_VERSION=13ace05
 ARG ERRCHECK_VERSION=v1.6.3
 ARG GHCLI_VERSION=2.23.0
+ARG SETUP_ENVTEST=latest
 
 ENV GOPATH=/build \
   GO111MODULE=on \
@@ -19,6 +20,7 @@ RUN dnf -y install \
     golang \
     git
 
+RUN go install sigs.k8s.io/controller-runtime/tools/setup-envtest@${SETUP_ENVTEST}
 RUN go install github.com/mgechev/revive@${REVIVE_VERSION}
 RUN go install honnef.co/go/tools/cmd/staticcheck@${STATICCHECK_VERSION}
 RUN go install github.com/gordonklaus/ineffassign@${INEFFASSIGN_VERSION}
@@ -38,7 +40,8 @@ FROM ${CI_BASE}
 ENV SUMMARY="Toolchain for running pre-commit hooks." \
     DESCRIPTION="Toolchain for running pre-commit hooks." \
     PATH=/build/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-  GO111MODULE=on
+  GO111MODULE=on \
+  ENVTEST_K8S_VERSION=1.25.0
 
 LABEL summary="$SUMMARY" \
     description="$DESCRIPTION" \
@@ -53,11 +56,13 @@ RUN dnf -y install \
     python3-pip \
     golang \
     git \
-    make \
-    && \
+    make && \
+    /build/bin/setup-envtest use ${ENVTEST_K8S_VERSION} --bin-dir /build/bin -p path && \
     dnf clean all
 
 WORKDIR /build/src
+
+ENV KUBEBUILDER_ASSETS=/build/bin/k8s/${ENVTEST_K8S_VERSION}-linux-amd64
 
 COPY requirements.txt /tmp/requirements.txt
 RUN python3 -m venv /build
