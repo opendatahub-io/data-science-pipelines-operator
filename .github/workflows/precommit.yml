@@ -12,7 +12,7 @@ jobs:
   precommit:
     runs-on: ubuntu-latest
     container:
-      image: quay.io/opendatahub/pre-commit-go-toolchain:v0.1
+      image: quay.io/opendatahub/pre-commit-go-toolchain:v0.2
       env:
         XDG_CACHE_HOME: /cache
         GOCACHE: /cache/go-build

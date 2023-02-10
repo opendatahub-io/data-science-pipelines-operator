@@ -21,21 +21,21 @@ import (
 )
 
 var mlPipelineUITemplates = []string{
-	"config/internal/mlpipelines-ui/configmap.yaml.tmpl",
-	"config/internal/mlpipelines-ui/deployment.yaml.tmpl",
-	"config/internal/mlpipelines-ui/role.yaml.tmpl",
-	"config/internal/mlpipelines-ui/rolebinding.yaml.tmpl",
-	"config/internal/mlpipelines-ui/route.yaml.tmpl",
-	"config/internal/mlpipelines-ui/sa-ds-pipeline-ui.yaml.tmpl",
-	"config/internal/mlpipelines-ui/sa_ds-pipelines-viewer.yaml.tmpl",
-	"config/internal/mlpipelines-ui/service.yaml.tmpl",
+	"mlpipelines-ui/configmap.yaml.tmpl",
+	"mlpipelines-ui/deployment.yaml.tmpl",
+	"mlpipelines-ui/role.yaml.tmpl",
+	"mlpipelines-ui/rolebinding.yaml.tmpl",
+	"mlpipelines-ui/route.yaml.tmpl",
+	"mlpipelines-ui/sa-ds-pipeline-ui.yaml.tmpl",
+	"mlpipelines-ui/sa_ds-pipelines-viewer.yaml.tmpl",
+	"mlpipelines-ui/service.yaml.tmpl",
 }
 
 var mlPipelineUIClusterScopedTemplates = []string{
-	"config/internal/mlpipelines-ui/clusterrolebinding.yaml.tmpl",
+	"mlpipelines-ui/clusterrolebinding.yaml.tmpl",
 }
 
-const uIClusterRolebindingTemplate = "config/internal/mlpipelines-ui/clusterrolebinding.yaml.tmpl"
+const uIClusterRolebindingTemplate = "mlpipelines-ui/clusterrolebinding.yaml.tmpl"
 
 func (r *DSPipelineReconciler) ReconcileUI(dsp *dspipelinesiov1alpha1.DSPipeline,
 	params *DSPipelineParams) error {

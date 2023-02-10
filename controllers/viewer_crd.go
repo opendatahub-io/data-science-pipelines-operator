@@ -21,10 +21,10 @@ import (
 )
 
 var viewerCRDTemplates = []string{
-	"config/internal/viewer-crd/deployment.yaml.tmpl",
-	"config/internal/viewer-crd/role.yaml.tmpl",
-	"config/internal/viewer-crd/rolebinding.yaml.tmpl",
-	"config/internal/viewer-crd/sa.yaml.tmpl",
+	"viewer-crd/deployment.yaml.tmpl",
+	"viewer-crd/role.yaml.tmpl",
+	"viewer-crd/rolebinding.yaml.tmpl",
+	"viewer-crd/sa.yaml.tmpl",
 }
 
 func (r *DSPipelineReconciler) ReconcileViewerCRD(dsp *dspipelinesiov1alpha1.DSPipeline,

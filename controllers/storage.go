@@ -26,10 +26,10 @@ import (
 )
 
 const (
-	storageDeploymentTemplate     = "config/internal/minio/deployment.yaml.tmpl"
-	storagePvcTemplate            = "config/internal/minio/pvc.yaml.tmpl"
-	storageServiceAccountTemplate = "config/internal/minio/service.yaml.tmpl"
-	storageSecretTemplate         = "config/internal/minio/secret.yaml.tmpl"
+	storageDeploymentTemplate     = "minio/deployment.yaml.tmpl"
+	storagePvcTemplate            = "minio/pvc.yaml.tmpl"
+	storageServiceAccountTemplate = "minio/service.yaml.tmpl"
+	storageSecretTemplate         = "minio/secret.yaml.tmpl"
 )
 
 func (r *DSPipelineReconciler) ReconcileStorage(ctx context.Context, dsp *dspipelinesiov1alpha1.DSPipeline,

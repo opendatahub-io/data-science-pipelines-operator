@@ -21,12 +21,12 @@ import (
 )
 
 var scheduledWorkflowTemplates = []string{
-	"config/internal/scheduled-workflow/deployment.yaml.tmpl",
-	"config/internal/scheduled-workflow/role.yaml.tmpl",
-	"config/internal/scheduled-workflow/rolebinding.yaml.tmpl",
-	"config/internal/scheduled-workflow/sa.yaml.tmpl",
-	"config/internal/scheduled-workflow/role.yaml.tmpl",
-	"config/internal/scheduled-workflow/rolebinding.yaml.tmpl",
+	"scheduled-workflow/deployment.yaml.tmpl",
+	"scheduled-workflow/role.yaml.tmpl",
+	"scheduled-workflow/rolebinding.yaml.tmpl",
+	"scheduled-workflow/sa.yaml.tmpl",
+	"scheduled-workflow/role.yaml.tmpl",
+	"scheduled-workflow/rolebinding.yaml.tmpl",
 }
 
 func (r *DSPipelineReconciler) ReconcileScheduledWorkflow(dsp *dspipelinesiov1alpha1.DSPipeline,

@@ -25,11 +25,11 @@ import (
 )
 
 const (
-	DBDeploymentTemplate     = "config/internal/mariadb/deployment.yaml.tmpl"
-	DBPvcTemplate            = "config/internal/mariadb/pvc.yaml.tmpl"
-	DBServiceAccountTemplate = "config/internal/mariadb/sa.yaml.tmpl"
-	DBSecretTemplate         = "config/internal/mariadb/secret.yaml.tmpl"
-	DBServiceTemplate        = "config/internal/mariadb/service.yaml.tmpl"
+	DBDeploymentTemplate     = "mariadb/deployment.yaml.tmpl"
+	DBPvcTemplate            = "mariadb/pvc.yaml.tmpl"
+	DBServiceAccountTemplate = "mariadb/sa.yaml.tmpl"
+	DBSecretTemplate         = "mariadb/secret.yaml.tmpl"
+	DBServiceTemplate        = "mariadb/service.yaml.tmpl"
 )
 
 func (r *DSPipelineReconciler) ReconcileDatabase(ctx context.Context, dsp *dspipelinesiov1alpha1.DSPipeline,
