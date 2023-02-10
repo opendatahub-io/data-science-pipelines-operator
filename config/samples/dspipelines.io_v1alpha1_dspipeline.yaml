@@ -2,49 +2,110 @@ apiVersion: dspipelines.opendatahub.io/v1alpha1
 kind: DSPipeline
 metadata:
   name: sample
+  namespace: data-science-project
 spec:
   apiServer:
+    deploy: true
+    image: quay.io/modh/odh-ml-pipelines-api-server-container:v1.18.0-8
+    resources:
+      requests:
+        cpu: 250m
+        memory: 500Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
     # optional (default is: ds-pipeline-artifact-script-${metadata.name} / artifact_script)
     artifactScriptConfigMap:
       name: ds-pipeline-artifact-script-sample
       key: "artifact_script"
-    apiServerImage: quay.io/modh/odh-ml-pipelines-api-server-container:v1.18.0-8
     artifactImage: quay.io/modh/odh-ml-pipelines-artifact-manager-container:v1.18.0-8
+    dBConfigConMaxLifetimeSec: 120
+    collectMetrics: true
   persistentAgent:
+    deploy: true
     image: quay.io/modh/odh-ml-pipelines-persistenceagent-container:v1.18.0-8
     pipelineAPIServerName: apiserver
+    numWorkers: 2  # Number of worker for sync job.
+    resources:
+      requests:
+        cpu: 120m
+        memory: 500Mi
+      limits:
+        cpu: 250m
+        memory: 1Gi
   scheduledWorkflow:
+    deploy: true
     image: quay.io/modh/odh-ml-pipelines-scheduledworkflow-container:v1.18.0-8
+    resources:
+      requests:
+        cpu: 120m
+        memory: 100Mi
+      limits:
+        cpu: 250m
+        memory: 250Mi
   viewerCRD:
+    deploy: true
     image: quay.io/modh/odh-ml-pipelines-viewercontroller-container:v1.18.0-8
+    resources:
+      requests:
+        cpu: 120m
+        memory: 100Mi
+      limits:
+        cpu: 250m
+        memory: 500Mi
   mlpipelineUI:
+    deploy: true
     image: quay.io/opendatahub/odh-ml-pipelines-frontend-container:beta-ui
+    resources:
+      limits:
+        cpu: 100m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 256Mi
     configMap: ds-pipeline-ui-configmap
   database:
-    mariaDB:   # mutually exclusive with custom
+    mariadb:   # mutually exclusive with custom
+      deploy: true
       image: registry.redhat.io/rhel8/mariadb-103:1-188
       username: mlpipeline
       pipelineDBName: randomDBName
+      pvcSize: 20Gi
+      resources:
+        requests:
+          cpu: 300m
+          memory: 800Mi
+        limits:
+          cpu: "1"
+          memory: 1Gi
       passwordSecret:
         name: ds-pipelines-db-sample
         key: password
-    # customDB:
-    #   host: mysql:3306
-    #   port: "8888"
-    #   username: root
-    #   pipelineDBName: randomDBName
-    #   passwordSecret:
-    #     name: somesecret
-    #     key: somekey
-  storage:
+#    externalDB:
+#      host: mysql:3306
+#      port: "8888"
+#      username: root
+#      pipelineDBName: randomDBName
+#      passwordSecret:
+#        name: somesecret
+#        key: somekey
+  objectStorage:
     minio:  # mutually exclusive with custom
+      deploy: true
       image: quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance
       bucket: mlpipeline
+      resources:
+        requests:
+          cpu: 20m
+          memory: 100Mi
+        limits:
+          cpu: 250m
+          memory: 1Gi
       s3CredentialsSecret:
         secretName: somesecret-sample
         accessKey: accesskey
         secretKey: secretkey
-#    customStorage:
+#    externalStorage:
 #      host: minio.com
 #      port: "9092"
 #      bucket: mlpipeline
@@ -52,3 +113,54 @@ spec:
 #        secretName: somesecret-db-sample
 #        accessKey: somekey
 #        secretKey: somekey
+status:
+  # Reports True iff:
+  # * ApiServerReady, PersistenceAgentReady, ScheduledWorkflowReady, DatabaseReady, ObjectStorageReady report True
+  # AND
+  # * MLPIpelinesUIReady is (Ready: True) OR is (Ready: False && DeploymentDisabled)
+  conditions:
+    - type: Ready
+      status: true
+      observedGeneration: 4
+      lastTransitionTime: '2023-02-02T21:00:00Z'
+      reason: MinimumReplicasAvailable
+      message: 'some message'
+    - type: ApiServerReady
+      status: true
+      observedGeneration: 4
+      lastTransitionTime: '2023-02-02T21:00:00Z'
+      reason: MinimumReplicasAvailable
+      message: 'some message'
+    - status: true
+      type: MLPIpelinesUIReady
+      observedGeneration: 4
+      lastTransitionTime: '2023-02-02T21:00:00Z'
+      reason: MinimumReplicasAvailable  # DeploymentDisabled
+      message: 'some message'
+    - status: true
+      type: PersistenceAgentReady
+      observedGeneration: 4
+      lastTransitionTime: '2023-02-02T21:00:00Z'
+      reason: MinimumReplicasAvailable
+      message: 'some message'
+    - status: true
+      type: ScheduledWorkflowReady
+      observedGeneration: 4
+      lastTransitionTime: '2023-02-02T21:00:00Z'
+      reason: MinimumReplicasAvailable
+      message: 'some message'
+    # Do we need to do this?? API Server application already
+    # checks for db/storage connectivity, and pod will fail to come up
+    # in such a case.
+    - status: false
+      type: DatabaseReady
+      observedGeneration: 4
+      lastTransitionTime: '2023-02-02T21:00:00Z'
+      reason: DataBaseUnreachable  # DataBaseFailedToDeploy, DataBaseReady
+      message: '500 gateway error received'
+    - status: false
+      type: ObjectStorageReady
+      observedGeneration: 4
+      lastTransitionTime: '2023-02-02T21:00:00Z'
+      reason: ObjectStorageUnreachable  # ObjectStorageFailedToDeploy, ObjectStorageReady
+      message: 'host unreachable'
