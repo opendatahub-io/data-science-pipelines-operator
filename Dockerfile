@@ -30,6 +30,5 @@ FROM registry.access.redhat.com/ubi8/ubi-minimal:8.7
 WORKDIR /
 COPY --from=builder /workspace/manager .
 COPY config/internal config/internal
-USER 65532:65532
 
 ENTRYPOINT ["/manager"]
