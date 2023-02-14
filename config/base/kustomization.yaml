@@ -1,0 +1,13 @@
+namespace: data-science-pipelines-operator
+namePrefix: data-science-pipelines-operator-
+resources:
+- ../crd
+- ../rbac
+- ../manager
+
+images:
+- name: controller
+  newName: quay.io/opendatahub/data-science-pipelines-operator
+  newTag: latest
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
