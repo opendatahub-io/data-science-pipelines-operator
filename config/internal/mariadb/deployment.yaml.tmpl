@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
         - name: mariadb
-          image: mariadb
+          image: {{.MariaDBImage}}
           ports:
             - containerPort: 3306
           readinessProbe:
