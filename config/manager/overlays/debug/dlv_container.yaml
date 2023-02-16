@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: controller-manager
+  namespace: dspipelines-controller
+  # namespace: data-science-pipelines-operator
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+      - command:
+        - /dlv
+        args:
+        - exec
+        - --listen=:2345
+        - --headless
+        - --api-version=2
+        - --log=true
+        - --continue=true
+        - --accept-multiclient
+        - /manager
+        name: manager
+        

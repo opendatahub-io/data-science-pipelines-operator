@@ -1,0 +1,10 @@
+patchesStrategicMerge:
+- dlv_container.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../../base
+images:
+- name: controller
+  newName: quay.io/gshereme/data-science-pipelines-operator
+  newTag: latest

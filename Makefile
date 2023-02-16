@@ -119,6 +119,10 @@ run: manifests generate fmt vet ## Run a controller from your host.
 podman-build: test ## Build container image with the manager.
 	podman build -t ${IMG} .
 
+.PHONY: podman-build-debug
+podman-build-debug: test ## Build container image with delve included, for remote debugging
+	podman build -t ${IMG} -f Dockerfile.debug .
+
 .PHONY: podman-push
 podman-push: ## Push container image with the manager.
 	podman push ${IMG}
@@ -131,7 +135,7 @@ endif
 
 .PHONY: install
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/crd | kubectl apply -f -
+	$(KUSTOMIZE) build config/crd  | tee /tmp/output.yaml
 
 .PHONY: uninstall
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
@@ -140,7 +144,14 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 .PHONY: deploy
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/base && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/base | kubectl apply -f -
+	$(KUSTOMIZE) build config/base | tee /tmp/output.yaml
+
+.PHONY: deploy-debug
+deploy-debug: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
+    ## should i set the image here or in base?
+	cd config/manager/overlays/debug && $(KUSTOMIZE) edit set image controller=${IMG}
+	## is this working?
+	$(KUSTOMIZE) build config/manager/overlays/debug | tee /tmp/output.yaml
 
 .PHONY: undeploy
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
@@ -181,7 +192,7 @@ $(ENVTEST): $(LOCALBIN)
 .PHONY: bundle
 bundle: manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.
 	operator-sdk generate kustomize manifests -q
-	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
+	cd config/manager/base && $(KUSTOMIZE) edit set image controller=$(IMG)
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle $(BUNDLE_GEN_FLAGS)
 	operator-sdk bundle validate ./bundle
 

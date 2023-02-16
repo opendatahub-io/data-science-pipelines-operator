@@ -3,11 +3,11 @@ namePrefix: data-science-pipelines-operator-
 resources:
 - ../crd
 - ../rbac
-- ../manager
+- ../manager/base
 
 images:
 - name: controller
-  newName: quay.io/opendatahub/data-science-pipelines-operator
+  newName: quay.io/gshereme/data-science-pipelines-operator
   newTag: latest
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
