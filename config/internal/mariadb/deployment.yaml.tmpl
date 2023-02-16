@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
         - name: mariadb
-          image: {{.MariaDBImage}}
+          image: {{.MariaDB.Image}}
           ports:
             - containerPort: 3306
           readinessProbe:
@@ -50,23 +50,23 @@ spec:
             timeoutSeconds: 1
           env:
             - name: MYSQL_USER
-              value: "{{.DBUser}}"
+              value: "{{.DBConnection.Username}}"
             - name: MYSQL_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  key: "{{.DBPasswordSecretKey}}"
-                  name: "{{.DBPasswordSecret}}"
+                  key: "{{.DBConnection.CredentialsSecret.Name}}"
+                  name: "{{.DBConnection.CredentialsSecret.Key}}"
             - name: MYSQL_DATABASE
-              value: "{{.DBName}}"
+              value: "{{.DBConnection.DBName}}"
             - name: MYSQL_ALLOW_EMPTY_PASSWORD
               value: "true"
           resources:
             requests:
-              cpu: 300m
-              memory: 800Mi
+              cpu: {{.MariaDB.ResourceRequirements.Requests.cpu}}
+              memory: {{.MariaDB.ResourceRequirements.Requests.memory}}
             limits:
-              cpu: "1"
-              memory: 1Gi
+              cpu: {{.MariaDB.ResourceRequirements.Limits.cpu}}
+              memory: {{.MariaDB.ResourceRequirements.Limits.memory}}
           volumeMounts:
             - name: mariadb-persistent-storage
               mountPath: /var/lib/mysql

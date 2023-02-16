@@ -22,66 +22,76 @@ spec:
             - name: POD_NAMESPACE
               value: "{{.Namespace}}"
             - name: DBCONFIG_USER
-              value: "{{.DBUser}}"
+              value: "{{.DBConnection.Username}}"
             - name: DBCONFIG_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  key: "{{.DBPasswordSecretKey}}"
-                  name: "{{.DBPasswordSecret}}"
+                  key: "{{.DBConnection.CredentialsSecret.Name}}"
+                  name: "{{.DBConnection.CredentialsSecret.Key}}"
             - name: DBCONFIG_DBNAME
-              value: "{{.DBName}}"
+              value: "{{.DBConnection.Name}}"
             - name: DBCONFIG_HOST
-              value: "{{.DBHost}}"
+              value: "{{.DBConnection.Host}}"
             - name: DBCONFIG_PORT
-              value: "{{.DBPort}}"
-            - name: PIPELINE_RUNTIME
-              value: "{{.PipelineRuntime}}"
+              value: "{{.DBConnection.Port}}"
             - name: ARTIFACT_BUCKET
-              value: "{{.ArtifactBucket}}"
+              value: "{{.ObjectStorageConnection.Bucket}}"
             - name: ARTIFACT_ENDPOINT
-              value: "{{.ArtifactEndpoint}}"
+              value: "{{.ObjectStorageConnection.Endpoint}}"
             - name: ARTIFACT_SCRIPT
               valueFrom:
                 configMapKeyRef:
-                  key: "{{ .ArtifactScriptConfigMapKey }}"
-                  name: "{{ .ArtifactScriptConfigMapName }}"
+                  key: "{{ .APIServer.ArtifactScriptConfigMap.Key }}"
+                  name: "{{ .APIServer.ArtifactScriptConfigMap.Name }}"
             - name: ARTIFACT_IMAGE
-              value: "{{.ArtifactImage}}"
+              value: "{{.APIServer.ArtifactImage}}"
+            - name: ARCHIVE_LOGS
+              value: "{{.APIServer.ArchiveLogs}}"
+            - name: TRACK_ARTIFACTS
+              value: "{{.APIServer.TrackArtifacts}}"
+            - name: STRIP_EOF
+              value: "{{.APIServer.StripEOF}}"
+            - name: PIPELINE_RUNTIME
+              value: "tekton"
+            - name: DEFAULTPIPELINERUNNERSERVICEACCOUNT
+              value: "pipeline-runner-{{.Name}}"
             - name: INJECT_DEFAULT_SCRIPT
-              value: "{{.InjectDefaultScript}}"
+              value: "{{.APIServer.InjectDefaultScript}}"
             - name: APPLY_TEKTON_CUSTOM_RESOURCE
-              value: "{{.ApplyTektonCustomResource}}"
+              value: "{{.APIServer.ApplyTektonCustomResource}}"
             - name: TERMINATE_STATUS
-              value: "{{.TerminateStatus}}"
+              value: "{{.APIServer.TerminateStatus}}"
             - name: AUTO_UPDATE_PIPELINE_DEFAULT_VERSION
-              value: "{{.AutoUpdatePipelineDefaultVersion}}"
+              value: "{{.APIServer.AutoUpdatePipelineDefaultVersion}}"
             - name: DBCONFIG_CONMAXLIFETIMESEC
-              value: "{{.DBConfigCONMAXLifetimeSec}}"
+              value: "{{.APIServer.DBConfigConMaxLifetimeSec}}"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_HOST
               value: "ds-pipeline-visualizationserver"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
               value: "8888"
             - name: OBJECTSTORECONFIG_BUCKETNAME
-              value: "{{.ObjectStoreConfigBucketName}}"
+              value: "{{.ObjectStorageConnection.Bucket}}"
             - name: OBJECTSTORECONFIG_ACCESSKEY
               valueFrom:
                 secretKeyRef:
-                  key: "{{.AccessKeySecretKey}}"
-                  name: "{{.S3CredentialsSecretName}}"
+                  key: "{{.ObjectStorageConnection.CredentialsSecret.AccessKey}}"
+                  name: "{{.ObjectStorageConnection.CredentialsSecret.SecretName}}"
             - name: OBJECTSTORECONFIG_SECRETACCESSKEY
               valueFrom:
                 secretKeyRef:
-                  key: "{{.SecretKey}}"
-                  name: "{{.S3CredentialsSecretName}}"
+                  key: "{{.ObjectStorageConnection.CredentialsSecret.SecretKey}}"
+                  name: "{{.ObjectStorageConnection.CredentialsSecret.SecretName}}"
             - name: OBJECTSTORECONFIG_SECURE
-              value: "{{.ObjectStoreConfigSecure}}"
+              value: "{{.ObjectStorageConnection.Secure}}"
             - name: MINIO_SERVICE_SERVICE_HOST
-              value: "{{.MinioServiceServiceHost}}"
+              value: "{{.ObjectStorageConnection.Host}}"
             - name: MINIO_SERVICE_SERVICE_PORT
-              value: "{{.MinioServiceServicePort}}"
-            - name: DEFAULTPIPELINERUNNERSERVICEACCOUNT
-              value: "pipeline-runner-{{.Name}}"
-          image: {{.APIServerImage}}
+              value: "{{.ObjectStorageConnection.Port}}"
+            - name: CACHE_IMAGE
+              value: "{{.APIServer.CacheImage}}"
+            - name: MOVERESULTS_IMAGE
+              value: "{{.APIServer.MoveResultsImage}}"
+          image: {{.APIServer.Image}}
           imagePullPolicy: Always
           name: ds-pipeline-api-server
           ports:
@@ -103,7 +113,7 @@ spec:
             timeoutSeconds: 2
           readinessProbe:
             exec:
-              command: # wget -q -S -O - http://localhost:8888/apis/v1beta1/healthz
+              command:
                 - wget
                 - -q
                 - -S
@@ -115,9 +125,9 @@ spec:
             timeoutSeconds: 2
           resources:
             requests:
-              cpu: 250m
-              memory: 500Mi
+              cpu: {{.APIServer.ResourceRequirements.Requests.cpu}}
+              memory: {{.APIServer.ResourceRequirements.Requests.memory}}
             limits:
-              cpu: 500m
-              memory: 1Gi
+              cpu: {{.APIServer.ResourceRequirements.Limits.cpu}}
+              memory: {{.APIServer.ResourceRequirements.Limits.memory}}
       serviceAccountName: ds-pipeline-{{.Name}}

@@ -22,8 +22,8 @@ spec:
       containers:
         - env:
             - name: CRON_SCHEDULE_TIMEZONE
-              value: "{{.CronScheduleTimezone}}"
-          image: "{{.ScheduledWorkflowImage}}"
+              value: "{{.ScheduledWorkflow.CronScheduleTimezone}}"
+          image: "{{.ScheduledWorkflow.Image}}"
           imagePullPolicy: IfNotPresent
           name: ds-pipeline-scheduledworkflow
           command:
@@ -50,9 +50,9 @@ spec:
             timeoutSeconds: 2
           resources:
             requests:
-              cpu: 120m
-              memory: 100Mi
+              cpu: {{.ScheduledWorkflow.ResourceRequirements.Requests.cpu}}
+              memory: {{.ScheduledWorkflow.ResourceRequirements.Requests.memory}}
             limits:
-              cpu: 250m
-              memory: 250Mi
+              cpu: {{.ScheduledWorkflow.ResourceRequirements.Limits.cpu}}
+              memory: {{.ScheduledWorkflow.ResourceRequirements.Limits.memory}}
       serviceAccountName: ds-pipeline-scheduledworkflow-{{.Name}}

@@ -180,12 +180,12 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 
-	usingCustomDB, err := params.UsingCustomDB(dspipeline)
+	usingCustomDB, err := params.UsingExternalDB(dspipeline)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	usingCustomStorage, err := params.UsingCustomStorage(dspipeline)
+	usingCustomStorage, err := params.UsingExternalStorage(dspipeline)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

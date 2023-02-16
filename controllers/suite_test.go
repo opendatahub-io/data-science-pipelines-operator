@@ -59,8 +59,8 @@ var (
 const (
 	WorkingNamespace = "default"
 	DSPCRName        = "testdsp"
-	timeout          = time.Second * 20
-	interval         = time.Millisecond * 10
+	timeout          = time.Second * 6
+	interval         = time.Millisecond * 2
 )
 
 func TestAPIs(t *testing.T) {

@@ -20,13 +20,13 @@ spec:
         component: data-science-pipelines
     spec:
       containers:
-        - image: "{{.ViewerCrdImage}}"
+        - image: "{{.ViewerCRD.Image}}"
           imagePullPolicy: Always
           name: ds-pipeline-viewer-crd
           command:
             - controller
             - "-logtostderr=true"
-            - "-max_num_viewers={{.MaxNumViewer}}"
+            - "-max_num_viewers={{.ViewerCRD.MaxNumViewer}}"
             - "--namespace={{.Namespace}}"
           livenessProbe:
             exec:
@@ -48,9 +48,9 @@ spec:
             timeoutSeconds: 2
           resources:
             requests:
-              cpu: 120m
-              memory: 100Mi
+              cpu: {{.ViewerCRD.ResourceRequirements.Requests.cpu}}
+              memory: {{.ViewerCRD.ResourceRequirements.Requests.memory}}
             limits:
-              cpu: 250m
-              memory: 500Mi
+              cpu: {{.ViewerCRD.ResourceRequirements.Limits.cpu}}
+              memory: {{.ViewerCRD.ResourceRequirements.Limits.memory}}
       serviceAccountName: ds-pipeline-viewer-crd-{{.Name}}

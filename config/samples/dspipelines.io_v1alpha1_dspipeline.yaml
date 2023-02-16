@@ -2,56 +2,180 @@ apiVersion: dspipelines.opendatahub.io/v1alpha1
 kind: DSPipeline
 metadata:
   name: sample
+  namespace: data-science-project
 spec:
   apiServer:
-    apiServerImage: quay.io/modh/odh-ml-pipelines-api-server-container:v1.18.0-8
+    deploy: true
+    applyTektonCustomResource: true
+    archiveLogs: false
+    image: quay.io/modh/odh-ml-pipelines-api-server-container:v1.18.0-8
     artifactImage: quay.io/modh/odh-ml-pipelines-artifact-manager-container:v1.18.0-8
-  # optional (default is: ds-pipeline-artifact-script-${metadata.name})
-  # apiserver deployment will fail if the specified custom config does not exist
-  # if default name is used, the configmap will be over-written by the operator:
+    cacheImage: registry.access.redhat.com/ubi8/ubi-minimal
+    moveResultsImage: busybox
+    injectDefaultScript: true
+    stripEOF: true
+    terminateStatus: Cancelled
+    trackArtifacts: true
+    dbConfigConMaxLifetimeSec: 120
+    collectMetrics: true
+    autoUpdatePipelineDefaultVersion: true
+    resources:
+      requests:
+        cpu: 250m
+        memory: 500Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
 
-  #  artifactScriptConfigMap:
-  #    name: YourConfigMapName
-  #    key: "artifact_script"
-  persistentAgent:
+    # optional (default is: ds-pipeline-artifact-script-${metadata.name})
+    # apiserver deployment will fail if the specified custom config does not exist
+    # if default name is used, the configmap will be over-written by the operator:
+
+    #  artifactScriptConfigMap:
+    #    name: YourConfigMapName
+    #    key: "artifact_script"
+  persistenceAgent:
+    deploy: true
     image: quay.io/modh/odh-ml-pipelines-persistenceagent-container:v1.18.0-8
-    pipelineAPIServerName: apiserver
+    numWorkers: 2  # Number of worker for sync job.
+    resources:
+      requests:
+        cpu: 120m
+        memory: 500Mi
+      limits:
+        cpu: 250m
+        memory: 1Gi
   scheduledWorkflow:
+    deploy: true
     image: quay.io/modh/odh-ml-pipelines-scheduledworkflow-container:v1.18.0-8
+    cronScheduleTimezone: UTC
+    resources:
+      requests:
+        cpu: 120m
+        memory: 100Mi
+      limits:
+        cpu: 250m
+        memory: 250Mi
   viewerCRD:
+    deploy: true
     image: quay.io/modh/odh-ml-pipelines-viewercontroller-container:v1.18.0-8
+    maxNumViewer: 50
+    resources:
+      requests:
+        cpu: 120m
+        memory: 100Mi
+      limits:
+        cpu: 250m
+        memory: 500Mi
   mlpipelineUI:
+    deploy: true
     image: quay.io/opendatahub/odh-ml-pipelines-frontend-container:beta-ui
+    resources:
+      limits:
+        cpu: 100m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 256Mi
     configMap: ds-pipeline-ui-configmap
   database:
     mariaDB:   # mutually exclusive with custom
+      deploy: true
       image: registry.redhat.io/rhel8/mariadb-103:1-188
       username: mlpipeline
       pipelineDBName: randomDBName
+      pvcSize: 20Gi
+      resources:
+        requests:
+          cpu: 300m
+          memory: 800Mi
+        limits:
+          cpu: "1"
+          memory: 1Gi
       passwordSecret:
         name: ds-pipelines-db-sample
         key: password
-    # customDB:
-    #   host: mysql:3306
-    #   port: "8888"
-    #   username: root
-    #   pipelineDBName: randomDBName
-    #   passwordSecret:
-    #     name: somesecret
-    #     key: somekey
-  storage:
+#    externalDB:
+#      host: mysql:3306
+#      port: "8888"
+#      username: root
+#      pipelineDBName: randomDBName
+#      passwordSecret:
+#        name: somesecret
+#        key: somekey
+  objectStorage:
     minio:  # mutually exclusive with custom
+      deploy: true
       image: quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance
       bucket: mlpipeline
+      resources:
+        requests:
+          cpu: 20m
+          memory: 100Mi
+        limits:
+          cpu: 250m
+          memory: 1Gi
       s3CredentialsSecret:
         secretName: somesecret-sample
         accessKey: accesskey
         secretKey: secretkey
-#    customStorage:
+#    externalStorage:
 #      host: minio.com
 #      port: "9092"
 #      bucket: mlpipeline
+#      scheme: https
 #      s3CredentialsSecret:
 #        secretName: somesecret-db-sample
 #        accessKey: somekey
 #        secretKey: somekey
+status:
+  # Reports True iff:
+  # * ApiServerReady, PersistenceAgentReady, ScheduledWorkflowReady, DatabaseReady, ObjectStorageReady report True
+  # AND
+  # * MLPIpelinesUIReady is (Ready: True) OR is (Ready: False && DeploymentDisabled)
+  conditions:
+    - type: Ready
+      status: True
+      observedGeneration: 4
+      lastTransitionTime: '2023-02-02T21:00:00Z'
+      reason: MinimumReplicasAvailable
+      message: 'some message'
+    - type: ApiServerReady
+      status: True
+      observedGeneration: 4
+      lastTransitionTime: '2023-02-02T21:00:00Z'
+      reason: MinimumReplicasAvailable
+      message: 'some message'
+    - type: MLPIpelinesUIReady
+      status: True
+      observedGeneration: 4
+      lastTransitionTime: '2023-02-02T21:00:00Z'
+      reason: MinimumReplicasAvailable  # DeploymentDisabled
+      message: 'some message'
+    - type: PersistenceAgentReady
+      status: True
+      observedGeneration: 4
+      lastTransitionTime: '2023-02-02T21:00:00Z'
+      reason: MinimumReplicasAvailable
+      message: 'some message'
+    - type: ScheduledWorkflowReady
+      status: True
+      observedGeneration: 4
+      lastTransitionTime: '2023-02-02T21:00:00Z'
+      reason: MinimumReplicasAvailable
+      message: 'some message'
+    # Do we need to do this?? API Server application already
+    # checks for db/storage connectivity, and pod will fail to come up
+    # in such a case.
+    - type: DatabaseReady
+      status: True
+      observedGeneration: 4
+      lastTransitionTime: '2023-02-02T21:00:00Z'
+      reason: DataBaseUnreachable  # DataBaseFailedToDeploy, DataBaseReady
+      message: '500 gateway error received'
+    - type: ObjectStorageReady
+      status: True
+      observedGeneration: 4
+      lastTransitionTime: '2023-02-02T21:00:00Z'
+      reason: ObjectStorageUnreachable  # ObjectStorageFailedToDeploy, ObjectStorageReady
+      message: 'host unreachable'

@@ -39,7 +39,7 @@ func (r *DSPipelineReconciler) ReconcileDatabase(ctx context.Context, dsp *dspip
 	// If the provided secret does not exist, create it
 	secret := &v1.Secret{}
 	namespacedName := types.NamespacedName{
-		Name:      params.DBPasswordSecret,
+		Name:      params.DBConnection.CredentialsSecret.Name,
 		Namespace: req.Namespace,
 	}
 	err := r.Get(ctx, namespacedName, secret)

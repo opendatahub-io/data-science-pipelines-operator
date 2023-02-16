@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -25,18 +27,31 @@ import (
 type DSPipelineSpec struct {
 	// APIService specifies the Kubeflow Apiserver configurations
 	APIServer         `json:"apiServer,omitempty" validation:"Required"`
-	PersistentAgent   `json:"persistentAgent,omitempty"`
+	PersistenceAgent  `json:"persistenceAgent,omitempty"`
 	ScheduledWorkflow `json:"scheduledWorkflow,omitempty"`
 	ViewerCRD         `json:"viewerCRD,omitempty"`
 	Database          `json:"database,omitempty"`
-	Storage           `json:"storage,omitempty"`
+	ObjectStorage     `json:"objectStorage,omitempty"`
 	MlPipelineUI      `json:"mlpipelineUI,omitempty"`
 }
 
 type APIServer struct {
-	Image                   string `json:"apiServerImage,omitempty"`
-	ArtifactImage           string `json:"artifactImage,omitempty"`
-	ArtifactScriptConfigMap `json:"artifactScriptConfigMap,omitempty"`
+	Deploy                           bool   `json:"deploy,omitempty"`
+	Image                            string `json:"image,omitempty"`
+	ApplyTektonCustomResource        bool   `json:"applyTektonCustomResource,omitempty"`
+	ArchiveLogs                      bool   `json:"archiveLogs,omitempty"`
+	ArtifactImage                    string `json:"artifactImage,omitempty"`
+	CacheImage                       string `json:"cacheImage,omitempty"`
+	MoveResultsImage                 string `json:"moveResultsImage,omitempty"`
+	ArtifactScriptConfigMap          `json:"artifactScriptConfigMap,omitempty"`
+	InjectDefaultScript              bool   `json:"injectDefaultScript,omitempty"`
+	StripEOF                         bool   `json:"stripEOF,omitempty"`
+	TerminateStatus                  string `json:"terminateStatus,omitempty"`
+	TrackArtifacts                   bool   `json:"trackArtifacts,omitempty"`
+	DBConfigConMaxLifetimeSec        int    `json:"dbConfigConMaxLifetimeSec,omitempty"`
+	CollectMetrics                   bool   `json:"collectMetrics,omitempty"`
+	AutoUpdatePipelineDefaultVersion bool   `json:"autoUpdatePipelineDefaultVersion,omitempty"`
+	corev1.ResourceRequirements      `json:"resources,omitempty"`
 }
 
 type ArtifactScriptConfigMap struct {
@@ -44,33 +59,50 @@ type ArtifactScriptConfigMap struct {
 	Key  string `json:"key,omitempty"`
 }
 
-type PersistentAgent struct {
-	Image                 string `json:"image,omitempty"`
-	PipelineAPIServerName string `json:"pipelineAPIServerName,omitempty"`
+type PersistenceAgent struct {
+	Deploy                      bool   `json:"deploy,omitempty"`
+	Image                       string `json:"image,omitempty"`
+	NumWorkers                  int    `json:"numWorkers,omitempty"`
+	corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
 type ScheduledWorkflow struct {
-	Image string `json:"image,omitempty"`
+	Deploy                      bool   `json:"deploy,omitempty"`
+	Image                       string `json:"image,omitempty"`
+	CronScheduleTimezone        string `json:"cronScheduleTimezone,omitempty"`
+	corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
 type ViewerCRD struct {
-	Image string `json:"image,omitempty"`
+	Deploy                      bool   `json:"deploy,omitempty"`
+	Image                       string `json:"image,omitempty"`
+	MaxNumViewer                int    `json:"maxNumViewer,omitempty"`
+	corev1.ResourceRequirements `json:"resources,omitempty"`
+}
+
+type MlPipelineUI struct {
+	Deploy                      bool   `json:"deploy,omitempty"`
+	Image                       string `json:"image,omitempty"`
+	ConfigMapName               string `json:"configMap,omitempty"`
+	corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
 type Database struct {
-	Image    string `json:"image,omitempty"`
-	MariaDB  `json:"mariaDB,omitempty"`
-	CustomDB `json:"customDB,omitempty"`
+	MariaDB    `json:"mariaDB,omitempty"`
+	ExternalDB `json:"externalDB,omitempty"`
 }
 
 type MariaDB struct {
-	Image          string         `json:"image,omitempty"`
-	Username       string         `json:"username,omitempty"`
-	PasswordSecret SecretKeyValue `json:"passwordSecret,omitempty"`
-	DBName         string         `json:"pipelineDBName,omitempty"`
+	Deploy         bool                        `json:"deploy,omitempty"`
+	Image          string                      `json:"image,omitempty"`
+	Username       string                      `json:"username,omitempty"`
+	PasswordSecret SecretKeyValue              `json:"passwordSecret,omitempty"`
+	DBName         string                      `json:"pipelineDBName,omitempty"`
+	PVCSize        resource.Quantity           `json:"pvcSize,omitempty"`
+	Resources      corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
-type CustomDB struct {
+type ExternalDB struct {
 	Host           string         `json:"host,omitempty"`
 	Port           string         `json:"port,omitempty"`
 	Username       string         `json:"username,omitempty"`
@@ -78,41 +110,42 @@ type CustomDB struct {
 	PasswordSecret SecretKeyValue `json:"passwordSecret,omitempty"`
 }
 
-type Storage struct {
-	Minio         `json:"minio,omitempty"`
-	CustomStorage `json:"customStorage,omitempty"`
+type ObjectStorage struct {
+	Minio           `json:"minio,omitempty"`
+	ExternalStorage `json:"externalStorage,omitempty"`
 }
 
 type Minio struct {
+	Deploy             bool   `json:"deploy,omitempty"`
 	Image              string `json:"image,omitempty"`
 	Bucket             string `json:"bucket,omitempty"`
-	s3CredentialSecret `json:"s3CredentialsSecret,omitempty"`
+	S3CredentialSecret `json:"s3CredentialsSecret,omitempty"`
+	PVCSize            resource.Quantity           `json:"pvcSize,omitempty"`
+	Resources          corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
-type CustomStorage struct {
+type ExternalStorage struct {
 	Host               string `json:"host,omitempty"`
 	Port               string `json:"port,omitempty"`
 	Bucket             string `json:"bucket,omitempty"`
-	s3CredentialSecret `json:"s3CredentialsSecret,omitempty"`
+	Scheme             string `json:"scheme,omitempty"`
+	S3CredentialSecret `json:"s3CredentialsSecret,omitempty"`
 }
 
-type MlPipelineUI struct {
-	Image         string `json:"image,omitempty"`
-	ConfigMapName string `json:"configMap,omitempty"`
-}
-
-type DSPipelineStatus struct {
-}
-
-type s3CredentialSecret struct {
+type S3CredentialSecret struct {
 	SecretName string `json:"secretName,omitempty"`
-	AccessKey  string `json:"accessKey,omitempty"`
-	SecretKey  string `json:"secretKey,omitempty"`
+	// The "Keys" in the k8sSecret key/value pairs. Not to be confused with the values.
+	AccessKey string `json:"accessKey,omitempty"`
+	SecretKey string `json:"secretKey,omitempty"`
 }
 
 type SecretKeyValue struct {
 	Name string `json:"name,omitempty"`
 	Key  string `json:"key,omitempty"`
+}
+
+type DSPipelineStatus struct {
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -121,9 +154,8 @@ type SecretKeyValue struct {
 type DSPipeline struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   DSPipelineSpec   `json:"spec,omitempty"`
-	Status DSPipelineStatus `json:"status,omitempty"`
+	Spec              DSPipelineSpec   `json:"spec,omitempty"`
+	Status            DSPipelineStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true

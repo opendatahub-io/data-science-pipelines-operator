@@ -23,14 +23,14 @@ spec:
         - env:
             - name: NAMESPACE
               value: "{{.Namespace}}"
-          image: "{{.PersistenceAgentImage}}"
+          image: "{{.PersistenceAgent.Image}}"
           imagePullPolicy: IfNotPresent
           name: ds-pipeline-persistenceagent
           command:
             - persistence_agent
             - "--logtostderr=true"
             - "--ttlSecondsAfterWorkflowFinish=86400"
-            - "--numWorker=2"
+            - "--numWorker={{.PersistenceAgent.NumWorkers}}"
             - "--mlPipelineAPIServerName={{.APIServerServiceName}}"
             - "--namespace={{.Namespace}}"
             - "--mlPipelineServiceHttpPort=8888"
@@ -55,9 +55,9 @@ spec:
             timeoutSeconds: 2
           resources:
             requests:
-              cpu: 120m
-              memory: 500Mi
+              cpu: {{.PersistentAgent.ResourceRequirements.Requests.cpu}}
+              memory: {{.PersistentAgent.ResourceRequirements.Requests.memory}}
             limits:
-              cpu: 250m
-              memory: 1Gi
+              cpu: {{.PersistentAgent.ResourceRequirements.Limits.cpu}}
+              memory: {{.PersistentAgent.ResourceRequirements.Limits.memory}}
       serviceAccountName: ds-pipeline-persistenceagent-{{.Name}}

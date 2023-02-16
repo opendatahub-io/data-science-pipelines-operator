@@ -7,8 +7,9 @@ spec:
     artifactScriptConfigMap:
       name: ds-pipeline-artifact-script-testdsp
       key: "artifact_script"
-    apiServerImage: quay.io/modh/odh-ml-pipelines-api-server-container:v1.18.0-8
+    image: quay.io/modh/odh-ml-pipelines-api-server-container:v1.18.0-8
     artifactImage: quay.io/modh/odh-ml-pipelines-artifact-manager-container:v1.18.0-8
+    dbConfigConMaxLifetimeSec: 120
   persistentAgent:
     image: quay.io/modh/odh-ml-pipelines-persistenceagent-container:v1.18.0-8
     pipelineAPIServerName: apiserver
@@ -27,7 +28,7 @@ spec:
       passwordSecret:
         name: ds-pipelines-db-testdsp
         key: password
-  storage:
+  objectStorage:
     minio:
       image: quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance
       bucket: mlpipeline

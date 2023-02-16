@@ -57,12 +57,12 @@ spec:
             successThreshold: 1
             failureThreshold: 3
           resources:
-            limits:
-              cpu: 100m
-              memory: 256Mi
             requests:
-              cpu: 100m
-              memory: 256Mi
+              cpu: {{.MlPipelineUI.ResourceRequirements.Requests.cpu}}
+              memory: {{.MlPipelineUI.ResourceRequirements.Requests.memory}}
+            limits:
+              cpu: {{.MlPipelineUI.ResourceRequirements.Limits.cpu}}
+              memory: {{.MlPipelineUI.ResourceRequirements.Limits.memory}}
           volumeMounts:
             - mountPath: /etc/tls/private
               name: proxy-tls
@@ -76,13 +76,13 @@ spec:
             - name: MINIO_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
-                  key: "{{.AccessKeySecretKey}}"
-                  name: "{{.S3CredentialsSecretName}}"
+                  key: "{{.ObjectStorageConnection.CredentialsSecret.AccessKey}}"
+                  name: "{{.ObjectStorageConnection.CredentialsSecret.SecretName}}"
             - name: MINIO_SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  key: "{{.SecretKey}}"
-                  name: "{{.S3CredentialsSecretName}}"
+                  key: "{{.ObjectStorageConnection.CredentialsSecret.SecretKey}}"
+                  name: "{{.ObjectStorageConnection.CredentialsSecret.SecretName}}"
             - name: ALLOW_CUSTOM_VISUALIZATIONS
               value: "true"
             - name: ARGO_ARCHIVE_LOGS
@@ -91,7 +91,7 @@ spec:
               value: ds-pipeline-{{.Name}}
             - name: ML_PIPELINE_SERVICE_PORT
               value: '8888'
-          image: {{.MLPipelineUIImage}}
+          image: {{.MlPipelineUI.Image}}
           imagePullPolicy: IfNotPresent
           livenessProbe:
             exec:
