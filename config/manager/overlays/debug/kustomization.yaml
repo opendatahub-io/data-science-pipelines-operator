@@ -3,7 +3,7 @@ patchesStrategicMerge:
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-- ../../base
+- ../../../base
 images:
 - name: controller
   newName: quay.io/gshereme/data-science-pipelines-operator
