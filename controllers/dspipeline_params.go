@@ -62,6 +62,7 @@ type DSPipelineParams struct {
 	ArtifactTracking                 string
 	ArtifactScriptConfigMapName      string
 	ArtifactScriptConfigMapKey       string
+	MariaDBImage                     string
 	DBUser                           string
 	DBPasswordSecretKey              string
 	DBPasswordSecret                 string
@@ -160,6 +161,7 @@ func (r *DSPipelineParams) ExtractParams(dsp *dspipelinesiov1alpha1.DSPipeline) 
 		r.DBPort = customDB.Port
 	} else {
 		mariaDB := dsp.Spec.Database.MariaDB
+		r.MariaDBImage = mariaDB.Image
 		r.DBUser = mariaDB.Username
 		r.DBName = mariaDB.DBName
 		r.DBPasswordSecretKey = mariaDB.PasswordSecret.Key
