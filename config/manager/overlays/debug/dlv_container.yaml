@@ -21,4 +21,3 @@ spec:
         - --accept-multiclient
         - /manager
         name: manager
-        
