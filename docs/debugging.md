@@ -61,5 +61,3 @@ Now connect your local debugger to localhost port 2345. If you're using VS Code,
 To test your debugger, set a breakpoint in `dspipeline_controller.go` on the `Reconcile` method, and then make a change to any `DSPipeline` CR. Your IDE or debugger should break at that breakpoint. Note that if you leave the debugger paused for too long, the Kubernetes readiness check will fail and the pod will be restarted, killing your debugging session.
 
 ![](images/remote_debug_break.png)
-
-
