@@ -56,10 +56,10 @@ Forwarding from 127.0.0.1:2345 -> 2345
 
 Now connect your local debugger to localhost port 2345. If you're using VS Code, you can run the `Remote debug` launch configuration that's included with this project's source code.
 
-![](docs/images/remote_debug_configuration.png)
+![](images/remote_debug_configuration.png)
 
 To test your debugger, set a breakpoint in `dspipeline_controller.go` on the `Reconcile` method, and then make a change to any `DSPipeline` CR. Your IDE or debugger should break at that breakpoint. Note that if you leave the debugger paused for too long, the Kubernetes readiness check will fail and the pod will be restarted, killing your debugging session.
 
-![](docs/images/remote_debug_break.png)
+![](images/remote_debug_break.png)
 
 
