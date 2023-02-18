@@ -6,5 +6,5 @@ resources:
 - ../../../base
 images:
 - name: controller
-  newName: quay.io/gshereme/data-science-pipelines-operator
+  newName: quay.io/opendatahub/data-science-pipelines-operator
   newTag: latest
