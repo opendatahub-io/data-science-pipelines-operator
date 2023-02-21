@@ -1,18 +1,14 @@
 apiVersion: dspipelines.opendatahub.io/v1alpha1
 kind: DSPipeline
 metadata:
-  name: sample
+  name: testdsp2
 spec:
   apiServer:
+    artifactScriptConfigMap:
+      name: doesnotexist
+      key: "somekey"
     apiServerImage: quay.io/modh/odh-ml-pipelines-api-server-container:v1.18.0-8
     artifactImage: quay.io/modh/odh-ml-pipelines-artifact-manager-container:v1.18.0-8
-  # optional (default is: ds-pipeline-artifact-script-${metadata.name})
-  # apiserver deployment will fail if the specified custom config does not exist
-  # if default name is used, the configmap will be over-written by the operator:
-
-  #  artifactScriptConfigMap:
-  #    name: YourConfigMapName
-  #    key: "artifact_script"
   persistentAgent:
     image: quay.io/modh/odh-ml-pipelines-persistenceagent-container:v1.18.0-8
     pipelineAPIServerName: apiserver
@@ -24,34 +20,18 @@ spec:
     image: quay.io/opendatahub/odh-ml-pipelines-frontend-container:beta-ui
     configMap: ds-pipeline-ui-configmap
   database:
-    mariaDB:   # mutually exclusive with custom
+    mariaDB:
       image: registry.redhat.io/rhel8/mariadb-103:1-188
       username: mlpipeline
       pipelineDBName: randomDBName
       passwordSecret:
-        name: ds-pipelines-db-sample
+        name: ds-pipelines-db-testdsp
         key: password
-    # customDB:
-    #   host: mysql:3306
-    #   port: "8888"
-    #   username: root
-    #   pipelineDBName: randomDBName
-    #   passwordSecret:
-    #     name: somesecret
-    #     key: somekey
   storage:
-    minio:  # mutually exclusive with custom
+    minio:
       image: quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance
       bucket: mlpipeline
       s3CredentialsSecret:
-        secretName: somesecret-sample
+        secretName: somesecret-testdsp
         accessKey: accesskey
         secretKey: secretkey
-#    customStorage:
-#      host: minio.com
-#      port: "9092"
-#      bucket: mlpipeline
-#      s3CredentialsSecret:
-#        secretName: somesecret-db-sample
-#        accessKey: somekey
-#        secretKey: somekey

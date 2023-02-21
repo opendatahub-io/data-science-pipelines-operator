@@ -24,12 +24,16 @@ import (
 	dspipelinesiov1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/testutil"
 	appsv1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
 const (
 	dspcrcase1                  = "./testdata/deploy/case_1.yaml"
+	dspcrcase2                  = "./testdata/deploy/case_2.yaml"
 	apiserverDeployment         = "./testdata/results/case_1/apiserver/deployment.yaml"
+	apiserverConfigMap1         = "./testdata/results/case_1/apiserver/configmap_artifact_script.yaml"
+	apiserverConfigMap2         = "./testdata/results/case_2/apiserver/configmap_artifact_script.yaml"
 	mariadbDeployment           = "./testdata/results/case_1/mariadb/deployment.yaml"
 	minioDeployment             = "./testdata/results/case_1/minio/deployment.yaml"
 	mlpipelinesUIDeployment     = "./testdata/results/case_1/mlpipelines-ui/deployment.yaml"
@@ -59,6 +63,38 @@ func compareDeployments(path string, opts mf.Option) {
 
 }
 
+func compareConfigMaps(path string, opts mf.Option) {
+	expectedConfigMap := &v1.ConfigMap{}
+	Expect(convertToStructuredResource(path, expectedConfigMap, opts)).NotTo(HaveOccurred())
+
+	actualConfigMap := &v1.ConfigMap{}
+	Eventually(func() error {
+		namespacedNamed := types.NamespacedName{Name: expectedConfigMap.Name, Namespace: WorkingNamespace}
+		return k8sClient.Get(ctx, namespacedNamed, actualConfigMap)
+	}, timeout, interval).ShouldNot(HaveOccurred())
+
+	Expect(testutil.ConfigMapsAreEqual(*expectedConfigMap, *actualConfigMap)).Should(BeTrue())
+
+}
+
+func configMapDoesNotExists(path string, opts mf.Option) {
+	expectedConfigMap := &v1.ConfigMap{}
+	actualConfigMap := &v1.ConfigMap{}
+	Expect(convertToStructuredResource(path, expectedConfigMap, opts)).NotTo(HaveOccurred())
+
+	namespacedNamed := types.NamespacedName{
+		Name:      expectedConfigMap.Name,
+		Namespace: WorkingNamespace,
+	}
+
+	Eventually(func() error {
+		return k8sClient.Get(ctx, namespacedNamed, actualConfigMap)
+	}, timeout, interval).Should(HaveOccurred())
+
+	Expect(actualConfigMap).To(Equal(&v1.ConfigMap{}))
+
+}
+
 var _ = Describe("The DS Pipeline Controller", func() {
 	client := mfc.NewClient(k8sClient)
 	opts := mf.UseClient(client)
@@ -68,6 +104,10 @@ var _ = Describe("The DS Pipeline Controller", func() {
 		It("Should create an api server deployment", func() {
 			deployDSP(ctx, dspcrcase1, opts)
 			compareDeployments(apiserverDeployment, opts)
+		})
+
+		It("Should create a default artifact script, when none are specified in the CR", func() {
+			compareConfigMaps(apiserverConfigMap1, opts)
 		})
 
 		It("Should create a MLpipeline UI", func() {
@@ -93,6 +133,14 @@ var _ = Describe("The DS Pipeline Controller", func() {
 
 		It("Should create a Viewer CRD deployment", func() {
 			compareDeployments(viewerCrdDeployment, opts)
+		})
+
+	})
+
+	Context("In a namespace, when a DSP CR with custom Artifact ConfigMap is deployed", func() {
+		It("Should report error if specified configmap does not exist.", func() {
+			deployDSP(ctx, dspcrcase2, opts)
+			configMapDoesNotExists(apiserverConfigMap2, opts)
 		})
 	})
 
