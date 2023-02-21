@@ -21,8 +21,8 @@ data:
     }
 kind: ConfigMap
 metadata:
-  name: ds-pipeline-artifact-script-{{ .Name }}
-  namespace: {{.Namespace}}
+  name: ds-pipeline-artifact-script-testdsp
+  namespace: default
   labels:
-    app: ds-pipeline-{{.Name}}
+    app: ds-pipeline-testdsp
     component: data-science-pipelines

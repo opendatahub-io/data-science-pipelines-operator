@@ -25,13 +25,13 @@ import (
 )
 
 const (
-	defaultDBHostPrefix               = "mariadb"
-	defaultDBHostPort                 = "3306"
-	defaultMinioHostPrefix            = "minio"
-	defaultMinioPort                  = "9000"
-	defaultArtifactScriptConfigMap    = "ds-pipeline-artifact-script-sample"
-	defaultArtifactScriptConfigMapKey = "artifact_script"
-	defaultDSPServicePrefix           = "ds-pipeline"
+	defaultDBHostPrefix                  = "mariadb"
+	defaultDBHostPort                    = "3306"
+	defaultMinioHostPrefix               = "minio"
+	defaultMinioPort                     = "9000"
+	defaultArtifactScriptConfigMapPrefix = "ds-pipeline-artifact-script-"
+	defaultArtifactScriptConfigMapKey    = "artifact_script"
+	defaultDSPServicePrefix              = "ds-pipeline"
 )
 
 type DSPipelineParams struct {
@@ -142,7 +142,7 @@ func (r *DSPipelineParams) ExtractParams(dsp *dspipelinesiov1alpha1.DSPipeline) 
 		r.ArtifactScriptConfigMapName = dsp.Spec.APIServer.ArtifactScriptConfigMap.Name
 		r.ArtifactScriptConfigMapKey = dsp.Spec.APIServer.ArtifactScriptConfigMap.Key
 	} else {
-		r.ArtifactScriptConfigMapName = defaultArtifactScriptConfigMap
+		r.ArtifactScriptConfigMapName = defaultArtifactScriptConfigMapPrefix + dsp.Name
 		r.ArtifactScriptConfigMapKey = defaultArtifactScriptConfigMapKey
 	}
 
