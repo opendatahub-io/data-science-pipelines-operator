@@ -169,8 +169,8 @@ func (p *DSPipelineParams) SetupDBParams(ctx context.Context, dsp *dspipelinesio
 	err = client.Get(ctx, namespacedName, dbSecret)
 	if err != nil && apierrs.IsNotFound(err) {
 		if DBCredentialsNotSpecified {
-			p.DBConnection.Password = passwordGen(12)
-			dbSecret.StringData[defaultDBSecretKey] = p.DBConnection.Password
+			generatedPass := passwordGen(12)
+			p.DBConnection.Password = base64.StdEncoding.EncodeToString([]byte(generatedPass))
 			createNewSecret = true
 		} else {
 			log.Error(err, fmt.Sprintf("DB secret %s was specified in CR but does not exist.",
@@ -182,12 +182,13 @@ func (p *DSPipelineParams) SetupDBParams(ctx context.Context, dsp *dspipelinesio
 		return err
 	}
 
-	if !createNewSecret {
-		p.DBConnection.Password, err = GetSecretDataDecoded(dbSecret, p.DBConnection.CredentialsSecret.Key)
-		if err != nil {
-			return err
-		}
+	// Password was dynamically generated, no need to retrieve it from fetched secret
+	if createNewSecret {
+		return nil
 	}
+
+	cs := p.DBConnection.CredentialsSecret
+	p.DBConnection.Password = base64.StdEncoding.EncodeToString(dbSecret.Data[cs.Key])
 
 	return nil
 }
@@ -255,10 +256,10 @@ func (p *DSPipelineParams) SetupObjectParams(ctx context.Context, dsp *dspipelin
 	err = client.Get(ctx, namespacedName, storageSecret)
 	if err != nil && apierrs.IsNotFound(err) {
 		if storageCredentialsNotSpecified {
-			p.ObjectStorageConnection.AccessKeyID = passwordGen(16)
-			p.ObjectStorageConnection.SecretAccessKey = passwordGen(24)
-			storageSecret.StringData[defaultObjectStorageAccessKey] = p.ObjectStorageConnection.AccessKeyID
-			storageSecret.StringData[defaultObjectStorageSecretKey] = p.ObjectStorageConnection.SecretAccessKey
+			generatedPass := passwordGen(16)
+			p.ObjectStorageConnection.AccessKeyID = base64.StdEncoding.EncodeToString([]byte(generatedPass))
+			generatedPass = passwordGen(24)
+			p.ObjectStorageConnection.SecretAccessKey = base64.StdEncoding.EncodeToString([]byte(generatedPass))
 			createNewSecret = true
 		} else {
 			log.Error(err, fmt.Sprintf("Storage secret %s was specified in CR but does not exist.",
@@ -270,29 +271,16 @@ func (p *DSPipelineParams) SetupObjectParams(ctx context.Context, dsp *dspipelin
 		return err
 	}
 
-	if !createNewSecret {
-		p.ObjectStorageConnection.AccessKeyID, err = GetSecretDataDecoded(
-			storageSecret, p.ObjectStorageConnection.CredentialsSecret.AccessKey)
-		if err != nil {
-			return err
-		}
-		p.ObjectStorageConnection.SecretAccessKey, err = GetSecretDataDecoded(
-			storageSecret, p.ObjectStorageConnection.CredentialsSecret.SecretKey)
-		if err != nil {
-			return err
-		}
+	// Password was dynamically generated, no need to retrieve it from fetched secret
+	if createNewSecret {
+		return nil
 	}
+
+	cs := p.ObjectStorageConnection.CredentialsSecret
+	p.ObjectStorageConnection.AccessKeyID = base64.StdEncoding.EncodeToString(storageSecret.Data[cs.AccessKey])
+	p.ObjectStorageConnection.SecretAccessKey = base64.StdEncoding.EncodeToString(storageSecret.Data[cs.SecretKey])
 
 	return nil
-}
-
-func GetSecretDataDecoded(s *v1.Secret, key string) (string, error) {
-	var secretData []byte
-	_, err := base64.StdEncoding.Decode(secretData, s.Data[key])
-	if err != nil {
-		return "", err
-	}
-	return string(secretData), nil
 }
 
 func (p *DSPipelineParams) ExtractParams(ctx context.Context, dsp *dspipelinesiov1alpha1.DSPipeline, client client.Client, log logr.Logger) error {

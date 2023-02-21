@@ -50,9 +50,9 @@ spec:
             timeoutSeconds: 2
           resources:
             requests:
-              cpu: {{.ScheduledWorkflow.ResourceRequirements.Requests.cpu}}
-              memory: {{.ScheduledWorkflow.ResourceRequirements.Requests.memory}}
+              cpu: {{.ScheduledWorkflow.Resources.Requests.CPU}}
+              memory: {{.ScheduledWorkflow.Resources.Requests.Memory}}
             limits:
-              cpu: {{.ScheduledWorkflow.ResourceRequirements.Limits.cpu}}
-              memory: {{.ScheduledWorkflow.ResourceRequirements.Limits.memory}}
+              cpu: {{.ScheduledWorkflow.Resources.Limits.CPU}}
+              memory: {{.ScheduledWorkflow.Resources.Limits.Memory}}
       serviceAccountName: ds-pipeline-scheduledworkflow-{{.Name}}

@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -51,7 +50,7 @@ type APIServer struct {
 	DBConfigConMaxLifetimeSec        int    `json:"dbConfigConMaxLifetimeSec,omitempty"`
 	CollectMetrics                   bool   `json:"collectMetrics,omitempty"`
 	AutoUpdatePipelineDefaultVersion bool   `json:"autoUpdatePipelineDefaultVersion,omitempty"`
-	corev1.ResourceRequirements      `json:"resources,omitempty"`
+	ResourceRequirements             `json:"resources,omitempty"`
 }
 
 type ArtifactScriptConfigMap struct {
@@ -60,31 +59,31 @@ type ArtifactScriptConfigMap struct {
 }
 
 type PersistenceAgent struct {
-	Deploy                      bool   `json:"deploy,omitempty"`
-	Image                       string `json:"image,omitempty"`
-	NumWorkers                  int    `json:"numWorkers,omitempty"`
-	corev1.ResourceRequirements `json:"resources,omitempty"`
+	Deploy               bool   `json:"deploy,omitempty"`
+	Image                string `json:"image,omitempty"`
+	NumWorkers           int    `json:"numWorkers,omitempty"`
+	ResourceRequirements `json:"resources,omitempty"`
 }
 
 type ScheduledWorkflow struct {
-	Deploy                      bool   `json:"deploy,omitempty"`
-	Image                       string `json:"image,omitempty"`
-	CronScheduleTimezone        string `json:"cronScheduleTimezone,omitempty"`
-	corev1.ResourceRequirements `json:"resources,omitempty"`
+	Deploy               bool   `json:"deploy,omitempty"`
+	Image                string `json:"image,omitempty"`
+	CronScheduleTimezone string `json:"cronScheduleTimezone,omitempty"`
+	ResourceRequirements `json:"resources,omitempty"`
 }
 
 type ViewerCRD struct {
-	Deploy                      bool   `json:"deploy,omitempty"`
-	Image                       string `json:"image,omitempty"`
-	MaxNumViewer                int    `json:"maxNumViewer,omitempty"`
-	corev1.ResourceRequirements `json:"resources,omitempty"`
+	Deploy               bool   `json:"deploy,omitempty"`
+	Image                string `json:"image,omitempty"`
+	MaxNumViewer         int    `json:"maxNumViewer,omitempty"`
+	ResourceRequirements `json:"resources,omitempty"`
 }
 
 type MlPipelineUI struct {
-	Deploy                      bool   `json:"deploy,omitempty"`
-	Image                       string `json:"image,omitempty"`
-	ConfigMapName               string `json:"configMap,omitempty"`
-	corev1.ResourceRequirements `json:"resources,omitempty"`
+	Deploy               bool   `json:"deploy,omitempty"`
+	Image                string `json:"image,omitempty"`
+	ConfigMapName        string `json:"configMap,omitempty"`
+	ResourceRequirements `json:"resources,omitempty"`
 }
 
 type Database struct {
@@ -93,13 +92,13 @@ type Database struct {
 }
 
 type MariaDB struct {
-	Deploy         bool                        `json:"deploy,omitempty"`
-	Image          string                      `json:"image,omitempty"`
-	Username       string                      `json:"username,omitempty"`
-	PasswordSecret SecretKeyValue              `json:"passwordSecret,omitempty"`
-	DBName         string                      `json:"pipelineDBName,omitempty"`
-	PVCSize        resource.Quantity           `json:"pvcSize,omitempty"`
-	Resources      corev1.ResourceRequirements `json:"resources,omitempty"`
+	Deploy         bool                 `json:"deploy,omitempty"`
+	Image          string               `json:"image,omitempty"`
+	Username       string               `json:"username,omitempty"`
+	PasswordSecret SecretKeyValue       `json:"passwordSecret,omitempty"`
+	DBName         string               `json:"pipelineDBName,omitempty"`
+	PVCSize        resource.Quantity    `json:"pvcSize,omitempty"`
+	Resources      ResourceRequirements `json:"resources,omitempty"`
 }
 
 type ExternalDB struct {
@@ -120,8 +119,21 @@ type Minio struct {
 	Image              string `json:"image,omitempty"`
 	Bucket             string `json:"bucket,omitempty"`
 	S3CredentialSecret `json:"s3CredentialsSecret,omitempty"`
-	PVCSize            resource.Quantity           `json:"pvcSize,omitempty"`
-	Resources          corev1.ResourceRequirements `json:"resources,omitempty"`
+	PVCSize            resource.Quantity    `json:"pvcSize,omitempty"`
+	Resources          ResourceRequirements `json:"resources,omitempty"`
+}
+
+// ResourceRequirements structures compute resource requirements.
+// Replaces ResourceRequirements from corev1 which also includes optional storage field.
+// We handle storage field separately, and should not include it as a subfield for Resources.
+type ResourceRequirements struct {
+	Limits   Resources `json:"limits,omitempty"`
+	Requests Resources `json:"requests,omitempty"`
+}
+
+type Resources struct {
+	CPU    resource.Quantity `json:"cpu,omitempty"`
+	Memory resource.Quantity `json:"memory,omitempty"`
 }
 
 type ExternalStorage struct {

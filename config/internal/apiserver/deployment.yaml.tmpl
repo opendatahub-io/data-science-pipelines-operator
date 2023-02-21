@@ -125,9 +125,9 @@ spec:
             timeoutSeconds: 2
           resources:
             requests:
-              cpu: {{.APIServer.ResourceRequirements.Requests.cpu}}
-              memory: {{.APIServer.ResourceRequirements.Requests.memory}}
+              cpu: {{.APIServer.Resources.Requests.CPU}}
+              memory: {{.APIServer.Resources.Requests.Memory}}
             limits:
-              cpu: {{.APIServer.ResourceRequirements.Limits.cpu}}
-              memory: {{.APIServer.ResourceRequirements.Limits.memory}}
+              cpu: {{.APIServer.Resources.Limits.CPU}}
+              memory: {{.APIServer.Resources.Limits.Memory}}
       serviceAccountName: ds-pipeline-{{.Name}}

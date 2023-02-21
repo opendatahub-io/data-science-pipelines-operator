@@ -10,5 +10,6 @@ stringData:
   host: "{{.MinioServiceServiceHost}}"
   port: "{{.MinioServiceServicePort}}"
   secure: "false"
-  accesskey: {{.AccessKey}}
+data:
+  accesskey: "{{.AccessKey}}"
   secretkey: {{.SecretKeyVal}}

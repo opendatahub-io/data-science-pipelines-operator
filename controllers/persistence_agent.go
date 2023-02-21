@@ -30,7 +30,7 @@ var persistenceAgentTemplates = []string{
 func (r *DSPipelineReconciler) ReconcilePersistenceAgent(dsp *dspipelinesiov1alpha1.DSPipeline,
 	params *DSPipelineParams) error {
 
-	r.Log.Info("Applying PersistenceAgent Resources")
+	r.Log.Info("Applying PersistenceAgent ResourceRequirements")
 
 	for _, template := range persistenceAgentTemplates {
 		err := r.Apply(dsp, params, template)
@@ -39,6 +39,6 @@ func (r *DSPipelineReconciler) ReconcilePersistenceAgent(dsp *dspipelinesiov1alp
 		}
 	}
 
-	r.Log.Info("Finished applying PersistenceAgent Resources")
+	r.Log.Info("Finished applying PersistenceAgent ResourceRequirements")
 	return nil
 }

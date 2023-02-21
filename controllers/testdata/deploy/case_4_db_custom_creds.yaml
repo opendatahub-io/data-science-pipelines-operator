@@ -1,0 +1,24 @@
+apiVersion: dspipelines.opendatahub.io/v1alpha1
+kind: DSPipeline
+metadata:
+  name: testdsp
+spec:
+  apiServer:
+    deploy: false
+  persistenceAgent:
+    deploy: false
+  scheduledWorkflow:
+    deploy: false
+  viewerCRD:
+    deploy: false
+  mlpipelineUI:
+    deploy: false
+  database:
+    mariaDB:
+      deploy: true
+      passwordSecret:
+        name: test-db-secret
+        key: password
+  objectStorage:
+    minio:
+      deploy: false

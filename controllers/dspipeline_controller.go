@@ -153,8 +153,6 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	err = params.ExtractParams(ctx, dspipeline, r.Client, r.Log)
 	if err != nil {
-		log.Error(err, "Unable to parse CR spec, "+
-			"failed to reconcile, ensure CR is well formed")
 		return ctrl.Result{}, err
 	}
 
@@ -185,6 +183,13 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
+	if !usingCustomDB {
+		err = r.ReconcileDatabase(dspipeline, params)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	usingCustomStorage, err := params.UsingExternalStorage(dspipeline)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -192,13 +197,6 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	if !usingCustomStorage {
 		err := r.ReconcileStorage(dspipeline, params)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-	}
-
-	if !usingCustomDB {
-		err = r.ReconcileDatabase(dspipeline, params)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -249,7 +247,7 @@ func (r *DSPipelineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// Clean Up any resources not handled by garbage collection, like Cluster Resources
+// Clean Up any resources not handled by garbage collection, like Cluster ResourceRequirements
 func (r *DSPipelineReconciler) cleanUpResources(ctx context.Context, req ctrl.Request, dsp *dspipelinesiov1alpha1.DSPipeline, params *DSPipelineParams) error {
 	err := r.CleanUpUI(params)
 	if err != nil {

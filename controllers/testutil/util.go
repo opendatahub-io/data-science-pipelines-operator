@@ -78,7 +78,7 @@ func DeploymentsAreEqual(dp1 appsv1.Deployment, dp2 appsv1.Deployment) bool {
 			return false
 		}
 		if !reflect.DeepEqual(c1.Resources, c2.Resources) {
-			notEqualMsg("Container Resources")
+			notEqualMsg("Container ResourceRequirements")
 			return false
 		}
 		if !reflect.DeepEqual(c1.VolumeMounts, c2.VolumeMounts) {

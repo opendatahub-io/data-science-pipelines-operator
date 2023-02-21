@@ -55,9 +55,9 @@ spec:
             timeoutSeconds: 2
           resources:
             requests:
-              cpu: {{.PersistentAgent.ResourceRequirements.Requests.cpu}}
-              memory: {{.PersistentAgent.ResourceRequirements.Requests.memory}}
+              cpu: {{.PersistentAgent.Resources.Requests.CPU}}
+              memory: {{.PersistentAgent.Resources.Requests.Memory}}
             limits:
-              cpu: {{.PersistentAgent.ResourceRequirements.Limits.cpu}}
-              memory: {{.PersistentAgent.ResourceRequirements.Limits.memory}}
+              cpu: {{.PersistentAgent.Resources.Limits.CPU}}
+              memory: {{.PersistentAgent.Resources.Limits.Memory}}
       serviceAccountName: ds-pipeline-persistenceagent-{{.Name}}

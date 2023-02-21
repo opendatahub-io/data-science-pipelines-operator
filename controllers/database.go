@@ -30,13 +30,13 @@ var dbTemplates = []string{
 func (r *DSPipelineReconciler) ReconcileDatabase(dsp *dspipelinesiov1alpha1.DSPipeline,
 	params *DSPipelineParams) error {
 
-	r.Log.Info("Applying Database Resources")
+	r.Log.Info("Applying Database ResourceRequirements")
 	for _, template := range dbTemplates {
 		err := r.Apply(dsp, params, template)
 		if err != nil {
 			return err
 		}
 	}
-	r.Log.Info("Finished applying Database Resources")
+	r.Log.Info("Finished applying Database ResourceRequirements")
 	return nil
 }

@@ -54,19 +54,19 @@ spec:
             - name: MYSQL_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  key: "{{.DBConnection.CredentialsSecret.Name}}"
-                  name: "{{.DBConnection.CredentialsSecret.Key}}"
+                  key: "{{.DBConnection.CredentialsSecret.Key}}"
+                  name: "{{.DBConnection.CredentialsSecret.Name}}"
             - name: MYSQL_DATABASE
               value: "{{.DBConnection.DBName}}"
             - name: MYSQL_ALLOW_EMPTY_PASSWORD
               value: "true"
           resources:
             requests:
-              cpu: {{.MariaDB.ResourceRequirements.Requests.cpu}}
-              memory: {{.MariaDB.ResourceRequirements.Requests.memory}}
+              cpu: {{.MariaDB.Resources.Requests.CPU}}
+              memory: {{.MariaDB.Resources.Requests.Memory}}
             limits:
-              cpu: {{.MariaDB.ResourceRequirements.Limits.cpu}}
-              memory: {{.MariaDB.ResourceRequirements.Limits.memory}}
+              cpu: {{.MariaDB.Resources.Limits.CPU}}
+              memory: {{.MariaDB.Resources.Limits.Memory}}
           volumeMounts:
             - name: mariadb-persistent-storage
               mountPath: /var/lib/mysql

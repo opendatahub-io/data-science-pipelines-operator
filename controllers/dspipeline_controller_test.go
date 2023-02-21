@@ -29,17 +29,17 @@ import (
 )
 
 const (
-	dspcrcase1                  = "./testdata/deploy/case_1.yaml"
+	dspcrcase1                  = "./testdata/deploy/case_2_standard_deploy.yaml"
 	dspcrcase2                  = "./testdata/deploy/case_2.yaml"
-	apiserverDeployment         = "./testdata/results/case_1/apiserver/deployment.yaml"
+	apiserverDeployment         = "./testdata/results/case_2/apiserver/deployment.yaml"
 	apiserverConfigMap1         = "./testdata/results/case_1/apiserver/configmap_artifact_script.yaml"
 	apiserverConfigMap2         = "./testdata/results/case_2/apiserver/configmap_artifact_script.yaml"
-	mariadbDeployment           = "./testdata/results/case_1/mariadb/deployment.yaml"
-	minioDeployment             = "./testdata/results/case_1/minio/deployment.yaml"
-	mlpipelinesUIDeployment     = "./testdata/results/case_1/mlpipelines-ui/deployment.yaml"
-	persistenceAgentDeployment  = "./testdata/results/case_1/persistence-agent/deployment.yaml"
-	scheduledWorkflowDeployment = "./testdata/results/case_1/scheduled-workflow/deployment.yaml"
-	viewerCrdDeployment         = "./testdata/results/case_1/viewer-crd/deployment.yaml"
+	mariadbDeployment           = "./testdata/results/case_2/mariadb/deployment.yaml"
+	minioDeployment             = "./testdata/results/case_2/minio/deployment.yaml"
+	mlpipelinesUIDeployment     = "./testdata/results/case_2/mlpipelines-ui/deployment.yaml"
+	persistenceAgentDeployment  = "./testdata/results/case_2/persistence-agent/deployment.yaml"
+	scheduledWorkflowDeployment = "./testdata/results/case_2/scheduled-workflow/deployment.yaml"
+	viewerCrdDeployment         = "./testdata/results/case_2/viewer-crd/deployment.yaml"
 )
 
 func deployDSP(ctx context.Context, path string, opts mf.Option) {

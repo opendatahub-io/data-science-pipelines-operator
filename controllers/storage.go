@@ -29,7 +29,7 @@ var storageTemplates = []string{
 
 func (r *DSPipelineReconciler) ReconcileStorage(dsp *dspipelinesiov1alpha1.DSPipeline,
 	params *DSPipelineParams) error {
-	r.Log.Info("Applying Storage Resources")
+	r.Log.Info("Applying Storage ResourceRequirements")
 
 	for _, template := range storageTemplates {
 		err := r.Apply(dsp, params, template)
@@ -38,6 +38,6 @@ func (r *DSPipelineReconciler) ReconcileStorage(dsp *dspipelinesiov1alpha1.DSPip
 		}
 	}
 
-	r.Log.Info("Finished applying Storage Resources")
+	r.Log.Info("Finished applying Storage ResourceRequirements")
 	return nil
 }

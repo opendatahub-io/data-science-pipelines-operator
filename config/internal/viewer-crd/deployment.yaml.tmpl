@@ -48,9 +48,9 @@ spec:
             timeoutSeconds: 2
           resources:
             requests:
-              cpu: {{.ViewerCRD.ResourceRequirements.Requests.cpu}}
-              memory: {{.ViewerCRD.ResourceRequirements.Requests.memory}}
+              cpu: {{.ViewerCRD.Resources.Requests.CPU}}
+              memory: {{.ViewerCRD.Resources.Requests.Memory}}
             limits:
-              cpu: {{.ViewerCRD.ResourceRequirements.Limits.cpu}}
-              memory: {{.ViewerCRD.ResourceRequirements.Limits.memory}}
+              cpu: {{.ViewerCRD.Resources.Limits.CPU}}
+              memory: {{.ViewerCRD.Resources.Limits.Memory}}
       serviceAccountName: ds-pipeline-viewer-crd-{{.Name}}

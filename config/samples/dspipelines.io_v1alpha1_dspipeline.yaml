@@ -108,6 +108,7 @@ spec:
       deploy: true
       image: quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance
       bucket: mlpipeline
+      pvcSize: 10Gi
       resources:
         requests:
           cpu: 20m
