@@ -1,0 +1,31 @@
+apiVersion: kfdef.apps.kubeflow.org/v1
+kind: KfDef
+metadata:
+  name: opendatahub
+  namespace: opendatahub
+spec:
+  applications:
+  - kustomizeConfig:
+      repoRef:
+        name: manifests
+        path: odh-common
+    name: odh-common
+  - kustomizeConfig:
+      parameters:
+        - name: namespace
+          value: openshift-operators
+      repoRef:
+        name: manifests
+        path: openshift-pipelines/cluster
+    name: openshift-pipelines
+  - kustomizeConfig:
+      repoRef:
+        name: app
+        path: config
+    name: data-science-pipelines-operator
+  repos:
+  - name: manifests
+    uri: https://github.com/opendatahub-io/odh-manifests/tarball/master
+  - name: app
+    uri: https://github.com/opendatahub-io/data-science-pipelines-operator/tarball/main
+  version: master
