@@ -151,7 +151,7 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		dspipeline.APIVersion, dspipeline.Kind = gvk.Version, gvk.Kind
 	}
 
-	err = params.ExtractParams(dspipeline)
+	err = params.ExtractParams(ctx, dspipeline, r.Client, r.Log)
 	if err != nil {
 		log.Error(err, "Unable to parse CR spec, "+
 			"failed to reconcile, ensure CR is well formed")
@@ -191,21 +191,18 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	if !usingCustomStorage {
-		err := r.ReconcileStorage(ctx, dspipeline, req, params)
+		err := r.ReconcileStorage(dspipeline, params)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 
 	if !usingCustomDB {
-		err = r.ReconcileDatabase(ctx, dspipeline, req, params)
+		err = r.ReconcileDatabase(dspipeline, params)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 	}
-
-	// TODO: Ensure db/storage (if deploying custom) are running before
-	// Use status fields to conditionally deploy
 
 	err = r.ReconcileAPIServer(ctx, dspipeline, req, params)
 	if err != nil {

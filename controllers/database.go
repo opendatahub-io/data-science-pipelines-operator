@@ -16,52 +16,27 @@ limitations under the License.
 package controllers
 
 import (
-	"context"
 	dspipelinesiov1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
-	v1 "k8s.io/api/core/v1"
-	apierrs "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
-	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-const (
-	DBDeploymentTemplate     = "mariadb/deployment.yaml.tmpl"
-	DBPvcTemplate            = "mariadb/pvc.yaml.tmpl"
-	DBServiceAccountTemplate = "mariadb/sa.yaml.tmpl"
-	DBSecretTemplate         = "mariadb/secret.yaml.tmpl"
-	DBServiceTemplate        = "mariadb/service.yaml.tmpl"
-)
+var dbTemplates = []string{
+	"mariadb/deployment.yaml.tmpl",
+	"mariadb/pvc.yaml.tmpl",
+	"mariadb/sa.yaml.tmpl",
+	"mariadb/secret.yaml.tmpl",
+	"mariadb/service.yaml.tmpl",
+}
 
-func (r *DSPipelineReconciler) ReconcileDatabase(ctx context.Context, dsp *dspipelinesiov1alpha1.DSPipeline,
-	req ctrl.Request, params *DSPipelineParams) error {
+func (r *DSPipelineReconciler) ReconcileDatabase(dsp *dspipelinesiov1alpha1.DSPipeline,
+	params *DSPipelineParams) error {
+
 	r.Log.Info("Applying Database Resources")
-
-	// If the provided secret does not exist, create it
-	secret := &v1.Secret{}
-	namespacedName := types.NamespacedName{
-		Name:      params.DBConnection.CredentialsSecret.Name,
-		Namespace: req.Namespace,
-	}
-	err := r.Get(ctx, namespacedName, secret)
-	if err != nil && apierrs.IsNotFound(err) {
-		r.Log.Info("Specified DB secret not found, creating...")
-		err := r.Apply(dsp, params, DBSecretTemplate)
-		if err != nil {
-			return err
-		}
-	} else if err != nil {
-		r.Log.Error(err, "Unable to fetch DB secret...")
-		return err
-	}
-
-	templates := []string{DBDeploymentTemplate, DBPvcTemplate, DBServiceAccountTemplate, DBServiceTemplate}
-	for _, template := range templates {
+	for _, template := range dbTemplates {
 		err := r.Apply(dsp, params, template)
 		if err != nil {
 			return err
 		}
 	}
-
 	r.Log.Info("Finished applying Database Resources")
 	return nil
 }

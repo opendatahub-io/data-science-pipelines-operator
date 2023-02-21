@@ -17,12 +17,19 @@ limitations under the License.
 package controllers
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
+	"github.com/go-logr/logr"
 	mf "github.com/manifestival/manifestival"
 	dspipelinesiov1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	v1 "k8s.io/api/core/v1"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
+	"math/rand"
 	"reflect"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"time"
 )
 
 const (
@@ -68,7 +75,7 @@ type ObjectStorageConnection struct {
 	SecretAccessKey   string
 }
 
-func (r *DSPipelineParams) UsingExternalDB(dsp *dspipelinesiov1alpha1.DSPipeline) (bool, error) {
+func (p *DSPipelineParams) UsingExternalDB(dsp *dspipelinesiov1alpha1.DSPipeline) (bool, error) {
 	ExternalDBIsNotEmpty := !reflect.DeepEqual(dsp.Spec.Database.ExternalDB, dspipelinesiov1alpha1.ExternalDB{})
 	MariaDBIsNotEmpty := !reflect.DeepEqual(dsp.Spec.Database.MariaDB, dspipelinesiov1alpha1.MariaDB{})
 	if ExternalDBIsNotEmpty {
@@ -79,7 +86,7 @@ func (r *DSPipelineParams) UsingExternalDB(dsp *dspipelinesiov1alpha1.DSPipeline
 	return false, fmt.Errorf("no Database specified for DS-Pipeline resource")
 }
 
-func (r *DSPipelineParams) UsingExternalStorage(dsp *dspipelinesiov1alpha1.DSPipeline) (bool, error) {
+func (p *DSPipelineParams) UsingExternalStorage(dsp *dspipelinesiov1alpha1.DSPipeline) (bool, error) {
 	ExternalStorageIsNotEmpty := !reflect.DeepEqual(dsp.Spec.ObjectStorage.ExternalStorage, dspipelinesiov1alpha1.ExternalStorage{})
 	MinioIsNotEmpty := !reflect.DeepEqual(dsp.Spec.ObjectStorage.Minio, dspipelinesiov1alpha1.Minio{})
 	if ExternalStorageIsNotEmpty {
@@ -88,6 +95,195 @@ func (r *DSPipelineParams) UsingExternalStorage(dsp *dspipelinesiov1alpha1.DSPip
 		return false, nil
 	}
 	return false, fmt.Errorf("no Database specified for DS-Pipeline resource")
+}
+
+func passwordGen(n int) string {
+	rand.Seed(time.Now().UnixNano())
+	var chars = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890")
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = chars[rand.Intn(len(chars))]
+	}
+	return string(b)
+}
+
+// SetupDBParams Populates the DB connection Parameters.
+// If an external secret is specified, SetupDBParams will retrieve DB credentials from it.
+// If DSPO is managing a dynamically created secret, then SetupDBParams generates the creds.
+func (p *DSPipelineParams) SetupDBParams(ctx context.Context, dsp *dspipelinesiov1alpha1.DSPipeline, client client.Client, log logr.Logger) error {
+	//Set up DB Connection
+	usingExternalDB, err := p.UsingExternalDB(dsp)
+	if err != nil {
+		return err
+	}
+
+	if usingExternalDB {
+		// Assume validation for CR ensures these values exist
+		p.DBConnection.Host = dsp.Spec.Database.ExternalDB.Host
+		p.DBConnection.Port = dsp.Spec.Database.ExternalDB.Port
+		p.DBConnection.Username = dsp.Spec.Database.ExternalDB.Username
+		p.DBConnection.DBName = dsp.Spec.Database.ExternalDB.DBName
+		p.DBConnection.CredentialsSecret = dsp.Spec.Database.ExternalDB.PasswordSecret
+	} else {
+		p.DBConnection.Host = fmt.Sprintf(
+			"%s.%s.svc.cluster.local",
+			defaultDBHostPrefix+"-"+p.Name,
+			p.Namespace,
+		)
+		p.DBConnection.Port = defaultDBHostPort
+		p.DBConnection.Username = defaultDBUser
+		p.DBConnection.DBName = defaultDBName
+
+		if dsp.Spec.Database.ExternalDB.Username != "" {
+			p.DBConnection.Username = dsp.Spec.Database.ExternalDB.Username
+		}
+		if dsp.Spec.Database.ExternalDB.DBName != "" {
+			p.DBConnection.DBName = dsp.Spec.Database.ExternalDB.DBName
+		}
+		mariaDBSecretSpecified := !reflect.DeepEqual(dsp.Spec.MariaDB.PasswordSecret, dspipelinesiov1alpha1.SecretKeyValue{})
+		if mariaDBSecretSpecified {
+			p.DBConnection.CredentialsSecret = dsp.Spec.MariaDB.PasswordSecret
+		}
+	}
+
+	DBCredentialsNotSpecified := reflect.DeepEqual(p.DBConnection.CredentialsSecret, dspipelinesiov1alpha1.SecretKeyValue{})
+	if DBCredentialsNotSpecified {
+		// We assume validation ensures DB Credentials are specified for External DB
+		// So this case is only possible if MariaDB deployment is specified, but no secret is provided.
+		// In this case a custom secret will be created.
+		p.DBConnection.CredentialsSecret = dspipelinesiov1alpha1.SecretKeyValue{
+			Name: defaultDBHostPrefix + p.Name,
+			Key:  defaultDBSecretKey,
+		}
+	}
+
+	dbSecret := &v1.Secret{}
+	namespacedName := types.NamespacedName{
+		Name:      p.DBConnection.CredentialsSecret.Name,
+		Namespace: p.Namespace,
+	}
+
+	createNewSecret := false
+
+	// Attempt to fetch the specified DB secret
+	err = client.Get(ctx, namespacedName, dbSecret)
+	if err != nil && apierrs.IsNotFound(err) {
+		if DBCredentialsNotSpecified {
+			p.DBConnection.Password = passwordGen(12)
+			dbSecret.StringData[defaultDBSecretKey] = p.DBConnection.Password
+			createNewSecret = true
+		} else {
+			log.Error(err, fmt.Sprintf("DB secret %s was specified in CR but does not exist.",
+				p.DBConnection.CredentialsSecret.Name))
+			return err
+		}
+	} else if err != nil {
+		log.Error(err, "Unable to fetch DB secret...")
+		return err
+	}
+
+	if !createNewSecret {
+		p.DBConnection.Password, err = GetSecretDataDecoded(dbSecret, p.DBConnection.CredentialsSecret.Key)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// SetupObjectParams Populates the Object Storage connection Parameters.
+// If an external secret is specified, SetupObjectParams will retrieve storage credentials from it.
+// If DSPO is managing a dynamically created secret, then SetupObjectParams generates the creds.
+func (p *DSPipelineParams) SetupObjectParams(ctx context.Context, dsp *dspipelinesiov1alpha1.DSPipeline, client client.Client, log logr.Logger) error {
+
+	usingExternalObjectStorage, err := p.UsingExternalStorage(dsp)
+	if err != nil {
+		return err
+	}
+
+	p.ObjectStorageConnection.Secure = DefaultObjectStoreConnectionSecure
+	if usingExternalObjectStorage {
+		// Assume validation for CR ensures these values exist
+		p.ObjectStorageConnection.Bucket = dsp.Spec.ObjectStorage.ExternalStorage.Bucket
+		p.ObjectStorageConnection.CredentialsSecret = dsp.Spec.ObjectStorage.ExternalStorage.S3CredentialSecret
+		p.ObjectStorageConnection.Host = dsp.Spec.ObjectStorage.ExternalStorage.Host
+		p.ObjectStorageConnection.Port = dsp.Spec.ObjectStorage.ExternalStorage.Port
+		p.ObjectStorageConnection.Scheme = dsp.Spec.ObjectStorage.ExternalStorage.Scheme
+	} else {
+		p.ObjectStorageConnection.Bucket = dsp.Spec.ObjectStorage.Minio.Bucket
+		p.ObjectStorageConnection.Host = fmt.Sprintf(
+			"%s.%s.svc.cluster.local", defaultMinioHostPrefix+"-"+p.Name,
+			p.Namespace,
+		)
+		p.ObjectStorageConnection.Port = defaultMinioPort
+		p.ObjectStorageConnection.Scheme = defaultMinioScheme
+		minioSecretSpecified := !reflect.DeepEqual(dsp.Spec.Minio.S3CredentialSecret, dspipelinesiov1alpha1.S3CredentialSecret{})
+		if minioSecretSpecified {
+			p.ObjectStorageConnection.CredentialsSecret = dsp.Spec.ObjectStorage.Minio.S3CredentialSecret
+		}
+	}
+
+	p.ObjectStorageConnection.Endpoint = fmt.Sprintf(
+		"%s://%s:%s",
+		p.ObjectStorageConnection.Scheme,
+		p.ObjectStorageConnection.Host,
+		p.ObjectStorageConnection.Port,
+	)
+
+	storageCredentialsNotSpecified := reflect.DeepEqual(p.ObjectStorageConnection.CredentialsSecret, dspipelinesiov1alpha1.S3CredentialSecret{})
+	if storageCredentialsNotSpecified {
+		// We assume validation ensures Storage Credentials are specified for External Object Storage
+		// So this case is only possible if Custom Object Storage deployment is enabled, but no secret is provided.
+		// In this case a custom secret will be created.
+		p.ObjectStorageConnection.CredentialsSecret = dspipelinesiov1alpha1.S3CredentialSecret{
+			SecretName: defaultObjectStorageSecretName,
+			AccessKey:  defaultObjectStorageAccessKey,
+			SecretKey:  defaultObjectStorageSecretKey,
+		}
+	}
+
+	storageSecret := &v1.Secret{}
+	namespacedName := types.NamespacedName{
+		Name:      p.ObjectStorageConnection.CredentialsSecret.SecretName,
+		Namespace: p.Namespace,
+	}
+
+	createNewSecret := false
+
+	// Attempt to fetch the specified storage secret
+	err = client.Get(ctx, namespacedName, storageSecret)
+	if err != nil && apierrs.IsNotFound(err) {
+		if storageCredentialsNotSpecified {
+			p.ObjectStorageConnection.AccessKeyID = passwordGen(16)
+			p.ObjectStorageConnection.SecretAccessKey = passwordGen(24)
+			storageSecret.StringData[defaultObjectStorageAccessKey] = p.ObjectStorageConnection.AccessKeyID
+			storageSecret.StringData[defaultObjectStorageSecretKey] = p.ObjectStorageConnection.SecretAccessKey
+			createNewSecret = true
+		} else {
+			log.Error(err, fmt.Sprintf("Storage secret %s was specified in CR but does not exist.",
+				p.ObjectStorageConnection.CredentialsSecret.SecretName))
+			return err
+		}
+	} else if err != nil {
+		log.Error(err, "Unable to fetch Storage secret...")
+		return err
+	}
+
+	if !createNewSecret {
+		p.ObjectStorageConnection.AccessKeyID, err = GetSecretDataDecoded(
+			storageSecret, p.ObjectStorageConnection.CredentialsSecret.AccessKey)
+		if err != nil {
+			return err
+		}
+		p.ObjectStorageConnection.SecretAccessKey, err = GetSecretDataDecoded(
+			storageSecret, p.ObjectStorageConnection.CredentialsSecret.SecretKey)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func GetSecretDataDecoded(s *v1.Secret, key string) (string, error) {
@@ -99,22 +295,32 @@ func GetSecretDataDecoded(s *v1.Secret, key string) (string, error) {
 	return string(secretData), nil
 }
 
-func (r *DSPipelineParams) ExtractParams(dsp *dspipelinesiov1alpha1.DSPipeline) error {
-	r.Name = dsp.Name
-	r.Namespace = dsp.Namespace
-	r.Owner = dsp
-	r.APIServer = dsp.Spec.APIServer
-	r.APIServerServiceName = fmt.Sprintf("%s-%s", defaultDSPServicePrefix, r.Name)
-	r.ScheduledWorkflow = dsp.Spec.ScheduledWorkflow
-	r.ViewerCRD = dsp.Spec.ViewerCRD
-	r.PersistenceAgent = dsp.Spec.PersistenceAgent
-	r.MlPipelineUI = dsp.Spec.MlPipelineUI
-	r.MariaDB = dsp.Spec.MariaDB
-	r.Minio = dsp.Spec.Minio
+func (p *DSPipelineParams) ExtractParams(ctx context.Context, dsp *dspipelinesiov1alpha1.DSPipeline, client client.Client, log logr.Logger) error {
+	p.Name = dsp.Name
+	p.Namespace = dsp.Namespace
+	p.Owner = dsp
+	p.APIServer = dsp.Spec.APIServer
+	p.APIServerServiceName = fmt.Sprintf("%s-%s", defaultDSPServicePrefix, p.Name)
+	p.ScheduledWorkflow = dsp.Spec.ScheduledWorkflow
+	p.ViewerCRD = dsp.Spec.ViewerCRD
+	p.PersistenceAgent = dsp.Spec.PersistenceAgent
+	p.MlPipelineUI = dsp.Spec.MlPipelineUI
+	p.MariaDB = dsp.Spec.MariaDB
+	p.Minio = dsp.Spec.Minio
+
+	err := p.SetupDBParams(ctx, dsp, client, log)
+	if err != nil {
+		return err
+	}
+
+	err = p.SetupObjectParams(ctx, dsp, client, log)
+	if err != nil {
+		return err
+	}
 
 	if dsp.Spec.APIServer.ArtifactScriptConfigMap == (dspipelinesiov1alpha1.ArtifactScriptConfigMap{}) {
-		r.APIServer.ArtifactScriptConfigMap.Name = defaultArtifactScriptConfigMap
-		r.APIServer.ArtifactScriptConfigMap.Key = defaultArtifactScriptConfigMapKey
+		p.APIServer.ArtifactScriptConfigMap.Name = defaultArtifactScriptConfigMap
+		p.APIServer.ArtifactScriptConfigMap.Key = defaultArtifactScriptConfigMapKey
 	}
 
 	return nil
