@@ -4,6 +4,7 @@ resources:
 - ../crd
 - ../rbac
 - ../manager
+- ../prometheus
 
 images:
 - name: controller
