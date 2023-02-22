@@ -30,7 +30,12 @@ var viewerCRDTemplates = []string{
 func (r *DSPipelineReconciler) ReconcileViewerCRD(dsp *dspipelinesiov1alpha1.DSPipeline,
 	params *DSPipelineParams) error {
 
-	r.Log.Info("Applying ViewerCRD ResourceRequirements")
+	if dsp.Spec.ViewerCRD.Deploy == false {
+		r.Log.Info("Skipping Application of ViewerCRD Resources")
+		return nil
+	}
+
+	r.Log.Info("Applying ViewerCRD Resources")
 
 	for _, template := range viewerCRDTemplates {
 		err := r.Apply(dsp, params, template)
@@ -39,6 +44,6 @@ func (r *DSPipelineReconciler) ReconcileViewerCRD(dsp *dspipelinesiov1alpha1.DSP
 		}
 	}
 
-	r.Log.Info("Finished applying ViewerCRD ResourceRequirements")
+	r.Log.Info("Finished applying ViewerCRD Resources")
 	return nil
 }

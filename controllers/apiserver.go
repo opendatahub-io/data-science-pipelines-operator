@@ -51,7 +51,13 @@ const (
 )
 
 func (r *DSPipelineReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspipelinesiov1alpha1.DSPipeline, req ctrl.Request, params *DSPipelineParams) error {
-	r.Log.Info("Applying APIServer ResourceRequirements")
+
+	if dsp.Spec.APIServer.Deploy == false {
+		r.Log.Info("Skipping Application of APIServer Resources")
+		return nil
+	}
+
+	r.Log.Info("Applying APIServer Resources")
 
 	for _, template := range apiServerTemplates {
 		err := r.Apply(dsp, params, template)
@@ -60,6 +66,6 @@ func (r *DSPipelineReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspi
 		}
 	}
 
-	r.Log.Info("Finished applying APIServer ResourceRequirements")
+	r.Log.Info("Finished applying APIServer Resources")
 	return nil
 }

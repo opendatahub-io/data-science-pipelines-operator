@@ -20,6 +20,6 @@ spec:
     minio:
       bucket: mlpipeline
       s3CredentialsSecret:
-        secretName: testStorageSecret
+        secretName: teststoragesecret
         accessKey: accesskey
         secretKey: secretkey

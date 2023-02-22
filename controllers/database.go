@@ -30,13 +30,18 @@ var dbTemplates = []string{
 func (r *DSPipelineReconciler) ReconcileDatabase(dsp *dspipelinesiov1alpha1.DSPipeline,
 	params *DSPipelineParams) error {
 
-	r.Log.Info("Applying Database ResourceRequirements")
+	if dsp.Spec.Database.MariaDB.Deploy == false {
+		r.Log.Info("Skipping Application of MariaDB Resources")
+		return nil
+	}
+
+	r.Log.Info("Applying Database Resources")
 	for _, template := range dbTemplates {
 		err := r.Apply(dsp, params, template)
 		if err != nil {
 			return err
 		}
 	}
-	r.Log.Info("Finished applying Database ResourceRequirements")
+	r.Log.Info("Finished applying Database Resources")
 	return nil
 }

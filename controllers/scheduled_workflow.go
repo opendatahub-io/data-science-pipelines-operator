@@ -32,7 +32,12 @@ var scheduledWorkflowTemplates = []string{
 func (r *DSPipelineReconciler) ReconcileScheduledWorkflow(dsp *dspipelinesiov1alpha1.DSPipeline,
 	params *DSPipelineParams) error {
 
-	r.Log.Info("Applying ScheduledWorkflow ResourceRequirements")
+	if dsp.Spec.ScheduledWorkflow.Deploy == false {
+		r.Log.Info("Skipping Application of ScheduledWorkflow Resources")
+		return nil
+	}
+
+	r.Log.Info("Applying ScheduledWorkflow Resources")
 
 	for _, template := range scheduledWorkflowTemplates {
 		err := r.Apply(dsp, params, template)
@@ -41,6 +46,6 @@ func (r *DSPipelineReconciler) ReconcileScheduledWorkflow(dsp *dspipelinesiov1al
 		}
 	}
 
-	r.Log.Info("Finished applying ScheduledWorkflow ResourceRequirements")
+	r.Log.Info("Finished applying ScheduledWorkflow Resources")
 	return nil
 }

@@ -17,7 +17,7 @@ spec:
     mariaDB:
       deploy: true
       passwordSecret:
-        name: test-db-secret
+        name: testdbsecret
         key: password
   objectStorage:
     minio:

@@ -29,7 +29,13 @@ var storageTemplates = []string{
 
 func (r *DSPipelineReconciler) ReconcileStorage(dsp *dspipelinesiov1alpha1.DSPipeline,
 	params *DSPipelineParams) error {
-	r.Log.Info("Applying Storage ResourceRequirements")
+
+	if dsp.Spec.ObjectStorage.Minio.Deploy == false {
+		r.Log.Info("Skipping Application of ObjectStorage Resources")
+		return nil
+	}
+
+	r.Log.Info("Applying Storage Resources")
 
 	for _, template := range storageTemplates {
 		err := r.Apply(dsp, params, template)
@@ -38,6 +44,6 @@ func (r *DSPipelineReconciler) ReconcileStorage(dsp *dspipelinesiov1alpha1.DSPip
 		}
 	}
 
-	r.Log.Info("Finished applying Storage ResourceRequirements")
+	r.Log.Info("Finished applying Storage Resources")
 	return nil
 }
