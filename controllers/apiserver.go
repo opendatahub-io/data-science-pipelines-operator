@@ -34,22 +34,6 @@ var apiServerTemplates = []string{
 	"apiserver/mlpipeline-minio-artifact.yaml.tmpl",
 }
 
-const (
-	defaultDBHostPrefix                = "mariadb"
-	defaultDBHostPort                  = "3306"
-	defaultDBUser                      = "mlpipeline"
-	defaultDBName                      = "mlpipeline"
-	defaultDBSecretKey                 = "password"
-	defaultMinioHostPrefix             = "minio"
-	defaultMinioPort                   = "9000"
-	defaultObjectStorageAccessKey      = "accesskey"
-	defaultObjectStorageSecretKey      = "secretkey"
-	defaultMinioScheme                 = "http"
-	DefaultObjectStoreConnectionSecure = false
-	// This is hardcoded in kfp-tekton, apiserver will always use this hardcoded secret for tekton resources
-	defaultObjectStorageSecretName = "mlpipeline-minio-artifact"
-)
-
 func (r *DSPipelineReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspipelinesiov1alpha1.DSPipeline, req ctrl.Request, params *DSPipelineParams) error {
 
 	if dsp.Spec.APIServer.Deploy == false {

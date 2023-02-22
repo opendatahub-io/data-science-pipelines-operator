@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"github.com/go-logr/logr"
 	mf "github.com/manifestival/manifestival"
@@ -33,9 +34,23 @@ import (
 )
 
 const (
-	defaultArtifactScriptConfigMap    = "ds-pipeline-artifact-script"
-	defaultArtifactScriptConfigMapKey = "artifact_script"
-	defaultDSPServicePrefix           = "ds-pipeline"
+	defaultArtifactScriptConfigMap     = "ds-pipeline-artifact-script"
+	defaultArtifactScriptConfigMapKey  = "artifact_script"
+	defaultDSPServicePrefix            = "ds-pipeline"
+	defaultDBHostPrefix                = "mariadb"
+	defaultDBSecretNamePrefix          = "mariadb-"
+	defaultDBHostPort                  = "3306"
+	defaultDBUser                      = "mlpipeline"
+	defaultDBName                      = "mlpipeline"
+	defaultDBSecretKey                 = "password"
+	defaultMinioHostPrefix             = "minio"
+	defaultMinioPort                   = "9000"
+	defaultObjectStorageAccessKey      = "accesskey"
+	defaultObjectStorageSecretKey      = "secretkey"
+	defaultMinioScheme                 = "http"
+	DefaultObjectStoreConnectionSecure = false
+	// This is hardcoded in kfp-tekton, apiserver will always use this hardcoded secret for tekton resources
+	defaultObjectStorageSecretName = "mlpipeline-minio-artifact"
 )
 
 type DSPipelineParams struct {
@@ -111,10 +126,18 @@ func passwordGen(n int) string {
 // If an external secret is specified, SetupDBParams will retrieve DB credentials from it.
 // If DSPO is managing a dynamically created secret, then SetupDBParams generates the creds.
 func (p *DSPipelineParams) SetupDBParams(ctx context.Context, dsp *dspipelinesiov1alpha1.DSPipeline, client client.Client, log logr.Logger) error {
-	//Set up DB Connection
+
 	usingExternalDB, err := p.UsingExternalDB(dsp)
 	if err != nil {
 		return err
+	}
+
+	var customCreds dspipelinesiov1alpha1.SecretKeyValue
+
+	// Even if a secret is specified DSPO will deploy its own secret owned by DSPO
+	p.DBConnection.CredentialsSecret = dspipelinesiov1alpha1.SecretKeyValue{
+		Name: defaultDBSecretNamePrefix + p.Name,
+		Key:  defaultDBSecretKey,
 	}
 
 	if usingExternalDB {
@@ -123,7 +146,7 @@ func (p *DSPipelineParams) SetupDBParams(ctx context.Context, dsp *dspipelinesio
 		p.DBConnection.Port = dsp.Spec.Database.ExternalDB.Port
 		p.DBConnection.Username = dsp.Spec.Database.ExternalDB.Username
 		p.DBConnection.DBName = dsp.Spec.Database.ExternalDB.DBName
-		p.DBConnection.CredentialsSecret = dsp.Spec.Database.ExternalDB.PasswordSecret
+		customCreds = dsp.Spec.Database.ExternalDB.PasswordSecret
 	} else {
 		p.DBConnection.Host = fmt.Sprintf(
 			"%s.%s.svc.cluster.local",
@@ -142,24 +165,26 @@ func (p *DSPipelineParams) SetupDBParams(ctx context.Context, dsp *dspipelinesio
 		}
 		mariaDBSecretSpecified := !reflect.DeepEqual(dsp.Spec.MariaDB.PasswordSecret, dspipelinesiov1alpha1.SecretKeyValue{})
 		if mariaDBSecretSpecified {
-			p.DBConnection.CredentialsSecret = dsp.Spec.MariaDB.PasswordSecret
+			customCreds = dsp.Spec.MariaDB.PasswordSecret
 		}
 	}
 
-	DBCredentialsNotSpecified := reflect.DeepEqual(p.DBConnection.CredentialsSecret, dspipelinesiov1alpha1.SecretKeyValue{})
-	if DBCredentialsNotSpecified {
-		// We assume validation ensures DB Credentials are specified for External DB
-		// So this case is only possible if MariaDB deployment is specified, but no secret is provided.
-		// In this case a custom secret will be created.
-		p.DBConnection.CredentialsSecret = dspipelinesiov1alpha1.SecretKeyValue{
-			Name: defaultDBHostPrefix + p.Name,
-			Key:  defaultDBSecretKey,
-		}
+	// Secret where DB credentials reside on cluster
+	var credsSecretName string
+	var credsPasswordKey string
+
+	customCredentialsSpecified := !reflect.DeepEqual(customCreds, dspipelinesiov1alpha1.SecretKeyValue{})
+	if customCredentialsSpecified {
+		credsSecretName = customCreds.Name
+		credsPasswordKey = customCreds.Key
+	} else {
+		credsSecretName = p.DBConnection.CredentialsSecret.Name
+		credsPasswordKey = p.DBConnection.CredentialsSecret.Key
 	}
 
 	dbSecret := &v1.Secret{}
 	namespacedName := types.NamespacedName{
-		Name:      p.DBConnection.CredentialsSecret.Name,
+		Name:      credsSecretName,
 		Namespace: p.Namespace,
 	}
 
@@ -168,13 +193,13 @@ func (p *DSPipelineParams) SetupDBParams(ctx context.Context, dsp *dspipelinesio
 	// Attempt to fetch the specified DB secret
 	err = client.Get(ctx, namespacedName, dbSecret)
 	if err != nil && apierrs.IsNotFound(err) {
-		if DBCredentialsNotSpecified {
+		if !customCredentialsSpecified {
 			generatedPass := passwordGen(12)
 			p.DBConnection.Password = base64.StdEncoding.EncodeToString([]byte(generatedPass))
 			createNewSecret = true
 		} else {
-			log.Error(err, fmt.Sprintf("DB secret %s was specified in CR but does not exist.",
-				p.DBConnection.CredentialsSecret.Name))
+			log.Error(err, fmt.Sprintf("DB secret [%s] was specified in CR but does not exist.",
+				credsSecretName))
 			return err
 		}
 	} else if err != nil {
@@ -187,9 +212,12 @@ func (p *DSPipelineParams) SetupDBParams(ctx context.Context, dsp *dspipelinesio
 		return nil
 	}
 
-	cs := p.DBConnection.CredentialsSecret
-	p.DBConnection.Password = base64.StdEncoding.EncodeToString(dbSecret.Data[cs.Key])
+	p.DBConnection.Password = base64.StdEncoding.EncodeToString(dbSecret.Data[credsPasswordKey])
 
+	if p.DBConnection.Password == "" {
+		return errors.New(fmt.Sprintf("DB Password from secret [%s] for key [%s] was not successfully retrieved, "+
+			"ensure that the secret with this key exist.", credsSecretName, credsPasswordKey))
+	}
 	return nil
 }
 
@@ -203,11 +231,20 @@ func (p *DSPipelineParams) SetupObjectParams(ctx context.Context, dsp *dspipelin
 		return err
 	}
 
+	var customCreds dspipelinesiov1alpha1.S3CredentialSecret
+
+	// Even if a secret is specified DSPO will deploy its own secret owned by DSPO
+	p.ObjectStorageConnection.CredentialsSecret = dspipelinesiov1alpha1.S3CredentialSecret{
+		SecretName: defaultObjectStorageSecretName,
+		AccessKey:  defaultObjectStorageAccessKey,
+		SecretKey:  defaultObjectStorageSecretKey,
+	}
 	p.ObjectStorageConnection.Secure = DefaultObjectStoreConnectionSecure
+
 	if usingExternalObjectStorage {
 		// Assume validation for CR ensures these values exist
 		p.ObjectStorageConnection.Bucket = dsp.Spec.ObjectStorage.ExternalStorage.Bucket
-		p.ObjectStorageConnection.CredentialsSecret = dsp.Spec.ObjectStorage.ExternalStorage.S3CredentialSecret
+		customCreds = dsp.Spec.ObjectStorage.ExternalStorage.S3CredentialSecret
 		p.ObjectStorageConnection.Host = dsp.Spec.ObjectStorage.ExternalStorage.Host
 		p.ObjectStorageConnection.Port = dsp.Spec.ObjectStorage.ExternalStorage.Port
 		p.ObjectStorageConnection.Scheme = dsp.Spec.ObjectStorage.ExternalStorage.Scheme
@@ -221,7 +258,7 @@ func (p *DSPipelineParams) SetupObjectParams(ctx context.Context, dsp *dspipelin
 		p.ObjectStorageConnection.Scheme = defaultMinioScheme
 		minioSecretSpecified := !reflect.DeepEqual(dsp.Spec.Minio.S3CredentialSecret, dspipelinesiov1alpha1.S3CredentialSecret{})
 		if minioSecretSpecified {
-			p.ObjectStorageConnection.CredentialsSecret = dsp.Spec.ObjectStorage.Minio.S3CredentialSecret
+			customCreds = dsp.Spec.ObjectStorage.Minio.S3CredentialSecret
 		}
 	}
 
@@ -232,21 +269,25 @@ func (p *DSPipelineParams) SetupObjectParams(ctx context.Context, dsp *dspipelin
 		p.ObjectStorageConnection.Port,
 	)
 
-	storageCredentialsNotSpecified := reflect.DeepEqual(p.ObjectStorageConnection.CredentialsSecret, dspipelinesiov1alpha1.S3CredentialSecret{})
-	if storageCredentialsNotSpecified {
-		// We assume validation ensures Storage Credentials are specified for External Object Storage
-		// So this case is only possible if Custom Object Storage deployment is enabled, but no secret is provided.
-		// In this case a custom secret will be created.
-		p.ObjectStorageConnection.CredentialsSecret = dspipelinesiov1alpha1.S3CredentialSecret{
-			SecretName: defaultObjectStorageSecretName,
-			AccessKey:  defaultObjectStorageAccessKey,
-			SecretKey:  defaultObjectStorageSecretKey,
-		}
+	// Secret where DB credentials reside on cluster
+	var credsSecretName string
+	var credsAccessKey string
+	var credsSecretKey string
+
+	customCredentialsSpecified := !reflect.DeepEqual(customCreds, dspipelinesiov1alpha1.S3CredentialSecret{})
+	if customCredentialsSpecified {
+		credsSecretName = customCreds.SecretName
+		credsAccessKey = customCreds.AccessKey
+		credsSecretKey = customCreds.SecretKey
+	} else {
+		credsSecretName = p.ObjectStorageConnection.CredentialsSecret.SecretName
+		credsAccessKey = p.ObjectStorageConnection.CredentialsSecret.AccessKey
+		credsSecretKey = p.ObjectStorageConnection.CredentialsSecret.SecretKey
 	}
 
 	storageSecret := &v1.Secret{}
 	namespacedName := types.NamespacedName{
-		Name:      p.ObjectStorageConnection.CredentialsSecret.SecretName,
+		Name:      credsSecretName,
 		Namespace: p.Namespace,
 	}
 
@@ -255,7 +296,7 @@ func (p *DSPipelineParams) SetupObjectParams(ctx context.Context, dsp *dspipelin
 	// Attempt to fetch the specified storage secret
 	err = client.Get(ctx, namespacedName, storageSecret)
 	if err != nil && apierrs.IsNotFound(err) {
-		if storageCredentialsNotSpecified {
+		if !customCredentialsSpecified {
 			generatedPass := passwordGen(16)
 			p.ObjectStorageConnection.AccessKeyID = base64.StdEncoding.EncodeToString([]byte(generatedPass))
 			generatedPass = passwordGen(24)
@@ -276,9 +317,13 @@ func (p *DSPipelineParams) SetupObjectParams(ctx context.Context, dsp *dspipelin
 		return nil
 	}
 
-	cs := p.ObjectStorageConnection.CredentialsSecret
-	p.ObjectStorageConnection.AccessKeyID = base64.StdEncoding.EncodeToString(storageSecret.Data[cs.AccessKey])
-	p.ObjectStorageConnection.SecretAccessKey = base64.StdEncoding.EncodeToString(storageSecret.Data[cs.SecretKey])
+	p.ObjectStorageConnection.AccessKeyID = base64.StdEncoding.EncodeToString(storageSecret.Data[credsAccessKey])
+	p.ObjectStorageConnection.SecretAccessKey = base64.StdEncoding.EncodeToString(storageSecret.Data[credsSecretKey])
+
+	if p.ObjectStorageConnection.AccessKeyID == "" || p.ObjectStorageConnection.SecretAccessKey == "" {
+		return errors.New(fmt.Sprintf("Object Storage Password from secret [%s] for keys [%s, %s] was not "+
+			"successfully retrieved, ensure that the secret with this key exist.", credsSecretName, credsAccessKey, credsSecretKey))
+	}
 
 	return nil
 }
