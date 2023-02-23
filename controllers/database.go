@@ -34,10 +34,10 @@ func (r *DSPipelineReconciler) ReconcileDatabase(ctx context.Context, dsp *dspip
 	// If no database was specified, DSPO will deploy mariaDB by default
 	// As such DSPO needs to update the CR with the state of the mariaDB
 	// to match desired with live states.
-	if dsp.Spec.Database == nil && dsp.Spec.Database.MariaDB == nil {
-		dsp.Spec.Database = &dspipelinesiov1alpha1.Database{
-			MariaDB: params.MariaDB.DeepCopy(),
-		}
+	if dsp.Spec.Database == nil || (dsp.Spec.Database.MariaDB == nil && !params.UsingExternalDB(dsp)) {
+		dsp.Spec.Database = &dspipelinesiov1alpha1.Database{}
+		dsp.Spec.Database.MariaDB = params.MariaDB.DeepCopy()
+		dsp.Spec.Database.MariaDB.Deploy = true
 		if err := r.Update(ctx, dsp); err != nil {
 			return err
 		}

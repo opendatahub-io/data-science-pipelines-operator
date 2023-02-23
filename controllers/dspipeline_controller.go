@@ -182,7 +182,6 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	usingCustomDB := params.UsingExternalDB(dspipeline)
 
 	if !usingCustomDB {
-		// Todo: update the CR with no db was specified and a custom mariadb was deployed
 		err = r.ReconcileDatabase(ctx, dspipeline, params)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -192,8 +191,7 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	usingCustomStorage := params.UsingExternalStorage(dspipeline)
 
 	if !usingCustomStorage {
-		// Todo: update the CR with no db was specified and a custom mariadb was deployed
-		err := r.ReconcileStorage(dspipeline, params)
+		err := r.ReconcileStorage(ctx, dspipeline, params)
 		if err != nil {
 			return ctrl.Result{}, err
 		}

@@ -26,10 +26,10 @@ spec:
             - name: DBCONFIG_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  key: "{{.DBConnection.CredentialsSecret.Name}}"
-                  name: "{{.DBConnection.CredentialsSecret.Key}}"
+                  key: "{{.DBConnection.CredentialsSecret.Key}}"
+                  name: "{{.DBConnection.CredentialsSecret.Name}}"
             - name: DBCONFIG_DBNAME
-              value: "{{.DBConnection.Name}}"
+              value: "{{.DBConnection.DBName}}"
             - name: DBCONFIG_HOST
               value: "{{.DBConnection.Host}}"
             - name: DBCONFIG_PORT

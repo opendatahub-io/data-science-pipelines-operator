@@ -31,7 +31,6 @@ var apiServerTemplates = []string{
 	"apiserver/sa_pipeline-runner.yaml.tmpl",
 	"apiserver/service.yaml.tmpl",
 	"apiserver/deployment.yaml.tmpl",
-	"apiserver/mlpipeline-minio-artifact.yaml.tmpl",
 }
 
 func (r *DSPipelineReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspipelinesiov1alpha1.DSPipeline, req ctrl.Request, params *DSPipelineParams) error {

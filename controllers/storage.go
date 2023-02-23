@@ -17,6 +17,7 @@ limitations under the License.
 package controllers
 
 import (
+	"context"
 	dspipelinesiov1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 )
 
@@ -27,8 +28,20 @@ var storageTemplates = []string{
 	"minio/secret.yaml.tmpl",
 }
 
-func (r *DSPipelineReconciler) ReconcileStorage(dsp *dspipelinesiov1alpha1.DSPipeline,
+func (r *DSPipelineReconciler) ReconcileStorage(ctx context.Context, dsp *dspipelinesiov1alpha1.DSPipeline,
 	params *DSPipelineParams) error {
+
+	// If no storage was specified, DSPO will deploy minio by default
+	// As such DSPO needs to update the CR with the state of minio
+	// to match desired with live state.
+	if dsp.Spec.ObjectStorage == nil || (dsp.Spec.ObjectStorage.Minio == nil && !params.UsingExternalStorage(dsp)) {
+		dsp.Spec.ObjectStorage = &dspipelinesiov1alpha1.ObjectStorage{}
+		dsp.Spec.ObjectStorage.Minio = params.Minio.DeepCopy()
+		dsp.Spec.ObjectStorage.Minio.Deploy = true
+		if err := r.Update(ctx, dsp); err != nil {
+			return err
+		}
+	}
 
 	if dsp.Spec.ObjectStorage.Minio.Deploy == false {
 		r.Log.Info("Skipping Application of ObjectStorage Resources")
