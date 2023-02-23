@@ -21,36 +21,51 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Todo: Add validation
-
 type DSPipelineSpec struct {
 	// APIService specifies the Kubeflow Apiserver configurations
-	APIServer         `json:"apiServer,omitempty" validation:"Required"`
-	PersistenceAgent  `json:"persistenceAgent,omitempty"`
+	// +kubebuilder:default:={apiServer: {}}
+	APIServer `json:"apiServer,omitempty"`
+	// +kubebuilder:default:={persistenceAgent: {}}
+	PersistenceAgent `json:"persistenceAgent,omitempty"`
+	// +kubebuilder:default:={scheduledWorkflow: {}}
 	ScheduledWorkflow `json:"scheduledWorkflow,omitempty"`
-	ViewerCRD         `json:"viewerCRD,omitempty"`
-	Database          `json:"database,omitempty"`
-	ObjectStorage     `json:"objectStorage,omitempty"`
-	MlPipelineUI      `json:"mlpipelineUI,omitempty"`
+	// +kubebuilder:default:={viewerCRD: {}}
+	ViewerCRD `json:"viewerCRD,omitempty"`
+	// +kubebuilder:default:={database: {}}
+	Database `json:"database,omitempty"`
+	// +kubebuilder:default:={objectStorage: {}}
+	ObjectStorage `json:"objectStorage,omitempty"`
+	// +kubebuilder:default:={mlpipelineUI: {}}
+	MlPipelineUI `json:"mlpipelineUI,omitempty"`
 }
 
 type APIServer struct {
-	Deploy                           bool   `json:"deploy,omitempty"`
-	Image                            string `json:"image,omitempty"`
-	ApplyTektonCustomResource        bool   `json:"applyTektonCustomResource,omitempty"`
-	ArchiveLogs                      bool   `json:"archiveLogs,omitempty"`
-	ArtifactImage                    string `json:"artifactImage,omitempty"`
-	CacheImage                       string `json:"cacheImage,omitempty"`
-	MoveResultsImage                 string `json:"moveResultsImage,omitempty"`
-	ArtifactScriptConfigMap          `json:"artifactScriptConfigMap,omitempty"`
-	InjectDefaultScript              bool   `json:"injectDefaultScript,omitempty"`
-	StripEOF                         bool   `json:"stripEOF,omitempty"`
-	TerminateStatus                  string `json:"terminateStatus,omitempty"`
-	TrackArtifacts                   bool   `json:"trackArtifacts,omitempty"`
-	DBConfigConMaxLifetimeSec        int    `json:"dbConfigConMaxLifetimeSec,omitempty"`
-	CollectMetrics                   bool   `json:"collectMetrics,omitempty"`
-	AutoUpdatePipelineDefaultVersion bool   `json:"autoUpdatePipelineDefaultVersion,omitempty"`
-	ResourceRequirements             `json:"resources,omitempty"`
+	// +kubebuilder:default:=true
+	Deploy bool   `json:"deploy,omitempty"`
+	Image  string `json:"image,omitempty"`
+	// +kubebuilder:default:=true
+	ApplyTektonCustomResource bool `json:"applyTektonCustomResource,omitempty"`
+	// +kubebuilder:default:=false
+	ArchiveLogs             bool   `json:"archiveLogs,omitempty"`
+	ArtifactImage           string `json:"artifactImage,omitempty"`
+	CacheImage              string `json:"cacheImage,omitempty"`
+	MoveResultsImage        string `json:"moveResultsImage,omitempty"`
+	ArtifactScriptConfigMap `json:"artifactScriptConfigMap,omitempty"`
+	// +kubebuilder:default:=true
+	InjectDefaultScript bool `json:"injectDefaultScript,omitempty"`
+	// +kubebuilder:default:=true
+	StripEOF bool `json:"stripEOF,omitempty"`
+	// +kubebuilder:default:=Cancelled
+	TerminateStatus string `json:"terminateStatus,omitempty"`
+	// +kubebuilder:default:=true
+	TrackArtifacts bool `json:"trackArtifacts,omitempty"`
+	// +kubebuilder:default:=120
+	DBConfigConMaxLifetimeSec int `json:"dbConfigConMaxLifetimeSec,omitempty"`
+	// +kubebuilder:default:=true
+	CollectMetrics bool `json:"collectMetrics,omitempty"`
+	// +kubebuilder:default:=true
+	AutoUpdatePipelineDefaultVersion bool                 `json:"autoUpdatePipelineDefaultVersion,omitempty"`
+	Resources                        ResourceRequirements `json:"resources,omitempty"`
 }
 
 type ArtifactScriptConfigMap struct {
@@ -59,31 +74,39 @@ type ArtifactScriptConfigMap struct {
 }
 
 type PersistenceAgent struct {
-	Deploy               bool   `json:"deploy,omitempty"`
-	Image                string `json:"image,omitempty"`
-	NumWorkers           int    `json:"numWorkers,omitempty"`
-	ResourceRequirements `json:"resources,omitempty"`
+	// +kubebuilder:default:=true
+	Deploy bool   `json:"deploy,omitempty"`
+	Image  string `json:"image,omitempty"`
+	// +kubebuilder:default:=2
+	NumWorkers int                  `json:"numWorkers,omitempty"`
+	Resources  ResourceRequirements `json:"resources,omitempty"`
 }
 
 type ScheduledWorkflow struct {
-	Deploy               bool   `json:"deploy,omitempty"`
-	Image                string `json:"image,omitempty"`
-	CronScheduleTimezone string `json:"cronScheduleTimezone,omitempty"`
-	ResourceRequirements `json:"resources,omitempty"`
+	// +kubebuilder:default:=true
+	Deploy bool   `json:"deploy,omitempty"`
+	Image  string `json:"image,omitempty"`
+	// +kubebuilder:default:=UTC
+	CronScheduleTimezone string               `json:"cronScheduleTimezone,omitempty"`
+	Resources            ResourceRequirements `json:"resources,omitempty"`
 }
 
 type ViewerCRD struct {
-	Deploy               bool   `json:"deploy,omitempty"`
-	Image                string `json:"image,omitempty"`
-	MaxNumViewer         int    `json:"maxNumViewer,omitempty"`
-	ResourceRequirements `json:"resources,omitempty"`
+	// +kubebuilder:default:=false
+	Deploy bool   `json:"deploy,omitempty"`
+	Image  string `json:"image,omitempty"`
+	// +kubebuilder:default:=50
+	MaxNumViewer int                  `json:"maxNumViewer,omitempty"`
+	Resources    ResourceRequirements `json:"resources,omitempty"`
 }
 
 type MlPipelineUI struct {
-	Deploy               bool   `json:"deploy,omitempty"`
-	Image                string `json:"image,omitempty"`
-	ConfigMapName        string `json:"configMap,omitempty"`
-	ResourceRequirements `json:"resources,omitempty"`
+	// +kubebuilder:default:=true
+	Deploy bool   `json:"deploy,omitempty"`
+	Image  string `json:"image,omitempty"`
+	// +kubebuilder:default:=ds-pipeline-ui-configmap
+	ConfigMapName string               `json:"configMap,omitempty"`
+	Resources     ResourceRequirements `json:"resources,omitempty"`
 }
 
 type Database struct {
@@ -92,13 +115,17 @@ type Database struct {
 }
 
 type MariaDB struct {
-	Deploy         bool                 `json:"deploy,omitempty"`
-	Image          string               `json:"image,omitempty"`
-	Username       string               `json:"username,omitempty"`
-	PasswordSecret SecretKeyValue       `json:"passwordSecret,omitempty"`
-	DBName         string               `json:"pipelineDBName,omitempty"`
-	PVCSize        resource.Quantity    `json:"pvcSize,omitempty"`
-	Resources      ResourceRequirements `json:"resources,omitempty"`
+	// +kubebuilder:default:=true
+	Deploy bool   `json:"deploy,omitempty"`
+	Image  string `json:"image,omitempty"`
+	// +kubebuilder:default:=mlpipeline
+	Username       string         `json:"username,omitempty"`
+	PasswordSecret SecretKeyValue `json:"passwordSecret,omitempty"`
+	// +kubebuilder:default:=mlpipeline
+	DBName string `json:"pipelineDBName,omitempty"`
+	// +kubebuilder:default:="10Gi"
+	PVCSize   resource.Quantity    `json:"pvcSize,omitempty"`
+	Resources ResourceRequirements `json:"resources,omitempty"`
 }
 
 type ExternalDB struct {
@@ -115,12 +142,15 @@ type ObjectStorage struct {
 }
 
 type Minio struct {
-	Deploy             bool   `json:"deploy,omitempty"`
-	Image              string `json:"image,omitempty"`
+	// +kubebuilder:default:=true
+	Deploy bool   `json:"deploy,omitempty"`
+	Image  string `json:"image,omitempty"`
+	// +kubebuilder:default:=mlpipeline
 	Bucket             string `json:"bucket,omitempty"`
 	S3CredentialSecret `json:"s3CredentialsSecret,omitempty"`
-	PVCSize            resource.Quantity    `json:"pvcSize,omitempty"`
-	Resources          ResourceRequirements `json:"resources,omitempty"`
+	// +kubebuilder:default:="10Gi"
+	PVCSize   resource.Quantity    `json:"pvcSize,omitempty"`
+	Resources ResourceRequirements `json:"resources,omitempty"`
 }
 
 // ResourceRequirements structures compute resource requirements.

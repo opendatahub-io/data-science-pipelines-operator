@@ -124,10 +124,22 @@ spec:
             periodSeconds: 5
             timeoutSeconds: 2
           resources:
+            {{ if .APIServer.Resources.Requests }}
             requests:
+              {{ if .APIServer.Resources.Requests.CPU }}
               cpu: {{.APIServer.Resources.Requests.CPU}}
+              {{ end }}
+              {{ if .APIServer.Resources.Requests.Memory }}
               memory: {{.APIServer.Resources.Requests.Memory}}
+              {{ end }}
+            {{ end }}
+            {{ if .APIServer.Resources.Limits }}
             limits:
+              {{ if .APIServer.Resources.Limits.CPU }}
               cpu: {{.APIServer.Resources.Limits.CPU}}
+              {{ end }}
+              {{ if .APIServer.Resources.Limits.Memory }}
               memory: {{.APIServer.Resources.Limits.Memory}}
+              {{ end }}
+            {{ end }}
       serviceAccountName: ds-pipeline-{{.Name}}

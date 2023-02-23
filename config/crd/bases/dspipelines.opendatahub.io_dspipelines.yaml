@@ -34,11 +34,15 @@ spec:
           spec:
             properties:
               apiServer:
+                default:
+                  apiServer: null
                 description: APIService specifies the Kubeflow Apiserver configurations
                 properties:
                   applyTektonCustomResource:
+                    default: true
                     type: boolean
                   archiveLogs:
+                    default: false
                     type: boolean
                   artifactImage:
                     type: string
@@ -50,22 +54,31 @@ spec:
                         type: string
                     type: object
                   autoUpdatePipelineDefaultVersion:
+                    default: true
                     type: boolean
                   cacheImage:
                     type: string
                   collectMetrics:
+                    default: true
                     type: boolean
                   dbConfigConMaxLifetimeSec:
+                    default: 120
                     type: integer
                   deploy:
+                    default: true
                     type: boolean
                   image:
                     type: string
                   injectDefaultScript:
+                    default: true
                     type: boolean
                   moveResultsImage:
                     type: string
                   resources:
+                    description: ResourceRequirements structures compute resource
+                      requirements. Replaces ResourceRequirements from corev1 which
+                      also includes optional storage field. We handle storage field
+                      separately, and should not include it as a subfield for Resources.
                     properties:
                       limits:
                         properties:
@@ -99,13 +112,18 @@ spec:
                         type: object
                     type: object
                   stripEOF:
+                    default: true
                     type: boolean
                   terminateStatus:
+                    default: Cancelled
                     type: string
                   trackArtifacts:
+                    default: true
                     type: boolean
                 type: object
               database:
+                default:
+                  database: null
                 properties:
                   externalDB:
                     properties:
@@ -128,6 +146,7 @@ spec:
                   mariaDB:
                     properties:
                       deploy:
+                        default: true
                         type: boolean
                       image:
                         type: string
@@ -139,14 +158,21 @@ spec:
                             type: string
                         type: object
                       pipelineDBName:
+                        default: mlpipeline
                         type: string
                       pvcSize:
                         anyOf:
                         - type: integer
                         - type: string
+                        default: 10Gi
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                       resources:
+                        description: ResourceRequirements structures compute resource
+                          requirements. Replaces ResourceRequirements from corev1
+                          which also includes optional storage field. We handle storage
+                          field separately, and should not include it as a subfield
+                          for Resources.
                         properties:
                           limits:
                             properties:
@@ -180,18 +206,27 @@ spec:
                             type: object
                         type: object
                       username:
+                        default: mlpipeline
                         type: string
                     type: object
                 type: object
               mlpipelineUI:
+                default:
+                  mlpipelineUI: null
                 properties:
                   configMap:
+                    default: ds-pipeline-ui-configmap
                     type: string
                   deploy:
+                    default: true
                     type: boolean
                   image:
                     type: string
                   resources:
+                    description: ResourceRequirements structures compute resource
+                      requirements. Replaces ResourceRequirements from corev1 which
+                      also includes optional storage field. We handle storage field
+                      separately, and should not include it as a subfield for Resources.
                     properties:
                       limits:
                         properties:
@@ -226,6 +261,8 @@ spec:
                     type: object
                 type: object
               objectStorage:
+                default:
+                  objectStorage: null
                 properties:
                   externalStorage:
                     properties:
@@ -252,8 +289,10 @@ spec:
                   minio:
                     properties:
                       bucket:
+                        default: mlpipeline
                         type: string
                       deploy:
+                        default: true
                         type: boolean
                       image:
                         type: string
@@ -261,9 +300,15 @@ spec:
                         anyOf:
                         - type: integer
                         - type: string
+                        default: 10Gi
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                       resources:
+                        description: ResourceRequirements structures compute resource
+                          requirements. Replaces ResourceRequirements from corev1
+                          which also includes optional storage field. We handle storage
+                          field separately, and should not include it as a subfield
+                          for Resources.
                         properties:
                           limits:
                             properties:
@@ -310,14 +355,22 @@ spec:
                     type: object
                 type: object
               persistenceAgent:
+                default:
+                  persistenceAgent: null
                 properties:
                   deploy:
+                    default: true
                     type: boolean
                   image:
                     type: string
                   numWorkers:
+                    default: 2
                     type: integer
                   resources:
+                    description: ResourceRequirements structures compute resource
+                      requirements. Replaces ResourceRequirements from corev1 which
+                      also includes optional storage field. We handle storage field
+                      separately, and should not include it as a subfield for Resources.
                     properties:
                       limits:
                         properties:
@@ -352,14 +405,22 @@ spec:
                     type: object
                 type: object
               scheduledWorkflow:
+                default:
+                  scheduledWorkflow: null
                 properties:
                   cronScheduleTimezone:
+                    default: UTC
                     type: string
                   deploy:
+                    default: true
                     type: boolean
                   image:
                     type: string
                   resources:
+                    description: ResourceRequirements structures compute resource
+                      requirements. Replaces ResourceRequirements from corev1 which
+                      also includes optional storage field. We handle storage field
+                      separately, and should not include it as a subfield for Resources.
                     properties:
                       limits:
                         properties:
@@ -394,14 +455,22 @@ spec:
                     type: object
                 type: object
               viewerCRD:
+                default:
+                  viewerCRD: null
                 properties:
                   deploy:
+                    default: false
                     type: boolean
                   image:
                     type: string
                   maxNumViewer:
+                    default: 50
                     type: integer
                   resources:
+                    description: ResourceRequirements structures compute resource
+                      requirements. Replaces ResourceRequirements from corev1 which
+                      also includes optional storage field. We handle storage field
+                      separately, and should not include it as a subfield for Resources.
                     properties:
                       limits:
                         properties:

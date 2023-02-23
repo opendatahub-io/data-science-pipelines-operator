@@ -57,12 +57,24 @@ spec:
             successThreshold: 1
             failureThreshold: 3
           resources:
+            {{ if .MlPipelineUI.Resources.Requests }}
             requests:
+              {{ if .MlPipelineUI.Resources.Requests.CPU }}
               cpu: {{.MlPipelineUI.Resources.Requests.CPU}}
+              {{ end }}
+              {{ if .MlPipelineUI.Resources.Requests.Memory }}
               memory: {{.MlPipelineUI.Resources.Requests.Memory}}
+              {{ end }}
+            {{ end }}
+            {{ if .MlPipelineUI.Resources.Limits }}
             limits:
+              {{ if .MlPipelineUI.Resources.Limits.CPU }}
               cpu: {{.MlPipelineUI.Resources.Limits.CPU}}
+              {{ end }}
+              {{ if .MlPipelineUI.Resources.Limits.Memory }}
               memory: {{.MlPipelineUI.Resources.Limits.Memory}}
+              {{ end }}
+            {{ end }}
           volumeMounts:
             - mountPath: /etc/tls/private
               name: proxy-tls

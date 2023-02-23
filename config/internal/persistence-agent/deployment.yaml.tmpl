@@ -54,10 +54,22 @@ spec:
             periodSeconds: 5
             timeoutSeconds: 2
           resources:
+            {{ if .PersistenceAgent.Resources.Requests }}
             requests:
-              cpu: {{.PersistentAgent.Resources.Requests.CPU}}
-              memory: {{.PersistentAgent.Resources.Requests.Memory}}
+              {{ if .PersistenceAgent.Resources.Requests.CPU }}
+              cpu: {{.PersistenceAgent.Resources.Requests.CPU}}
+              {{ end }}
+              {{ if .PersistenceAgent.Resources.Requests.Memory }}
+              memory: {{.PersistenceAgent.Resources.Requests.Memory}}
+              {{ end }}
+            {{ end }}
+            {{ if .PersistenceAgent.Resources.Limits }}
             limits:
-              cpu: {{.PersistentAgent.Resources.Limits.CPU}}
-              memory: {{.PersistentAgent.Resources.Limits.Memory}}
+              {{ if .PersistenceAgent.Resources.Limits.CPU }}
+              cpu: {{.PersistenceAgent.Resources.Limits.CPU}}
+              {{ end }}
+              {{ if .PersistenceAgent.Resources.Limits.Memory }}
+              memory: {{.PersistenceAgent.Resources.Limits.Memory}}
+              {{ end }}
+            {{ end }}
       serviceAccountName: ds-pipeline-persistenceagent-{{.Name}}

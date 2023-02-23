@@ -24,6 +24,7 @@ import (
 	"github.com/go-logr/logr"
 	mf "github.com/manifestival/manifestival"
 	dspipelinesiov1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	v1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -31,26 +32,6 @@ import (
 	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
-)
-
-const (
-	defaultArtifactScriptConfigMap     = "ds-pipeline-artifact-script"
-	defaultArtifactScriptConfigMapKey  = "artifact_script"
-	defaultDSPServicePrefix            = "ds-pipeline"
-	defaultDBHostPrefix                = "mariadb"
-	defaultDBSecretNamePrefix          = "mariadb-"
-	defaultDBHostPort                  = "3306"
-	defaultDBUser                      = "mlpipeline"
-	defaultDBName                      = "mlpipeline"
-	defaultDBSecretKey                 = "password"
-	defaultMinioHostPrefix             = "minio"
-	defaultMinioPort                   = "9000"
-	defaultObjectStorageAccessKey      = "accesskey"
-	defaultObjectStorageSecretKey      = "secretkey"
-	defaultMinioScheme                 = "http"
-	DefaultObjectStoreConnectionSecure = false
-	// This is hardcoded in kfp-tekton, apiserver will always use this hardcoded secret for tekton resources
-	defaultObjectStorageSecretName = "mlpipeline-minio-artifact"
 )
 
 type DSPipelineParams struct {
@@ -90,26 +71,22 @@ type ObjectStorageConnection struct {
 	SecretAccessKey   string
 }
 
-func (p *DSPipelineParams) UsingExternalDB(dsp *dspipelinesiov1alpha1.DSPipeline) (bool, error) {
+// UsingExternalDB will return true if an external Database is specified in the CR, otherwise false.
+func (p *DSPipelineParams) UsingExternalDB(dsp *dspipelinesiov1alpha1.DSPipeline) bool {
 	ExternalDBIsNotEmpty := !reflect.DeepEqual(dsp.Spec.Database.ExternalDB, dspipelinesiov1alpha1.ExternalDB{})
-	MariaDBIsNotEmpty := !reflect.DeepEqual(dsp.Spec.Database.MariaDB, dspipelinesiov1alpha1.MariaDB{})
 	if ExternalDBIsNotEmpty {
-		return true, nil
-	} else if MariaDBIsNotEmpty {
-		return false, nil
+		return true
 	}
-	return false, fmt.Errorf("no Database specified for DS-Pipeline resource")
+	return false
 }
 
-func (p *DSPipelineParams) UsingExternalStorage(dsp *dspipelinesiov1alpha1.DSPipeline) (bool, error) {
+// UsingExternalStorage will return true if an external Object Storage is specified in the CR, otherwise false.
+func (p *DSPipelineParams) UsingExternalStorage(dsp *dspipelinesiov1alpha1.DSPipeline) bool {
 	ExternalStorageIsNotEmpty := !reflect.DeepEqual(dsp.Spec.ObjectStorage.ExternalStorage, dspipelinesiov1alpha1.ExternalStorage{})
-	MinioIsNotEmpty := !reflect.DeepEqual(dsp.Spec.ObjectStorage.Minio, dspipelinesiov1alpha1.Minio{})
 	if ExternalStorageIsNotEmpty {
-		return true, nil
-	} else if MinioIsNotEmpty {
-		return false, nil
+		return true
 	}
-	return false, fmt.Errorf("no Database specified for DS-Pipeline resource")
+	return false
 }
 
 func passwordGen(n int) string {
@@ -127,17 +104,14 @@ func passwordGen(n int) string {
 // If DSPO is managing a dynamically created secret, then SetupDBParams generates the creds.
 func (p *DSPipelineParams) SetupDBParams(ctx context.Context, dsp *dspipelinesiov1alpha1.DSPipeline, client client.Client, log logr.Logger) error {
 
-	usingExternalDB, err := p.UsingExternalDB(dsp)
-	if err != nil {
-		return err
-	}
+	usingExternalDB := p.UsingExternalDB(dsp)
 
 	var customCreds dspipelinesiov1alpha1.SecretKeyValue
 
 	// Even if a secret is specified DSPO will deploy its own secret owned by DSPO
 	p.DBConnection.CredentialsSecret = dspipelinesiov1alpha1.SecretKeyValue{
-		Name: defaultDBSecretNamePrefix + p.Name,
-		Key:  defaultDBSecretKey,
+		Name: config.MariaDBSecretNamePrefix + p.Name,
+		Key:  config.MariaDBSecretKey,
 	}
 
 	if usingExternalDB {
@@ -150,12 +124,12 @@ func (p *DSPipelineParams) SetupDBParams(ctx context.Context, dsp *dspipelinesio
 	} else {
 		p.DBConnection.Host = fmt.Sprintf(
 			"%s.%s.svc.cluster.local",
-			defaultDBHostPrefix+"-"+p.Name,
+			config.MariaDBHostPrefix+"-"+p.Name,
 			p.Namespace,
 		)
-		p.DBConnection.Port = defaultDBHostPort
-		p.DBConnection.Username = defaultDBUser
-		p.DBConnection.DBName = defaultDBName
+		p.DBConnection.Port = config.MariaDBHostPort
+		p.DBConnection.Username = config.MariaDBUser
+		p.DBConnection.DBName = config.MariaDBName
 
 		if dsp.Spec.Database.ExternalDB.Username != "" {
 			p.DBConnection.Username = dsp.Spec.Database.ExternalDB.Username
@@ -191,7 +165,7 @@ func (p *DSPipelineParams) SetupDBParams(ctx context.Context, dsp *dspipelinesio
 	createNewSecret := false
 
 	// Attempt to fetch the specified DB secret
-	err = client.Get(ctx, namespacedName, dbSecret)
+	err := client.Get(ctx, namespacedName, dbSecret)
 	if err != nil && apierrs.IsNotFound(err) {
 		if !customCredentialsSpecified {
 			generatedPass := passwordGen(12)
@@ -226,20 +200,17 @@ func (p *DSPipelineParams) SetupDBParams(ctx context.Context, dsp *dspipelinesio
 // If DSPO is managing a dynamically created secret, then SetupObjectParams generates the creds.
 func (p *DSPipelineParams) SetupObjectParams(ctx context.Context, dsp *dspipelinesiov1alpha1.DSPipeline, client client.Client, log logr.Logger) error {
 
-	usingExternalObjectStorage, err := p.UsingExternalStorage(dsp)
-	if err != nil {
-		return err
-	}
+	usingExternalObjectStorage := p.UsingExternalStorage(dsp)
 
 	var customCreds dspipelinesiov1alpha1.S3CredentialSecret
 
 	// Even if a secret is specified DSPO will deploy its own secret owned by DSPO
 	p.ObjectStorageConnection.CredentialsSecret = dspipelinesiov1alpha1.S3CredentialSecret{
-		SecretName: defaultObjectStorageSecretName,
-		AccessKey:  defaultObjectStorageAccessKey,
-		SecretKey:  defaultObjectStorageSecretKey,
+		SecretName: config.ObjectStorageSecretName,
+		AccessKey:  config.ObjectStorageAccessKey,
+		SecretKey:  config.ObjectStorageSecretKey,
 	}
-	p.ObjectStorageConnection.Secure = DefaultObjectStoreConnectionSecure
+	p.ObjectStorageConnection.Secure = config.ObjectStoreConnectionSecure
 
 	if usingExternalObjectStorage {
 		// Assume validation for CR ensures these values exist
@@ -249,13 +220,18 @@ func (p *DSPipelineParams) SetupObjectParams(ctx context.Context, dsp *dspipelin
 		p.ObjectStorageConnection.Port = dsp.Spec.ObjectStorage.ExternalStorage.Port
 		p.ObjectStorageConnection.Scheme = dsp.Spec.ObjectStorage.ExternalStorage.Scheme
 	} else {
-		p.ObjectStorageConnection.Bucket = dsp.Spec.ObjectStorage.Minio.Bucket
+		p.ObjectStorageConnection.Bucket = config.MinioDefaultBucket
 		p.ObjectStorageConnection.Host = fmt.Sprintf(
-			"%s.%s.svc.cluster.local", defaultMinioHostPrefix+"-"+p.Name,
+			"%s.%s.svc.cluster.local", config.MinioHostPrefix+"-"+p.Name,
 			p.Namespace,
 		)
-		p.ObjectStorageConnection.Port = defaultMinioPort
-		p.ObjectStorageConnection.Scheme = defaultMinioScheme
+
+		if dsp.Spec.ObjectStorage.Minio.Bucket != "" {
+			p.ObjectStorageConnection.Bucket = dsp.Spec.ObjectStorage.Minio.Bucket
+		}
+
+		p.ObjectStorageConnection.Port = config.MinioPort
+		p.ObjectStorageConnection.Scheme = config.MinioScheme
 		minioSecretSpecified := !reflect.DeepEqual(dsp.Spec.Minio.S3CredentialSecret, dspipelinesiov1alpha1.S3CredentialSecret{})
 		if minioSecretSpecified {
 			customCreds = dsp.Spec.ObjectStorage.Minio.S3CredentialSecret
@@ -294,7 +270,7 @@ func (p *DSPipelineParams) SetupObjectParams(ctx context.Context, dsp *dspipelin
 	createNewSecret := false
 
 	// Attempt to fetch the specified storage secret
-	err = client.Get(ctx, namespacedName, storageSecret)
+	err := client.Get(ctx, namespacedName, storageSecret)
 	if err != nil && apierrs.IsNotFound(err) {
 		if !customCredentialsSpecified {
 			generatedPass := passwordGen(16)
@@ -328,18 +304,49 @@ func (p *DSPipelineParams) SetupObjectParams(ctx context.Context, dsp *dspipelin
 	return nil
 }
 
+func setStringDefault(defaultValue string, value *string) {
+	if *value == "" {
+		*value = defaultValue
+	}
+}
+
+func setResourcesDefault(defaultValue dspipelinesiov1alpha1.ResourceRequirements, value *dspipelinesiov1alpha1.ResourceRequirements) {
+	if reflect.DeepEqual(*value, dspipelinesiov1alpha1.ResourceRequirements{}) {
+		*value = defaultValue
+	}
+}
+
 func (p *DSPipelineParams) ExtractParams(ctx context.Context, dsp *dspipelinesiov1alpha1.DSPipeline, client client.Client, log logr.Logger) error {
 	p.Name = dsp.Name
 	p.Namespace = dsp.Namespace
 	p.Owner = dsp
 	p.APIServer = dsp.Spec.APIServer
-	p.APIServerServiceName = fmt.Sprintf("%s-%s", defaultDSPServicePrefix, p.Name)
+	p.APIServerServiceName = fmt.Sprintf("%s-%s", config.DSPServicePrefix, p.Name)
 	p.ScheduledWorkflow = dsp.Spec.ScheduledWorkflow
 	p.ViewerCRD = dsp.Spec.ViewerCRD
 	p.PersistenceAgent = dsp.Spec.PersistenceAgent
 	p.MlPipelineUI = dsp.Spec.MlPipelineUI
 	p.MariaDB = dsp.Spec.MariaDB
 	p.Minio = dsp.Spec.Minio
+
+	setStringDefault(config.APIServerImage, &p.APIServer.Image)
+	setStringDefault(config.APIServerArtifactImage, &p.APIServer.ArtifactImage)
+	setStringDefault(config.APIServerCacheImage, &p.APIServer.CacheImage)
+	setStringDefault(config.APIServerMoveResultsImage, &p.APIServer.MoveResultsImage)
+	setStringDefault(config.PersistenceAgentImage, &p.PersistenceAgent.Image)
+	setStringDefault(config.ScheduledWorkflowImage, &p.ScheduledWorkflow.Image)
+	setStringDefault(config.ViewerCRDImage, &p.ViewerCRD.Image)
+	setStringDefault(config.MlPipelineUIImage, &p.MlPipelineUI.Image)
+	setStringDefault(config.MariaDBImage, &p.MariaDB.Image)
+	setStringDefault(config.MinioImage, &p.Minio.Image)
+
+	setResourcesDefault(config.APIServerResourceRequirements, &p.APIServer.Resources)
+	setResourcesDefault(config.PersistenceAgentResourceRequirements, &p.PersistenceAgent.Resources)
+	setResourcesDefault(config.ScheduledWorkflowResourceRequirements, &p.ScheduledWorkflow.Resources)
+	setResourcesDefault(config.ViewerCRDResourceRequirements, &p.ViewerCRD.Resources)
+	setResourcesDefault(config.MariaDBResourceRequirements, &p.MariaDB.Resources)
+	setResourcesDefault(config.MinioResourceRequirements, &p.Minio.Resources)
+	setResourcesDefault(config.MlPipelineUIResourceRequirements, &p.MlPipelineUI.Resources)
 
 	err := p.SetupDBParams(ctx, dsp, client, log)
 	if err != nil {
@@ -352,8 +359,8 @@ func (p *DSPipelineParams) ExtractParams(ctx context.Context, dsp *dspipelinesio
 	}
 
 	if dsp.Spec.APIServer.ArtifactScriptConfigMap == (dspipelinesiov1alpha1.ArtifactScriptConfigMap{}) {
-		p.APIServer.ArtifactScriptConfigMap.Name = defaultArtifactScriptConfigMap
-		p.APIServer.ArtifactScriptConfigMap.Key = defaultArtifactScriptConfigMapKey
+		p.APIServer.ArtifactScriptConfigMap.Name = config.ArtifactScriptConfigMap
+		p.APIServer.ArtifactScriptConfigMap.Key = config.ArtifactScriptConfigMapKey
 	}
 
 	return nil

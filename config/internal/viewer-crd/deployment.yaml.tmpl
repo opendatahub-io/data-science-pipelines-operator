@@ -47,10 +47,22 @@ spec:
             periodSeconds: 5
             timeoutSeconds: 2
           resources:
+            {{ if .ViewerCRD.Resources.Requests }}
             requests:
+              {{ if .ViewerCRD.Resources.Requests.CPU }}
               cpu: {{.ViewerCRD.Resources.Requests.CPU}}
+              {{ end }}
+              {{ if .ViewerCRD.Resources.Requests.Memory }}
               memory: {{.ViewerCRD.Resources.Requests.Memory}}
+              {{ end }}
+            {{ end }}
+            {{ if .ViewerCRD.Resources.Limits }}
             limits:
+              {{ if .ViewerCRD.Resources.Limits.CPU }}
               cpu: {{.ViewerCRD.Resources.Limits.CPU}}
+              {{ end }}
+              {{ if .ViewerCRD.Resources.Limits.Memory }}
               memory: {{.ViewerCRD.Resources.Limits.Memory}}
+              {{ end }}
+            {{ end }}
       serviceAccountName: ds-pipeline-viewer-crd-{{.Name}}

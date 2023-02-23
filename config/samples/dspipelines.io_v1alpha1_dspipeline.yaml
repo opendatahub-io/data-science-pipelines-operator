@@ -6,9 +6,9 @@ metadata:
 spec:
   apiServer:
     deploy: true
+    image: quay.io/modh/odh-ml-pipelines-api-server-container:v1.18.0-8
     applyTektonCustomResource: true
     archiveLogs: false
-    image: quay.io/modh/odh-ml-pipelines-api-server-container:v1.18.0-8
     artifactImage: quay.io/modh/odh-ml-pipelines-artifact-manager-container:v1.18.0-8
     cacheImage: registry.access.redhat.com/ubi8/ubi-minimal
     moveResultsImage: busybox
@@ -111,7 +111,7 @@ spec:
       pvcSize: 10Gi
       resources:
         requests:
-          cpu: 20m
+          cpu: 200m
           memory: 100Mi
         limits:
           cpu: 250m

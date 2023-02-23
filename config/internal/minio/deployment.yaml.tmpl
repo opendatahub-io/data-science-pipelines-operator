@@ -55,12 +55,24 @@ spec:
             successThreshold: 1
             failureThreshold: 3
           resources:
+            {{ if .Minio.Resources.Requests }}
             requests:
+              {{ if .Minio.Resources.Requests.CPU }}
               cpu: {{.Minio.Resources.Requests.CPU}}
+              {{ end }}
+              {{ if .Minio.Resources.Requests.Memory }}
               memory: {{.Minio.Resources.Requests.Memory}}
+              {{ end }}
+            {{ end }}
+            {{ if .Minio.Resources.Limits }}
             limits:
+              {{ if .Minio.Resources.Limits.CPU }}
               cpu: {{.Minio.Resources.Limits.CPU}}
+              {{ end }}
+              {{ if .Minio.Resources.Limits.Memory }}
               memory: {{.Minio.Resources.Limits.Memory}}
+              {{ end }}
+            {{ end }}
           volumeMounts:
             - mountPath: /data
               name: data

@@ -156,6 +156,7 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
+	// TODO: convert everything to string and test omit empty
 	if dspipeline.ObjectMeta.DeletionTimestamp.IsZero() {
 		if !controllerutil.ContainsFinalizer(dspipeline, finalizerName) {
 			controllerutil.AddFinalizer(dspipeline, finalizerName)
@@ -178,10 +179,7 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 
-	usingCustomDB, err := params.UsingExternalDB(dspipeline)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+	usingCustomDB := params.UsingExternalDB(dspipeline)
 
 	if !usingCustomDB {
 		err = r.ReconcileDatabase(dspipeline, params)
@@ -190,10 +188,7 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	}
 
-	usingCustomStorage, err := params.UsingExternalStorage(dspipeline)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+	usingCustomStorage := params.UsingExternalStorage(dspipeline)
 
 	if !usingCustomStorage {
 		err := r.ReconcileStorage(dspipeline, params)
