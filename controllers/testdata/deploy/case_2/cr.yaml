@@ -10,9 +10,8 @@ spec:
     image: quay.io/modh/odh-ml-pipelines-api-server-container:v1.18.0-8
     artifactImage: quay.io/modh/odh-ml-pipelines-artifact-manager-container:v1.18.0-8
     dbConfigConMaxLifetimeSec: 120
-  persistentAgent:
+  persistenceAgent:
     image: quay.io/modh/odh-ml-pipelines-persistenceagent-container:v1.18.0-8
-    pipelineAPIServerName: apiserver
   scheduledWorkflow:
     image: quay.io/modh/odh-ml-pipelines-scheduledworkflow-container:v1.18.0-8
   viewerCRD:

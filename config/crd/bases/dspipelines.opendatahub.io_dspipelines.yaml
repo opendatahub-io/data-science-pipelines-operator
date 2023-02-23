@@ -35,7 +35,7 @@ spec:
             properties:
               apiServer:
                 default:
-                  apiServer: null
+                  deploy: true
                 description: APIService specifies the Kubeflow Apiserver configurations
                 properties:
                   applyTektonCustomResource:
@@ -107,7 +107,8 @@ spec:
                 type: object
               database:
                 default:
-                  database: null
+                  mariaDB:
+                    deploy: true
                 properties:
                   externalDB:
                     properties:
@@ -176,7 +177,7 @@ spec:
                 type: object
               mlpipelineUI:
                 default:
-                  mlpipelineUI: null
+                  deploy: true
                 properties:
                   configMap:
                     type: string
@@ -209,7 +210,8 @@ spec:
                 type: object
               objectStorage:
                 default:
-                  objectStorage: null
+                  minio:
+                    deploy: true
                 properties:
                   externalStorage:
                     properties:
@@ -283,7 +285,7 @@ spec:
                 type: object
               persistenceAgent:
                 default:
-                  persistenceAgent: null
+                  deploy: true
                 properties:
                   deploy:
                     default: true
@@ -317,7 +319,7 @@ spec:
                 type: object
               scheduledWorkflow:
                 default:
-                  scheduledWorkflow: null
+                  deploy: true
                 properties:
                   cronScheduleTimezone:
                     default: UTC
@@ -351,7 +353,7 @@ spec:
                 type: object
               viewerCRD:
                 default:
-                  viewerCRD: null
+                  deploy: false
                 properties:
                   deploy:
                     default: false

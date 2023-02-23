@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	dspcrcase1                  = "./testdata/deploy/case_2_standard_deploy.yaml"
+	dspcrcase1                  = "./testdata/deploy/cr.yaml"
 	dspcrcase2                  = "./testdata/deploy/case_2.yaml"
 	apiserverDeployment         = "./testdata/results/case_2/apiserver/deployment.yaml"
 	apiserverConfigMap1         = "./testdata/results/case_1/apiserver/configmap_artifact_script.yaml"

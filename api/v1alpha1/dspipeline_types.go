@@ -22,19 +22,19 @@ import (
 
 type DSPipelineSpec struct {
 	// APIService specifies the Kubeflow Apiserver configurations
-	// +kubebuilder:default:={apiServer: {}}
+	// +kubebuilder:default:={deploy: true}
 	*APIServer `json:"apiServer,omitempty"`
-	// +kubebuilder:default:={persistenceAgent: {}}
+	// +kubebuilder:default:={deploy: true}
 	*PersistenceAgent `json:"persistenceAgent,omitempty"`
-	// +kubebuilder:default:={scheduledWorkflow: {}}
+	// +kubebuilder:default:={deploy: true}
 	*ScheduledWorkflow `json:"scheduledWorkflow,omitempty"`
-	// +kubebuilder:default:={viewerCRD: {}}
+	// +kubebuilder:default:={deploy: false}
 	*ViewerCRD `json:"viewerCRD,omitempty"`
-	// +kubebuilder:default:={database: {}}
+	// +kubebuilder:default:={mariaDB: {deploy: true}}
 	*Database `json:"database,omitempty"`
-	// +kubebuilder:default:={objectStorage: {}}
+	// +kubebuilder:default:={minio: {deploy: true}}
 	*ObjectStorage `json:"objectStorage,omitempty"`
-	// +kubebuilder:default:={mlpipelineUI: {}}
+	// +kubebuilder:default:={deploy: true}
 	*MlPipelineUI `json:"mlpipelineUI,omitempty"`
 }
 

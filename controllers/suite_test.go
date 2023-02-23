@@ -79,6 +79,15 @@ var _ = BeforeSuite(func() {
 	}
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseFlagOptions(&opts)))
 
+	// Register API objects
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme.Scheme))
+	utilruntime.Must(buildv1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(imagev1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(routev1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(dspipelinesiov1alpha1.AddToScheme(scheme.Scheme))
+
+	//+kubebuilder:scaffold:scheme
+
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases"), filepath.Join("..", "config", "crd", "external")},
@@ -90,14 +99,6 @@ var _ = BeforeSuite(func() {
 	cfg, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
-
-	// Register API objects
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme.Scheme))
-	utilruntime.Must(buildv1.AddToScheme(scheme.Scheme))
-	utilruntime.Must(imagev1.AddToScheme(scheme.Scheme))
-	utilruntime.Must(routev1.AddToScheme(scheme.Scheme))
-	utilruntime.Must(dspipelinesiov1alpha1.AddToScheme(scheme.Scheme))
-	//+kubebuilder:scaffold:scheme
 
 	// Initialize Kubernetes client
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
