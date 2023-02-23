@@ -179,7 +179,6 @@ spec:
                   mlpipelineUI: null
                 properties:
                   configMap:
-                    default: ds-pipeline-ui-configmap
                     type: string
                   deploy:
                     default: true

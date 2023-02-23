@@ -40,30 +40,38 @@ type DSPipelineSpec struct {
 
 type APIServer struct {
 	// +kubebuilder:default:=true
-	Deploy bool   `json:"deploy,omitempty"`
+	// +optional
+	Deploy bool   `json:"deploy"`
 	Image  string `json:"image,omitempty"`
 	// +kubebuilder:default:=true
-	ApplyTektonCustomResource bool `json:"applyTektonCustomResource,omitempty"`
+	// +optional
+	ApplyTektonCustomResource bool `json:"applyTektonCustomResource"`
 	// +kubebuilder:default:=false
-	ArchiveLogs              bool   `json:"archiveLogs,omitempty"`
+	// +optional
+	ArchiveLogs              bool   `json:"archiveLogs"`
 	ArtifactImage            string `json:"artifactImage,omitempty"`
 	CacheImage               string `json:"cacheImage,omitempty"`
 	MoveResultsImage         string `json:"moveResultsImage,omitempty"`
 	*ArtifactScriptConfigMap `json:"artifactScriptConfigMap,omitempty"`
 	// +kubebuilder:default:=true
-	InjectDefaultScript bool `json:"injectDefaultScript,omitempty"`
+	// +optional
+	InjectDefaultScript bool `json:"injectDefaultScript"`
 	// +kubebuilder:default:=true
-	StripEOF bool `json:"stripEOF,omitempty"`
+	// +optional
+	StripEOF bool `json:"stripEOF"`
 	// +kubebuilder:default:=Cancelled
 	TerminateStatus string `json:"terminateStatus,omitempty"`
 	// +kubebuilder:default:=true
-	TrackArtifacts bool `json:"trackArtifacts,omitempty"`
+	// +optional
+	TrackArtifacts bool `json:"trackArtifacts"`
 	// +kubebuilder:default:=120
 	DBConfigConMaxLifetimeSec int `json:"dbConfigConMaxLifetimeSec,omitempty"`
 	// +kubebuilder:default:=true
-	CollectMetrics bool `json:"collectMetrics,omitempty"`
+	// +optional
+	CollectMetrics bool `json:"collectMetrics"`
 	// +kubebuilder:default:=true
-	AutoUpdatePipelineDefaultVersion bool                  `json:"autoUpdatePipelineDefaultVersion,omitempty"`
+	// +optional
+	AutoUpdatePipelineDefaultVersion bool                  `json:"autoUpdatePipelineDefaultVersion"`
 	Resources                        *ResourceRequirements `json:"resources,omitempty"`
 }
 
@@ -74,7 +82,8 @@ type ArtifactScriptConfigMap struct {
 
 type PersistenceAgent struct {
 	// +kubebuilder:default:=true
-	Deploy bool   `json:"deploy,omitempty"`
+	// +optional
+	Deploy bool   `json:"deploy"`
 	Image  string `json:"image,omitempty"`
 	// +kubebuilder:default:=2
 	NumWorkers int                   `json:"numWorkers,omitempty"`
@@ -83,7 +92,8 @@ type PersistenceAgent struct {
 
 type ScheduledWorkflow struct {
 	// +kubebuilder:default:=true
-	Deploy bool   `json:"deploy,omitempty"`
+	// +optional
+	Deploy bool   `json:"deploy"`
 	Image  string `json:"image,omitempty"`
 	// +kubebuilder:default:=UTC
 	CronScheduleTimezone string                `json:"cronScheduleTimezone,omitempty"`
@@ -92,7 +102,8 @@ type ScheduledWorkflow struct {
 
 type ViewerCRD struct {
 	// +kubebuilder:default:=false
-	Deploy bool   `json:"deploy,omitempty"`
+	// +optional
+	Deploy bool   `json:"deploy"`
 	Image  string `json:"image,omitempty"`
 	// +kubebuilder:default:=50
 	MaxNumViewer int                   `json:"maxNumViewer,omitempty"`
@@ -101,9 +112,9 @@ type ViewerCRD struct {
 
 type MlPipelineUI struct {
 	// +kubebuilder:default:=true
-	Deploy bool   `json:"deploy,omitempty"`
-	Image  string `json:"image,omitempty"`
-	// +kubebuilder:default:=ds-pipeline-ui-configmap
+	// +optional
+	Deploy        bool                  `json:"deploy"`
+	Image         string                `json:"image,omitempty"`
 	ConfigMapName string                `json:"configMap,omitempty"`
 	Resources     *ResourceRequirements `json:"resources,omitempty"`
 }
@@ -115,7 +126,8 @@ type Database struct {
 
 type MariaDB struct {
 	// +kubebuilder:default:=true
-	Deploy bool   `json:"deploy,omitempty"`
+	// +optional
+	Deploy bool   `json:"deploy"`
 	Image  string `json:"image,omitempty"`
 	// +kubebuilder:default:=mlpipeline
 	Username       string          `json:"username,omitempty"`
@@ -142,7 +154,8 @@ type ObjectStorage struct {
 
 type Minio struct {
 	// +kubebuilder:default:=true
-	Deploy bool   `json:"deploy,omitempty"`
+	// +optional
+	Deploy bool   `json:"deploy"`
 	Image  string `json:"image,omitempty"`
 	// +kubebuilder:default:=mlpipeline
 	Bucket              string `json:"bucket,omitempty"`

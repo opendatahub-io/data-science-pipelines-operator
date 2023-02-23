@@ -57,24 +57,12 @@ spec:
             successThreshold: 1
             failureThreshold: 3
           resources:
-            {{ if .MlPipelineUI.Resources.Requests }}
-            requests:
-              {{ if .MlPipelineUI.Resources.Requests.CPU }}
-              cpu: {{.MlPipelineUI.Resources.Requests.CPU}}
-              {{ end }}
-              {{ if .MlPipelineUI.Resources.Requests.Memory }}
-              memory: {{.MlPipelineUI.Resources.Requests.Memory}}
-              {{ end }}
-            {{ end }}
-            {{ if .MlPipelineUI.Resources.Limits }}
             limits:
-              {{ if .MlPipelineUI.Resources.Limits.CPU }}
-              cpu: {{.MlPipelineUI.Resources.Limits.CPU}}
-              {{ end }}
-              {{ if .MlPipelineUI.Resources.Limits.Memory }}
-              memory: {{.MlPipelineUI.Resources.Limits.Memory}}
-              {{ end }}
-            {{ end }}
+              cpu: 100m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
           volumeMounts:
             - mountPath: /etc/tls/private
               name: proxy-tls
@@ -133,9 +121,24 @@ spec:
             periodSeconds: 5
             timeoutSeconds: 2
           resources:
+            {{ if .MlPipelineUI.Resources.Requests }}
             requests:
-              cpu: 10m
-              memory: 70Mi
+              {{ if .MlPipelineUI.Resources.Requests.CPU }}
+              cpu: {{.MlPipelineUI.Resources.Requests.CPU}}
+              {{ end }}
+              {{ if .MlPipelineUI.Resources.Requests.Memory }}
+              memory: {{.MlPipelineUI.Resources.Requests.Memory}}
+              {{ end }}
+            {{ end }}
+            {{ if .MlPipelineUI.Resources.Limits }}
+            limits:
+              {{ if .MlPipelineUI.Resources.Limits.CPU }}
+              cpu: {{.MlPipelineUI.Resources.Limits.CPU}}
+              {{ end }}
+              {{ if .MlPipelineUI.Resources.Limits.Memory }}
+              memory: {{.MlPipelineUI.Resources.Limits.Memory}}
+              {{ end }}
+            {{ end }}
           volumeMounts:
             - mountPath: /etc/config
               name: config-volume
@@ -143,7 +146,7 @@ spec:
       serviceAccountName: ds-pipeline-ui-{{.Name}}
       volumes:
         - configMap:
-            name: ds-pipeline-ui-configmap-{{.Name}}
+            name: {{.MlPipelineUI.ConfigMapName}}
           name: config-volume
         - name: proxy-tls
           secret:

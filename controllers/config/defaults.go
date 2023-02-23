@@ -21,36 +21,43 @@ import (
 )
 
 const (
-	ODHMLPipelinesVersionTag          = "v1.18.0-8" // ToDO: Make this a flag
-	APIServerImage                    = "quay.io/modh/odh-ml-pipelines-api-server-container:" + ODHMLPipelinesVersionTag
-	APIServerArtifactImage            = "quay.io/modh/odh-ml-pipelines-artifact-manager-container:" + ODHMLPipelinesVersionTag
-	APIServerCacheImage               = "registry.access.redhat.com/ubi8/ubi-minimal"
-	APIServerMoveResultsImage         = "busybox"
-	PersistenceAgentImage             = "quay.io/modh/odh-ml-pipelines-persistenceagent-container:" + ODHMLPipelinesVersionTag
-	ScheduledWorkflowImage            = "quay.io/modh/odh-ml-pipelines-scheduledworkflow-container:" + ODHMLPipelinesVersionTag
-	ViewerCRDImage                    = "quay.io/modh/odh-ml-pipelines-viewercontroller-container:" + ODHMLPipelinesVersionTag
-	MlPipelineUIImage                 = "quay.io/opendatahub/odh-ml-pipelines-frontend-container:beta-ui"
-	MariaDBImage                      = "registry.redhat.io/rhel8/mariadb-103:1-188"
-	MinioImage                        = "quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance"
+	ODHMLPipelinesVersionTag  = "v1.18.0-8" // ToDO: Make this a flag
+	APIServerImage            = "quay.io/modh/odh-ml-pipelines-api-server-container:" + ODHMLPipelinesVersionTag
+	APIServerArtifactImage    = "quay.io/modh/odh-ml-pipelines-artifact-manager-container:" + ODHMLPipelinesVersionTag
+	APIServerCacheImage       = "registry.access.redhat.com/ubi8/ubi-minimal"
+	APIServerMoveResultsImage = "busybox"
+	PersistenceAgentImage     = "quay.io/modh/odh-ml-pipelines-persistenceagent-container:" + ODHMLPipelinesVersionTag
+	ScheduledWorkflowImage    = "quay.io/modh/odh-ml-pipelines-scheduledworkflow-container:" + ODHMLPipelinesVersionTag
+	ViewerCRDImage            = "quay.io/modh/odh-ml-pipelines-viewercontroller-container:" + ODHMLPipelinesVersionTag
+	MlPipelineUIImage         = "quay.io/opendatahub/odh-ml-pipelines-frontend-container:beta-ui"
+	MariaDBImage              = "registry.redhat.io/rhel8/mariadb-103:1-188"
+	MinioImage                = "quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance"
+
+	APIServerDeployByDefault = true
+
+	MLPipelineUIConfigMapPrefix       = "ds-pipeline-ui-configmap-"
 	ArtifactScriptConfigMapNamePrefix = "ds-pipeline-artifact-script-"
 	ArtifactScriptConfigMapKey        = "artifact_script"
 	DSPServicePrefix                  = "ds-pipeline"
-	MariaDBName                       = "mlpipeline"
-	MariaDBHostPrefix                 = "mariadb"
-	MariaDBHostPort                   = "3306"
-	MariaDBUser                       = "mlpipeline"
-	MariaDBSecretNamePrefix           = "mariadb-"
-	MariaDBSecretKey                  = "password"
-	MariaDBNamePVCSize                = "10Gi"
-	MinioHostPrefix                   = "minio"
-	MinioPort                         = "9000"
-	MinioScheme                       = "http"
-	MinioDefaultBucket                = "mlpipeline"
-	MinioPVCSize                      = "10Gi"
-	ObjectStoreConnectionSecure       = false
-	ObjectStorageSecretName           = "mlpipeline-minio-artifact" // hardcoded in kfp-tekton
-	ObjectStorageAccessKey            = "accesskey"
-	ObjectStorageSecretKey            = "secretkey"
+
+	MariaDBName             = "mlpipeline"
+	MariaDBHostPrefix       = "mariadb"
+	MariaDBHostPort         = "3306"
+	MariaDBUser             = "mlpipeline"
+	MariaDBSecretNamePrefix = "mariadb-"
+	MariaDBSecretKey        = "password"
+	MariaDBNamePVCSize      = "10Gi"
+
+	MinioHostPrefix    = "minio"
+	MinioPort          = "9000"
+	MinioScheme        = "http"
+	MinioDefaultBucket = "mlpipeline"
+	MinioPVCSize       = "10Gi"
+
+	ObjectStoreConnectionSecure = false
+	ObjectStorageSecretName     = "mlpipeline-minio-artifact" // hardcoded in kfp-tekton
+	ObjectStorageAccessKey      = "accesskey"
+	ObjectStorageSecretKey      = "secretkey"
 )
 
 // Default ResourceRequirements

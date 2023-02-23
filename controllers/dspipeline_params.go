@@ -383,6 +383,7 @@ func (p *DSPipelineParams) ExtractParams(ctx context.Context, dsp *dspipelinesio
 	}
 	if p.MlPipelineUI != nil {
 		setStringDefault(config.MlPipelineUIImage, &p.MlPipelineUI.Image)
+		setStringDefault(config.MLPipelineUIConfigMapPrefix+dsp.Name, &p.MlPipelineUI.ConfigMapName)
 		setResourcesDefault(config.MlPipelineUIResourceRequirements, &p.MlPipelineUI.Resources)
 	}
 
