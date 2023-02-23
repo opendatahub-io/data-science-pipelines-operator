@@ -16,6 +16,7 @@ limitations under the License.
 package controllers
 
 import (
+	"context"
 	dspipelinesiov1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 )
 
@@ -27,8 +28,20 @@ var dbTemplates = []string{
 	"mariadb/service.yaml.tmpl",
 }
 
-func (r *DSPipelineReconciler) ReconcileDatabase(dsp *dspipelinesiov1alpha1.DSPipeline,
+func (r *DSPipelineReconciler) ReconcileDatabase(ctx context.Context, dsp *dspipelinesiov1alpha1.DSPipeline,
 	params *DSPipelineParams) error {
+
+	// If no database was specified, DSPO will deploy mariaDB by default
+	// As such DSPO needs to update the CR with the state of the mariaDB
+	// to match desired with live states.
+	if dsp.Spec.Database == nil && dsp.Spec.Database.MariaDB == nil {
+		dsp.Spec.Database = &dspipelinesiov1alpha1.Database{
+			MariaDB: params.MariaDB.DeepCopy(),
+		}
+		if err := r.Update(ctx, dsp); err != nil {
+			return err
+		}
+	}
 
 	if dsp.Spec.Database.MariaDB.Deploy == false {
 		r.Log.Info("Skipping Application of MariaDB Resources")
@@ -43,5 +56,6 @@ func (r *DSPipelineReconciler) ReconcileDatabase(dsp *dspipelinesiov1alpha1.DSPi
 		}
 	}
 	r.Log.Info("Finished applying Database Resources")
+
 	return nil
 }

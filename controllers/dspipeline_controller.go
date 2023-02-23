@@ -156,7 +156,7 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
-	// TODO: convert everything to string and test omit empty
+	// Ensure that empty values do not overwrite desired state
 	if dspipeline.ObjectMeta.DeletionTimestamp.IsZero() {
 		if !controllerutil.ContainsFinalizer(dspipeline, finalizerName) {
 			controllerutil.AddFinalizer(dspipeline, finalizerName)
@@ -182,7 +182,8 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	usingCustomDB := params.UsingExternalDB(dspipeline)
 
 	if !usingCustomDB {
-		err = r.ReconcileDatabase(dspipeline, params)
+		// Todo: update the CR with no db was specified and a custom mariadb was deployed
+		err = r.ReconcileDatabase(ctx, dspipeline, params)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -191,6 +192,7 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	usingCustomStorage := params.UsingExternalStorage(dspipeline)
 
 	if !usingCustomStorage {
+		// Todo: update the CR with no db was specified and a custom mariadb was deployed
 		err := r.ReconcileStorage(dspipeline, params)
 		if err != nil {
 			return ctrl.Result{}, err

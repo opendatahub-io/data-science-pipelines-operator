@@ -17,26 +17,25 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type DSPipelineSpec struct {
 	// APIService specifies the Kubeflow Apiserver configurations
 	// +kubebuilder:default:={apiServer: {}}
-	APIServer `json:"apiServer,omitempty"`
+	*APIServer `json:"apiServer,omitempty"`
 	// +kubebuilder:default:={persistenceAgent: {}}
-	PersistenceAgent `json:"persistenceAgent,omitempty"`
+	*PersistenceAgent `json:"persistenceAgent,omitempty"`
 	// +kubebuilder:default:={scheduledWorkflow: {}}
-	ScheduledWorkflow `json:"scheduledWorkflow,omitempty"`
+	*ScheduledWorkflow `json:"scheduledWorkflow,omitempty"`
 	// +kubebuilder:default:={viewerCRD: {}}
-	ViewerCRD `json:"viewerCRD,omitempty"`
+	*ViewerCRD `json:"viewerCRD,omitempty"`
 	// +kubebuilder:default:={database: {}}
-	Database `json:"database,omitempty"`
+	*Database `json:"database,omitempty"`
 	// +kubebuilder:default:={objectStorage: {}}
-	ObjectStorage `json:"objectStorage,omitempty"`
+	*ObjectStorage `json:"objectStorage,omitempty"`
 	// +kubebuilder:default:={mlpipelineUI: {}}
-	MlPipelineUI `json:"mlpipelineUI,omitempty"`
+	*MlPipelineUI `json:"mlpipelineUI,omitempty"`
 }
 
 type APIServer struct {
@@ -46,11 +45,11 @@ type APIServer struct {
 	// +kubebuilder:default:=true
 	ApplyTektonCustomResource bool `json:"applyTektonCustomResource,omitempty"`
 	// +kubebuilder:default:=false
-	ArchiveLogs             bool   `json:"archiveLogs,omitempty"`
-	ArtifactImage           string `json:"artifactImage,omitempty"`
-	CacheImage              string `json:"cacheImage,omitempty"`
-	MoveResultsImage        string `json:"moveResultsImage,omitempty"`
-	ArtifactScriptConfigMap `json:"artifactScriptConfigMap,omitempty"`
+	ArchiveLogs              bool   `json:"archiveLogs,omitempty"`
+	ArtifactImage            string `json:"artifactImage,omitempty"`
+	CacheImage               string `json:"cacheImage,omitempty"`
+	MoveResultsImage         string `json:"moveResultsImage,omitempty"`
+	*ArtifactScriptConfigMap `json:"artifactScriptConfigMap,omitempty"`
 	// +kubebuilder:default:=true
 	InjectDefaultScript bool `json:"injectDefaultScript,omitempty"`
 	// +kubebuilder:default:=true
@@ -64,8 +63,8 @@ type APIServer struct {
 	// +kubebuilder:default:=true
 	CollectMetrics bool `json:"collectMetrics,omitempty"`
 	// +kubebuilder:default:=true
-	AutoUpdatePipelineDefaultVersion bool                 `json:"autoUpdatePipelineDefaultVersion,omitempty"`
-	Resources                        ResourceRequirements `json:"resources,omitempty"`
+	AutoUpdatePipelineDefaultVersion bool                  `json:"autoUpdatePipelineDefaultVersion,omitempty"`
+	Resources                        *ResourceRequirements `json:"resources,omitempty"`
 }
 
 type ArtifactScriptConfigMap struct {
@@ -78,8 +77,8 @@ type PersistenceAgent struct {
 	Deploy bool   `json:"deploy,omitempty"`
 	Image  string `json:"image,omitempty"`
 	// +kubebuilder:default:=2
-	NumWorkers int                  `json:"numWorkers,omitempty"`
-	Resources  ResourceRequirements `json:"resources,omitempty"`
+	NumWorkers int                   `json:"numWorkers,omitempty"`
+	Resources  *ResourceRequirements `json:"resources,omitempty"`
 }
 
 type ScheduledWorkflow struct {
@@ -87,8 +86,8 @@ type ScheduledWorkflow struct {
 	Deploy bool   `json:"deploy,omitempty"`
 	Image  string `json:"image,omitempty"`
 	// +kubebuilder:default:=UTC
-	CronScheduleTimezone string               `json:"cronScheduleTimezone,omitempty"`
-	Resources            ResourceRequirements `json:"resources,omitempty"`
+	CronScheduleTimezone string                `json:"cronScheduleTimezone,omitempty"`
+	Resources            *ResourceRequirements `json:"resources,omitempty"`
 }
 
 type ViewerCRD struct {
@@ -96,8 +95,8 @@ type ViewerCRD struct {
 	Deploy bool   `json:"deploy,omitempty"`
 	Image  string `json:"image,omitempty"`
 	// +kubebuilder:default:=50
-	MaxNumViewer int                  `json:"maxNumViewer,omitempty"`
-	Resources    ResourceRequirements `json:"resources,omitempty"`
+	MaxNumViewer int                   `json:"maxNumViewer,omitempty"`
+	Resources    *ResourceRequirements `json:"resources,omitempty"`
 }
 
 type MlPipelineUI struct {
@@ -105,13 +104,13 @@ type MlPipelineUI struct {
 	Deploy bool   `json:"deploy,omitempty"`
 	Image  string `json:"image,omitempty"`
 	// +kubebuilder:default:=ds-pipeline-ui-configmap
-	ConfigMapName string               `json:"configMap,omitempty"`
-	Resources     ResourceRequirements `json:"resources,omitempty"`
+	ConfigMapName string                `json:"configMap,omitempty"`
+	Resources     *ResourceRequirements `json:"resources,omitempty"`
 }
 
 type Database struct {
-	MariaDB    `json:"mariaDB,omitempty"`
-	ExternalDB `json:"externalDB,omitempty"`
+	*MariaDB    `json:"mariaDB,omitempty"`
+	*ExternalDB `json:"externalDB,omitempty"`
 }
 
 type MariaDB struct {
@@ -119,26 +118,26 @@ type MariaDB struct {
 	Deploy bool   `json:"deploy,omitempty"`
 	Image  string `json:"image,omitempty"`
 	// +kubebuilder:default:=mlpipeline
-	Username       string         `json:"username,omitempty"`
-	PasswordSecret SecretKeyValue `json:"passwordSecret,omitempty"`
+	Username       string          `json:"username,omitempty"`
+	PasswordSecret *SecretKeyValue `json:"passwordSecret,omitempty"`
 	// +kubebuilder:default:=mlpipeline
 	DBName string `json:"pipelineDBName,omitempty"`
 	// +kubebuilder:default:="10Gi"
-	PVCSize   resource.Quantity    `json:"pvcSize,omitempty"`
-	Resources ResourceRequirements `json:"resources,omitempty"`
+	PVCSize   string                `json:"pvcSize,omitempty"`
+	Resources *ResourceRequirements `json:"resources,omitempty"`
 }
 
 type ExternalDB struct {
-	Host           string         `json:"host,omitempty"`
-	Port           string         `json:"port,omitempty"`
-	Username       string         `json:"username,omitempty"`
-	DBName         string         `json:"pipelineDBName,omitempty"`
-	PasswordSecret SecretKeyValue `json:"passwordSecret,omitempty"`
+	Host           string          `json:"host,omitempty"`
+	Port           string          `json:"port,omitempty"`
+	Username       string          `json:"username,omitempty"`
+	DBName         string          `json:"pipelineDBName,omitempty"`
+	PasswordSecret *SecretKeyValue `json:"passwordSecret,omitempty"`
 }
 
 type ObjectStorage struct {
-	Minio           `json:"minio,omitempty"`
-	ExternalStorage `json:"externalStorage,omitempty"`
+	*Minio           `json:"minio,omitempty"`
+	*ExternalStorage `json:"externalStorage,omitempty"`
 }
 
 type Minio struct {
@@ -146,32 +145,32 @@ type Minio struct {
 	Deploy bool   `json:"deploy,omitempty"`
 	Image  string `json:"image,omitempty"`
 	// +kubebuilder:default:=mlpipeline
-	Bucket             string `json:"bucket,omitempty"`
-	S3CredentialSecret `json:"s3CredentialsSecret,omitempty"`
+	Bucket              string `json:"bucket,omitempty"`
+	*S3CredentialSecret `json:"s3CredentialsSecret,omitempty"`
 	// +kubebuilder:default:="10Gi"
-	PVCSize   resource.Quantity    `json:"pvcSize,omitempty"`
-	Resources ResourceRequirements `json:"resources,omitempty"`
+	PVCSize   string                `json:"pvcSize,omitempty"`
+	Resources *ResourceRequirements `json:"resources,omitempty"`
 }
 
 // ResourceRequirements structures compute resource requirements.
 // Replaces ResourceRequirements from corev1 which also includes optional storage field.
 // We handle storage field separately, and should not include it as a subfield for Resources.
 type ResourceRequirements struct {
-	Limits   Resources `json:"limits,omitempty"`
-	Requests Resources `json:"requests,omitempty"`
+	Limits   *Resources `json:"limits,omitempty"`
+	Requests *Resources `json:"requests,omitempty"`
 }
 
 type Resources struct {
-	CPU    resource.Quantity `json:"cpu,omitempty"`
-	Memory resource.Quantity `json:"memory,omitempty"`
+	CPU    string `json:"cpu,omitempty"`
+	Memory string `json:"memory,omitempty"`
 }
 
 type ExternalStorage struct {
-	Host               string `json:"host,omitempty"`
-	Port               string `json:"port,omitempty"`
-	Bucket             string `json:"bucket,omitempty"`
-	Scheme             string `json:"scheme,omitempty"`
-	S3CredentialSecret `json:"s3CredentialsSecret,omitempty"`
+	Host                string `json:"host,omitempty"`
+	Port                string `json:"port,omitempty"`
+	Bucket              string `json:"bucket,omitempty"`
+	Scheme              string `json:"scheme,omitempty"`
+	*S3CredentialSecret `json:"s3CredentialsSecret,omitempty"`
 }
 
 type S3CredentialSecret struct {

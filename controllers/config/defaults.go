@@ -18,7 +18,6 @@ package config
 
 import (
 	dspipelinesiov1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
-	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 const (
@@ -66,13 +65,13 @@ var (
 
 func createResourceRequirement(RequestsCPU string, RequestsMemory string, LimitsCPU string, LimitsMemory string) dspipelinesiov1alpha1.ResourceRequirements {
 	return dspipelinesiov1alpha1.ResourceRequirements{
-		Requests: dspipelinesiov1alpha1.Resources{
-			CPU:    resource.MustParse(RequestsCPU),
-			Memory: resource.MustParse(RequestsMemory),
+		Requests: &dspipelinesiov1alpha1.Resources{
+			CPU:    RequestsCPU,
+			Memory: RequestsMemory,
 		},
-		Limits: dspipelinesiov1alpha1.Resources{
-			CPU:    resource.MustParse(LimitsCPU),
-			Memory: resource.MustParse(LimitsMemory),
+		Limits: &dspipelinesiov1alpha1.Resources{
+			CPU:    LimitsCPU,
+			Memory: LimitsMemory,
 		},
 	}
 }
