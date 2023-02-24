@@ -29,11 +29,11 @@ import (
 )
 
 const (
-	dspcrcase1                  = "./testdata/deploy/cr.yaml"
 	dspcrcase2                  = "./testdata/deploy/case_2/cr.yaml"
+	dspcrcase5                  = "./testdata/deploy/case_5/cr.yaml"
 	apiserverDeployment         = "./testdata/results/case_2/apiserver/deployment.yaml"
-	apiserverConfigMap1         = "./testdata/results/case_1/apiserver/configmap_artifact_script.yaml"
-	apiserverConfigMap2         = "./testdata/results/case_2/apiserver/configmap_artifact_script.yaml"
+	apiserverConfigMap1         = "./testdata/results/case_2/apiserver/configmap_artifact_script.yaml"
+	apiserverConfigMap2         = "./testdata/results/case_5/apiserver/configmap_artifact_script.yaml"
 	mariadbDeployment           = "./testdata/results/case_2/mariadb/deployment.yaml"
 	minioDeployment             = "./testdata/results/case_2/minio/deployment.yaml"
 	mlpipelinesUIDeployment     = "./testdata/results/case_2/mlpipelines-ui/deployment.yaml"
@@ -139,7 +139,7 @@ var _ = Describe("The DS Pipeline Controller", func() {
 
 	Context("In a namespace, when a DSP CR with custom Artifact ConfigMap is deployed", func() {
 		It("Should report error if specified configmap does not exist.", func() {
-			deployDSP(ctx, dspcrcase2, opts)
+			deployDSP(ctx, dspcrcase5, opts)
 			configMapDoesNotExists(apiserverConfigMap2, opts)
 		})
 	})

@@ -1,11 +1,11 @@
 apiVersion: v1
 data:
-  artifact_script: |-
+  somekey: |-
     #!/usr/bin/env sh
     push_artifact() {
         if [ -f "$2" ]; then
             tar -cvzf $1.tgz $2
-            aws s3 --endpoint ${ARTIFACT_ENDPOINT_SCHEME}${ARTIFACT_ENDPOINT} cp $1.tgz s3://$ARTIFACT_BUCKET/artifacts/$PIPELINERUN/$PIPELINETASK/$1.tgz
+            aws s3 --endpoint ${ARTIFACT_ENDPOINT} cp $1.tgz s3://$ARTIFACT_BUCKET/artifacts/$PIPELINERUN/$PIPELINETASK/$1.tgz
         else
             echo "$2 file does not exist. Skip artifact tracking for $1"
         fi
@@ -21,8 +21,6 @@ data:
     }
 kind: ConfigMap
 metadata:
-  name: ds-pipeline-artifact-script-testdsp
+  name: doesnotexist
   namespace: default
-  labels:
-    app: ds-pipeline-testdsp
-    component: data-science-pipelines
+

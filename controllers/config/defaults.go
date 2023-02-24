@@ -33,8 +33,6 @@ const (
 	MariaDBImage              = "registry.redhat.io/rhel8/mariadb-103:1-188"
 	MinioImage                = "quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance"
 
-	APIServerDeployByDefault = true
-
 	MLPipelineUIConfigMapPrefix       = "ds-pipeline-ui-configmap-"
 	ArtifactScriptConfigMapNamePrefix = "ds-pipeline-artifact-script-"
 	ArtifactScriptConfigMapKey        = "artifact_script"
