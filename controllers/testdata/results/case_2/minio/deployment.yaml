@@ -28,13 +28,13 @@ spec:
               valueFrom:
                 secretKeyRef:
                   key: "accesskey"
-                  name: "somesecret-testdsp"
+                  name: "mlpipeline-minio-artifact"
             - name: MINIO_SECRET_KEY
               valueFrom:
                 secretKeyRef:
                   key: "secretkey"
-                  name: "somesecret-testdsp"
-          image: "quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance"
+                  name: "mlpipeline-minio-artifact"
+          image: "quay.io/opendatahub/test-minio:test"
           name: minio
           ports:
             - containerPort: 9000
@@ -57,11 +57,11 @@ spec:
             failureThreshold: 3
           resources:
             requests:
-              cpu: 20m
-              memory: 100Mi
-            limits:
-              cpu: 250m
+              cpu: 1334m
               memory: 1Gi
+            limits:
+              cpu: 2535m
+              memory: 5Gi
           volumeMounts:
             - mountPath: /data
               name: data

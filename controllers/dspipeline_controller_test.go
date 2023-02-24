@@ -30,7 +30,7 @@ import (
 
 const (
 	dspcrcase1                  = "./testdata/deploy/cr.yaml"
-	dspcrcase2                  = "./testdata/deploy/case_2.yaml"
+	dspcrcase2                  = "./testdata/deploy/case_2/cr.yaml"
 	apiserverDeployment         = "./testdata/results/case_2/apiserver/deployment.yaml"
 	apiserverConfigMap1         = "./testdata/results/case_1/apiserver/configmap_artifact_script.yaml"
 	apiserverConfigMap2         = "./testdata/results/case_2/apiserver/configmap_artifact_script.yaml"
@@ -102,7 +102,7 @@ var _ = Describe("The DS Pipeline Controller", func() {
 	Context("In a namespace, when a DSP CR is deployed", func() {
 
 		It("Should create an api server deployment", func() {
-			deployDSP(ctx, dspcrcase1, opts)
+			deployDSP(ctx, dspcrcase2, opts)
 			compareDeployments(apiserverDeployment, opts)
 		})
 

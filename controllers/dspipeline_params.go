@@ -146,8 +146,8 @@ func (p *DSPipelineParams) SetupDBParams(ctx context.Context, dsp *dspipelinesio
 			p.Namespace,
 		)
 		p.DBConnection.Port = config.MariaDBHostPort
-		p.DBConnection.Username = config.MariaDBUser
-		p.DBConnection.DBName = config.MariaDBName
+		p.DBConnection.Username = p.MariaDB.Username
+		p.DBConnection.DBName = p.MariaDB.DBName
 		if p.MariaDB.PasswordSecret != nil {
 			customCreds = p.MariaDB.PasswordSecret
 		}

@@ -10,7 +10,10 @@ metadata:
 spec:
   replicas: 1
   strategy:
-    type: Recreate  # Need this since backing PVC is ReadWriteOnce, which creates resource lock condition in default Rolling strategy
+    # Need this since backing PVC is ReadWriteOnce,
+    # which creates resource lock condition in default
+    # Rolling strategy
+    type: Recreate
   selector:
     matchLabels:
       app: mariadb-{{.Name}}

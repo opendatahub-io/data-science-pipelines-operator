@@ -22,8 +22,8 @@ spec:
       containers:
         - env:
             - name: CRON_SCHEDULE_TIMEZONE
-              value: "UTC"
-          image: "quay.io/modh/odh-ml-pipelines-scheduledworkflow-container:v1.18.0-8"
+              value: "EST"
+          image: "quay.io/modh/test-scheduledworkflow-container:test"
           imagePullPolicy: IfNotPresent
           name: ds-pipeline-scheduledworkflow
           command:
@@ -50,9 +50,9 @@ spec:
             timeoutSeconds: 2
           resources:
             requests:
-              cpu: 120m
-              memory: 100Mi
+              cpu: 1235m
+              memory: 1Gi
             limits:
-              cpu: 250m
-              memory: 250Mi
+              cpu: 2526m
+              memory: 5Gi
       serviceAccountName: ds-pipeline-scheduledworkflow-testdsp

@@ -4,34 +4,95 @@ metadata:
   name: testdsp
 spec:
   apiServer:
-    artifactScriptConfigMap:
-      name: ds-pipeline-artifact-script-testdsp
-      key: "artifact_script"
-    image: quay.io/modh/odh-ml-pipelines-api-server-container:v1.18.0-8
-    artifactImage: quay.io/modh/odh-ml-pipelines-artifact-manager-container:v1.18.0-8
-    dbConfigConMaxLifetimeSec: 120
+    deploy: true
+    image: quay.io/modh/test-api-server-container:test
+    applyTektonCustomResource: true
+    archiveLogs: false
+    artifactImage: quay.io/modh/test-artifact-manager-container:test
+    cacheImage: registry.access.redhat.com/ubi8/test-ubi-minimal
+    moveResultsImage: testbusybox
+    injectDefaultScript: true
+    stripEOF: true
+    terminateStatus: Cancelled
+    trackArtifacts: true
+    dbConfigConMaxLifetimeSec: 125
+    collectMetrics: true
+    autoUpdatePipelineDefaultVersion: true
+    resources:
+      requests:
+        cpu: "1231m"
+        memory: "1Gi"
+      limits:
+        cpu: "2522m"
+        memory: "5Gi"
   persistenceAgent:
-    image: quay.io/modh/odh-ml-pipelines-persistenceagent-container:v1.18.0-8
+    deploy: true
+    image: quay.io/modh/test-persistenceagent-container:test
+    numWorkers: 5
+    resources:
+      requests:
+        cpu: "1233m"
+        memory: "1Gi"
+      limits:
+        cpu: "2524m"
+        memory: "5Gi"
   scheduledWorkflow:
-    image: quay.io/modh/odh-ml-pipelines-scheduledworkflow-container:v1.18.0-8
+    deploy: true
+    image: quay.io/modh/test-scheduledworkflow-container:test
+    cronScheduleTimezone: EST
+    resources:
+      requests:
+        cpu: "1235m"
+        memory: "1Gi"
+      limits:
+        cpu: "2526m"
+        memory: "5Gi"
   viewerCRD:
-    image: quay.io/modh/odh-ml-pipelines-viewercontroller-container:v1.18.0-8
+    deploy: true
+    image: quay.io/modh/test-viewercontroller-container:test
+    maxNumViewer: 25
+    resources:
+      requests:
+        cpu: "1237m"
+        memory: "1Gi"
+      limits:
+        cpu: "2528m"
+        memory: "5Gi"
   mlpipelineUI:
-    image: quay.io/opendatahub/odh-ml-pipelines-frontend-container:beta-ui
-    configMap: ds-pipeline-ui-configmap
+    deploy: true
+    image: quay.io/opendatahub/test-frontend-container:beta-ui
+    configMap: some-test-configmap
+    resources:
+      requests:
+        cpu: "1239m"
+        memory: "1Gi"
+      limits:
+        cpu: "2530m"
+        memory: "5Gi"
   database:
     mariaDB:
-      image: registry.redhat.io/rhel8/mariadb-103:1-188
-      username: mlpipeline
+      deploy: true
+      image: registry.redhat.io/rhel8/test-mariadb-103:test
+      username: testuser
       pipelineDBName: randomDBName
-      passwordSecret:
-        name: ds-pipelines-db-testdsp
-        key: password
+      pvcSize: 32Gi
+      resources:
+        requests:
+          cpu: "1212m"
+          memory: "1Gi"
+        limits:
+          cpu: "2554m"
+          memory: "5Gi"
   objectStorage:
     minio:
-      image: quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance
+      deploy: true
+      image: quay.io/opendatahub/test-minio:test
       bucket: mlpipeline
-      s3CredentialsSecret:
-        secretName: somesecret-testdsp
-        accessKey: accesskey
-        secretKey: secretkey
+      pvcSize: 40Gi
+      resources:
+        requests:
+          cpu: "1334m"
+          memory: "1Gi"
+        limits:
+          cpu: "2535m"
+          memory: "5Gi"

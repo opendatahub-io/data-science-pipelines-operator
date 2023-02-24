@@ -23,14 +23,14 @@ spec:
         - env:
             - name: NAMESPACE
               value: "default"
-          image: "quay.io/modh/odh-ml-pipelines-persistenceagent-container:v1.18.0-8"
+          image: "quay.io/modh/test-persistenceagent-container:test"
           imagePullPolicy: IfNotPresent
           name: ds-pipeline-persistenceagent
           command:
             - persistence_agent
             - "--logtostderr=true"
             - "--ttlSecondsAfterWorkflowFinish=86400"
-            - "--numWorker=2"
+            - "--numWorker=5"
             - "--mlPipelineAPIServerName=ds-pipeline-testdsp"
             - "--namespace=default"
             - "--mlPipelineServiceHttpPort=8888"
@@ -55,9 +55,9 @@ spec:
             timeoutSeconds: 2
           resources:
             requests:
-              cpu: 120m
-              memory: 500Mi
-            limits:
-              cpu: 250m
+              cpu: 1233m
               memory: 1Gi
+            limits:
+              cpu: 2524m
+              memory: 5Gi
       serviceAccountName: ds-pipeline-persistenceagent-testdsp

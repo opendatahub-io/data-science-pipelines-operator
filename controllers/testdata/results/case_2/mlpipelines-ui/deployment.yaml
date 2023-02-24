@@ -79,12 +79,12 @@ spec:
               valueFrom:
                 secretKeyRef:
                   key: "accesskey"
-                  name: "somesecret-testdsp"
+                  name: "mlpipeline-minio-artifact"
             - name: MINIO_SECRET_KEY
               valueFrom:
                 secretKeyRef:
                   key: "secretkey"
-                  name: "somesecret-testdsp"
+                  name: "mlpipeline-minio-artifact"
             - name: ALLOW_CUSTOM_VISUALIZATIONS
               value: "true"
             - name: ARGO_ARCHIVE_LOGS
@@ -93,7 +93,7 @@ spec:
               value: ds-pipeline-testdsp
             - name: ML_PIPELINE_SERVICE_PORT
               value: '8888'
-          image: quay.io/opendatahub/odh-ml-pipelines-frontend-container:beta-ui
+          image: quay.io/opendatahub/test-frontend-container:beta-ui
           imagePullPolicy: IfNotPresent
           livenessProbe:
             exec:
@@ -125,8 +125,11 @@ spec:
             timeoutSeconds: 2
           resources:
             requests:
-              cpu: 10m
-              memory: 70Mi
+              cpu: 1239m
+              memory: 1Gi
+            limits:
+              cpu: 2530m
+              memory: 5Gi
           volumeMounts:
             - mountPath: /etc/config
               name: config-volume
@@ -134,7 +137,7 @@ spec:
       serviceAccountName: ds-pipeline-ui-testdsp
       volumes:
         - configMap:
-            name: ds-pipeline-ui-configmap-testdsp
+            name: some-test-configmap
             defaultMode: 420
           name: config-volume
         - name: proxy-tls

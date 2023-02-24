@@ -22,31 +22,39 @@ spec:
             - name: POD_NAMESPACE
               value: "default"
             - name: DBCONFIG_USER
-              value: "mlpipeline"
+              value: "testuser"
             - name: DBCONFIG_PASSWORD
               valueFrom:
                 secretKeyRef:
                   key: "password"
-                  name: "ds-pipelines-db-testdsp"
+                  name: "mariadb-testdsp"
             - name: DBCONFIG_DBNAME
               value: "randomDBName"
             - name: DBCONFIG_HOST
               value: "mariadb-testdsp.default.svc.cluster.local"
             - name: DBCONFIG_PORT
               value: "3306"
-            - name: PIPELINE_RUNTIME
-              value: "tekton"
             - name: ARTIFACT_BUCKET
               value: "mlpipeline"
             - name: ARTIFACT_ENDPOINT
-              value: "minio-testdsp:9000"
+              value: "http://minio-testdsp.default.svc.cluster.local:9000"
             - name: ARTIFACT_SCRIPT
               valueFrom:
                 configMapKeyRef:
                   key: "artifact_script"
                   name: "ds-pipeline-artifact-script-testdsp"
             - name: ARTIFACT_IMAGE
-              value: "quay.io/modh/odh-ml-pipelines-artifact-manager-container:v1.18.0-8"
+              value: "quay.io/modh/test-artifact-manager-container:test"
+            - name: ARCHIVE_LOGS
+              value: "false"
+            - name: TRACK_ARTIFACTS
+              value: "true"
+            - name: STRIP_EOF
+              value: "true"
+            - name: PIPELINE_RUNTIME
+              value: "tekton"
+            - name: DEFAULTPIPELINERUNNERSERVICEACCOUNT
+              value: "pipeline-runner-testdsp"
             - name: INJECT_DEFAULT_SCRIPT
               value: "true"
             - name: APPLY_TEKTON_CUSTOM_RESOURCE
@@ -56,7 +64,7 @@ spec:
             - name: AUTO_UPDATE_PIPELINE_DEFAULT_VERSION
               value: "true"
             - name: DBCONFIG_CONMAXLIFETIMESEC
-              value: "120"
+              value: "125"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_HOST
               value: "ds-pipeline-visualizationserver"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
@@ -67,21 +75,23 @@ spec:
               valueFrom:
                 secretKeyRef:
                   key: "accesskey"
-                  name: "somesecret-testdsp"
+                  name: "mlpipeline-minio-artifact"
             - name: OBJECTSTORECONFIG_SECRETACCESSKEY
               valueFrom:
                 secretKeyRef:
                   key: "secretkey"
-                  name: "somesecret-testdsp"
+                  name: "mlpipeline-minio-artifact"
             - name: OBJECTSTORECONFIG_SECURE
               value: "false"
             - name: MINIO_SERVICE_SERVICE_HOST
               value: "minio-testdsp.default.svc.cluster.local"
             - name: MINIO_SERVICE_SERVICE_PORT
               value: "9000"
-            - name: DEFAULTPIPELINERUNNERSERVICEACCOUNT
-              value: "pipeline-runner-testdsp"
-          image: quay.io/modh/odh-ml-pipelines-api-server-container:v1.18.0-8
+            - name: CACHE_IMAGE
+              value: "registry.access.redhat.com/ubi8/test-ubi-minimal"
+            - name: MOVERESULTS_IMAGE
+              value: "testbusybox"
+          image: quay.io/modh/test-api-server-container:test
           imagePullPolicy: Always
           name: ds-pipeline-api-server
           ports:
@@ -117,9 +127,9 @@ spec:
             timeoutSeconds: 2
           resources:
             requests:
-              cpu: 250m
-              memory: 500Mi
-            limits:
-              cpu: 500m
+              cpu: 1231m
               memory: 1Gi
+            limits:
+              cpu: 2522m
+              memory: 5Gi
       serviceAccountName: ds-pipeline-testdsp

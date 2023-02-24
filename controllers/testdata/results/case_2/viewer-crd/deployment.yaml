@@ -20,13 +20,13 @@ spec:
         component: data-science-pipelines
     spec:
       containers:
-        - image: "quay.io/modh/odh-ml-pipelines-viewercontroller-container:v1.18.0-8"
+        - image: "quay.io/modh/test-viewercontroller-container:test"
           imagePullPolicy: Always
           name: ds-pipeline-viewer-crd
           command:
             - controller
             - "-logtostderr=true"
-            - "-max_num_viewers=50"
+            - "-max_num_viewers=25"
             - "--namespace=default"
           livenessProbe:
             exec:
@@ -48,9 +48,9 @@ spec:
             timeoutSeconds: 2
           resources:
             requests:
-              cpu: 120m
-              memory: 100Mi
+              cpu: 1237m
+              memory: 1Gi
             limits:
-              cpu: 250m
-              memory: 500Mi
+              cpu: 2528m
+              memory: 5Gi
       serviceAccountName: ds-pipeline-viewer-crd-testdsp
