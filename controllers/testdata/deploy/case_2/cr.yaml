@@ -1,7 +1,7 @@
 apiVersion: dspipelines.opendatahub.io/v1alpha1
 kind: DSPipeline
 metadata:
-  name: testdsp
+  name: testdsp2
 spec:
   apiServer:
     deploy: true

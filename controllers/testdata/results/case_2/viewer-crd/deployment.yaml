@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ds-pipeline-viewer-crd-testdsp
+  name: ds-pipeline-viewer-crd-testdsp2
   namespace: default
   labels:
-    app: ds-pipeline-viewer-crd-testdsp
+    app: ds-pipeline-viewer-crd-testdsp2
     component: data-science-pipelines
 spec:
   selector:
     matchLabels:
-      app: ds-pipeline-viewer-crd-testdsp
+      app: ds-pipeline-viewer-crd-testdsp2
       component: data-science-pipelines
   template:
     metadata:
       annotations:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
       labels:
-        app: ds-pipeline-viewer-crd-testdsp
+        app: ds-pipeline-viewer-crd-testdsp2
         component: data-science-pipelines
     spec:
       containers:
@@ -53,4 +53,4 @@ spec:
             limits:
               cpu: 2528m
               memory: 5Gi
-      serviceAccountName: ds-pipeline-viewer-crd-testdsp
+      serviceAccountName: ds-pipeline-viewer-crd-testdsp2

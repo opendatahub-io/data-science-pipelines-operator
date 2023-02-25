@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ds-pipeline-ui-testdsp
+  name: ds-pipeline-ui-testdsp2
   namespace: default
   labels:
-    app: ds-pipeline-ui-testdsp
+    app: ds-pipeline-ui-testdsp2
     component: data-science-pipelines
 spec:
   selector:
     matchLabels:
-      app: ds-pipeline-ui-testdsp
+      app: ds-pipeline-ui-testdsp2
       component: data-science-pipelines
   template:
     metadata:
       annotations:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
       labels:
-        app: ds-pipeline-ui-testdsp
+        app: ds-pipeline-ui-testdsp2
         component: data-science-pipelines
     spec:
       containers:
@@ -24,13 +24,13 @@ spec:
           args:
             - --https-address=:8443
             - --provider=openshift
-            - --openshift-service-account=ds-pipeline-ui-testdsp
+            - --openshift-service-account=ds-pipeline-ui-testdsp2
             - --upstream=http://localhost:3000
             - --tls-cert=/etc/tls/private/tls.crt
             - --tls-key=/etc/tls/private/tls.key
             - --cookie-secret=SECRET
-            - '--openshift-delegate-urls={"/": {"resource": "route", "verb": "get", "name": "ds-pipeline-ui-testdsp"}}'
-            - '--openshift-sar={"resource": "route", "resourceName": "ds-pipeline-ui-testdsp", "verb": "get"}'
+            - '--openshift-delegate-urls={"/": {"resource": "route", "verb": "get", "name": "ds-pipeline-ui-testdsp2"}}'
+            - '--openshift-sar={"resource": "route", "resourceName": "ds-pipeline-ui-testdsp2", "verb": "get"}'
             - --skip-auth-regex='(^/metrics|^/apis/v1beta1/healthz)'
           image: registry.redhat.io/openshift4/ose-oauth-proxy:v4.8
           ports:
@@ -90,7 +90,7 @@ spec:
             - name: ARGO_ARCHIVE_LOGS
               value: "true"
             - name: ML_PIPELINE_SERVICE_HOST
-              value: ds-pipeline-testdsp
+              value: ds-pipeline-testdsp2
             - name: ML_PIPELINE_SERVICE_PORT
               value: '8888'
           image: quay.io/opendatahub/test-frontend-container:beta-ui
@@ -134,7 +134,7 @@ spec:
             - mountPath: /etc/config
               name: config-volume
               readOnly: true
-      serviceAccountName: ds-pipeline-ui-testdsp
+      serviceAccountName: ds-pipeline-ui-testdsp2
       volumes:
         - configMap:
             name: some-test-configmap
@@ -142,5 +142,5 @@ spec:
           name: config-volume
         - name: proxy-tls
           secret:
-            secretName: ds-pipelines-ui-proxy-tls-testdsp
+            secretName: ds-pipelines-ui-proxy-tls-testdsp2
             defaultMode: 420

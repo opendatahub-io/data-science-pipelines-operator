@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ds-pipeline-persistenceagent-testdsp
+  name: ds-pipeline-persistenceagent-testdsp2
   namespace: default
   labels:
-    app: ds-pipeline-persistenceagent-testdsp
+    app: ds-pipeline-persistenceagent-testdsp2
     component: data-science-pipelines
 spec:
   selector:
     matchLabels:
-      app: ds-pipeline-persistenceagent-testdsp
+      app: ds-pipeline-persistenceagent-testdsp2
       component: data-science-pipelines
   template:
     metadata:
       annotations:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
       labels:
-        app: ds-pipeline-persistenceagent-testdsp
+        app: ds-pipeline-persistenceagent-testdsp2
         component: data-science-pipelines
     spec:
       containers:
@@ -31,7 +31,7 @@ spec:
             - "--logtostderr=true"
             - "--ttlSecondsAfterWorkflowFinish=86400"
             - "--numWorker=5"
-            - "--mlPipelineAPIServerName=ds-pipeline-testdsp"
+            - "--mlPipelineAPIServerName=ds-pipeline-testdsp2"
             - "--namespace=default"
             - "--mlPipelineServiceHttpPort=8888"
             - "--mlPipelineServiceGRPCPort=8887"
@@ -60,4 +60,4 @@ spec:
             limits:
               cpu: 2524m
               memory: 5Gi
-      serviceAccountName: ds-pipeline-persistenceagent-testdsp
+      serviceAccountName: ds-pipeline-persistenceagent-testdsp2

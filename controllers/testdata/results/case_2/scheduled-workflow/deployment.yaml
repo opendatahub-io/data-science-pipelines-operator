@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ds-pipeline-scheduledworkflow-testdsp
+  name: ds-pipeline-scheduledworkflow-testdsp2
   namespace: default
   labels:
-    app: ds-pipeline-scheduledworkflow-testdsp
+    app: ds-pipeline-scheduledworkflow-testdsp2
     component: data-science-pipelines
 spec:
   selector:
     matchLabels:
-      app: ds-pipeline-scheduledworkflow-testdsp
+      app: ds-pipeline-scheduledworkflow-testdsp2
       component: data-science-pipelines
   template:
     metadata:
       annotations:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
       labels:
-        app: ds-pipeline-scheduledworkflow-testdsp
+        app: ds-pipeline-scheduledworkflow-testdsp2
         component: data-science-pipelines
     spec:
       containers:
@@ -55,4 +55,4 @@ spec:
             limits:
               cpu: 2526m
               memory: 5Gi
-      serviceAccountName: ds-pipeline-scheduledworkflow-testdsp
+      serviceAccountName: ds-pipeline-scheduledworkflow-testdsp2

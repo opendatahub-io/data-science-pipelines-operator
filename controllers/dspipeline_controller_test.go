@@ -103,38 +103,23 @@ var _ = Describe("The DS Pipeline Controller", func() {
 
 		It("Should create an api server deployment", func() {
 			deployDSP(ctx, dspcrcase2, opts)
+			By("Creating apiserverDeployment UI resources")
 			compareDeployments(apiserverDeployment, opts)
-		})
-
-		It("Should create a default artifact script, when none are specified in the CR", func() {
+			By("Creating default artifact ConfigMap UI resources")
 			compareConfigMaps(apiserverConfigMap1, opts)
-		})
-
-		It("Should create a MLpipeline UI", func() {
-			By("Creating MLPipeline UI resources")
+			By("Creating mlpipelinesUIDeployment UI resources")
 			compareDeployments(mlpipelinesUIDeployment, opts)
-		})
-
-		It("Should create a MariaDB deployment", func() {
+			By("Creating mariadbDeployment UI resources")
 			compareDeployments(mariadbDeployment, opts)
-		})
-
-		It("Should create a Minio storage deployment", func() {
+			By("Creating minioDeployment UI resources")
 			compareDeployments(minioDeployment, opts)
-		})
-
-		It("Should create a Persistence Agent deployment", func() {
+			By("Creating persistenceAgentDeployment UI resources")
 			compareDeployments(persistenceAgentDeployment, opts)
-		})
-
-		It("Should create a Scheduled Workflow deployment", func() {
+			By("Creating scheduledWorkflowDeployment UI resources")
 			compareDeployments(scheduledWorkflowDeployment, opts)
-		})
-
-		It("Should create a Viewer CRD deployment", func() {
+			By("Creating viewerCrdDeployment UI resources")
 			compareDeployments(viewerCrdDeployment, opts)
 		})
-
 	})
 
 	Context("In a namespace, when a DSP CR with custom Artifact ConfigMap is deployed", func() {

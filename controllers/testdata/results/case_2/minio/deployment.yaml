@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: minio-testdsp
+  name: minio-testdsp2
   namespace: default
   labels:
-    app: minio-testdsp
+    app: minio-testdsp2
     component: data-science-pipelines
 spec:
   selector:
     matchLabels:
-      app: minio-testdsp
+      app: minio-testdsp2
       component: data-science-pipelines
   strategy:
     type: Recreate
   template:
     metadata:
       labels:
-        app: minio-testdsp
+        app: minio-testdsp2
         component: data-science-pipelines
     spec:
       containers:
@@ -69,4 +69,4 @@ spec:
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: minio-testdsp
+            claimName: minio-testdsp2
