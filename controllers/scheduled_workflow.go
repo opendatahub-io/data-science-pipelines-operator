@@ -32,7 +32,7 @@ var scheduledWorkflowTemplates = []string{
 func (r *DSPipelineReconciler) ReconcileScheduledWorkflow(dsp *dspipelinesiov1alpha1.DSPipeline,
 	params *DSPipelineParams) error {
 
-	if dsp.Spec.ScheduledWorkflow.Deploy == false {
+	if !dsp.Spec.ScheduledWorkflow.Deploy {
 		r.Log.Info("Skipping Application of ScheduledWorkflow Resources")
 		return nil
 	}

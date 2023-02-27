@@ -30,7 +30,7 @@ var persistenceAgentTemplates = []string{
 func (r *DSPipelineReconciler) ReconcilePersistenceAgent(dsp *dspipelinesiov1alpha1.DSPipeline,
 	params *DSPipelineParams) error {
 
-	if dsp.Spec.PersistenceAgent.Deploy == false {
+	if !dsp.Spec.PersistenceAgent.Deploy {
 		r.Log.Info("Skipping Application of PersistenceAgent Resources")
 		return nil
 	}

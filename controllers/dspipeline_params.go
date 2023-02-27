@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"github.com/go-logr/logr"
 	mf "github.com/manifestival/manifestival"
@@ -199,7 +198,7 @@ func (p *DSPipelineParams) SetupDBParams(ctx context.Context, dsp *dspipelinesio
 	p.DBConnection.Password = base64.StdEncoding.EncodeToString(dbSecret.Data[credsPasswordKey])
 
 	if p.DBConnection.Password == "" {
-		return errors.New(fmt.Sprintf("DB Password from secret [%s] for key [%s] was not successfully retrieved, "+
+		return fmt.Errorf(fmt.Sprintf("DB Password from secret [%s] for key [%s] was not successfully retrieved, "+
 			"ensure that the secret with this key exist.", credsSecretName, credsPasswordKey))
 	}
 	return nil
@@ -321,7 +320,7 @@ func (p *DSPipelineParams) SetupObjectParams(ctx context.Context, dsp *dspipelin
 	p.ObjectStorageConnection.SecretAccessKey = base64.StdEncoding.EncodeToString(storageSecret.Data[credsSecretKey])
 
 	if p.ObjectStorageConnection.AccessKeyID == "" || p.ObjectStorageConnection.SecretAccessKey == "" {
-		return errors.New(fmt.Sprintf("Object Storage Password from secret [%s] for keys [%s, %s] was not "+
+		return fmt.Errorf(fmt.Sprintf("Object Storage Password from secret [%s] for keys [%s, %s] was not "+
 			"successfully retrieved, ensure that the secret with this key exist.", credsSecretName, credsAccessKey, credsSecretKey))
 	}
 

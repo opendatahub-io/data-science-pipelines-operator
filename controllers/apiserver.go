@@ -35,7 +35,7 @@ var apiServerTemplates = []string{
 
 func (r *DSPipelineReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspipelinesiov1alpha1.DSPipeline, req ctrl.Request, params *DSPipelineParams) error {
 
-	if dsp.Spec.APIServer.Deploy == false {
+	if !dsp.Spec.APIServer.Deploy {
 		r.Log.Info("Skipping Application of APIServer Resources")
 		return nil
 	}

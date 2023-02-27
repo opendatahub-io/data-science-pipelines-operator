@@ -195,7 +195,7 @@ var _ = Describe("The DS Pipeline Controller", func() {
 	client := mfc.NewClient(k8sClient)
 	opts := mf.UseClient(client)
 
-	for testcase, _ := range cases {
+	for testcase := range cases {
 		testcase := testcase
 		description := cases[testcase].Description
 		dspPath := cases[testcase].Path
@@ -204,7 +204,7 @@ var _ = Describe("The DS Pipeline Controller", func() {
 			It(fmt.Sprintf("Should successfully deploy the Custom Resource for case %s", testcase), func() {
 				deployDSP(dspPath, opts)
 			})
-			for component, _ := range expectedDeployments {
+			for component := range expectedDeployments {
 				component := component
 				deploymentPath := expectedDeployments[component]
 				It(fmt.Sprintf("Should create deployment for component %s", deploymentsCreated[testcase][component]), func() {
@@ -212,18 +212,18 @@ var _ = Describe("The DS Pipeline Controller", func() {
 				})
 			}
 
-			for component, _ := range deploymentsNotCreated[testcase] {
+			for component := range deploymentsNotCreated[testcase] {
 				It(fmt.Sprintf("Should NOT create deployments for component %s", component), func() {
 					deploymentDoesNotExists(deploymentsNotCreated[testcase][component], opts)
 				})
 			}
 
-			for component, _ := range configMapsCreated[testcase] {
+			for component := range configMapsCreated[testcase] {
 				It(fmt.Sprintf("Should create configmaps for component %s", component), func() {
 					compareConfigMaps(configMapsCreated[testcase][component], opts)
 				})
 			}
-			for component, _ := range configMapsNotCreated[testcase] {
+			for component := range configMapsNotCreated[testcase] {
 				It(fmt.Sprintf("Should NOT create configmaps for component %s", component), func() {
 					configMapDoesNotExists(configMapsNotCreated[testcase][component], opts)
 				})

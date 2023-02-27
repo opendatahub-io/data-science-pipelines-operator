@@ -136,31 +136,31 @@ status:
   # * MLPIpelinesUIReady is (Ready: True) OR is (Ready: False && DeploymentDisabled)
   conditions:
     - type: Ready
-      status: True
+      status: "True"
       observedGeneration: 4
       lastTransitionTime: '2023-02-02T21:00:00Z'
       reason: MinimumReplicasAvailable
       message: 'some message'
     - type: ApiServerReady
-      status: True
+      status: "True"
       observedGeneration: 4
       lastTransitionTime: '2023-02-02T21:00:00Z'
       reason: MinimumReplicasAvailable
       message: 'some message'
     - type: MLPIpelinesUIReady
-      status: True
+      status: "True"
       observedGeneration: 4
       lastTransitionTime: '2023-02-02T21:00:00Z'
       reason: MinimumReplicasAvailable  # DeploymentDisabled
       message: 'some message'
     - type: PersistenceAgentReady
-      status: True
+      status: "True"
       observedGeneration: 4
       lastTransitionTime: '2023-02-02T21:00:00Z'
       reason: MinimumReplicasAvailable
       message: 'some message'
     - type: ScheduledWorkflowReady
-      status: True
+      status: "True"
       observedGeneration: 4
       lastTransitionTime: '2023-02-02T21:00:00Z'
       reason: MinimumReplicasAvailable
@@ -169,13 +169,13 @@ status:
     # checks for db/storage connectivity, and pod will fail to come up
     # in such a case.
     - type: DatabaseReady
-      status: True
+      status: "True"
       observedGeneration: 4
       lastTransitionTime: '2023-02-02T21:00:00Z'
       reason: DataBaseUnreachable  # DataBaseFailedToDeploy, DataBaseReady
       message: '500 gateway error received'
     - type: ObjectStorageReady
-      status: True
+      status: "True"
       observedGeneration: 4
       lastTransitionTime: '2023-02-02T21:00:00Z'
       reason: ObjectStorageUnreachable  # ObjectStorageFailedToDeploy, ObjectStorageReady

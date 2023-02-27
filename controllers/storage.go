@@ -43,7 +43,7 @@ func (r *DSPipelineReconciler) ReconcileStorage(ctx context.Context, dsp *dspipe
 		}
 	}
 
-	if dsp.Spec.ObjectStorage.Minio.Deploy == false {
+	if !dsp.Spec.ObjectStorage.Minio.Deploy {
 		r.Log.Info("Skipping Application of ObjectStorage Resources")
 		return nil
 	}

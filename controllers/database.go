@@ -43,7 +43,7 @@ func (r *DSPipelineReconciler) ReconcileDatabase(ctx context.Context, dsp *dspip
 		}
 	}
 
-	if dsp.Spec.Database.MariaDB.Deploy == false {
+	if !dsp.Spec.Database.MariaDB.Deploy {
 		r.Log.Info("Skipping Application of MariaDB Resources")
 		return nil
 	}
