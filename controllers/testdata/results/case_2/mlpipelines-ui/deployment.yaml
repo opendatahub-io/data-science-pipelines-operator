@@ -29,10 +29,9 @@ spec:
             - --tls-cert=/etc/tls/private/tls.crt
             - --tls-key=/etc/tls/private/tls.key
             - --cookie-secret=SECRET
-            - '--openshift-delegate-urls={"/": {"resource": "route", "verb": "get", "name": "ds-pipeline-ui-testdsp2"}}'
-            - '--openshift-sar={"resource": "route", "resourceName": "ds-pipeline-ui-testdsp2", "verb": "get"}'
+            - '--openshift-delegate-urls={"/": {"group":"route.openshift.io","resource":"routes","verb":"get","name":"ds-pipeline-ui-testdsp2","namespace":"default"}}'
             - --skip-auth-regex='(^/metrics|^/apis/v1beta1/healthz)'
-          image: registry.redhat.io/openshift4/ose-oauth-proxy:v4.8
+          image: registry.redhat.io/openshift4/ose-oauth-proxy:v4.12.0
           ports:
             - containerPort: 8443
               name: https
