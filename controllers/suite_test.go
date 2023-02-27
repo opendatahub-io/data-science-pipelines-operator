@@ -30,7 +30,7 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"k8s.io/client-go/kubernetes/scheme"
@@ -128,7 +128,7 @@ var _ = BeforeSuite(func() {
 		Expect(err).ToNot(HaveOccurred(), "Failed to run manager")
 	}()
 
-}, 60)
+})
 
 var _ = AfterSuite(func() {
 	// Give some time to allow workers to gracefully shutdown
@@ -138,13 +138,6 @@ var _ = AfterSuite(func() {
 	time.Sleep(1 * time.Second)
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
-})
-
-// Cleanup resources to not contaminate between tests
-var _ = AfterEach(func() {
-	inNamespace := client.InNamespace(WorkingNamespace)
-	Expect(k8sClient.DeleteAllOf(context.TODO(), &dspipelinesiov1alpha1.DSPipeline{}, inNamespace)).ToNot(HaveOccurred())
-
 })
 
 func convertToStructuredResource(path string, out interface{}, opts manifestival.Option) error {

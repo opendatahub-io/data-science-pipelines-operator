@@ -16,37 +16,115 @@ limitations under the License.
 package controllers
 
 import (
-	"context"
+	"errors"
+	"fmt"
 	mfc "github.com/manifestival/controller-runtime-client"
 	mf "github.com/manifestival/manifestival"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	dspipelinesiov1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/testutil"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"reflect"
 )
 
-const (
-	dspcrcase2                  = "./testdata/deploy/case_2/cr.yaml"
-	dspcrcase5                  = "./testdata/deploy/case_5/cr.yaml"
-	apiserverDeployment         = "./testdata/results/case_2/apiserver/deployment.yaml"
-	apiserverConfigMap1         = "./testdata/results/case_2/apiserver/configmap_artifact_script.yaml"
-	apiserverConfigMap2         = "./testdata/results/case_5/apiserver/configmap_artifact_script.yaml"
-	mariadbDeployment           = "./testdata/results/case_2/mariadb/deployment.yaml"
-	minioDeployment             = "./testdata/results/case_2/minio/deployment.yaml"
-	mlpipelinesUIDeployment     = "./testdata/results/case_2/mlpipelines-ui/deployment.yaml"
-	persistenceAgentDeployment  = "./testdata/results/case_2/persistence-agent/deployment.yaml"
-	scheduledWorkflowDeployment = "./testdata/results/case_2/scheduled-workflow/deployment.yaml"
-	viewerCrdDeployment         = "./testdata/results/case_2/viewer-crd/deployment.yaml"
-)
+type TestCase struct {
+	Description string
+	Path        string
+}
 
-func deployDSP(ctx context.Context, path string, opts mf.Option) {
+type CaseComponentResources map[string]ResourcePath
+type ResourcePath map[string]string
+
+var cases = map[string]TestCase{
+	"case0": {
+		Description: "Empty CR Spec",
+		Path:        "./testdata/deploy/case_0/cr.yaml",
+	},
+	"case2": {
+		Description: "Standard CR Spec with components specified",
+		Path:        "./testdata/deploy/case_2/cr.yaml",
+	},
+	"case5": {
+		Description: "",
+		Path:        "./testdata/deploy/case_5/cr.yaml",
+	},
+}
+var deploymentsCreated = CaseComponentResources{
+	"case0": {
+		"apiserver":                    "./testdata/results/case_0/apiserver/deployment.yaml",
+		"mariadb":                      "./testdata/results/case_0/mariadb/deployment.yaml",
+		"minioDeployment0":             "./testdata/results/case_0/minio/deployment.yaml",
+		"mlpipelinesUIDeployment0":     "./testdata/results/case_0/mlpipelines-ui/deployment.yaml",
+		"persistenceAgentDeployment0":  "./testdata/results/case_0/persistence-agent/deployment.yaml",
+		"scheduledWorkflowDeployment0": "./testdata/results/case_0/scheduled-workflow/deployment.yaml",
+	},
+	"case2": {
+		"apiserver":                    "./testdata/results/case_2/apiserver/deployment.yaml",
+		"mariadb":                      "./testdata/results/case_2/mariadb/deployment.yaml",
+		"minioDeployment0":             "./testdata/results/case_2/minio/deployment.yaml",
+		"mlpipelinesUIDeployment0":     "./testdata/results/case_2/mlpipelines-ui/deployment.yaml",
+		"persistenceAgentDeployment0":  "./testdata/results/case_2/persistence-agent/deployment.yaml",
+		"scheduledWorkflowDeployment0": "./testdata/results/case_2/scheduled-workflow/deployment.yaml",
+		"viewerCrdDeployment0":         "./testdata/results/case_2/viewer-crd/deployment.yaml",
+	},
+}
+
+var deploymentsNotCreated = CaseComponentResources{
+	"case0": {
+		"viewerCrdDeployment": "./testdata/results/case_0/viewer-crd/deployment.yaml",
+	},
+}
+
+var configMapsCreated = CaseComponentResources{
+	"case0": {
+		"apiserver": "./testdata/results/case_0/apiserver/configmap_artifact_script.yaml",
+	},
+	"case2": {
+		"apiserver": "./testdata/results/case_2/apiserver/configmap_artifact_script.yaml",
+	},
+}
+
+var configMapsNotCreated = CaseComponentResources{
+	"case5": {
+		"apiserver": "./testdata/results/case_5/apiserver/configmap_artifact_script.yaml",
+	},
+}
+
+func deployDSP(path string, opts mf.Option) {
 	dsp := &dspipelinesiov1alpha1.DSPipeline{}
 	err := convertToStructuredResource(path, dsp, opts)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient.Create(ctx, dsp)).Should(Succeed())
+
+	dsp2 := &dspipelinesiov1alpha1.DSPipeline{}
+	Eventually(func() error {
+		namespacedNamed := types.NamespacedName{Name: dsp.Name, Namespace: WorkingNamespace}
+		return k8sClient.Get(ctx, namespacedNamed, dsp2)
+	}, timeout, interval).ShouldNot(HaveOccurred())
+}
+
+func deleteDSP(path string, opts mf.Option) {
+	dsp := &dspipelinesiov1alpha1.DSPipeline{}
+	err := convertToStructuredResource(path, dsp, opts)
+	Expect(err).NotTo(HaveOccurred())
+
+	Eventually(func() error {
+		return k8sClient.Delete(ctx, dsp)
+	}, timeout, interval).ShouldNot(HaveOccurred())
+
+	dsp2 := &dspipelinesiov1alpha1.DSPipeline{}
+	Eventually(func() error {
+		namespacedNamed := types.NamespacedName{Name: dsp.Name, Namespace: WorkingNamespace}
+		Expect(k8sClient.Get(ctx, namespacedNamed, dsp2)).NotTo(HaveOccurred())
+		if !reflect.DeepEqual(dsp2, &dspipelinesiov1alpha1.DSPipeline{}) {
+			return errors.New("DSP still exists on cluster")
+		}
+		return nil
+	}, timeout, interval).Should(HaveOccurred())
+
 }
 
 func compareDeployments(path string, opts mf.Option) {
@@ -77,6 +155,24 @@ func compareConfigMaps(path string, opts mf.Option) {
 
 }
 
+func deploymentDoesNotExists(path string, opts mf.Option) {
+	expectedDeployment := &appsv1.Deployment{}
+	actualDeployment := &appsv1.Deployment{}
+	Expect(convertToStructuredResource(path, expectedDeployment, opts)).NotTo(HaveOccurred())
+
+	namespacedNamed := types.NamespacedName{
+		Name:      expectedDeployment.Name,
+		Namespace: WorkingNamespace,
+	}
+
+	Eventually(func() error {
+		return k8sClient.Get(ctx, namespacedNamed, actualDeployment)
+	}, timeout, interval).Should(HaveOccurred())
+
+	Expect(actualDeployment).To(Equal(&appsv1.Deployment{}))
+
+}
+
 func configMapDoesNotExists(path string, opts mf.Option) {
 	expectedConfigMap := &v1.ConfigMap{}
 	actualConfigMap := &v1.ConfigMap{}
@@ -98,35 +194,44 @@ func configMapDoesNotExists(path string, opts mf.Option) {
 var _ = Describe("The DS Pipeline Controller", func() {
 	client := mfc.NewClient(k8sClient)
 	opts := mf.UseClient(client)
-	ctx := context.Background()
-	Context("In a namespace, when a DSP CR is deployed", func() {
 
-		It("Should create an api server deployment", func() {
-			deployDSP(ctx, dspcrcase2, opts)
-			By("Creating apiserverDeployment UI resources")
-			compareDeployments(apiserverDeployment, opts)
-			By("Creating default artifact ConfigMap UI resources")
-			compareConfigMaps(apiserverConfigMap1, opts)
-			By("Creating mlpipelinesUIDeployment UI resources")
-			compareDeployments(mlpipelinesUIDeployment, opts)
-			By("Creating mariadbDeployment UI resources")
-			compareDeployments(mariadbDeployment, opts)
-			By("Creating minioDeployment UI resources")
-			compareDeployments(minioDeployment, opts)
-			By("Creating persistenceAgentDeployment UI resources")
-			compareDeployments(persistenceAgentDeployment, opts)
-			By("Creating scheduledWorkflowDeployment UI resources")
-			compareDeployments(scheduledWorkflowDeployment, opts)
-			By("Creating viewerCrdDeployment UI resources")
-			compareDeployments(viewerCrdDeployment, opts)
+	for testcase, _ := range cases {
+		testcase := testcase
+		description := cases[testcase].Description
+		dspPath := cases[testcase].Path
+		expectedDeployments := deploymentsCreated[testcase]
+		Context(description, func() {
+			It(fmt.Sprintf("Should successfully deploy the Custom Resource for case %s", testcase), func() {
+				deployDSP(dspPath, opts)
+			})
+			for component, _ := range expectedDeployments {
+				component := component
+				deploymentPath := expectedDeployments[component]
+				It(fmt.Sprintf("Should create deployment for component %s", deploymentsCreated[testcase][component]), func() {
+					compareDeployments(deploymentPath, opts)
+				})
+			}
+
+			for component, _ := range deploymentsNotCreated[testcase] {
+				It(fmt.Sprintf("Should NOT create deployments for component %s", component), func() {
+					deploymentDoesNotExists(deploymentsNotCreated[testcase][component], opts)
+				})
+			}
+
+			for component, _ := range configMapsCreated[testcase] {
+				It(fmt.Sprintf("Should create configmaps for component %s", component), func() {
+					compareConfigMaps(configMapsCreated[testcase][component], opts)
+				})
+			}
+			for component, _ := range configMapsNotCreated[testcase] {
+				It(fmt.Sprintf("Should NOT create configmaps for component %s", component), func() {
+					configMapDoesNotExists(configMapsNotCreated[testcase][component], opts)
+				})
+			}
+
+			It(fmt.Sprintf("Should successfully delete the Custom Resource for case %s", testcase), func() {
+				deleteDSP(dspPath, opts)
+			})
 		})
-	})
-
-	Context("In a namespace, when a DSP CR with custom Artifact ConfigMap is deployed", func() {
-		It("Should report error if specified configmap does not exist.", func() {
-			deployDSP(ctx, dspcrcase5, opts)
-			configMapDoesNotExists(apiserverConfigMap2, opts)
-		})
-	})
-
+	}
 })

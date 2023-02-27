@@ -1,38 +1,38 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ds-pipeline-persistenceagent-testdsp2
+  name: ds-pipeline-persistenceagent-testdsp0
   namespace: default
   labels:
-    app: ds-pipeline-persistenceagent-testdsp2
+    app: ds-pipeline-persistenceagent-testdsp0
     component: data-science-pipelines
 spec:
   selector:
     matchLabels:
-      app: ds-pipeline-persistenceagent-testdsp2
+      app: ds-pipeline-persistenceagent-testdsp0
       component: data-science-pipelines
   template:
     metadata:
       annotations:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
       labels:
-        app: ds-pipeline-persistenceagent-testdsp2
+        app: ds-pipeline-persistenceagent-testdsp0
         component: data-science-pipelines
     spec:
       containers:
         - env:
             - name: NAMESPACE
               value: "default"
-          image: "quay.io/modh/test-persistenceagent-container:test"
+          image: "quay.io/modh/odh-ml-pipelines-persistenceagent-container:v1.18.0-8"
           imagePullPolicy: IfNotPresent
           name: ds-pipeline-persistenceagent
           command:
             - persistence_agent
             - "--logtostderr=true"
             - "--ttlSecondsAfterWorkflowFinish=86400"
-            - "--numWorker=5"
-            - "--mlPipelineAPIServerName=ds-pipeline-testdsp2"
-            - "--namespace=testdsp2"
+            - "--numWorker=2"
+            - "--mlPipelineAPIServerName=ds-pipeline-testdsp0"
+            - "--namespace=default"
             - "--mlPipelineServiceHttpPort=8888"
             - "--mlPipelineServiceGRPCPort=8887"
           livenessProbe:
@@ -55,9 +55,9 @@ spec:
             timeoutSeconds: 2
           resources:
             requests:
-              cpu: 1233m
-              memory: 1Gi
+              cpu: 120m
+              memory: 500Mi
             limits:
-              cpu: 2524m
-              memory: 5Gi
-      serviceAccountName: ds-pipeline-persistenceagent-testdsp2
+              cpu: 250m
+              memory: 1Gi
+      serviceAccountName: ds-pipeline-persistenceagent-testdsp0
