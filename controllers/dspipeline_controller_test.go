@@ -40,41 +40,53 @@ type ResourcePath map[string]string
 
 var cases = map[string]TestCase{
 	"case0": {
-		Description: "Empty CR Spec",
+		Description: "empty CR Spec",
 		Path:        "./testdata/deploy/case_0/cr.yaml",
 	},
+	"case1": {
+		Description: "all Deploy fields are set to false",
+		Path:        "./testdata/deploy/case_1/cr.yaml",
+	},
 	"case2": {
-		Description: "Standard CR Spec with components specified",
+		Description: "standard CR Spec with components specified",
 		Path:        "./testdata/deploy/case_2/cr.yaml",
 	},
-	"case5": {
-		Description: "",
-		Path:        "./testdata/deploy/case_5/cr.yaml",
+	"case3": {
+		Description: "custom Artifact configmap is provided",
+		Path:        "./testdata/deploy/case_3/cr.yaml",
 	},
 }
 var deploymentsCreated = CaseComponentResources{
 	"case0": {
-		"apiserver":                    "./testdata/results/case_0/apiserver/deployment.yaml",
-		"mariadb":                      "./testdata/results/case_0/mariadb/deployment.yaml",
-		"minioDeployment0":             "./testdata/results/case_0/minio/deployment.yaml",
-		"mlpipelinesUIDeployment0":     "./testdata/results/case_0/mlpipelines-ui/deployment.yaml",
-		"persistenceAgentDeployment0":  "./testdata/results/case_0/persistence-agent/deployment.yaml",
-		"scheduledWorkflowDeployment0": "./testdata/results/case_0/scheduled-workflow/deployment.yaml",
+		"apiserver":                   "./testdata/results/case_0/apiserver/deployment.yaml",
+		"mariadb":                     "./testdata/results/case_0/mariadb/deployment.yaml",
+		"minioDeployment":             "./testdata/results/case_0/minio/deployment.yaml",
+		"mlpipelinesUIDeployment":     "./testdata/results/case_0/mlpipelines-ui/deployment.yaml",
+		"persistenceAgentDeployment":  "./testdata/results/case_0/persistence-agent/deployment.yaml",
+		"scheduledWorkflowDeployment": "./testdata/results/case_0/scheduled-workflow/deployment.yaml",
 	},
 	"case2": {
-		"apiserver":                    "./testdata/results/case_2/apiserver/deployment.yaml",
-		"mariadb":                      "./testdata/results/case_2/mariadb/deployment.yaml",
-		"minioDeployment0":             "./testdata/results/case_2/minio/deployment.yaml",
-		"mlpipelinesUIDeployment0":     "./testdata/results/case_2/mlpipelines-ui/deployment.yaml",
-		"persistenceAgentDeployment0":  "./testdata/results/case_2/persistence-agent/deployment.yaml",
-		"scheduledWorkflowDeployment0": "./testdata/results/case_2/scheduled-workflow/deployment.yaml",
-		"viewerCrdDeployment0":         "./testdata/results/case_2/viewer-crd/deployment.yaml",
+		"apiserver":                   "./testdata/results/case_2/apiserver/deployment.yaml",
+		"mariadb":                     "./testdata/results/case_2/mariadb/deployment.yaml",
+		"minioDeployment":             "./testdata/results/case_2/minio/deployment.yaml",
+		"mlpipelinesUIDeployment":     "./testdata/results/case_2/mlpipelines-ui/deployment.yaml",
+		"persistenceAgentDeployment":  "./testdata/results/case_2/persistence-agent/deployment.yaml",
+		"scheduledWorkflowDeployment": "./testdata/results/case_2/scheduled-workflow/deployment.yaml",
+		"viewerCrdDeployment":         "./testdata/results/case_2/viewer-crd/deployment.yaml",
 	},
 }
 
 var deploymentsNotCreated = CaseComponentResources{
 	"case0": {
 		"viewerCrdDeployment": "./testdata/results/case_0/viewer-crd/deployment.yaml",
+	},
+	"case1": {
+		"apiserver":                   "./testdata/results/case_1/apiserver/deployment.yaml",
+		"mariadb":                     "./testdata/results/case_1/mariadb/deployment.yaml",
+		"minioDeployment":             "./testdata/results/case_1/minio/deployment.yaml",
+		"mlpipelinesUIDeployment":     "./testdata/results/case_1/mlpipelines-ui/deployment.yaml",
+		"persistenceAgentDeployment":  "./testdata/results/case_1/persistence-agent/deployment.yaml",
+		"scheduledWorkflowDeployment": "./testdata/results/case_1/scheduled-workflow/deployment.yaml",
 	},
 }
 
@@ -88,8 +100,8 @@ var configMapsCreated = CaseComponentResources{
 }
 
 var configMapsNotCreated = CaseComponentResources{
-	"case5": {
-		"apiserver": "./testdata/results/case_5/apiserver/configmap_artifact_script.yaml",
+	"case3": {
+		"apiserver": "./testdata/results/case_3/apiserver/configmap_artifact_script.yaml",
 	},
 }
 
