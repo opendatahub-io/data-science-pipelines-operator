@@ -2,10 +2,5 @@ apiVersion: dspipelines.opendatahub.io/v1alpha1
 kind: DSPipeline
 metadata:
   name: sample
-  namespace: kfpv1
-spec:
-  database:
-    mariaDB:
-      resources:
-        requests:
-          cpu: "3"
+  namespace: data-science-project
+spec: {}
