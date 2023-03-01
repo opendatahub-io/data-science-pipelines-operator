@@ -17,7 +17,7 @@ limitations under the License.
 package controllers
 
 import (
-	dspipelinesiov1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 )
 
 var scheduledWorkflowTemplates = []string{
@@ -29,8 +29,8 @@ var scheduledWorkflowTemplates = []string{
 	"scheduled-workflow/rolebinding.yaml.tmpl",
 }
 
-func (r *DSPipelineReconciler) ReconcileScheduledWorkflow(dsp *dspipelinesiov1alpha1.DSPipeline,
-	params *DSPipelineParams) error {
+func (r *DSPAReconciler) ReconcileScheduledWorkflow(dsp *dspav1alpha1.DataSciencePipelinesApplication,
+	params *DSPAParams) error {
 
 	if !dsp.Spec.ScheduledWorkflow.Deploy {
 		r.Log.Info("Skipping Application of ScheduledWorkflow Resources")

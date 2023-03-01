@@ -11,8 +11,8 @@ Data Science Pipeline stacks onto individual OCP namespaces.
    3. [Deploy the Operator standalone](#deploy-the-operator-standalone)
    4. [Deploy DSP instance](#deploy-dsp-instance)
       1. [Deploy another DSP instance](#deploy-another-dsp-instance)
-2. [DSPipeline Component Overview](#dspipeline-component-overview)
-3. [Using a DSPipeline](#using-a-dspipeline)
+2. [DataSciencePipelinesApplication Component Overview](#datasciencepipelinesapplication-component-overview)
+3. [Using a DataSciencePipelinesApplication](#using-a-datasciencepipelinesapplication)
    1. [Using the Graphical UI](#using-the-graphical-ui)
    2. [Using the API](#using-the-api)
 4. [Cleanup](#cleanup)
@@ -118,7 +118,7 @@ DSP_Namespace=test-ds-project-1
 oc new-project ${DSP_Namespace}
 ```
 
-DSPO introduces a new custom resource to your cluster called `DSPipeline`. This resource is where you configure your DSP 
+DSPO introduces a new custom resource to your cluster called `DataSciencePipelinesApplication`. This resource is where you configure your DSP 
 components, your DB and Storage configurations, and so forth. For now, we'll use the sample one provided, feel free to 
 inspect this sample resource to see other configurable options.
 
@@ -133,12 +133,12 @@ Confirm all pods reach ready state by running:
 oc get pods -n ${DSP_Namespace}
 ```
 
-For instructions on how to use this DSP instance refer to these instructions: [here](#using-a-dspipeline).
+For instructions on how to use this DSP instance refer to these instructions: [here](#using-a-datasciencepipelinesapplication).
 
 ### Deploy another DSP instance 
 
-You can use the DSPO to deploy multiple `DSPipeline` instances in different OpenShift namespaces, for example earlier 
-we deployed a `DSPipeline` resource named `sample`. We can use this again and deploy it to a different namespace:
+You can use the DSPO to deploy multiple `DataSciencePipelinesApplication` instances in different OpenShift namespaces, for example earlier 
+we deployed a `DataSciencePipelinesApplication` resource named `sample`. We can use this again and deploy it to a different namespace:
 
 ```bash
 DSP_Namespace_2=test-ds-project-2
@@ -165,25 +165,25 @@ Notice the introduction of 2 `secrets` `testdbsecret`, `teststoragesecret` and 2
 
 These can be configured by the end user as needed.
 
-# DSPipeline Component Overview
+# DataSciencePipelinesApplication Component Overview
 
-When a `DSPipeline` is deployed, the following components are deployed in the target namespace: 
+When a `DataSciencePipelinesApplication` is deployed, the following components are deployed in the target namespace: 
 * APIServer 
 * Persistence Agent
 * Scheduled Workflow controller
 * Viewer CRD controller
 * MLPipelines UI
 
-If specified in the `DSPipeline` resource, the following components may also be additionally deployed: 
+If specified in the `DataSciencePipelinesApplication` resource, the following components may also be additionally deployed: 
 * MariaDB
 * Minio
 
 To understand how these components interact with each other please refer to the upstream 
 [Kubeflow Pipelines Architectural Overview] documentation.
 
-# Using a DSPipeline
+# Using a DataSciencePipelinesApplication
 
-When a `DSPipeline` is deployed, use the MLPipelines UI endpoint to interact with DSP, either via a GUI or via API calls.
+When a `DataSciencePipelinesApplication` is deployed, use the MLPipelines UI endpoint to interact with DSP, either via a GUI or via API calls.
 
 You can retrieve this route by running the following in your terminal: 
 
@@ -261,9 +261,9 @@ client.create_run_from_pipeline_func(pipeline_func=flipcoin_pipeline, arguments=
 Retrieve your token and DSP route: 
 
 ```bash
-# This is the namespace you deployed the DSPipeline Custom Resource
+# This is the namespace you deployed the DataSciencePipelinesApplication Custom Resource
 DSP_Namespace=test-ds-project-1
-# This is the metadata.name of that DSPipeline Custom Resource
+# This is the metadata.name of that DataSciencePipelinesApplication Custom Resource
 DSP_CR_NAME=sample
 export DSP_ROUTE="https://$(oc get routes -n ${DSP_Namespace} ds-pipeline-ui-${DSP_CR_NAME} --template={{.spec.host}})"
 export OCP_AUTH_TOKEN=$(oc whoami --show-token)
@@ -280,19 +280,19 @@ the runs via `client.list_runs()`.
 
 # Cleanup
 
-To remove a `DSPipeline` from your custer, run: 
+To remove a `DataSciencePipelinesApplication` from your custer, run: 
 
 ```bash
 # Replace environment variables accordingly
 oc delete ${YOUR_DSPIPELINE_NAME} -n ${YOUR_DSPIPELINES_NAMESPACE}
 ```
 
-The DSPO will clean up all manifests associated with each `DSPipeline` instance.
+The DSPO will clean up all manifests associated with each `DataSciencePipelinesApplication` instance.
 
-Or you can remove all `DSPipeline` instances in your whole cluster by running the following: 
+Or you can remove all `DataSciencePipelinesApplication` instances in your whole cluster by running the following: 
 
 ```bash
-oc delete DSPipeline --all -A
+oc delete DataSciencePipelinesApplication --all -A
 ```
 
 Depending on how you installed DSPO, follow the instructions below accordingly to remove the operator:

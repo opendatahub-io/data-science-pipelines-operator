@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"github.com/go-logr/logr"
 	mf "github.com/manifestival/manifestival"
-	dspipelinesiov1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspa "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	v1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
@@ -32,18 +32,18 @@ import (
 	"time"
 )
 
-type DSPipelineParams struct {
+type DSPAParams struct {
 	Name                 string
 	Namespace            string
 	Owner                mf.Owner
-	APIServer            *dspipelinesiov1alpha1.APIServer
+	APIServer            *dspa.APIServer
 	APIServerServiceName string
-	ScheduledWorkflow    *dspipelinesiov1alpha1.ScheduledWorkflow
-	ViewerCRD            *dspipelinesiov1alpha1.ViewerCRD
-	PersistenceAgent     *dspipelinesiov1alpha1.PersistenceAgent
-	MlPipelineUI         *dspipelinesiov1alpha1.MlPipelineUI
-	MariaDB              *dspipelinesiov1alpha1.MariaDB
-	Minio                *dspipelinesiov1alpha1.Minio
+	ScheduledWorkflow    *dspa.ScheduledWorkflow
+	ViewerCRD            *dspa.ViewerCRD
+	PersistenceAgent     *dspa.PersistenceAgent
+	MlPipelineUI         *dspa.MlPipelineUI
+	MariaDB              *dspa.MariaDB
+	Minio                *dspa.Minio
 	DBConnection
 	ObjectStorageConnection
 }
@@ -53,13 +53,13 @@ type DBConnection struct {
 	Port              string
 	Username          string
 	DBName            string
-	CredentialsSecret *dspipelinesiov1alpha1.SecretKeyValue
+	CredentialsSecret *dspa.SecretKeyValue
 	Password          string
 }
 
 type ObjectStorageConnection struct {
 	Bucket            string
-	CredentialsSecret *dspipelinesiov1alpha1.S3CredentialSecret
+	CredentialsSecret *dspa.S3CredentialSecret
 	Secure            bool
 	Host              string
 	Port              string
@@ -70,7 +70,7 @@ type ObjectStorageConnection struct {
 }
 
 // UsingExternalDB will return true if an external Database is specified in the CR, otherwise false.
-func (p *DSPipelineParams) UsingExternalDB(dsp *dspipelinesiov1alpha1.DSPipeline) bool {
+func (p *DSPAParams) UsingExternalDB(dsp *dspa.DataSciencePipelinesApplication) bool {
 	if dsp.Spec.Database != nil && dsp.Spec.Database.ExternalDB != nil {
 		return true
 	}
@@ -78,7 +78,7 @@ func (p *DSPipelineParams) UsingExternalDB(dsp *dspipelinesiov1alpha1.DSPipeline
 }
 
 // UsingExternalStorage will return true if an external Object Storage is specified in the CR, otherwise false.
-func (p *DSPipelineParams) UsingExternalStorage(dsp *dspipelinesiov1alpha1.DSPipeline) bool {
+func (p *DSPAParams) UsingExternalStorage(dsp *dspa.DataSciencePipelinesApplication) bool {
 	if dsp.Spec.ObjectStorage != nil && dsp.Spec.ObjectStorage.ExternalStorage != nil {
 		return true
 	}
@@ -98,14 +98,14 @@ func passwordGen(n int) string {
 // SetupDBParams Populates the DB connection Parameters.
 // If an external secret is specified, SetupDBParams will retrieve DB credentials from it.
 // If DSPO is managing a dynamically created secret, then SetupDBParams generates the creds.
-func (p *DSPipelineParams) SetupDBParams(ctx context.Context, dsp *dspipelinesiov1alpha1.DSPipeline, client client.Client, log logr.Logger) error {
+func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, log logr.Logger) error {
 
 	usingExternalDB := p.UsingExternalDB(dsp)
 
-	var customCreds *dspipelinesiov1alpha1.SecretKeyValue
+	var customCreds *dspa.SecretKeyValue
 
 	// Even if a secret is specified DSPO will deploy its own secret owned by DSPO
-	p.DBConnection.CredentialsSecret = &dspipelinesiov1alpha1.SecretKeyValue{
+	p.DBConnection.CredentialsSecret = &dspa.SecretKeyValue{
 		Name: config.MariaDBSecretNamePrefix + p.Name,
 		Key:  config.MariaDBSecretKey,
 	}
@@ -122,7 +122,7 @@ func (p *DSPipelineParams) SetupDBParams(ctx context.Context, dsp *dspipelinesio
 		// If no externalDB or mariaDB is specified, DSPO assumes
 		// MariaDB deployment with defaults.
 		if p.MariaDB == nil {
-			p.MariaDB = &dspipelinesiov1alpha1.MariaDB{
+			p.MariaDB = &dspa.MariaDB{
 				Deploy:    true,
 				Image:     config.MariaDBImage,
 				Resources: config.MariaDBResourceRequirements.DeepCopy(),
@@ -207,14 +207,14 @@ func (p *DSPipelineParams) SetupDBParams(ctx context.Context, dsp *dspipelinesio
 // SetupObjectParams Populates the Object Storage connection Parameters.
 // If an external secret is specified, SetupObjectParams will retrieve storage credentials from it.
 // If DSPO is managing a dynamically created secret, then SetupObjectParams generates the creds.
-func (p *DSPipelineParams) SetupObjectParams(ctx context.Context, dsp *dspipelinesiov1alpha1.DSPipeline, client client.Client, log logr.Logger) error {
+func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, log logr.Logger) error {
 
 	usingExternalObjectStorage := p.UsingExternalStorage(dsp)
 
-	var customCreds *dspipelinesiov1alpha1.S3CredentialSecret
+	var customCreds *dspa.S3CredentialSecret
 
 	// Even if a secret is specified DSPO will deploy its own secret owned by DSPO
-	p.ObjectStorageConnection.CredentialsSecret = &dspipelinesiov1alpha1.S3CredentialSecret{
+	p.ObjectStorageConnection.CredentialsSecret = &dspa.S3CredentialSecret{
 		SecretName: config.ObjectStorageSecretName,
 		AccessKey:  config.ObjectStorageAccessKey,
 		SecretKey:  config.ObjectStorageSecretKey,
@@ -232,7 +232,7 @@ func (p *DSPipelineParams) SetupObjectParams(ctx context.Context, dsp *dspipelin
 		// If no ExternalStorage or Minio is specified, DSPO assumes
 		// Minio deployment with defaults.
 		if p.Minio == nil {
-			p.Minio = &dspipelinesiov1alpha1.Minio{
+			p.Minio = &dspa.Minio{
 				Deploy:    true,
 				Image:     config.MinioImage,
 				Bucket:    config.MinioDefaultBucket,
@@ -333,13 +333,13 @@ func setStringDefault(defaultValue string, value *string) {
 	}
 }
 
-func setResourcesDefault(defaultValue dspipelinesiov1alpha1.ResourceRequirements, value **dspipelinesiov1alpha1.ResourceRequirements) {
+func setResourcesDefault(defaultValue dspa.ResourceRequirements, value **dspa.ResourceRequirements) {
 	if *value == nil {
 		*value = defaultValue.DeepCopy()
 	}
 }
 
-func (p *DSPipelineParams) ExtractParams(ctx context.Context, dsp *dspipelinesiov1alpha1.DSPipeline, client client.Client, log logr.Logger) error {
+func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, log logr.Logger) error {
 	p.Name = dsp.Name
 	p.Namespace = dsp.Namespace
 	p.Owner = dsp
@@ -362,7 +362,7 @@ func (p *DSPipelineParams) ExtractParams(ctx context.Context, dsp *dspipelinesio
 		setResourcesDefault(config.APIServerResourceRequirements, &p.APIServer.Resources)
 
 		if p.APIServer.ArtifactScriptConfigMap == nil {
-			p.APIServer.ArtifactScriptConfigMap = &dspipelinesiov1alpha1.ArtifactScriptConfigMap{
+			p.APIServer.ArtifactScriptConfigMap = &dspa.ArtifactScriptConfigMap{
 				Name: config.ArtifactScriptConfigMapNamePrefix + dsp.Name,
 				Key:  config.ArtifactScriptConfigMapKey,
 			}

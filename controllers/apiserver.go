@@ -16,9 +16,7 @@ limitations under the License.
 package controllers
 
 import (
-	"context"
-	dspipelinesiov1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
-	ctrl "sigs.k8s.io/controller-runtime"
+	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 )
 
 var apiServerTemplates = []string{
@@ -33,7 +31,7 @@ var apiServerTemplates = []string{
 	"apiserver/deployment.yaml.tmpl",
 }
 
-func (r *DSPipelineReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspipelinesiov1alpha1.DSPipeline, req ctrl.Request, params *DSPipelineParams) error {
+func (r *DSPAReconciler) ReconcileAPIServer(dsp *dspav1alpha1.DataSciencePipelinesApplication, params *DSPAParams) error {
 
 	if !dsp.Spec.APIServer.Deploy {
 		r.Log.Info("Skipping Application of APIServer Resources")

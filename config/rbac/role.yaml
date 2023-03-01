@@ -111,9 +111,9 @@ rules:
   verbs:
   - '*'
 - apiGroups:
-  - dspipelines.opendatahub.io
+  - datasciencepipelinesapplications.opendatahub.io
   resources:
-  - dspipelines
+  - datasciencepipelinesapplications
   verbs:
   - create
   - delete
@@ -123,15 +123,15 @@ rules:
   - update
   - watch
 - apiGroups:
-  - dspipelines.opendatahub.io
+  - datasciencepipelinesapplications.opendatahub.io
   resources:
-  - dspipelines/finalizers
+  - datasciencepipelinesapplications/finalizers
   verbs:
   - update
 - apiGroups:
-  - dspipelines.opendatahub.io
+  - datasciencepipelinesapplications.opendatahub.io
   resources:
-  - dspipelines/status
+  - datasciencepipelinesapplications/status
   verbs:
   - get
   - patch

@@ -5,14 +5,14 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.10.0
   creationTimestamp: null
-  name: dspipelines.dspipelines.opendatahub.io
+  name: datasciencepipelinesapplications.datasciencepipelinesapplications.opendatahub.io
 spec:
-  group: dspipelines.opendatahub.io
+  group: datasciencepipelinesapplications.opendatahub.io
   names:
-    kind: DSPipeline
-    listKind: DSPipelineList
-    plural: dspipelines
-    singular: dspipeline
+    kind: DataSciencePipelinesApplication
+    listKind: DataSciencePipelinesApplicationList
+    plural: datasciencepipelinesapplications
+    singular: datasciencepipelinesapplication
   scope: Namespaced
   versions:
   - name: v1alpha1

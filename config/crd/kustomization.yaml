@@ -1,5 +1,5 @@
 resources:
-- bases/dspipelines.opendatahub.io_dspipelines.yaml
+- bases/datasciencepipelinesapplications.opendatahub.io_datasciencepipelinesapplications.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 - bases/scheduledworkflows.yaml
 - bases/viewers.yaml

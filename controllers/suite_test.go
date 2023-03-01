@@ -41,7 +41,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	dspipelinesiov1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -84,7 +84,7 @@ var _ = BeforeSuite(func() {
 	utilruntime.Must(buildv1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(imagev1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(routev1.AddToScheme(scheme.Scheme))
-	utilruntime.Must(dspipelinesiov1alpha1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(dspav1alpha1.AddToScheme(scheme.Scheme))
 
 	//+kubebuilder:scaffold:scheme
 
@@ -113,7 +113,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&DSPipelineReconciler{
+	err = (&DSPAReconciler{
 		Client:        k8sClient,
 		Log:           ctrl.Log.WithName("controllers").WithName("ds-pipelines-controller"),
 		Scheme:        scheme.Scheme,

@@ -12,8 +12,8 @@ resources:
     namespaced: true
   controller: true
   domain: opendatahub.io
-  group: dspipelines
-  kind: DSPipeline
+  group: datasciencepipelinesapplications
+  kind: DataSciencePipelinesApplication
   path: github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1
   version: v1alpha1
 version: "3"

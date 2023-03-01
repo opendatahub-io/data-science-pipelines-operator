@@ -1,5 +1,10 @@
-apiVersion: dspipelines.opendatahub.io/v1alpha1
-kind: DSPipeline
+# This file should not be used to deploy a DataSciencePipelinesApplication
+# It's main purpose is to show all possible fields that can be configured
+# Note that you cannot specify all fields, some are mutually exclusive
+# For example, you can only specify either a miniodb deployment or
+# externalstorage connection, but not both
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
+kind: DataSciencePipelinesApplication
 metadata:
   name: sample
   namespace: data-science-project
@@ -26,7 +31,6 @@ spec:
       limits:
         cpu: 500m
         memory: 1Gi
-
     # optional (default is: ds-pipeline-artifact-script-${metadata.name})
     # apiserver deployment will fail if the specified custom config does not exist
     # if default name is used, the configmap will be over-written by the operator:
@@ -77,9 +81,11 @@ spec:
       requests:
         cpu: 100m
         memory: 256Mi
+    # requires this configmap to be created before hand,
+    # otherwise operator will not deploy DSPA
     configMap: ds-pipeline-ui-configmap
   database:
-    mariaDB:   # mutually exclusive with custom
+    mariaDB:   # mutually exclusive with externalDB
       deploy: true
       image: registry.redhat.io/rhel8/mariadb-103:1-188
       username: mlpipeline
@@ -92,6 +98,8 @@ spec:
         limits:
           cpu: "1"
           memory: 1Gi
+      # requires this configmap to be created before hand,
+      # otherwise operator will not deploy DSPA
       passwordSecret:
         name: ds-pipelines-db-sample
         key: password
@@ -104,7 +112,7 @@ spec:
 #        name: somesecret
 #        key: somekey
   objectStorage:
-    minio:  # mutually exclusive with custom
+    minio:  # mutually exclusive with externalStorage
       deploy: true
       image: quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance
       bucket: mlpipeline
@@ -116,6 +124,8 @@ spec:
         limits:
           cpu: 250m
           memory: 1Gi
+      # requires this configmap to be created before hand,
+      # otherwise operator will not deploy DSPA
       s3CredentialsSecret:
         secretName: somesecret-sample
         accessKey: accesskey

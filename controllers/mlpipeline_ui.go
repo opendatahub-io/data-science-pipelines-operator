@@ -17,7 +17,7 @@ limitations under the License.
 package controllers
 
 import (
-	dspipelinesiov1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 )
 
 var mlPipelineUITemplates = []string{
@@ -37,8 +37,8 @@ var mlPipelineUIClusterScopedTemplates = []string{
 
 const uIClusterRolebindingTemplate = "mlpipelines-ui/clusterrolebinding.yaml.tmpl"
 
-func (r *DSPipelineReconciler) ReconcileUI(dsp *dspipelinesiov1alpha1.DSPipeline,
-	params *DSPipelineParams) error {
+func (r *DSPAReconciler) ReconcileUI(dsp *dspav1alpha1.DataSciencePipelinesApplication,
+	params *DSPAParams) error {
 
 	if !dsp.Spec.MlPipelineUI.Deploy {
 		r.Log.Info("Skipping Application of MlPipelineUI Resources")
@@ -62,7 +62,7 @@ func (r *DSPipelineReconciler) ReconcileUI(dsp *dspipelinesiov1alpha1.DSPipeline
 	return nil
 }
 
-func (r *DSPipelineReconciler) CleanUpUI(params *DSPipelineParams) error {
+func (r *DSPAReconciler) CleanUpUI(params *DSPAParams) error {
 	for _, template := range mlPipelineUIClusterScopedTemplates {
 		err := r.DeleteResource(params, template)
 		if err != nil {
