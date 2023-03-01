@@ -1,0 +1,6 @@
+apiVersion: dspipelines.opendatahub.io/v1alpha1
+kind: DSPipeline
+metadata:
+  name: sample
+  namespace: data-science-project
+spec: {}

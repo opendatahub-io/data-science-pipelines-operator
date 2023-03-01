@@ -10,7 +10,10 @@ metadata:
 spec:
   replicas: 1
   strategy:
-    type: Recreate  # Need this since backing PVC is ReadWriteOnce, which creates resource lock condition in default Rolling strategy
+    # Need this since backing PVC is ReadWriteOnce,
+    # which creates resource lock condition in default
+    # Rolling strategy
+    type: Recreate
   selector:
     matchLabels:
       app: mariadb-{{.Name}}
@@ -23,7 +26,7 @@ spec:
     spec:
       containers:
         - name: mariadb
-          image: {{.MariaDBImage}}
+          image: {{.MariaDB.Image}}
           ports:
             - containerPort: 3306
           readinessProbe:
@@ -50,23 +53,35 @@ spec:
             timeoutSeconds: 1
           env:
             - name: MYSQL_USER
-              value: "{{.DBUser}}"
+              value: "{{.DBConnection.Username}}"
             - name: MYSQL_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  key: "{{.DBPasswordSecretKey}}"
-                  name: "{{.DBPasswordSecret}}"
+                  key: "{{.DBConnection.CredentialsSecret.Key}}"
+                  name: "{{.DBConnection.CredentialsSecret.Name}}"
             - name: MYSQL_DATABASE
-              value: "{{.DBName}}"
+              value: "{{.DBConnection.DBName}}"
             - name: MYSQL_ALLOW_EMPTY_PASSWORD
               value: "true"
           resources:
+            {{ if .MariaDB.Resources.Requests }}
             requests:
-              cpu: 300m
-              memory: 800Mi
+              {{ if .MariaDB.Resources.Requests.CPU }}
+              cpu: {{.MariaDB.Resources.Requests.CPU}}
+              {{ end }}
+              {{ if .MariaDB.Resources.Requests.Memory }}
+              memory: {{.MariaDB.Resources.Requests.Memory}}
+              {{ end }}
+            {{ end }}
+            {{ if .MariaDB.Resources.Limits }}
             limits:
-              cpu: "1"
-              memory: 1Gi
+              {{ if .MariaDB.Resources.Limits.CPU }}
+              cpu: {{.MariaDB.Resources.Limits.CPU}}
+              {{ end }}
+              {{ if .MariaDB.Resources.Limits.Memory }}
+              memory: {{.MariaDB.Resources.Limits.Memory}}
+              {{ end }}
+            {{ end }}
           volumeMounts:
             - name: mariadb-persistent-storage
               mountPath: /var/lib/mysql

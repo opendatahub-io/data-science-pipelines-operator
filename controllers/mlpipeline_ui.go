@@ -40,6 +40,11 @@ const uIClusterRolebindingTemplate = "mlpipelines-ui/clusterrolebinding.yaml.tmp
 func (r *DSPipelineReconciler) ReconcileUI(dsp *dspipelinesiov1alpha1.DSPipeline,
 	params *DSPipelineParams) error {
 
+	if !dsp.Spec.MlPipelineUI.Deploy {
+		r.Log.Info("Skipping Application of MlPipelineUI Resources")
+		return nil
+	}
+
 	r.Log.Info("Applying MlPipelineUI Resources")
 	for _, template := range mlPipelineUITemplates {
 		err := r.Apply(dsp, params, template)

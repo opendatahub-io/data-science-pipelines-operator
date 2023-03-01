@@ -30,7 +30,7 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"k8s.io/client-go/kubernetes/scheme"
@@ -59,8 +59,8 @@ var (
 const (
 	WorkingNamespace = "default"
 	DSPCRName        = "testdsp"
-	timeout          = time.Second * 20
-	interval         = time.Millisecond * 10
+	timeout          = time.Second * 6
+	interval         = time.Millisecond * 2
 )
 
 func TestAPIs(t *testing.T) {
@@ -79,6 +79,15 @@ var _ = BeforeSuite(func() {
 	}
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseFlagOptions(&opts)))
 
+	// Register API objects
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme.Scheme))
+	utilruntime.Must(buildv1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(imagev1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(routev1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(dspipelinesiov1alpha1.AddToScheme(scheme.Scheme))
+
+	//+kubebuilder:scaffold:scheme
+
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases"), filepath.Join("..", "config", "crd", "external")},
@@ -90,14 +99,6 @@ var _ = BeforeSuite(func() {
 	cfg, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
-
-	// Register API objects
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme.Scheme))
-	utilruntime.Must(buildv1.AddToScheme(scheme.Scheme))
-	utilruntime.Must(imagev1.AddToScheme(scheme.Scheme))
-	utilruntime.Must(routev1.AddToScheme(scheme.Scheme))
-	utilruntime.Must(dspipelinesiov1alpha1.AddToScheme(scheme.Scheme))
-	//+kubebuilder:scaffold:scheme
 
 	// Initialize Kubernetes client
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
@@ -127,7 +128,7 @@ var _ = BeforeSuite(func() {
 		Expect(err).ToNot(HaveOccurred(), "Failed to run manager")
 	}()
 
-}, 60)
+})
 
 var _ = AfterSuite(func() {
 	// Give some time to allow workers to gracefully shutdown
@@ -137,13 +138,6 @@ var _ = AfterSuite(func() {
 	time.Sleep(1 * time.Second)
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
-})
-
-// Cleanup resources to not contaminate between tests
-var _ = AfterEach(func() {
-	inNamespace := client.InNamespace(WorkingNamespace)
-	Expect(k8sClient.DeleteAllOf(context.TODO(), &dspipelinesiov1alpha1.DSPipeline{}, inNamespace)).ToNot(HaveOccurred())
-
 })
 
 func convertToStructuredResource(path string, out interface{}, opts manifestival.Option) error {

@@ -147,6 +147,24 @@ cd ${WORKING_DIR}/config/samples
 kustomize build . | oc -n ${DSP_Namespace_2} apply -f -
 ```
 
+### Deploy a DSP with custom credentials
+
+Using DSPO you can specify custom credentials for Database and Object storage. If specifying external connections, this 
+is required. You can also provide secrets for the built in MariaDB and Minio deployments. To see a sample configuration 
+you can simply investigate and deploy the following path: 
+
+```bash
+DSP_Namespace_3=test-ds-project-3
+oc new-project ${DSP_Namespace_3}
+cd ${WORKING_DIR}/config/samples/custom-configs
+kustomize build . | oc -n ${DSP_Namespace_3} apply -f -
+```
+
+Notice the introduction of 2 `secrets` `testdbsecret`, `teststoragesecret` and 2 `configmaps` `custom-ui-configmap` and 
+`custom-artifact-script`. The `secrets` allow you to provide your own credentials for the DB and MariaDB connections. 
+
+These can be configured by the end user as needed.
+
 # DSPipeline Component Overview
 
 When a `DSPipeline` is deployed, the following components are deployed in the target namespace: 

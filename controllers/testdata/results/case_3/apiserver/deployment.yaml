@@ -1,0 +1,135 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ds-pipeline-testdsp3
+  namespace: default
+  labels:
+    app: ds-pipeline-testdsp3
+    component: data-science-pipelines
+spec:
+  selector:
+    matchLabels:
+      app: ds-pipeline-testdsp3
+      component: data-science-pipelines
+  template:
+    metadata:
+      labels:
+        app: ds-pipeline-testdsp3
+        component: data-science-pipelines
+    spec:
+      containers:
+        - env:
+            - name: POD_NAMESPACE
+              value: "default"
+            - name: DBCONFIG_USER
+              value: "testuser"
+            - name: DBCONFIG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: "password"
+                  name: "mariadb-testdsp3"
+            - name: DBCONFIG_DBNAME
+              value: "randomDBName"
+            - name: DBCONFIG_HOST
+              value: "mariadb-testdsp3.default.svc.cluster.local"
+            - name: DBCONFIG_PORT
+              value: "3306"
+            - name: ARTIFACT_BUCKET
+              value: "mlpipeline"
+            - name: ARTIFACT_ENDPOINT
+              value: "http://minio-testdsp3.default.svc.cluster.local:9000"
+            - name: ARTIFACT_SCRIPT
+              valueFrom:
+                configMapKeyRef:
+                  key: "artifact_script"
+                  name: "ds-pipeline-artifact-script-testdsp3"
+            - name: ARTIFACT_IMAGE
+              value: "quay.io/modh/test-artifact-manager-container:test"
+            - name: ARCHIVE_LOGS
+              value: "false"
+            - name: TRACK_ARTIFACTS
+              value: "true"
+            - name: STRIP_EOF
+              value: "true"
+            - name: PIPELINE_RUNTIME
+              value: "tekton"
+            - name: DEFAULTPIPELINERUNNERSERVICEACCOUNT
+              value: "pipeline-runner-testdsp3"
+            - name: INJECT_DEFAULT_SCRIPT
+              value: "true"
+            - name: APPLY_TEKTON_CUSTOM_RESOURCE
+              value: "true"
+            - name: TERMINATE_STATUS
+              value: "Cancelled"
+            - name: AUTO_UPDATE_PIPELINE_DEFAULT_VERSION
+              value: "true"
+            - name: DBCONFIG_CONMAXLIFETIMESEC
+              value: "125"
+            - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_HOST
+              value: "ds-pipeline-visualizationserver"
+            - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
+              value: "8888"
+            - name: OBJECTSTORECONFIG_BUCKETNAME
+              value: "mlpipeline"
+            - name: OBJECTSTORECONFIG_ACCESSKEY
+              valueFrom:
+                secretKeyRef:
+                  key: "accesskey"
+                  name: "mlpipeline-minio-artifact"
+            - name: OBJECTSTORECONFIG_SECRETACCESSKEY
+              valueFrom:
+                secretKeyRef:
+                  key: "secretkey"
+                  name: "mlpipeline-minio-artifact"
+            - name: OBJECTSTORECONFIG_SECURE
+              value: "false"
+            - name: MINIO_SERVICE_SERVICE_HOST
+              value: "minio-testdsp3.default.svc.cluster.local"
+            - name: MINIO_SERVICE_SERVICE_PORT
+              value: "9000"
+            - name: CACHE_IMAGE
+              value: "registry.access.redhat.com/ubi8/test-ubi-minimal"
+            - name: MOVERESULTS_IMAGE
+              value: "testbusybox"
+          image: quay.io/modh/test-api-server-container:test
+          imagePullPolicy: Always
+          name: ds-pipeline-api-server
+          ports:
+            - containerPort: 8888
+              name: http
+              protocol: TCP
+            - containerPort: 8887
+              name: grpc
+              protocol: TCP
+          livenessProbe:
+            exec:
+              command:
+                - wget
+                - -q
+                - -S
+                - -O
+                - '-'
+                - http://localhost:8888/apis/v1beta1/healthz
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+          readinessProbe:
+            exec:
+              command:
+                - wget
+                - -q
+                - -S
+                - -O
+                - '-'
+                - http://localhost:8888/apis/v1beta1/healthz
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+          resources:
+            requests:
+              cpu: 1231m
+              memory: 1Gi
+            limits:
+              cpu: 2522m
+              memory: 5Gi
+      serviceAccountName: ds-pipeline-testdsp3

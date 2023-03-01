@@ -151,13 +151,12 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		dspipeline.APIVersion, dspipeline.Kind = gvk.Version, gvk.Kind
 	}
 
-	err = params.ExtractParams(dspipeline)
+	err = params.ExtractParams(ctx, dspipeline, r.Client, r.Log)
 	if err != nil {
-		log.Error(err, "Unable to parse CR spec, "+
-			"failed to reconcile, ensure CR is well formed")
 		return ctrl.Result{}, err
 	}
 
+	// Ensure that empty values do not overwrite desired state
 	if dspipeline.ObjectMeta.DeletionTimestamp.IsZero() {
 		if !controllerutil.ContainsFinalizer(dspipeline, finalizerName) {
 			controllerutil.AddFinalizer(dspipeline, finalizerName)
@@ -180,32 +179,23 @@ func (r *DSPipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 
-	usingCustomDB, err := params.UsingCustomDB(dspipeline)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	usingCustomStorage, err := params.UsingCustomStorage(dspipeline)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	if !usingCustomStorage {
-		err := r.ReconcileStorage(ctx, dspipeline, req, params)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-	}
+	usingCustomDB := params.UsingExternalDB(dspipeline)
 
 	if !usingCustomDB {
-		err = r.ReconcileDatabase(ctx, dspipeline, req, params)
+		err = r.ReconcileDatabase(ctx, dspipeline, params)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 
-	// TODO: Ensure db/storage (if deploying custom) are running before
-	// Use status fields to conditionally deploy
+	usingCustomStorage := params.UsingExternalStorage(dspipeline)
+
+	if !usingCustomStorage {
+		err := r.ReconcileStorage(ctx, dspipeline, params)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
 
 	err = r.ReconcileAPIServer(ctx, dspipeline, req, params)
 	if err != nil {
@@ -252,7 +242,7 @@ func (r *DSPipelineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// Clean Up any resources not handled by garbage collection, like Cluster Resources
+// Clean Up any resources not handled by garbage collection, like Cluster ResourceRequirements
 func (r *DSPipelineReconciler) cleanUpResources(ctx context.Context, req ctrl.Request, dsp *dspipelinesiov1alpha1.DSPipeline, params *DSPipelineParams) error {
 	err := r.CleanUpUI(params)
 	if err != nil {

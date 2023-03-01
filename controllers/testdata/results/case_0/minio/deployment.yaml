@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio-testdsp0
+  namespace: default
+  labels:
+    app: minio-testdsp0
+    component: data-science-pipelines
+spec:
+  selector:
+    matchLabels:
+      app: minio-testdsp0
+      component: data-science-pipelines
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: minio-testdsp0
+        component: data-science-pipelines
+    spec:
+      containers:
+        - args:
+            - server
+            - /data
+          env:
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: "accesskey"
+                  name: "mlpipeline-minio-artifact"
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: "secretkey"
+                  name: "mlpipeline-minio-artifact"
+          image: "quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance"
+          name: minio
+          ports:
+            - containerPort: 9000
+              protocol: TCP
+          livenessProbe:
+            tcpSocket:
+              port: 9000
+            initialDelaySeconds: 30
+            timeoutSeconds: 1
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              port: 9000
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 200m
+              memory: 100Mi
+            limits:
+              cpu: 250m
+              memory: 1Gi
+          volumeMounts:
+            - mountPath: /data
+              name: data
+              subPath: minio
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: minio-testdsp0

@@ -27,14 +27,14 @@ spec:
             - name: MINIO_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
-                  key: "{{.AccessKeySecretKey}}"
-                  name: "{{.S3CredentialsSecretName}}"
+                  key: "{{.ObjectStorageConnection.CredentialsSecret.AccessKey}}"
+                  name: "{{.ObjectStorageConnection.CredentialsSecret.SecretName}}"
             - name: MINIO_SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  key: "{{.SecretKey}}"
-                  name: "{{.S3CredentialsSecretName}}"
-          image: "{{.MinioImage}}"
+                  key: "{{.ObjectStorageConnection.CredentialsSecret.SecretKey}}"
+                  name: "{{.ObjectStorageConnection.CredentialsSecret.SecretName}}"
+          image: "{{.Minio.Image}}"
           name: minio
           ports:
             - containerPort: 9000
@@ -55,12 +55,24 @@ spec:
             successThreshold: 1
             failureThreshold: 3
           resources:
+            {{ if .Minio.Resources.Requests }}
             requests:
-              cpu: 20m
-              memory: 100Mi
+              {{ if .Minio.Resources.Requests.CPU }}
+              cpu: {{.Minio.Resources.Requests.CPU}}
+              {{ end }}
+              {{ if .Minio.Resources.Requests.Memory }}
+              memory: {{.Minio.Resources.Requests.Memory}}
+              {{ end }}
+            {{ end }}
+            {{ if .Minio.Resources.Limits }}
             limits:
-              cpu: 250m
-              memory: 1Gi
+              {{ if .Minio.Resources.Limits.CPU }}
+              cpu: {{.Minio.Resources.Limits.CPU}}
+              {{ end }}
+              {{ if .Minio.Resources.Limits.Memory }}
+              memory: {{.Minio.Resources.Limits.Memory}}
+              {{ end }}
+            {{ end }}
           volumeMounts:
             - mountPath: /data
               name: data
