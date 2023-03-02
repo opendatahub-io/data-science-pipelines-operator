@@ -1,0 +1,11 @@
+Images:
+  ApiServer: quay.io/modh/odh-ml-pipelines-api-server-container:v1.18.0-8
+  Artifact: quay.io/modh/odh-ml-pipelines-artifact-manager-container:v1.18.0-8
+  PersistentAgent: quay.io/modh/odh-ml-pipelines-persistenceagent-container:v1.18.0-8
+  ScheduledWorkflow: quay.io/modh/odh-ml-pipelines-scheduledworkflow-container:v1.18.0-8
+  ViewerCRD: quay.io/modh/odh-ml-pipelines-viewercontroller-container:v1.18.0-8
+  Cache: registry.access.redhat.com/ubi8/ubi-minimal
+  MoveResultsImage: busybox
+  MlPipelineUI: quay.io/opendatahub/odh-ml-pipelines-frontend-container:beta-ui
+  MariaDB: registry.redhat.io/rhel8/mariadb-103:1-188
+  Minio: quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance
