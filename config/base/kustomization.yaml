@@ -5,7 +5,7 @@ resources:
 - ../rbac
 - ../manager
 - ../prometheus
-
+- ../configmaps
 images:
 - name: controller
   newName: quay.io/opendatahub/data-science-pipelines-operator

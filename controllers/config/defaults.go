@@ -16,20 +16,13 @@ limitations under the License.
 
 package config
 
-import dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+import (
+	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	"github.com/spf13/viper"
+)
 
 const (
-	ODHMLPipelinesVersionTag  = "v1.18.0-8" // ToDO: Make this a flag
-	APIServerImage            = "quay.io/modh/odh-ml-pipelines-api-server-container:" + ODHMLPipelinesVersionTag
-	APIServerArtifactImage    = "quay.io/modh/odh-ml-pipelines-artifact-manager-container:" + ODHMLPipelinesVersionTag
-	APIServerCacheImage       = "registry.access.redhat.com/ubi8/ubi-minimal"
-	APIServerMoveResultsImage = "busybox"
-	PersistenceAgentImage     = "quay.io/modh/odh-ml-pipelines-persistenceagent-container:" + ODHMLPipelinesVersionTag
-	ScheduledWorkflowImage    = "quay.io/modh/odh-ml-pipelines-scheduledworkflow-container:" + ODHMLPipelinesVersionTag
-	ViewerCRDImage            = "quay.io/modh/odh-ml-pipelines-viewercontroller-container:" + ODHMLPipelinesVersionTag
-	MlPipelineUIImage         = "quay.io/opendatahub/odh-ml-pipelines-frontend-container:beta-ui"
-	MariaDBImage              = "registry.redhat.io/rhel8/mariadb-103:1-188"
-	MinioImage                = "quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance"
+	DefaultImageValue = "MustSetInConfig"
 
 	MLPipelineUIConfigMapPrefix       = "ds-pipeline-ui-configmap-"
 	ArtifactScriptConfigMapNamePrefix = "ds-pipeline-artifact-script-"
@@ -56,8 +49,41 @@ const (
 	ObjectStorageSecretKey      = "secretkey"
 )
 
-// Default ResourceRequirements
+// DSPO Config File Paths
+const (
+	APIServerImagePath            = "Images.ApiServer"
+	APIServerArtifactImagePath    = "Images.Artifact"
+	PersistenceAgentImagePath     = "Images.PersistentAgent"
+	ScheduledWorkflowImagePath    = "Images.ScheduledWorkflow"
+	ViewerCRDImagePath            = "Images.ViewerCRD"
+	APIServerCacheImagePath       = "Images.Cache"
+	APIServerMoveResultsImagePath = "Images.MoveResultsImage"
+	MlPipelineUIImagePath         = "Images.MlPipelineUI"
+	MariaDBImagePath              = "Images.MariaDB"
+	MinioImagePath                = "Images.Minio"
+)
 
+// Any required Configmap paths can be added here,
+// they will be automatically included for required
+// validation check
+var requiredFields = []string{
+	APIServerImagePath,
+	APIServerArtifactImagePath,
+	PersistenceAgentImagePath,
+	ScheduledWorkflowImagePath,
+	ViewerCRDImagePath,
+	APIServerCacheImagePath,
+	APIServerMoveResultsImagePath,
+	MlPipelineUIImagePath,
+	MariaDBImagePath,
+	MinioImagePath,
+}
+
+func GetConfigRequiredFields() []string {
+	return requiredFields
+}
+
+// Default ResourceRequirements
 var (
 	APIServerResourceRequirements         = createResourceRequirement("250m", "500Mi", "500m", "1Gi")
 	PersistenceAgentResourceRequirements  = createResourceRequirement("120m", "500Mi", "250m", "1Gi")
@@ -79,4 +105,11 @@ func createResourceRequirement(RequestsCPU string, RequestsMemory string, Limits
 			Memory: LimitsMemory,
 		},
 	}
+}
+
+func GetStringConfigWithDefault(configName, value string) string {
+	if !viper.IsSet(configName) {
+		return value
+	}
+	return viper.GetString(configName)
 }
