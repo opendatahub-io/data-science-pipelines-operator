@@ -12,6 +12,8 @@ spec:
     kind: DataSciencePipelinesApplication
     listKind: DataSciencePipelinesApplicationList
     plural: datasciencepipelinesapplications
+    shortNames:
+    - dspa
     singular: datasciencepipelinesapplication
   scope: Namespaced
   versions:
