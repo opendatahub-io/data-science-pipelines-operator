@@ -67,6 +67,9 @@ spec:
                   deploy:
                     default: true
                     type: boolean
+                  enableOauth:
+                    default: true
+                    type: boolean
                   image:
                     type: string
                   injectDefaultScript:

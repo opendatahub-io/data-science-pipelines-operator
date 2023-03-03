@@ -13,6 +13,7 @@ spec:
     moveResultsImage: testbusybox
     injectDefaultScript: true
     stripEOF: true
+    enableOauth: true
     terminateStatus: Cancelled
     trackArtifacts: true
     dbConfigConMaxLifetimeSec: 125

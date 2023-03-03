@@ -16,7 +16,10 @@ limitations under the License.
 package controllers
 
 import (
+	"context"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	v1 "github.com/openshift/api/route/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 var apiServerTemplates = []string{
@@ -31,7 +34,11 @@ var apiServerTemplates = []string{
 	"apiserver/deployment.yaml.tmpl",
 }
 
-func (r *DSPAReconciler) ReconcileAPIServer(dsp *dspav1alpha1.DataSciencePipelinesApplication, params *DSPAParams) error {
+// serverRoute is a resource deployed conditionally
+// as such it is handled separately
+const serverRoute = "apiserver/route.yaml.tmpl"
+
+func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication, params *DSPAParams) error {
 
 	if !dsp.Spec.APIServer.Deploy {
 		r.Log.Info("Skipping Application of APIServer Resources")
@@ -42,6 +49,20 @@ func (r *DSPAReconciler) ReconcileAPIServer(dsp *dspav1alpha1.DataSciencePipelin
 
 	for _, template := range apiServerTemplates {
 		err := r.Apply(dsp, params, template)
+		if err != nil {
+			return err
+		}
+	}
+
+	if dsp.Spec.APIServer.EnableRoute {
+		err := r.Apply(dsp, params, serverRoute)
+		if err != nil {
+			return err
+		}
+	} else {
+		route := &v1.Route{}
+		namespacedNamed := types.NamespacedName{Name: "ds-pipeline-" + dsp.Name, Namespace: dsp.Namespace}
+		err := r.DeleteResourceIfItExists(ctx, route, namespacedNamed)
 		if err != nil {
 			return err
 		}

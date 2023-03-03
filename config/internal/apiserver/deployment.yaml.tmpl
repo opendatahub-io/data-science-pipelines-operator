@@ -18,6 +18,54 @@ spec:
         component: data-science-pipelines
     spec:
       containers:
+        {{ if .APIServer.EnableRoute }}
+        - name: oauth-proxy
+          args:
+            - --https-address=:8443
+            - --provider=openshift
+            - --openshift-service-account=ds-pipeline-{{.Name}}
+            - --upstream=http://localhost:8888
+            - --tls-cert=/etc/tls/private/tls.crt
+            - --tls-key=/etc/tls/private/tls.key
+            - --cookie-secret=SECRET
+            - '--openshift-delegate-urls={"/": {"group":"route.openshift.io","resource":"routes","verb":"get","name":"ds-pipeline-{{.Name}}","namespace":"{{.Namespace}}"}}'
+            - '--openshift-sar={"namespace":"{{.Namespace}}","resource":"routes","resourceName":"ds-pipeline-{{.Name}}","verb":"get","resourceAPIGroup":"route.openshift.io"}'
+            - --skip-auth-regex='(^/metrics|^/apis/v1beta1/healthz)'
+          image: registry.redhat.io/openshift4/ose-oauth-proxy:v4.12.0
+          ports:
+            - containerPort: 8443
+              name: oauth
+          livenessProbe:
+            httpGet:
+              path: /oauth/healthz
+              port: oauth
+              scheme: HTTPS
+            initialDelaySeconds: 30
+            timeoutSeconds: 1
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /oauth/healthz
+              port: oauth
+              scheme: HTTPS
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          resources:
+            limits:
+              cpu: 100m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          volumeMounts:
+            - mountPath: /etc/tls/private
+              name: proxy-tls
+        {{ end }}
         - env:
             - name: POD_NAMESPACE
               value: "{{.Namespace}}"
@@ -143,3 +191,7 @@ spec:
               {{ end }}
             {{ end }}
       serviceAccountName: ds-pipeline-{{.Name}}
+      volumes:
+        - name: proxy-tls
+          secret:
+            secretName: ds-pipelines-proxy-tls-{{.Name}}
