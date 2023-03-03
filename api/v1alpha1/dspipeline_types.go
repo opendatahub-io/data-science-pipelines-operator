@@ -204,6 +204,7 @@ type DSPAStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:resource:shortName=dspa
 
 type DataSciencePipelinesApplication struct {
 	metav1.TypeMeta   `json:",inline"`
