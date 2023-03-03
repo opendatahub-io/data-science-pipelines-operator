@@ -59,3 +59,9 @@ rules:
       - update
       - patch
       - delete
+  - apiGroups:
+      - route.openshift.io
+    verbs:
+      - get
+    resources:
+      - routes
