@@ -16,9 +16,7 @@ limitations under the License.
 
 package config
 
-import (
-	dspipelinesiov1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
-)
+import dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 
 const (
 	ODHMLPipelinesVersionTag  = "v1.18.0-8" // ToDO: Make this a flag
@@ -70,13 +68,13 @@ var (
 	MlPipelineUIResourceRequirements      = createResourceRequirement("100m", "256Mi", "100m", "256Mi")
 )
 
-func createResourceRequirement(RequestsCPU string, RequestsMemory string, LimitsCPU string, LimitsMemory string) dspipelinesiov1alpha1.ResourceRequirements {
-	return dspipelinesiov1alpha1.ResourceRequirements{
-		Requests: &dspipelinesiov1alpha1.Resources{
+func createResourceRequirement(RequestsCPU string, RequestsMemory string, LimitsCPU string, LimitsMemory string) dspav1alpha1.ResourceRequirements {
+	return dspav1alpha1.ResourceRequirements{
+		Requests: &dspav1alpha1.Resources{
 			CPU:    RequestsCPU,
 			Memory: RequestsMemory,
 		},
-		Limits: &dspipelinesiov1alpha1.Resources{
+		Limits: &dspav1alpha1.Resources{
 			CPU:    LimitsCPU,
 			Memory: LimitsMemory,
 		},

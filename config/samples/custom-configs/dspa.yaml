@@ -1,5 +1,5 @@
-apiVersion: dspipelines.opendatahub.io/v1alpha1
-kind: DSPipeline
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
+kind: DataSciencePipelinesApplication
 metadata:
   name: sample
 spec:

@@ -17,7 +17,7 @@ limitations under the License.
 package controllers
 
 import (
-	dspipelinesiov1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 )
 
 var viewerCRDTemplates = []string{
@@ -27,8 +27,8 @@ var viewerCRDTemplates = []string{
 	"viewer-crd/sa.yaml.tmpl",
 }
 
-func (r *DSPipelineReconciler) ReconcileViewerCRD(dsp *dspipelinesiov1alpha1.DSPipeline,
-	params *DSPipelineParams) error {
+func (r *DSPAReconciler) ReconcileViewerCRD(dsp *dspav1alpha1.DataSciencePipelinesApplication,
+	params *DSPAParams) error {
 
 	if !dsp.Spec.ViewerCRD.Deploy {
 		r.Log.Info("Skipping Application of ViewerCRD Resources")

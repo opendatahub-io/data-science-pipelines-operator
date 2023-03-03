@@ -26,7 +26,7 @@ function create_and_verify_data_science_pipelines_resources() {
     header "Testing Data Science Pipelines installation with help of DSPO CR"
 
     os::cmd::expect_success "oc apply -f ${RESOURCEDIR}/test-dspo-cr.yaml"
-    os::cmd::try_until_text "oc get crd dspipelines.dspipelines.opendatahub.io" "dspipelines.dspipelines.opendatahub.io" $odhdefaulttimeout $odhdefaultinterval
+    os::cmd::try_until_text "oc get crd datasciencepipelinesapplications.datasciencepipelinesapplications.opendatahub.io" "datasciencepipelinesapplications.datasciencepipelinesapplications.opendatahub.io" $odhdefaulttimeout $odhdefaultinterval
     os::cmd::try_until_text "oc get pods -l component=data-science-pipelines --field-selector='status.phase!=Running,status.phase!=Completed' -o jsonpath='{$.items[*].metadata.name}' | wc -w" "0" $odhdefaulttimeout $odhdefaultinterval
     running_pods=$(oc get pods -l component=data-science-pipelines --field-selector='status.phase=Running' -o jsonpath='{$.items[*].metadata.name}' | wc -w)
     os::cmd::expect_success "if [ "$running_pods" -gt "0" ]; then exit 0; else exit 1; fi"

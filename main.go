@@ -29,7 +29,7 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	dspipelinesiov1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers"
 	routev1 "github.com/openshift/api/route/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -52,7 +52,7 @@ func init() {
 	utilruntime.Must(imagev1.AddToScheme(scheme))
 	utilruntime.Must(routev1.AddToScheme(scheme))
 
-	utilruntime.Must(dspipelinesiov1alpha1.AddToScheme(scheme))
+	utilruntime.Must(dspav1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -87,13 +87,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.DSPipelineReconciler{
+	if err = (&controllers.DSPAReconciler{
 		Client:        mgr.GetClient(),
 		Scheme:        mgr.GetScheme(),
 		Log:           ctrl.Log,
 		TemplatesPath: "config/internal/",
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "DSPipelineParams")
+		setupLog.Error(err, "unable to create controller", "controller", "DSPAParams")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

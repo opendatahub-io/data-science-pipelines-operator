@@ -20,7 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type DSPipelineSpec struct {
+type DSPASpec struct {
 	// APIService specifies the Kubeflow Apiserver configurations
 	// +kubebuilder:default:={deploy: true}
 	*APIServer `json:"apiServer,omitempty"`
@@ -198,28 +198,28 @@ type SecretKeyValue struct {
 	Key  string `json:"key,omitempty"`
 }
 
-type DSPipelineStatus struct {
+type DSPAStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-type DSPipeline struct {
+type DataSciencePipelinesApplication struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              DSPipelineSpec   `json:"spec,omitempty"`
-	Status            DSPipelineStatus `json:"status,omitempty"`
+	Spec              DSPASpec   `json:"spec,omitempty"`
+	Status            DSPAStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-type DSPipelineList struct {
+type DataSciencePipelinesApplicationList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []DSPipeline `json:"items"`
+	Items           []DataSciencePipelinesApplication `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&DSPipeline{}, &DSPipelineList{})
+	SchemeBuilder.Register(&DataSciencePipelinesApplication{}, &DataSciencePipelinesApplicationList{})
 }

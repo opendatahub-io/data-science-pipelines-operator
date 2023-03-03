@@ -1,5 +1,6 @@
 apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
 kind: DataSciencePipelinesApplication
 metadata:
-  name: testdsp0
+  name: sample
+  namespace: data-science-project
 spec: {}

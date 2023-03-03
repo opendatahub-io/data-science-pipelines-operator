@@ -22,7 +22,7 @@ import (
 	mf "github.com/manifestival/manifestival"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	dspipelinesiov1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/testutil"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -106,12 +106,12 @@ var configMapsNotCreated = CaseComponentResources{
 }
 
 func deployDSP(path string, opts mf.Option) {
-	dsp := &dspipelinesiov1alpha1.DSPipeline{}
+	dsp := &dspav1alpha1.DataSciencePipelinesApplication{}
 	err := convertToStructuredResource(path, dsp, opts)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient.Create(ctx, dsp)).Should(Succeed())
 
-	dsp2 := &dspipelinesiov1alpha1.DSPipeline{}
+	dsp2 := &dspav1alpha1.DataSciencePipelinesApplication{}
 	Eventually(func() error {
 		namespacedNamed := types.NamespacedName{Name: dsp.Name, Namespace: WorkingNamespace}
 		return k8sClient.Get(ctx, namespacedNamed, dsp2)
@@ -119,7 +119,7 @@ func deployDSP(path string, opts mf.Option) {
 }
 
 func deleteDSP(path string, opts mf.Option) {
-	dsp := &dspipelinesiov1alpha1.DSPipeline{}
+	dsp := &dspav1alpha1.DataSciencePipelinesApplication{}
 	err := convertToStructuredResource(path, dsp, opts)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -127,11 +127,11 @@ func deleteDSP(path string, opts mf.Option) {
 		return k8sClient.Delete(ctx, dsp)
 	}, timeout, interval).ShouldNot(HaveOccurred())
 
-	dsp2 := &dspipelinesiov1alpha1.DSPipeline{}
+	dsp2 := &dspav1alpha1.DataSciencePipelinesApplication{}
 	Eventually(func() error {
 		namespacedNamed := types.NamespacedName{Name: dsp.Name, Namespace: WorkingNamespace}
 		Expect(k8sClient.Get(ctx, namespacedNamed, dsp2)).NotTo(HaveOccurred())
-		if !reflect.DeepEqual(dsp2, &dspipelinesiov1alpha1.DSPipeline{}) {
+		if !reflect.DeepEqual(dsp2, &dspav1alpha1.DataSciencePipelinesApplication{}) {
 			return errors.New("DSP still exists on cluster")
 		}
 		return nil

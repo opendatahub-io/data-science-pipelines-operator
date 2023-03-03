@@ -17,7 +17,7 @@ package controllers
 
 import (
 	"context"
-	dspipelinesiov1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 )
 
 var dbTemplates = []string{
@@ -28,14 +28,14 @@ var dbTemplates = []string{
 	"mariadb/service.yaml.tmpl",
 }
 
-func (r *DSPipelineReconciler) ReconcileDatabase(ctx context.Context, dsp *dspipelinesiov1alpha1.DSPipeline,
-	params *DSPipelineParams) error {
+func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,
+	params *DSPAParams) error {
 
 	// If no database was specified, DSPO will deploy mariaDB by default
 	// As such DSPO needs to update the CR with the state of the mariaDB
 	// to match desired with live states.
 	if dsp.Spec.Database == nil || (dsp.Spec.Database.MariaDB == nil && !params.UsingExternalDB(dsp)) {
-		dsp.Spec.Database = &dspipelinesiov1alpha1.Database{}
+		dsp.Spec.Database = &dspav1alpha1.Database{}
 		dsp.Spec.Database.MariaDB = params.MariaDB.DeepCopy()
 		dsp.Spec.Database.MariaDB.Deploy = true
 		if err := r.Update(ctx, dsp); err != nil {

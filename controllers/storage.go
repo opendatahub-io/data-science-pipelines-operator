@@ -18,7 +18,7 @@ package controllers
 
 import (
 	"context"
-	dspipelinesiov1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 )
 
 var storageTemplates = []string{
@@ -28,14 +28,14 @@ var storageTemplates = []string{
 	"minio/secret.yaml.tmpl",
 }
 
-func (r *DSPipelineReconciler) ReconcileStorage(ctx context.Context, dsp *dspipelinesiov1alpha1.DSPipeline,
-	params *DSPipelineParams) error {
+func (r *DSPAReconciler) ReconcileStorage(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,
+	params *DSPAParams) error {
 
 	// If no storage was specified, DSPO will deploy minio by default
 	// As such DSPO needs to update the CR with the state of minio
 	// to match desired with live state.
 	if dsp.Spec.ObjectStorage == nil || (dsp.Spec.ObjectStorage.Minio == nil && !params.UsingExternalStorage(dsp)) {
-		dsp.Spec.ObjectStorage = &dspipelinesiov1alpha1.ObjectStorage{}
+		dsp.Spec.ObjectStorage = &dspav1alpha1.ObjectStorage{}
 		dsp.Spec.ObjectStorage.Minio = params.Minio.DeepCopy()
 		dsp.Spec.ObjectStorage.Minio.Deploy = true
 		if err := r.Update(ctx, dsp); err != nil {

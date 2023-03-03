@@ -17,7 +17,7 @@ limitations under the License.
 package controllers
 
 import (
-	dspipelinesiov1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 )
 
 var persistenceAgentTemplates = []string{
@@ -27,8 +27,8 @@ var persistenceAgentTemplates = []string{
 	"persistence-agent/rolebinding.yaml.tmpl",
 }
 
-func (r *DSPipelineReconciler) ReconcilePersistenceAgent(dsp *dspipelinesiov1alpha1.DSPipeline,
-	params *DSPipelineParams) error {
+func (r *DSPAReconciler) ReconcilePersistenceAgent(dsp *dspav1alpha1.DataSciencePipelinesApplication,
+	params *DSPAParams) error {
 
 	if !dsp.Spec.PersistenceAgent.Deploy {
 		r.Log.Info("Skipping Application of PersistenceAgent Resources")
