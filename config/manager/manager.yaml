@@ -39,15 +39,15 @@ spec:
         name: manager
         env:
           - name: IMAGES_APISERVER
-            value: quay.io/modh/odh-ml-pipelines-api-server-container-live:1.22.0-rhods-6564
+            value: quay.io/opendatahub/ds-pipelines-api-server:main
           - name: IMAGES_ARTIFACT
-            value: quay.io/modh/odh-ml-pipelines-artifact-manager-container:v1.20.0-15
+            value: quay.io/opendatahub/ds-pipelines-artifact-manager:main
           - name: IMAGES_PERSISTENTAGENT
-            value: quay.io/modh/odh-ml-pipelines-persistenceagent-container:v1.20.0-15
+            value: quay.io/opendatahub/ds-pipelines-persistenceagent:main
           - name: IMAGES_SCHEDULEDWORKFLOW
-            value: quay.io/modh/odh-ml-pipelines-scheduledworkflow-container:v1.20.0-15
+            value: quay.io/opendatahub/ds-pipelines-scheduledworkflow:main
           - name: IMAGES_VIEWERCRD
-            value: quay.io/modh/odh-ml-pipelines-viewercontroller-container:v1.20.0-15
+            value: quay.io/opendatahub/ds-pipelines-viewercontroller:main
           - name: IMAGES_CACHE
             value: registry.access.redhat.com/ubi8/ubi-minimal
           - name: IMAGES_MOVERESULTSIMAGE

@@ -1,9 +1,9 @@
 Images:
-  ApiServer: quay.io/modh/odh-ml-pipelines-api-server-container:v1.18.0-8
-  Artifact: quay.io/modh/odh-ml-pipelines-artifact-manager-container:v1.18.0-8
-  PersistentAgent: quay.io/modh/odh-ml-pipelines-persistenceagent-container:v1.18.0-8
-  ScheduledWorkflow: quay.io/modh/odh-ml-pipelines-scheduledworkflow-container:v1.18.0-8
-  ViewerCRD: quay.io/modh/odh-ml-pipelines-viewercontroller-container:v1.18.0-8
+  ApiServer: quay.io/opendatahub/ds-pipelines-api-server:main
+  Artifact: quay.io/opendatahub/ds-pipelines-artifact-manager:main
+  PersistentAgent: quay.io/opendatahub/ds-pipelines-persistenceagent:main
+  ScheduledWorkflow: quay.io/opendatahub/ds-pipelines-scheduledworkflow:main
+  ViewerCRD: quay.io/opendatahub/ds-pipelines-viewercontroller:main
   Cache: registry.access.redhat.com/ubi8/ubi-minimal
   MoveResultsImage: registry.access.redhat.com/ubi8/ubi-micro
   MlPipelineUI: quay.io/opendatahub/odh-ml-pipelines-frontend-container:beta-ui
