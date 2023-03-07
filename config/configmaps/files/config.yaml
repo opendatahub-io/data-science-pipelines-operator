@@ -1,11 +1,11 @@
 Images:
-  ApiServer: quay.io/opendatahub/ds-pipelines-api-server:main
-  Artifact: quay.io/opendatahub/ds-pipelines-artifact-manager:main
-  PersistentAgent: quay.io/opendatahub/ds-pipelines-persistenceagent:main
-  ScheduledWorkflow: quay.io/opendatahub/ds-pipelines-scheduledworkflow:main
-  ViewerCRD: quay.io/opendatahub/ds-pipelines-viewercontroller:main
-  Cache: registry.access.redhat.com/ubi8/ubi-minimal
-  MoveResultsImage: registry.access.redhat.com/ubi8/ubi-micro
-  MlPipelineUI: quay.io/opendatahub/odh-ml-pipelines-frontend-container:beta-ui
-  MariaDB: registry.redhat.io/rhel8/mariadb-103:1-188
-  Minio: quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance
+  ApiServer: $(IMAGES_APISERVER)
+  Artifact: $(IMAGES_ARTIFACT)
+  PersistentAgent: $(IMAGES_PERSISTENTAGENT)
+  ScheduledWorkflow: $(IMAGES_SCHEDULEDWORKFLOW)
+  ViewerCRD: $(IMAGES_VIEWERCRD)
+  Cache: $(IMAGES_CACHE)
+  MoveResultsImage: $(IMAGES_MOVERESULTSIMAGE)
+  MlPipelineUI: $(IMAGES_MLPIPELINEUI)
+  MariaDB: $(IMAGES_MARIADB)
+  Minio: $(IMAGES_MINIO)
