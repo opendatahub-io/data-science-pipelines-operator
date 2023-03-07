@@ -16,7 +16,6 @@ limitations under the License.
 package controllers
 
 import (
-	"errors"
 	"fmt"
 	mfc "github.com/manifestival/controller-runtime-client"
 	mf "github.com/manifestival/manifestival"
@@ -24,10 +23,11 @@ import (
 	. "github.com/onsi/gomega"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/testutil"
+	"github.com/spf13/viper"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"reflect"
 )
 
 type TestCase struct {
@@ -39,25 +39,25 @@ type CaseComponentResources map[string]ResourcePath
 type ResourcePath map[string]string
 
 var cases = map[string]TestCase{
-	"case0": {
+	"case_0": {
 		Description: "empty CR Spec",
 		Path:        "./testdata/deploy/case_0/cr.yaml",
 	},
-	"case1": {
+	"case_1": {
 		Description: "all Deploy fields are set to false",
 		Path:        "./testdata/deploy/case_1/cr.yaml",
 	},
-	"case2": {
+	"case_2": {
 		Description: "standard CR Spec with components specified",
 		Path:        "./testdata/deploy/case_2/cr.yaml",
 	},
-	"case3": {
-		Description: "custom Artifact configmap is provided",
+	"case_3": {
+		Description: "custom Artifact configmap is provided, custom images override defaults",
 		Path:        "./testdata/deploy/case_3/cr.yaml",
 	},
 }
 var deploymentsCreated = CaseComponentResources{
-	"case0": {
+	"case_0": {
 		"apiserver":                   "./testdata/results/case_0/apiserver/deployment.yaml",
 		"mariadb":                     "./testdata/results/case_0/mariadb/deployment.yaml",
 		"minioDeployment":             "./testdata/results/case_0/minio/deployment.yaml",
@@ -65,7 +65,7 @@ var deploymentsCreated = CaseComponentResources{
 		"persistenceAgentDeployment":  "./testdata/results/case_0/persistence-agent/deployment.yaml",
 		"scheduledWorkflowDeployment": "./testdata/results/case_0/scheduled-workflow/deployment.yaml",
 	},
-	"case2": {
+	"case_2": {
 		"apiserver":                   "./testdata/results/case_2/apiserver/deployment.yaml",
 		"mariadb":                     "./testdata/results/case_2/mariadb/deployment.yaml",
 		"minioDeployment":             "./testdata/results/case_2/minio/deployment.yaml",
@@ -77,10 +77,10 @@ var deploymentsCreated = CaseComponentResources{
 }
 
 var deploymentsNotCreated = CaseComponentResources{
-	"case0": {
+	"case_0": {
 		"viewerCrdDeployment": "./testdata/results/case_0/viewer-crd/deployment.yaml",
 	},
-	"case1": {
+	"case_1": {
 		"apiserver":                   "./testdata/results/case_1/apiserver/deployment.yaml",
 		"mariadb":                     "./testdata/results/case_1/mariadb/deployment.yaml",
 		"minioDeployment":             "./testdata/results/case_1/minio/deployment.yaml",
@@ -91,16 +91,16 @@ var deploymentsNotCreated = CaseComponentResources{
 }
 
 var configMapsCreated = CaseComponentResources{
-	"case0": {
+	"case_0": {
 		"apiserver": "./testdata/results/case_0/apiserver/configmap_artifact_script.yaml",
 	},
-	"case2": {
+	"case_2": {
 		"apiserver": "./testdata/results/case_2/apiserver/configmap_artifact_script.yaml",
 	},
 }
 
 var configMapsNotCreated = CaseComponentResources{
-	"case3": {
+	"case_3": {
 		"apiserver": "./testdata/results/case_3/apiserver/configmap_artifact_script.yaml",
 	},
 }
@@ -130,12 +130,16 @@ func deleteDSP(path string, opts mf.Option) {
 	dsp2 := &dspav1alpha1.DataSciencePipelinesApplication{}
 	Eventually(func() error {
 		namespacedNamed := types.NamespacedName{Name: dsp.Name, Namespace: WorkingNamespace}
-		Expect(k8sClient.Get(ctx, namespacedNamed, dsp2)).NotTo(HaveOccurred())
-		if !reflect.DeepEqual(dsp2, &dspav1alpha1.DataSciencePipelinesApplication{}) {
-			return errors.New("DSP still exists on cluster")
+		err = k8sClient.Get(ctx, namespacedNamed, dsp2)
+		if err != nil {
+			if apierrs.IsNotFound(err) {
+				return nil
+			}
+			return err
 		}
-		return nil
-	}, timeout, interval).Should(HaveOccurred())
+		return fmt.Errorf("resource still exists on cluster")
+
+	}, timeout, interval).ShouldNot(HaveOccurred())
 
 }
 
@@ -203,40 +207,51 @@ func configMapDoesNotExists(path string, opts mf.Option) {
 
 }
 
-var _ = Describe("The DS Pipeline Controller", func() {
+var _ = Describe("The DS Pipeline Controller", Ordered, func() {
 	client := mfc.NewClient(k8sClient)
 	opts := mf.UseClient(client)
 
-	for testcase := range cases {
-		testcase := testcase
+	for tc := range cases {
+		// We assign local copies of all looping variables, as they are mutating
+		// we want the correct variables captured in each `It` closure, we do this
+		// by creating local variables
+		// https://onsi.github.io/ginkgo/#dynamically-generating-specs
+		testcase := tc
 		description := cases[testcase].Description
 		dspPath := cases[testcase].Path
-		expectedDeployments := deploymentsCreated[testcase]
+
 		Context(description, func() {
 			It(fmt.Sprintf("Should successfully deploy the Custom Resource for case %s", testcase), func() {
+				viper.New()
+				viper.SetConfigFile(fmt.Sprintf("testdata/deploy/%s/config.yaml", testcase))
+				err := viper.ReadInConfig()
+				Expect(err).ToNot(HaveOccurred(), "Failed to read config file")
 				deployDSP(dspPath, opts)
 			})
+			expectedDeployments := deploymentsCreated[testcase]
 			for component := range expectedDeployments {
 				component := component
 				deploymentPath := expectedDeployments[component]
-				It(fmt.Sprintf("Should create deployment for component %s", deploymentsCreated[testcase][component]), func() {
+				It(fmt.Sprintf("[%s] Should create deployment for component %s", testcase, component), func() {
 					compareDeployments(deploymentPath, opts)
 				})
 			}
 
+			notExpectedDeployments := deploymentsNotCreated[testcase]
 			for component := range deploymentsNotCreated[testcase] {
-				It(fmt.Sprintf("Should NOT create deployments for component %s", component), func() {
-					deploymentDoesNotExists(deploymentsNotCreated[testcase][component], opts)
+				deploymentPath := notExpectedDeployments[component]
+				It(fmt.Sprintf("[%s] Should NOT create deployments for component %s", testcase, component), func() {
+					deploymentDoesNotExists(deploymentPath, opts)
 				})
 			}
 
 			for component := range configMapsCreated[testcase] {
-				It(fmt.Sprintf("Should create configmaps for component %s", component), func() {
+				It(fmt.Sprintf("[%s] Should create configmaps for component %s", testcase, component), func() {
 					compareConfigMaps(configMapsCreated[testcase][component], opts)
 				})
 			}
 			for component := range configMapsNotCreated[testcase] {
-				It(fmt.Sprintf("Should NOT create configmaps for component %s", component), func() {
+				It(fmt.Sprintf("[%s] Should NOT create configmaps for component %s", testcase, component), func() {
 					configMapDoesNotExists(configMapsNotCreated[testcase][component], opts)
 				})
 			}

@@ -124,7 +124,7 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 		if p.MariaDB == nil {
 			p.MariaDB = &dspa.MariaDB{
 				Deploy:    true,
-				Image:     config.MariaDBImage,
+				Image:     config.GetStringConfigWithDefault(config.MariaDBImagePath, config.DefaultImageValue),
 				Resources: config.MariaDBResourceRequirements.DeepCopy(),
 				Username:  config.MariaDBUser,
 				DBName:    config.MariaDBName,
@@ -133,10 +133,11 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 		}
 		// If MariaDB was specified, ensure missing fields are
 		// populated with defaults.
-		setStringDefault(config.MariaDBImage, &p.MariaDB.Image)
+		if p.MariaDB.Image == "" {
+			p.MariaDB.Image = config.GetStringConfigWithDefault(config.MariaDBImagePath, config.DefaultImageValue)
+		}
 		setStringDefault(config.MariaDBUser, &p.MariaDB.Username)
 		setStringDefault(config.MariaDBName, &p.MariaDB.DBName)
-		setStringDefault(config.MariaDBImage, &p.MariaDB.Image)
 		setResourcesDefault(config.MariaDBResourceRequirements, &p.MariaDB.Resources)
 
 		p.DBConnection.Host = fmt.Sprintf(
@@ -234,7 +235,7 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 		if p.Minio == nil {
 			p.Minio = &dspa.Minio{
 				Deploy:    true,
-				Image:     config.MinioImage,
+				Image:     config.GetStringConfigWithDefault(config.MinioImagePath, config.DefaultImageValue),
 				Bucket:    config.MinioDefaultBucket,
 				PVCSize:   config.MinioPVCSize,
 				Resources: config.MinioResourceRequirements.DeepCopy(),
@@ -243,7 +244,10 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 
 		// If Minio was specified, ensure missing fields are
 		// populated with defaults.
-		setStringDefault(config.MinioImage, &p.Minio.Image)
+		if p.Minio.Image == "" {
+			p.Minio.Image = config.GetStringConfigWithDefault(config.MinioImagePath, config.DefaultImageValue)
+		}
+
 		setStringDefault(config.MinioDefaultBucket, &p.Minio.Bucket)
 		setStringDefault(config.MinioPVCSize, &p.Minio.PVCSize)
 		setResourcesDefault(config.MinioResourceRequirements, &p.Minio.Resources)
@@ -355,10 +359,12 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	// TODO: If p.<component> is nil we should create defaults
 
 	if p.APIServer != nil {
-		setStringDefault(config.APIServerImage, &p.APIServer.Image)
-		setStringDefault(config.APIServerArtifactImage, &p.APIServer.ArtifactImage)
-		setStringDefault(config.APIServerCacheImage, &p.APIServer.CacheImage)
-		setStringDefault(config.APIServerMoveResultsImage, &p.APIServer.MoveResultsImage)
+
+		p.APIServer.Image = config.GetStringConfigWithDefault(config.APIServerImagePath, config.DefaultImageValue)
+		p.APIServer.ArtifactImage = config.GetStringConfigWithDefault(config.APIServerArtifactImagePath, config.DefaultImageValue)
+		p.APIServer.CacheImage = config.GetStringConfigWithDefault(config.APIServerCacheImagePath, config.DefaultImageValue)
+		p.APIServer.MoveResultsImage = config.GetStringConfigWithDefault(config.APIServerMoveResultsImagePath, config.DefaultImageValue)
+
 		setResourcesDefault(config.APIServerResourceRequirements, &p.APIServer.Resources)
 
 		if p.APIServer.ArtifactScriptConfigMap == nil {
@@ -369,19 +375,19 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		}
 	}
 	if p.PersistenceAgent != nil {
-		setStringDefault(config.PersistenceAgentImage, &p.PersistenceAgent.Image)
+		p.PersistenceAgent.Image = config.GetStringConfigWithDefault(config.PersistenceAgentImagePath, config.DefaultImageValue)
 		setResourcesDefault(config.PersistenceAgentResourceRequirements, &p.PersistenceAgent.Resources)
 	}
 	if p.ScheduledWorkflow != nil {
-		setStringDefault(config.ScheduledWorkflowImage, &p.ScheduledWorkflow.Image)
+		p.ScheduledWorkflow.Image = config.GetStringConfigWithDefault(config.ScheduledWorkflowImagePath, config.DefaultImageValue)
 		setResourcesDefault(config.ScheduledWorkflowResourceRequirements, &p.ScheduledWorkflow.Resources)
 	}
 	if p.ViewerCRD != nil {
-		setStringDefault(config.ViewerCRDImage, &p.ViewerCRD.Image)
+		p.ViewerCRD.Image = config.GetStringConfigWithDefault(config.ViewerCRDImagePath, config.DefaultImageValue)
 		setResourcesDefault(config.ViewerCRDResourceRequirements, &p.ViewerCRD.Resources)
 	}
 	if p.MlPipelineUI != nil {
-		setStringDefault(config.MlPipelineUIImage, &p.MlPipelineUI.Image)
+		p.MlPipelineUI.Image = config.GetStringConfigWithDefault(config.MlPipelineUIImagePath, config.DefaultImageValue)
 		setStringDefault(config.MLPipelineUIConfigMapPrefix+dsp.Name, &p.MlPipelineUI.ConfigMapName)
 		setResourcesDefault(config.MlPipelineUIResourceRequirements, &p.MlPipelineUI.Resources)
 	}
