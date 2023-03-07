@@ -34,7 +34,7 @@ spec:
                 secretKeyRef:
                   key: "secretkey"
                   name: "mlpipeline-minio-artifact"
-          image: "quay.io/opendatahub/test-minio:test"
+          image: minio:test2
           name: minio
           ports:
             - containerPort: 9000

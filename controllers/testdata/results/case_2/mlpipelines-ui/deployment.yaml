@@ -92,7 +92,7 @@ spec:
               value: ds-pipeline-testdsp2
             - name: ML_PIPELINE_SERVICE_PORT
               value: '8888'
-          image: quay.io/opendatahub/test-frontend-container:beta-ui
+          image: frontend:test2
           imagePullPolicy: IfNotPresent
           livenessProbe:
             exec:

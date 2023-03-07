@@ -23,7 +23,7 @@ spec:
         - env:
             - name: NAMESPACE
               value: "default"
-          image: "quay.io/modh/odh-ml-pipelines-persistenceagent-container:v1.18.0-8"
+          image: persistenceagent:test0
           imagePullPolicy: IfNotPresent
           name: ds-pipeline-persistenceagent
           command:

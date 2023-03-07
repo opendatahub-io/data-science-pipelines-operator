@@ -20,7 +20,7 @@ spec:
         component: data-science-pipelines
     spec:
       containers:
-        - image: "quay.io/modh/odh-ml-pipelines-viewercontroller-container:v1.18.0-8"
+        - image: viewercontroller:test0
           imagePullPolicy: Always
           name: ds-pipeline-viewer-crd
           command:

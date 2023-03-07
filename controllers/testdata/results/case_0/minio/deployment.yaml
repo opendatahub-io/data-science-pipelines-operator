@@ -34,7 +34,7 @@ spec:
                 secretKeyRef:
                   key: "secretkey"
                   name: "mlpipeline-minio-artifact"
-          image: "quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance"
+          image: minio:test0
           name: minio
           ports:
             - containerPort: 9000
