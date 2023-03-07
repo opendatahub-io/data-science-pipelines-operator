@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
         - name: mariadb
-          image: registry.redhat.io/rhel8/test-mariadb-103:test
+          image: mariadb:test2
           ports:
             - containerPort: 3306
               protocol: TCP

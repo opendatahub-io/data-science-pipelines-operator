@@ -23,7 +23,7 @@ spec:
         - env:
             - name: CRON_SCHEDULE_TIMEZONE
               value: "UTC"
-          image: "quay.io/modh/odh-ml-pipelines-scheduledworkflow-container:v1.18.0-8"
+          image: scheduledworkflow:test0
           imagePullPolicy: IfNotPresent
           name: ds-pipeline-scheduledworkflow
           command:

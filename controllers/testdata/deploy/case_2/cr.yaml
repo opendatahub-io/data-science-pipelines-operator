@@ -5,12 +5,12 @@ metadata:
 spec:
   apiServer:
     deploy: true
-    image: quay.io/modh/test-api-server-container:test
+    image: api-server:test2
     applyTektonCustomResource: true
     archiveLogs: false
-    artifactImage: quay.io/modh/test-artifact-manager-container:test
-    cacheImage: registry.access.redhat.com/ubi8/test-ubi-minimal
-    moveResultsImage: testbusybox
+    artifactImage: artifact-manager:test2
+    cacheImage: ubi-minimal:test2
+    moveResultsImage: busybox:test2
     injectDefaultScript: true
     stripEOF: true
     terminateStatus: Cancelled
@@ -27,7 +27,7 @@ spec:
         memory: "5Gi"
   persistenceAgent:
     deploy: true
-    image: quay.io/modh/test-persistenceagent-container:test
+    image: persistenceagent:test2
     numWorkers: 5
     resources:
       requests:
@@ -38,7 +38,7 @@ spec:
         memory: "5Gi"
   scheduledWorkflow:
     deploy: true
-    image: quay.io/modh/test-scheduledworkflow-container:test
+    image: scheduledworkflow:test2
     cronScheduleTimezone: EST
     resources:
       requests:
@@ -49,7 +49,7 @@ spec:
         memory: "5Gi"
   viewerCRD:
     deploy: true
-    image: quay.io/modh/test-viewercontroller-container:test
+    image: viewercontroller:test2
     maxNumViewer: 25
     resources:
       requests:
@@ -60,7 +60,7 @@ spec:
         memory: "5Gi"
   mlpipelineUI:
     deploy: true
-    image: quay.io/opendatahub/test-frontend-container:beta-ui
+    image: frontend:test2
     configMap: some-test-configmap
     resources:
       requests:
@@ -72,7 +72,7 @@ spec:
   database:
     mariaDB:
       deploy: true
-      image: registry.redhat.io/rhel8/test-mariadb-103:test
+      image: mariadb:test2
       username: testuser
       pipelineDBName: randomDBName
       pvcSize: 32Gi
@@ -86,7 +86,7 @@ spec:
   objectStorage:
     minio:
       deploy: true
-      image: quay.io/opendatahub/test-minio:test
+      image: minio:test2
       bucket: mlpipeline
       pvcSize: 40Gi
       resources:

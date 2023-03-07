@@ -44,7 +44,7 @@ spec:
                   key: "artifact_script"
                   name: "ds-pipeline-artifact-script-testdsp0"
             - name: ARTIFACT_IMAGE
-              value: "quay.io/modh/odh-ml-pipelines-artifact-manager-container:v1.18.0-8"
+              value: "artifact-manager:test0"
             - name: ARCHIVE_LOGS
               value: "false"
             - name: TRACK_ARTIFACTS
@@ -88,10 +88,10 @@ spec:
             - name: MINIO_SERVICE_SERVICE_PORT
               value: "9000"
             - name: CACHE_IMAGE
-              value: "registry.access.redhat.com/ubi8/ubi-minimal"
+              value: "ubi-minimal:test0"
             - name: MOVERESULTS_IMAGE
-              value: "busybox"
-          image: quay.io/modh/odh-ml-pipelines-api-server-container:v1.18.0-8
+              value: "busybox:test0"
+          image: api-server:test0
           imagePullPolicy: Always
           name: ds-pipeline-api-server
           ports:

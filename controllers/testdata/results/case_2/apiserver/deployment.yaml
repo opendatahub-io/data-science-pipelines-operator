@@ -44,7 +44,7 @@ spec:
                   key: "artifact_script"
                   name: "ds-pipeline-artifact-script-testdsp2"
             - name: ARTIFACT_IMAGE
-              value: "quay.io/modh/test-artifact-manager-container:test"
+              value: "artifact-manager:test2"
             - name: ARCHIVE_LOGS
               value: "false"
             - name: TRACK_ARTIFACTS
@@ -88,10 +88,10 @@ spec:
             - name: MINIO_SERVICE_SERVICE_PORT
               value: "9000"
             - name: CACHE_IMAGE
-              value: "registry.access.redhat.com/ubi8/test-ubi-minimal"
+              value: "ubi-minimal:test2"
             - name: MOVERESULTS_IMAGE
-              value: "testbusybox"
-          image: quay.io/modh/test-api-server-container:test
+              value: "busybox:test2"
+          image: api-server:test2
           imagePullPolicy: Always
           name: ds-pipeline-api-server
           ports:
