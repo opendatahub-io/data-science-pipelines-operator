@@ -1,3 +1,5 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
 namespace: data-science-pipelines-operator
 namePrefix: data-science-pipelines-operator-
 resources:
@@ -6,9 +8,86 @@ resources:
 - ../manager
 - ../prometheus
 - ../configmaps
+
+# Parameterize images via KfDef in ODH
+configMapGenerator:
+  - name: dspo-parameters
+    envs:
+      - params.env
+vars:
+  - name: IMAGES_APISERVER
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGES_APISERVER
+  - name: IMAGES_ARTIFACT
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGES_ARTIFACT
+  - name: IMAGES_PERSISTENTAGENT
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGES_PERSISTENTAGENT
+  - name: IMAGES_SCHEDULEDWORKFLOW
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGES_SCHEDULEDWORKFLOW
+  - name: IMAGES_VIEWERCRD
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGES_VIEWERCRD
+  - name: IMAGES_CACHE
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGES_CACHE
+  - name: IMAGES_MOVERESULTSIMAGE
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGES_MOVERESULTSIMAGE
+  - name: IMAGES_MLPIPELINEUI
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGES_MLPIPELINEUI
+  - name: IMAGES_MARIADB
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGES_MARIADB
+  - name: IMAGES_MINIO
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGES_MINIO
+configurations:
+  - params.yaml
 images:
-- name: controller
-  newName: quay.io/opendatahub/data-science-pipelines-operator
-  newTag: latest
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
+  - name: controller
+    newName: quay.io/opendatahub/data-science-pipelines-operator
+    newTag: main

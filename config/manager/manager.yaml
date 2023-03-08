@@ -38,26 +38,27 @@ spec:
         image: controller:latest
         name: manager
         env:
+          # Env vars are prioritized over --config
           - name: IMAGES_APISERVER
-            value: quay.io/opendatahub/ds-pipelines-api-server:main
+            value: $(IMAGES_APISERVER)
           - name: IMAGES_ARTIFACT
-            value: quay.io/opendatahub/ds-pipelines-artifact-manager:main
+            value: $(IMAGES_ARTIFACT)
           - name: IMAGES_PERSISTENTAGENT
-            value: quay.io/opendatahub/ds-pipelines-persistenceagent:main
+            value: $(IMAGES_PERSISTENTAGENT)
           - name: IMAGES_SCHEDULEDWORKFLOW
-            value: quay.io/opendatahub/ds-pipelines-scheduledworkflow:main
+            value: $(IMAGES_SCHEDULEDWORKFLOW)
           - name: IMAGES_VIEWERCRD
-            value: quay.io/opendatahub/ds-pipelines-viewercontroller:main
+            value: $(IMAGES_VIEWERCRD)
           - name: IMAGES_CACHE
-            value: registry.access.redhat.com/ubi8/ubi-minimal
+            value: $(IMAGES_CACHE)
           - name: IMAGES_MOVERESULTSIMAGE
-            value: registry.access.redhat.com/ubi8/ubi-micro
+            value: $(IMAGES_MOVERESULTSIMAGE)
           - name: IMAGES_MLPIPELINEUI
-            value: quay.io/opendatahub/odh-ml-pipelines-frontend-container:beta-ui
+            value: $(IMAGES_MLPIPELINEUI)
           - name: IMAGES_MARIADB
-            value: registry.redhat.io/rhel8/mariadb-103:1-188
+            value: $(IMAGES_MARIADB)
           - name: IMAGES_MINIO
-            value: quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance
+            value: $(IMAGES_MINIO)
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
