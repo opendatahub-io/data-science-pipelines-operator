@@ -3,6 +3,8 @@ kind: ServiceAccount
 metadata:
   name: ds-pipeline-{{.Name}}
   namespace: {{.Namespace}}
+  annotations:
+    serviceaccounts.openshift.io/oauth-redirectreference.primary: '{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"ds-pipeline-{{.Name}}"}}'
   labels:
     app: ds-pipeline-{{.Name}}
     component: data-science-pipelines

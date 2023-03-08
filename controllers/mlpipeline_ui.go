@@ -31,12 +31,6 @@ var mlPipelineUITemplates = []string{
 	"mlpipelines-ui/service.yaml.tmpl",
 }
 
-var mlPipelineUIClusterScopedTemplates = []string{
-	"mlpipelines-ui/clusterrolebinding.yaml.tmpl",
-}
-
-const uIClusterRolebindingTemplate = "mlpipelines-ui/clusterrolebinding.yaml.tmpl"
-
 func (r *DSPAReconciler) ReconcileUI(dsp *dspav1alpha1.DataSciencePipelinesApplication,
 	params *DSPAParams) error {
 
@@ -53,21 +47,6 @@ func (r *DSPAReconciler) ReconcileUI(dsp *dspav1alpha1.DataSciencePipelinesAppli
 		}
 	}
 
-	err := r.ApplyWithoutOwner(params, uIClusterRolebindingTemplate)
-	if err != nil {
-		return err
-	}
-
 	r.Log.Info("Applying MlPipelineUI Resources")
-	return nil
-}
-
-func (r *DSPAReconciler) CleanUpUI(params *DSPAParams) error {
-	for _, template := range mlPipelineUIClusterScopedTemplates {
-		err := r.DeleteResource(params, template)
-		if err != nil {
-			return err
-		}
-	}
 	return nil
 }

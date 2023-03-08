@@ -1,0 +1,19 @@
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: ds-pipeline-{{.Name}}
+  namespace: {{.Namespace}}
+  labels:
+    app: ds-pipeline-{{.Name}}
+    component: data-science-pipelines
+  annotations:
+    kubernetes.io/tls-acme: "true"
+spec:
+  to:
+    kind: Service
+    name: ds-pipeline-{{.Name}}
+    weight: 100
+  port:
+    targetPort: oauth
+  tls:
+    termination: Reencrypt

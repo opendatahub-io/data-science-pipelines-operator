@@ -71,6 +71,9 @@ type APIServer struct {
 	CollectMetrics bool `json:"collectMetrics"`
 	// +kubebuilder:default:=true
 	// +optional
+	EnableRoute bool `json:"enableOauth"`
+	// +kubebuilder:default:=true
+	// +optional
 	AutoUpdatePipelineDefaultVersion bool                  `json:"autoUpdatePipelineDefaultVersion"`
 	Resources                        *ResourceRequirements `json:"resources,omitempty"`
 }

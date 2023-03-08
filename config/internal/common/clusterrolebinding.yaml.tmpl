@@ -1,7 +1,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: ds-pipeline-ui-auth-delegator-{{.Name}}
+  name: ds-pipeline-ui-auth-delegator-{{.Namespace}}-{{.Name}}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -10,3 +10,6 @@ subjects:
   - kind: ServiceAccount
     namespace: {{.Namespace}}
     name: ds-pipeline-ui-{{.Name}}
+  - kind: ServiceAccount
+    namespace: {{.Namespace}}
+    name: ds-pipeline-{{.Name}}
