@@ -28,7 +28,7 @@ spec:
             - --upstream=http://localhost:3000
             - --tls-cert=/etc/tls/private/tls.crt
             - --tls-key=/etc/tls/private/tls.key
-            - --cookie-secret=SECRET
+            - --cookie-secret-file=/etc/oauth/config/cookie_secret
             - '--openshift-delegate-urls={"/": {"group":"route.openshift.io","resource":"routes","verb":"get","name":"ds-pipeline-ui-testdsp2","namespace":"default"}}'
             - --skip-auth-regex='(^/metrics|^/apis/v1beta1/healthz)'
           image: registry.redhat.io/openshift4/ose-oauth-proxy:v4.12.0
@@ -66,6 +66,8 @@ spec:
           volumeMounts:
             - mountPath: /etc/tls/private
               name: proxy-tls
+            - mountPath: /etc/oauth/config
+              name: cookie-secret
         - env:
             - name: VIEWER_TENSORBOARD_POD_TEMPLATE_SPEC_PATH
               value: /etc/config/viewer-pod-template.json
@@ -142,4 +144,8 @@ spec:
         - name: proxy-tls
           secret:
             secretName: ds-pipelines-ui-proxy-tls-testdsp2
+            defaultMode: 420
+        - name: cookie-secret
+          secret:
+            secretName: ds-pipelines-ui-testdsp2-cookie-secret
             defaultMode: 420

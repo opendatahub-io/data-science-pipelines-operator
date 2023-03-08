@@ -26,7 +26,7 @@ spec:
             - --upstream=http://localhost:8888
             - --tls-cert=/etc/tls/private/tls.crt
             - --tls-key=/etc/tls/private/tls.key
-            - --cookie-secret=SECRET
+            - --cookie-secret-file=/etc/oauth/config/cookie_secret
             - '--openshift-delegate-urls={"/": {"group":"route.openshift.io","resource":"routes","verb":"get","name":"ds-pipeline-testdsp3","namespace":"default"}}'
             - '--openshift-sar={"namespace":"default", "resource": "routes", "resourceName":"ds-pipeline-testdsp3", "verb": "get"}'
             - --skip-auth-regex='(^/metrics|^/apis/v1beta1/healthz)'
@@ -65,6 +65,8 @@ spec:
           volumeMounts:
             - mountPath: /etc/tls/private
               name: proxy-tls
+            - mountPath: /etc/oauth/config
+              name: cookie-secret
         - env:
             - name: POD_NAMESPACE
               value: "default"
@@ -184,4 +186,8 @@ spec:
           secret:
             secretName: ds-pipelines-proxy-tls-testdsp3
             defaultMode: 420
-      serviceAccountName: ds-pipeline-testdsp3
+        - name: cookie-secret
+          secret:
+            secretName: ds-pipelines-ui-testdsp3-cookie-secret
+            defaultMode: 420
+      serviceAccountName: ds-pipeline-testdsp2

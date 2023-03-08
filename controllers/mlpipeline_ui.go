@@ -17,7 +17,11 @@ limitations under the License.
 package controllers
 
 import (
+	"context"
+	"fmt"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 var mlPipelineUITemplates = []string{
@@ -31,7 +35,9 @@ var mlPipelineUITemplates = []string{
 	"mlpipelines-ui/service.yaml.tmpl",
 }
 
-func (r *DSPAReconciler) ReconcileUI(dsp *dspav1alpha1.DataSciencePipelinesApplication,
+const mlPipelinesUICookieSecret = "mlpipelines-ui/secret.yaml.tmpl"
+
+func (r *DSPAReconciler) ReconcileUI(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,
 	params *DSPAParams) error {
 
 	if !dsp.Spec.MlPipelineUI.Deploy {
@@ -45,6 +51,16 @@ func (r *DSPAReconciler) ReconcileUI(dsp *dspav1alpha1.DataSciencePipelinesAppli
 		if err != nil {
 			return err
 		}
+	}
+
+	cookieSecret := &corev1.Secret{}
+	cookieSecretNN := types.NamespacedName{
+		Name:      fmt.Sprintf("ds-pipelines-ui-%s-cookie-secret", dsp.Name),
+		Namespace: dsp.Namespace,
+	}
+	err := r.CreateIfDoesNotItExists(ctx, cookieSecret, cookieSecretNN, params, mlPipelinesUICookieSecret, dsp)
+	if err != nil {
+		return err
 	}
 
 	r.Log.Info("Applying MlPipelineUI Resources")

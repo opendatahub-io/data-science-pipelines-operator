@@ -33,17 +33,19 @@ import (
 )
 
 type DSPAParams struct {
-	Name                 string
-	Namespace            string
-	Owner                mf.Owner
-	APIServer            *dspa.APIServer
-	APIServerServiceName string
-	ScheduledWorkflow    *dspa.ScheduledWorkflow
-	ViewerCRD            *dspa.ViewerCRD
-	PersistenceAgent     *dspa.PersistenceAgent
-	MlPipelineUI         *dspa.MlPipelineUI
-	MariaDB              *dspa.MariaDB
-	Minio                *dspa.Minio
+	Name                               string
+	Namespace                          string
+	Owner                              mf.Owner
+	APIServer                          *dspa.APIServer
+	APIServerServiceName               string
+	APIServerOauthProxyCookieSecret    string
+	ScheduledWorkflow                  *dspa.ScheduledWorkflow
+	ViewerCRD                          *dspa.ViewerCRD
+	PersistenceAgent                   *dspa.PersistenceAgent
+	MlPipelineUI                       *dspa.MlPipelineUI
+	MlPipelineUIOauthProxyCookieSecret string
+	MariaDB                            *dspa.MariaDB
+	Minio                              *dspa.Minio
 	DBConnection
 	ObjectStorageConnection
 }
@@ -367,6 +369,9 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 
 		setResourcesDefault(config.APIServerResourceRequirements, &p.APIServer.Resources)
 
+		generatedPass := passwordGen(32)
+		p.APIServerOauthProxyCookieSecret = base64.StdEncoding.EncodeToString([]byte(generatedPass))
+
 		if p.APIServer.ArtifactScriptConfigMap == nil {
 			p.APIServer.ArtifactScriptConfigMap = &dspa.ArtifactScriptConfigMap{
 				Name: config.ArtifactScriptConfigMapNamePrefix + dsp.Name,
@@ -390,6 +395,9 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		p.MlPipelineUI.Image = config.GetStringConfigWithDefault(config.MlPipelineUIImagePath, config.DefaultImageValue)
 		setStringDefault(config.MLPipelineUIConfigMapPrefix+dsp.Name, &p.MlPipelineUI.ConfigMapName)
 		setResourcesDefault(config.MlPipelineUIResourceRequirements, &p.MlPipelineUI.Resources)
+
+		generatedPass := passwordGen(32)
+		p.MlPipelineUIOauthProxyCookieSecret = base64.StdEncoding.EncodeToString([]byte(generatedPass))
 	}
 
 	err := p.SetupDBParams(ctx, dsp, client, log)
