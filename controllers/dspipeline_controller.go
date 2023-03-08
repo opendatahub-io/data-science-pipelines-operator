@@ -115,6 +115,21 @@ func (r *DSPAReconciler) DeleteResourceIfItExists(ctx context.Context, obj clien
 	return err
 }
 
+func (r *DSPAReconciler) CreateIfDoesNotItExists(ctx context.Context, obj client.Object, nn types.NamespacedName,
+	params *DSPAParams, path string, dsp *dspav1alpha1.DataSciencePipelinesApplication) error {
+	err := r.Get(ctx, nn, obj)
+	if err != nil {
+		if apierrs.IsNotFound(err) {
+			err := r.Apply(dsp, params, path)
+			if err != nil {
+				return err
+			}
+		}
+		return err
+	}
+	return nil
+}
+
 //+kubebuilder:rbac:groups=datasciencepipelinesapplications.opendatahub.io,resources=datasciencepipelinesapplications,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=datasciencepipelinesapplications.opendatahub.io,resources=datasciencepipelinesapplications/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=datasciencepipelinesapplications.opendatahub.io,resources=datasciencepipelinesapplications/finalizers,verbs=update
@@ -232,7 +247,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	err = r.ReconcileUI(dspa, params)
+	err = r.ReconcileUI(ctx, dspa, params)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
