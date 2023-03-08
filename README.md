@@ -96,7 +96,7 @@ Now we will navigate to the DSPO manifests then build and deploy them to this na
 
 ```bash
 cd ${WORKING_DIR}
-make deploy
+make deploy OPERATOR_NS=${DSPO_NS}
 ```
 
 Confirm the pods are successfully deployed and reach running state:
@@ -313,7 +313,7 @@ To clean up standalone DSPO deployment:
 ```bash
 # WORKING_DIR must be the root of this repository's clone
 cd ${WORKING_DIR}
-make undeploy
+make undeploy OPERATOR_NS=${DSPO_NS}
 oc delete project ${DSPO_NS}
 ```
 
