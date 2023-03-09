@@ -166,11 +166,6 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		dspa.APIVersion, dspa.Kind = gvk.Version, gvk.Kind
 	}
 
-	err = params.ExtractParams(ctx, dspa, r.Client, r.Log)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
 	// Ensure that empty values do not overwrite desired state
 	if dspa.ObjectMeta.DeletionTimestamp.IsZero() {
 		if !controllerutil.ContainsFinalizer(dspa, finalizerName) {
@@ -181,6 +176,8 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 	} else {
 		if controllerutil.ContainsFinalizer(dspa, finalizerName) {
+			params.Name = dspa.Name
+			params.Namespace = dspa.Namespace
 			if err := r.cleanUpResources(ctx, req, dspa, params); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -191,6 +188,12 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 
 		// Stop reconciliation as the item is being deleted
+		return ctrl.Result{}, nil
+	}
+
+	err = params.ExtractParams(ctx, dspa, r.Client, r.Log)
+	if err != nil {
+		log.Info(fmt.Sprintf("Encountered error when parsing CR: [%s]", err))
 		return ctrl.Result{}, nil
 	}
 

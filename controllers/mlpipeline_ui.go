@@ -34,7 +34,7 @@ var mlPipelineUITemplates = []string{
 func (r *DSPAReconciler) ReconcileUI(dsp *dspav1alpha1.DataSciencePipelinesApplication,
 	params *DSPAParams) error {
 
-	if !dsp.Spec.MlPipelineUI.Deploy {
+	if dsp.Spec.MlPipelineUI == nil || !dsp.Spec.MlPipelineUI.Deploy {
 		r.Log.Info("Skipping Application of MlPipelineUI Resources")
 		return nil
 	}

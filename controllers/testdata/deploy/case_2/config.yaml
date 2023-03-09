@@ -6,6 +6,4 @@ Images:
   ViewerCRD: viewercontroller:test2
   Cache: ubi-minimal:test2
   MoveResultsImage: busybox:test2
-  MlPipelineUI: frontend:test2
   MariaDB: mariadb:test2
-  Minio: minio:test2

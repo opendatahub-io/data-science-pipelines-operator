@@ -230,23 +230,19 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 		p.ObjectStorageConnection.Scheme = dsp.Spec.ObjectStorage.ExternalStorage.Scheme
 		customCreds = dsp.Spec.ObjectStorage.ExternalStorage.S3CredentialSecret
 	} else {
-		// If no ExternalStorage or Minio is specified, DSPO assumes
-		// Minio deployment with defaults.
 		if p.Minio == nil {
-			p.Minio = &dspa.Minio{
-				Deploy:    true,
-				Image:     config.GetStringConfigWithDefault(config.MinioImagePath, config.DefaultImageValue),
-				Bucket:    config.MinioDefaultBucket,
-				PVCSize:   config.MinioPVCSize,
-				Resources: config.MinioResourceRequirements.DeepCopy(),
-			}
+			return fmt.Errorf("either [spec.objectStorage.minio] or [spec.objectStorage.externalStorage] " +
+				"need to be specified in DSPA spec")
 		}
 
 		// If Minio was specified, ensure missing fields are
 		// populated with defaults.
+
 		if p.Minio.Image == "" {
-			p.Minio.Image = config.GetStringConfigWithDefault(config.MinioImagePath, config.DefaultImageValue)
+			return fmt.Errorf("minio specified, but no image provided in the DSPA CR Spec")
 		}
+
+		p.Minio.Image = dsp.Spec.ObjectStorage.Minio.Image
 
 		setStringDefault(config.MinioDefaultBucket, &p.Minio.Bucket)
 		setStringDefault(config.MinioPVCSize, &p.Minio.PVCSize)
@@ -387,7 +383,10 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		setResourcesDefault(config.ViewerCRDResourceRequirements, &p.ViewerCRD.Resources)
 	}
 	if p.MlPipelineUI != nil {
-		p.MlPipelineUI.Image = config.GetStringConfigWithDefault(config.MlPipelineUIImagePath, config.DefaultImageValue)
+		if dsp.Spec.MlPipelineUI.Image == "" {
+			return fmt.Errorf("mlPipelineUI specified, but no image provided in the DSPA CR Spec")
+		}
+		p.MlPipelineUI.Image = dsp.Spec.MlPipelineUI.Image
 		setStringDefault(config.MLPipelineUIConfigMapPrefix+dsp.Name, &p.MlPipelineUI.ConfigMapName)
 		setResourcesDefault(config.MlPipelineUIResourceRequirements, &p.MlPipelineUI.Resources)
 	}
