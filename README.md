@@ -127,6 +127,11 @@ cd ${WORKING_DIR}/config/samples
 kustomize build . | oc -n ${DSP_Namespace} apply -f -
 ```
 
+> Note: the sample CR used here deploys a minio instance so DSP may work out of the box
+> this is unsupported in production environments and we recommend to provide your own 
+> object storage connection details via spec.objectStorage.externalStorage
+> see ${WORKING_DIR}/config/samples/dspa_simple_external_storage.yaml for an example.
+
 Confirm all pods reach ready state by running: 
 
 ```

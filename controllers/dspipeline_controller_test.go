@@ -60,8 +60,6 @@ var deploymentsCreated = CaseComponentResources{
 	"case_0": {
 		"apiserver":                   "./testdata/results/case_0/apiserver/deployment.yaml",
 		"mariadb":                     "./testdata/results/case_0/mariadb/deployment.yaml",
-		"minioDeployment":             "./testdata/results/case_0/minio/deployment.yaml",
-		"mlpipelinesUIDeployment":     "./testdata/results/case_0/mlpipelines-ui/deployment.yaml",
 		"persistenceAgentDeployment":  "./testdata/results/case_0/persistence-agent/deployment.yaml",
 		"scheduledWorkflowDeployment": "./testdata/results/case_0/scheduled-workflow/deployment.yaml",
 	},

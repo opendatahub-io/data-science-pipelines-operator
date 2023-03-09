@@ -53,12 +53,8 @@ spec:
             value: $(IMAGES_CACHE)
           - name: IMAGES_MOVERESULTSIMAGE
             value: $(IMAGES_MOVERESULTSIMAGE)
-          - name: IMAGES_MLPIPELINEUI
-            value: $(IMAGES_MLPIPELINEUI)
           - name: IMAGES_MARIADB
             value: $(IMAGES_MARIADB)
-          - name: IMAGES_MINIO
-            value: $(IMAGES_MINIO)
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

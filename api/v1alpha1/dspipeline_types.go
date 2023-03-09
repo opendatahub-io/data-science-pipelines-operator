@@ -32,10 +32,10 @@ type DSPASpec struct {
 	*ViewerCRD `json:"viewerCRD,omitempty"`
 	// +kubebuilder:default:={mariaDB: {deploy: true}}
 	*Database `json:"database,omitempty"`
-	// +kubebuilder:default:={minio: {deploy: true}}
-	*ObjectStorage `json:"objectStorage,omitempty"`
-	// +kubebuilder:default:={deploy: true}
-	*MlPipelineUI `json:"mlpipelineUI,omitempty"`
+	// +kubebuilder:validation:Optional
+	*MlPipelineUI `json:"mlpipelineUI"`
+	// +kubebuilder:validation:Required
+	*ObjectStorage `json:"objectStorage"`
 }
 
 type APIServer struct {
@@ -117,9 +117,10 @@ type MlPipelineUI struct {
 	// +kubebuilder:default:=true
 	// +optional
 	Deploy        bool                  `json:"deploy"`
-	Image         string                `json:"image,omitempty"`
 	ConfigMapName string                `json:"configMap,omitempty"`
 	Resources     *ResourceRequirements `json:"resources,omitempty"`
+	// +kubebuilder:validation:Required
+	Image string `json:"image"`
 }
 
 type Database struct {
@@ -158,14 +159,15 @@ type ObjectStorage struct {
 type Minio struct {
 	// +kubebuilder:default:=true
 	// +optional
-	Deploy bool   `json:"deploy"`
-	Image  string `json:"image,omitempty"`
+	Deploy bool `json:"deploy"`
 	// +kubebuilder:default:=mlpipeline
 	Bucket              string `json:"bucket,omitempty"`
 	*S3CredentialSecret `json:"s3CredentialsSecret,omitempty"`
 	// +kubebuilder:default:="10Gi"
 	PVCSize   string                `json:"pvcSize,omitempty"`
 	Resources *ResourceRequirements `json:"resources,omitempty"`
+	// +kubebuilder:validation:Required
+	Image string `json:"image"`
 }
 
 // ResourceRequirements structures compute resource requirements.
@@ -182,11 +184,12 @@ type Resources struct {
 }
 
 type ExternalStorage struct {
-	Host                string `json:"host,omitempty"`
-	Port                string `json:"port,omitempty"`
-	Bucket              string `json:"bucket,omitempty"`
-	Scheme              string `json:"scheme,omitempty"`
-	*S3CredentialSecret `json:"s3CredentialsSecret,omitempty"`
+	// +kubebuilder:validation:Required
+	Host                string `json:"host"`
+	Port                string `json:"port"`
+	Bucket              string `json:"bucket"`
+	Scheme              string `json:"scheme"`
+	*S3CredentialSecret `json:"s3CredentialsSecret"`
 }
 
 type S3CredentialSecret struct {

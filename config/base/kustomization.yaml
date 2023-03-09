@@ -3,11 +3,11 @@ kind: Kustomization
 namespace: odh-applications
 namePrefix: data-science-pipelines-operator-
 resources:
-- ../crd
-- ../rbac
-- ../manager
-- ../prometheus
-- ../configmaps
+  - ../crd
+  - ../rbac
+  - ../manager
+  - ../prometheus
+  - ../configmaps
 
 # Parameterize images via KfDef in ODH
 configMapGenerator:
@@ -64,13 +64,6 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.IMAGES_MOVERESULTSIMAGE
-  - name: IMAGES_MLPIPELINEUI
-    objref:
-      kind: ConfigMap
-      name: dspo-parameters
-      apiVersion: v1
-    fieldref:
-      fieldpath: data.IMAGES_MLPIPELINEUI
   - name: IMAGES_MARIADB
     objref:
       kind: ConfigMap
@@ -78,13 +71,6 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.IMAGES_MARIADB
-  - name: IMAGES_MINIO
-    objref:
-      kind: ConfigMap
-      name: dspo-parameters
-      apiVersion: v1
-    fieldref:
-      fieldpath: data.IMAGES_MINIO
 configurations:
   - params.yaml
 images:

@@ -58,9 +58,7 @@ const (
 	ViewerCRDImagePath            = "Images.ViewerCRD"
 	APIServerCacheImagePath       = "Images.Cache"
 	APIServerMoveResultsImagePath = "Images.MoveResultsImage"
-	MlPipelineUIImagePath         = "Images.MlPipelineUI"
 	MariaDBImagePath              = "Images.MariaDB"
-	MinioImagePath                = "Images.Minio"
 )
 
 // Any required Configmap paths can be added here,
@@ -74,9 +72,7 @@ var requiredFields = []string{
 	ViewerCRDImagePath,
 	APIServerCacheImagePath,
 	APIServerMoveResultsImagePath,
-	MlPipelineUIImagePath,
 	MariaDBImagePath,
-	MinioImagePath,
 }
 
 func GetConfigRequiredFields() []string {

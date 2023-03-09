@@ -6,6 +6,4 @@ Images:
   ViewerCRD: $(IMAGES_VIEWERCRD)
   Cache: $(IMAGES_CACHE)
   MoveResultsImage: $(IMAGES_MOVERESULTSIMAGE)
-  MlPipelineUI: $(IMAGES_MLPIPELINEUI)
   MariaDB: $(IMAGES_MARIADB)
-  Minio: $(IMAGES_MINIO)

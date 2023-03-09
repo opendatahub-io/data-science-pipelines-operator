@@ -94,14 +94,14 @@ func (in *DSPASpec) DeepCopyInto(out *DSPASpec) {
 		*out = new(Database)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.ObjectStorage != nil {
-		in, out := &in.ObjectStorage, &out.ObjectStorage
-		*out = new(ObjectStorage)
-		(*in).DeepCopyInto(*out)
-	}
 	if in.MlPipelineUI != nil {
 		in, out := &in.MlPipelineUI, &out.MlPipelineUI
 		*out = new(MlPipelineUI)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.ObjectStorage != nil {
+		in, out := &in.ObjectStorage, &out.ObjectStorage
+		*out = new(ObjectStorage)
 		(*in).DeepCopyInto(*out)
 	}
 }

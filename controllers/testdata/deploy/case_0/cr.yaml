@@ -2,4 +2,9 @@ apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
 kind: DataSciencePipelinesApplication
 metadata:
   name: testdsp0
-spec: {}
+spec:
+  objectStorage:
+    minio:
+      image: minio:test0
+  mlpipelineUI:
+    image: frontend:test0

@@ -181,8 +181,6 @@ spec:
                     type: object
                 type: object
               mlpipelineUI:
-                default:
-                  deploy: true
                 properties:
                   configMap:
                     type: string
@@ -212,11 +210,10 @@ spec:
                             type: string
                         type: object
                     type: object
+                required:
+                - image
                 type: object
               objectStorage:
-                default:
-                  minio:
-                    deploy: true
                 properties:
                   externalStorage:
                     properties:
@@ -239,6 +236,12 @@ spec:
                         type: object
                       scheme:
                         type: string
+                    required:
+                    - bucket
+                    - host
+                    - port
+                    - s3CredentialsSecret
+                    - scheme
                     type: object
                   minio:
                     properties:
@@ -286,6 +289,8 @@ spec:
                           secretName:
                             type: string
                         type: object
+                    required:
+                    - image
                     type: object
                 type: object
               persistenceAgent:
@@ -390,6 +395,8 @@ spec:
                         type: object
                     type: object
                 type: object
+            required:
+            - objectStorage
             type: object
           status:
             properties:
