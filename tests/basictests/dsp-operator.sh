@@ -6,6 +6,7 @@ MY_DIR=$(readlink -f `dirname "${BASH_SOURCE[0]}"`)
 
 source ${MY_DIR}/../util
 RESOURCEDIR="${MY_DIR}/../resources/dsp-operator"
+DSPAPROJECT=${DSPAPROJECT:-"data-science-pipelines-test"}
 
 os::test::junit::declare_suite_start "$MY_SCRIPT"
 
@@ -25,21 +26,21 @@ function verify_data_science_pipelines_operator_install() {
 function create_and_verify_data_science_pipelines_resources() {
     header "Testing Data Science Pipelines installation with help of DSPO CR"
 
-    os::cmd::expect_success "oc apply -f ${RESOURCEDIR}/test-dspo-cr.yaml"
-    os::cmd::try_until_text "oc get crd datasciencepipelinesapplications.datasciencepipelinesapplications.opendatahub.io" "datasciencepipelinesapplications.datasciencepipelinesapplications.opendatahub.io" $odhdefaulttimeout $odhdefaultinterval
-    os::cmd::try_until_text "oc get pods -l component=data-science-pipelines --field-selector='status.phase!=Running,status.phase!=Completed' -o jsonpath='{$.items[*].metadata.name}' | wc -w" "0" $odhdefaulttimeout $odhdefaultinterval
-    running_pods=$(oc get pods -l component=data-science-pipelines --field-selector='status.phase=Running' -o jsonpath='{$.items[*].metadata.name}' | wc -w)
+    os::cmd::expect_success "oc apply -n ${DSPAPROJECT} -f ${RESOURCEDIR}/test-dspo-cr.yaml"
+    os::cmd::try_until_text "oc get crd -n ${DSPAPROJECT} datasciencepipelinesapplications.datasciencepipelinesapplications.opendatahub.io" "datasciencepipelinesapplications.datasciencepipelinesapplications.opendatahub.io" $odhdefaulttimeout $odhdefaultinterval
+    os::cmd::try_until_text "oc get pods -n ${DSPAPROJECT} -l component=data-science-pipelines --field-selector='status.phase!=Running,status.phase!=Completed' -o jsonpath='{$.items[*].metadata.name}' | wc -w" "0" $odhdefaulttimeout $odhdefaultinterval
+    running_pods=$(oc get pods -n ${DSPAPROJECT} -l component=data-science-pipelines --field-selector='status.phase=Running' -o jsonpath='{$.items[*].metadata.name}' | wc -w)
     os::cmd::expect_success "if [ "$running_pods" -gt "0" ]; then exit 0; else exit 1; fi"
 }
 
 function check_data_science_pipeline_route() {
     header "Checking Routes of Data Science Pipeline availability"
-    os::cmd::try_until_text "oc get pods -l app=ds-pipeline-ui-sample --field-selector='status.phase=Running' -o jsonpath='{$.items[*].metadata.name}' | wc -w" "1" $odhdefaulttimeout $odhdefaultinterval
+    os::cmd::try_until_text "oc get pods -n ${DSPAPROJECT}  -l app=ds-pipeline-ui-sample --field-selector='status.phase=Running' -o jsonpath='{$.items[*].metadata.name}' | wc -w" "1" $odhdefaulttimeout $odhdefaultinterval
 }
 
 function setup_monitoring() {
     header "Enabling User Workload Monitoring on the cluster"
-    os::cmd::expect_success "oc apply -f ${RESOURCEDIR}/enable-uwm.yaml"
+    os::cmd::expect_success "oc apply -n openshift-monitoring -f ${RESOURCEDIR}/enable-uwm.yaml"
 }
 
 function test_metrics() {
@@ -54,8 +55,8 @@ function test_metrics() {
 function create_pipeline() {
     header "Creating a pipeline from data science pipelines stack"
 
-    ROUTE=$(oc get route ds-pipeline-ui-sample --template={{.spec.host}})
-    SA_TOKEN=$(oc create token ds-pipeline-ui-sample)
+    ROUTE=$(oc get route -n ${DSPAPROJECT}  ds-pipeline-ui-sample --template={{.spec.host}})
+    SA_TOKEN=$(oc create token ds-pipeline-ui-sample -n ${DSPAPROJECT})
     PIPELINE_ID=$(curl -s -k -H "Authorization: Bearer ${SA_TOKEN}" -F "uploadfile=@${RESOURCEDIR}/test-pipeline-run.yaml" "https://${ROUTE}/apis/v1beta1/pipelines/upload" | jq -r .id)
     os::cmd::try_until_not_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' https://${ROUTE}/apis/v1beta1/pipelines/${PIPELINE_ID} | jq" "null" $odhdefaulttimeout $odhdefaultinterval
 }
@@ -105,6 +106,7 @@ function delete_pipeline() {
     os::cmd::try_until_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' -X DELETE https://${ROUTE}/apis/v1beta1/pipelines/${PIPELINE_ID} | jq" "" $odhdefaulttimeout $odhdefaultinterval
 }
 
+oc new-project ${DSPAPROJECT}
 
 echo "Testing Data Science Pipelines Operator functionality"
 verify_data_science_pipelines_operator_install
@@ -112,10 +114,6 @@ create_and_verify_data_science_pipelines_resources
 check_data_science_pipeline_route
 setup_monitoring
 test_metrics
-
-echo "Debugging pause for 3 hours"
-sleep 180m
-
 create_pipeline
 verify_pipeline_availabilty
 create_run
