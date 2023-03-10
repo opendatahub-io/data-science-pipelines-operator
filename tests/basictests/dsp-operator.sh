@@ -56,7 +56,7 @@ function create_pipeline() {
 
     ROUTE=$(oc get route ds-pipeline-ui-sample --template={{.spec.host}})
     SA_TOKEN=$(oc create token ds-pipeline-ui-sample)
-    PIPELINE_ID=$(curl -s -k -H "Authorization: Bearer ${SA_TOKEN}" -F "uploadfile=@${RESOURCEDIR}/test-pipeline-run.yaml" https://${ROUTE}/apis/v1beta1/pipelines/upload | jq -r .id)
+    PIPELINE_ID=$(curl -s -k -H "Authorization: Bearer ${SA_TOKEN}" -F "uploadfile=@${RESOURCEDIR}/test-pipeline-run.yaml" "https://${ROUTE}/apis/v1beta1/pipelines/upload" | jq -r .id)
     os::cmd::try_until_not_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' https://${ROUTE}/apis/v1beta1/pipelines/${PIPELINE_ID} | jq" "null" $odhdefaulttimeout $odhdefaultinterval
 }
 
