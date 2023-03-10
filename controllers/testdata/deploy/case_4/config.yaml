@@ -1,0 +1,9 @@
+Images:
+  ApiServer: this-apiserver-image-from-config-should-not-be-used:test4
+  Artifact: artifact-manager:test4
+  PersistentAgent: persistenceagent:test4
+  ScheduledWorkflow: scheduledworkflow:test4
+  ViewerCRD: viewercontroller:test4
+  Cache: ubi-minimal:test4
+  MoveResultsImage: busybox:test4
+  MariaDB: mariadb:test4

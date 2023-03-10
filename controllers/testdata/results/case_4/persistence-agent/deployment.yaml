@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ds-pipeline-persistenceagent-testdsp4
+  namespace: default
+  labels:
+    app: ds-pipeline-persistenceagent-testdsp4
+    component: data-science-pipelines
+spec:
+  selector:
+    matchLabels:
+      app: ds-pipeline-persistenceagent-testdsp4
+      component: data-science-pipelines
+  template:
+    metadata:
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+      labels:
+        app: ds-pipeline-persistenceagent-testdsp4
+        component: data-science-pipelines
+    spec:
+      containers:
+        - env:
+            - name: NAMESPACE
+              value: "default"
+          image: persistenceagent:test4
+          imagePullPolicy: IfNotPresent
+          name: ds-pipeline-persistenceagent
+          command:
+            - persistence_agent
+            - "--logtostderr=true"
+            - "--ttlSecondsAfterWorkflowFinish=86400"
+            - "--numWorker=5"
+            - "--mlPipelineAPIServerName=ds-pipeline-testdsp4"
+            - "--namespace=testdsp4"
+            - "--mlPipelineServiceHttpPort=8888"
+            - "--mlPipelineServiceGRPCPort=8887"
+          livenessProbe:
+            exec:
+              command:
+                - test
+                - -x
+                - persistence_agent
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 2
+          readinessProbe:
+            exec:
+              command:
+                - test
+                - -x
+                - persistence_agent
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+          resources:
+            requests:
+              cpu: 1233m
+              memory: 1Gi
+            limits:
+              cpu: 2524m
+              memory: 5Gi
+      serviceAccountName: ds-pipeline-persistenceagent-testdsp4
