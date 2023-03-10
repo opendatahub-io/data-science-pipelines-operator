@@ -112,6 +112,10 @@ create_and_verify_data_science_pipelines_resources
 check_data_science_pipeline_route
 setup_monitoring
 test_metrics
+
+echo "Debugging pause for 3 hours"
+sleep 180m
+
 create_pipeline
 verify_pipeline_availabilty
 create_run
