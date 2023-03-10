@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1beta1
 kind: PipelineRun
 metadata:
-  name: conditional-execution-pipeline
+  name: conditional-execution-pipeline-test
   annotations:
     tekton.dev/output_artifacts: '{"flip-coin": [{"key": "artifacts/$PIPELINERUN/flip-coin/Output.tgz",
       "name": "flip-coin-Output", "path": "/tmp/outputs/Output/data"}], "random-num":
