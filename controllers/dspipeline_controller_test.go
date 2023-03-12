@@ -31,12 +31,15 @@ import (
 )
 
 type TestCase struct {
-	Description string
-	Path        string
+	Description         string
+	Path                string
+	AdditionalResources map[string][]string
 }
 
 type CaseComponentResources map[string]ResourcePath
 type ResourcePath map[string]string
+
+const SecretKind = "Secret"
 
 var cases = map[string]TestCase{
 	"case_0": {
@@ -54,6 +57,12 @@ var cases = map[string]TestCase{
 	"case_3": {
 		Description: "custom Artifact configmap is provided, custom images override defaults",
 		Path:        "./testdata/deploy/case_3/cr.yaml",
+		AdditionalResources: map[string][]string{
+			SecretKind: {
+				"./testdata/deploy/case_3/secret1.yaml",
+				"./testdata/deploy/case_3/secret2.yaml",
+			},
+		},
 	},
 }
 var deploymentsCreated = CaseComponentResources{
@@ -72,19 +81,14 @@ var deploymentsCreated = CaseComponentResources{
 		"scheduledWorkflowDeployment": "./testdata/results/case_2/scheduled-workflow/deployment.yaml",
 		"viewerCrdDeployment":         "./testdata/results/case_2/viewer-crd/deployment.yaml",
 	},
+	"case_3": {
+		"apiserver": "./testdata/results/case_3/apiserver/deployment.yaml",
+	},
 }
 
 var deploymentsNotCreated = CaseComponentResources{
 	"case_0": {
 		"viewerCrdDeployment": "./testdata/results/case_0/viewer-crd/deployment.yaml",
-	},
-	"case_1": {
-		"apiserver":                   "./testdata/results/case_1/apiserver/deployment.yaml",
-		"mariadb":                     "./testdata/results/case_1/mariadb/deployment.yaml",
-		"minioDeployment":             "./testdata/results/case_1/minio/deployment.yaml",
-		"mlpipelinesUIDeployment":     "./testdata/results/case_1/mlpipelines-ui/deployment.yaml",
-		"persistenceAgentDeployment":  "./testdata/results/case_1/persistence-agent/deployment.yaml",
-		"scheduledWorkflowDeployment": "./testdata/results/case_1/scheduled-workflow/deployment.yaml",
 	},
 }
 
@@ -94,6 +98,13 @@ var configMapsCreated = CaseComponentResources{
 	},
 	"case_2": {
 		"apiserver": "./testdata/results/case_2/apiserver/configmap_artifact_script.yaml",
+	},
+}
+
+var secretsCreated = CaseComponentResources{
+	"case_3": {
+		"database": "./testdata/results/case_3/database/secret.yaml",
+		"storage":  "./testdata/results/case_3/storage/secret.yaml",
 	},
 }
 
@@ -113,6 +124,19 @@ func deployDSP(path string, opts mf.Option) {
 	Eventually(func() error {
 		namespacedNamed := types.NamespacedName{Name: dsp.Name, Namespace: WorkingNamespace}
 		return k8sClient.Get(ctx, namespacedNamed, dsp2)
+	}, timeout, interval).ShouldNot(HaveOccurred())
+}
+
+func deploySecret(path string, opts mf.Option) {
+	secret := &v1.Secret{}
+	err := convertToStructuredResource(path, secret, opts)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
+
+	secret2 := &v1.Secret{}
+	Eventually(func() error {
+		namespacedNamed := types.NamespacedName{Name: secret.Name, Namespace: WorkingNamespace}
+		return k8sClient.Get(ctx, namespacedNamed, secret2)
 	}, timeout, interval).ShouldNot(HaveOccurred())
 }
 
@@ -166,6 +190,20 @@ func compareConfigMaps(path string, opts mf.Option) {
 	}, timeout, interval).ShouldNot(HaveOccurred())
 
 	Expect(testutil.ConfigMapsAreEqual(*expectedConfigMap, *actualConfigMap)).Should(BeTrue())
+
+}
+
+func compareSecrets(path string, opts mf.Option) {
+	expectedSecret := &v1.Secret{}
+	Expect(convertToStructuredResource(path, expectedSecret, opts)).NotTo(HaveOccurred())
+
+	actualSecret := &v1.Secret{}
+	Eventually(func() error {
+		namespacedNamed := types.NamespacedName{Name: expectedSecret.Name, Namespace: WorkingNamespace}
+		return k8sClient.Get(ctx, namespacedNamed, actualSecret)
+	}, timeout, interval).ShouldNot(HaveOccurred())
+
+	Expect(testutil.SecretsAreEqual(*expectedSecret, *actualSecret)).Should(BeTrue())
 
 }
 
@@ -225,7 +263,18 @@ var _ = Describe("The DS Pipeline Controller", Ordered, func() {
 				err := viper.ReadInConfig()
 				Expect(err).ToNot(HaveOccurred(), "Failed to read config file")
 				deployDSP(dspPath, opts)
+				// Deploy any additional resources for this test case
+				if cases[testcase].AdditionalResources != nil {
+					for res, paths := range cases[testcase].AdditionalResources {
+						if res == SecretKind {
+							for _, p := range paths {
+								deploySecret(p, opts)
+							}
+						}
+					}
+				}
 			})
+
 			expectedDeployments := deploymentsCreated[testcase]
 			for component := range expectedDeployments {
 				component := component
@@ -248,6 +297,13 @@ var _ = Describe("The DS Pipeline Controller", Ordered, func() {
 					compareConfigMaps(configMapsCreated[testcase][component], opts)
 				})
 			}
+
+			for component := range secretsCreated[testcase] {
+				It(fmt.Sprintf("[%s] Should create secrets for component %s", testcase, component), func() {
+					compareSecrets(secretsCreated[testcase][component], opts)
+				})
+			}
+
 			for component := range configMapsNotCreated[testcase] {
 				It(fmt.Sprintf("[%s] Should NOT create configmaps for component %s", testcase, component), func() {
 					configMapDoesNotExists(configMapsNotCreated[testcase][component], opts)

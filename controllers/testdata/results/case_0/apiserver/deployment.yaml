@@ -74,7 +74,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   key: "password"
-                  name: "mariadb-testdsp0"
+                  name: "ds-pipeline-db-testdsp0"
             - name: DBCONFIG_DBNAME
               value: "mlpipeline"
             - name: DBCONFIG_HOST
