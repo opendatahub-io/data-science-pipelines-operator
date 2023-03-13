@@ -28,7 +28,7 @@ function create_and_verify_data_science_pipelines_resources() {
 
     os::cmd::expect_success "oc apply -n ${DSPAPROJECT} -f ${RESOURCEDIR}/test-dspo-cr.yaml"
     os::cmd::try_until_text "oc get crd -n ${DSPAPROJECT} datasciencepipelinesapplications.datasciencepipelinesapplications.opendatahub.io" "datasciencepipelinesapplications.datasciencepipelinesapplications.opendatahub.io" $odhdefaulttimeout $odhdefaultinterval
-    os::cmd::try_until_text "oc get pods -n ${DSPAPROJECT} -l component=data-science-pipelines --field-selector='status.phase!=Running,status.phase!=Completed' -o jsonpath='{$.items[*].metadata.name}' | wc -w" "0" $odhdefaulttimeout $odhdefaultinterval
+    os::cmd::try_until_text "oc -n ${DSPAPROJECT} get pods -l app=ds-pipeline-sample -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}'" "True" $odhdefaulttimeout $odhdefaultinterval
     running_pods=$(oc get pods -n ${DSPAPROJECT} -l component=data-science-pipelines --field-selector='status.phase=Running' -o jsonpath='{$.items[*].metadata.name}' | wc -w)
     os::cmd::expect_success "if [ "$running_pods" -gt "0" ]; then exit 0; else exit 1; fi"
 }
@@ -115,8 +115,8 @@ check_data_science_pipeline_route
 setup_monitoring
 test_metrics
 
-echo "Debugging pause for 3 hours"
-sleep 180m
+#echo "Debugging pause for 3 hours"
+#sleep 180m
 
 create_pipeline
 verify_pipeline_availabilty
