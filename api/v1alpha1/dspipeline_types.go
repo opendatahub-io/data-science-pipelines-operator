@@ -40,40 +40,40 @@ type DSPASpec struct {
 
 type APIServer struct {
 	// +kubebuilder:default:=true
-	// +optional
+	// +kubebuilder:validation:Optional
 	Deploy bool   `json:"deploy"`
 	Image  string `json:"image,omitempty"`
 	// +kubebuilder:default:=true
-	// +optional
+	// +kubebuilder:validation:Optional
 	ApplyTektonCustomResource bool `json:"applyTektonCustomResource"`
 	// +kubebuilder:default:=false
-	// +optional
+	// +kubebuilder:validation:Optional
 	ArchiveLogs              bool   `json:"archiveLogs"`
 	ArtifactImage            string `json:"artifactImage,omitempty"`
 	CacheImage               string `json:"cacheImage,omitempty"`
 	MoveResultsImage         string `json:"moveResultsImage,omitempty"`
 	*ArtifactScriptConfigMap `json:"artifactScriptConfigMap,omitempty"`
 	// +kubebuilder:default:=true
-	// +optional
+	// +kubebuilder:validation:Optional
 	InjectDefaultScript bool `json:"injectDefaultScript"`
 	// +kubebuilder:default:=true
-	// +optional
+	// +kubebuilder:validation:Optional
 	StripEOF bool `json:"stripEOF"`
 	// +kubebuilder:default:=Cancelled
 	TerminateStatus string `json:"terminateStatus,omitempty"`
 	// +kubebuilder:default:=true
-	// +optional
+	// +kubebuilder:validation:Optional
 	TrackArtifacts bool `json:"trackArtifacts"`
 	// +kubebuilder:default:=120
 	DBConfigConMaxLifetimeSec int `json:"dbConfigConMaxLifetimeSec,omitempty"`
 	// +kubebuilder:default:=true
-	// +optional
+	// +kubebuilder:validation:Optional
 	CollectMetrics bool `json:"collectMetrics"`
 	// +kubebuilder:default:=true
-	// +optional
+	// +kubebuilder:validation:Optional
 	EnableRoute bool `json:"enableOauth"`
 	// +kubebuilder:default:=true
-	// +optional
+	// +kubebuilder:validation:Optional
 	AutoUpdatePipelineDefaultVersion bool                  `json:"autoUpdatePipelineDefaultVersion"`
 	Resources                        *ResourceRequirements `json:"resources,omitempty"`
 }
@@ -85,7 +85,7 @@ type ArtifactScriptConfigMap struct {
 
 type PersistenceAgent struct {
 	// +kubebuilder:default:=true
-	// +optional
+	// +kubebuilder:validation:Optional
 	Deploy bool   `json:"deploy"`
 	Image  string `json:"image,omitempty"`
 	// +kubebuilder:default:=2
@@ -95,7 +95,7 @@ type PersistenceAgent struct {
 
 type ScheduledWorkflow struct {
 	// +kubebuilder:default:=true
-	// +optional
+	// +kubebuilder:validation:Optional
 	Deploy bool   `json:"deploy"`
 	Image  string `json:"image,omitempty"`
 	// +kubebuilder:default:=UTC
@@ -105,7 +105,7 @@ type ScheduledWorkflow struct {
 
 type ViewerCRD struct {
 	// +kubebuilder:default:=false
-	// +optional
+	// +kubebuilder:validation:Optional
 	Deploy bool   `json:"deploy"`
 	Image  string `json:"image,omitempty"`
 	// +kubebuilder:default:=50
@@ -115,7 +115,7 @@ type ViewerCRD struct {
 
 type MlPipelineUI struct {
 	// +kubebuilder:default:=true
-	// +optional
+	// +kubebuilder:validation:Optional
 	Deploy        bool                  `json:"deploy"`
 	ConfigMapName string                `json:"configMap,omitempty"`
 	Resources     *ResourceRequirements `json:"resources,omitempty"`
@@ -130,7 +130,7 @@ type Database struct {
 
 type MariaDB struct {
 	// +kubebuilder:default:=true
-	// +optional
+	// +kubebuilder:validation:Optional
 	Deploy bool   `json:"deploy"`
 	Image  string `json:"image,omitempty"`
 	// +kubebuilder:default:=mlpipeline
@@ -158,7 +158,7 @@ type ObjectStorage struct {
 
 type Minio struct {
 	// +kubebuilder:default:=true
-	// +optional
+	// +kubebuilder:validation:Optional
 	Deploy bool `json:"deploy"`
 	// +kubebuilder:default:=mlpipeline
 	Bucket              string `json:"bucket,omitempty"`
