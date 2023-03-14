@@ -19,6 +19,8 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"reflect"
+
 	"github.com/go-logr/logr"
 	mf "github.com/manifestival/manifestival"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
@@ -28,6 +30,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -197,22 +200,56 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, nil
 	}
 
-	usingCustomDB := params.UsingExternalDB(dspa)
+	// Initialize conditions
+	conditions := []metav1.Condition{}
 
+	usingCustomDB := params.UsingExternalDB(dspa)
+	databaseReady := r.buildCondition("DatabaseReady", dspa.Generation, "DatabaseReady")
 	if !usingCustomDB {
+
 		err = r.ReconcileDatabase(ctx, dspa, params)
 		if err != nil {
+			databaseReady.Status = metav1.ConditionFalse
+			databaseReady.Reason = "DataBaseFailedToDeploy"
 			return ctrl.Result{}, err
 		}
+
+		if !r.isDeploymentAvailable(ctx, dspa, "mariadb") {
+			databaseReady.Status = metav1.ConditionFalse
+			databaseReady.Reason = "DataBaseFailedToDeploy"
+
+			err = r.Status().Update(ctx, dspa)
+			if err != nil {
+				log.Info(err.Error())
+				return ctrl.Result{}, err
+			}
+		}
+
+		conditions = append(conditions, databaseReady)
 	}
 
 	usingCustomStorage := params.UsingExternalStorage(dspa)
-
+	objectStorageReady := r.buildCondition("ObjectStorageReady", dspa.Generation, "ObjectStorageReady")
 	if !usingCustomStorage {
 		err := r.ReconcileStorage(ctx, dspa, params)
 		if err != nil {
+			objectStorageReady.Status = metav1.ConditionFalse
+			objectStorageReady.Reason = "ObjectStorageFailedToDeploy"
 			return ctrl.Result{}, err
 		}
+
+		if !r.isDeploymentAvailable(ctx, dspa, "minio") {
+			objectStorageReady.Status = metav1.ConditionFalse
+			objectStorageReady.Reason = "ObjectStorageFailedToDeploy"
+
+			err = r.Status().Update(ctx, dspa)
+			if err != nil {
+				log.Info(err.Error())
+				return ctrl.Result{}, err
+			}
+		}
+
+		conditions = append(conditions, objectStorageReady)
 	}
 
 	err = r.ReconcileCommon(dspa, params)
@@ -220,32 +257,144 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
+	apiServerReady := r.buildCondition("ApiServerReady", dspa.Generation, "MinimumReplicasAvailable")
 	err = r.ReconcileAPIServer(ctx, dspa, params)
 	if err != nil {
+		apiServerReady.Status = metav1.ConditionFalse
 		return ctrl.Result{}, err
 	}
 
+	if !r.isDeploymentAvailable(ctx, dspa, "ds-pipeline") {
+		apiServerReady.Status = metav1.ConditionFalse
+
+		err = r.Status().Update(ctx, dspa)
+		if err != nil {
+			log.Info(err.Error())
+			return ctrl.Result{}, err
+		}
+	}
+	conditions = append(conditions, apiServerReady)
+
+	persistenceAgentReady := r.buildCondition("PersistenceAgentReady", dspa.Generation, "MinimumReplicasAvailable")
 	err = r.ReconcilePersistenceAgent(dspa, params)
 	if err != nil {
+		persistenceAgentReady.Status = metav1.ConditionFalse
 		return ctrl.Result{}, err
 	}
 
+	if !r.isDeploymentAvailable(ctx, dspa, "ds-pipeline-persistenceagent") {
+		persistenceAgentReady.Status = metav1.ConditionFalse
+
+		err = r.Status().Update(ctx, dspa)
+		if err != nil {
+			log.Info(err.Error())
+			return ctrl.Result{}, err
+		}
+	}
+	conditions = append(conditions, persistenceAgentReady)
+
+	scheduledWorkflowReady := r.buildCondition("ScheduledWorkflowReady", dspa.Generation, "MinimumReplicasAvailable")
 	err = r.ReconcileScheduledWorkflow(dspa, params)
 	if err != nil {
+		scheduledWorkflowReady.Status = metav1.ConditionFalse
 		return ctrl.Result{}, err
 	}
 
+	if !r.isDeploymentAvailable(ctx, dspa, "ds-pipeline-scheduledworkflow") {
+		scheduledWorkflowReady.Status = metav1.ConditionFalse
+
+		err = r.Status().Update(ctx, dspa)
+		if err != nil {
+			log.Info(err.Error())
+			return ctrl.Result{}, err
+		}
+	}
+	conditions = append(conditions, scheduledWorkflowReady)
+
+	userInterfaceReady := r.buildCondition("UserInterfaceReady", dspa.Generation, "MinimumReplicasAvailable")
 	err = r.ReconcileUI(dspa, params)
 	if err != nil {
+		userInterfaceReady.Status = metav1.ConditionFalse
 		return ctrl.Result{}, err
 	}
+
+	if !r.isDeploymentAvailable(ctx, dspa, "ds-pipeline-ui") {
+		userInterfaceReady.Status = metav1.ConditionFalse
+
+		err = r.Status().Update(ctx, dspa)
+		if err != nil {
+			log.Info(err.Error())
+			return ctrl.Result{}, err
+		}
+	}
+	conditions = append(conditions, userInterfaceReady)
 
 	err = r.ReconcileViewerCRD(dspa, params)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
+	log.Info("Updating CR status")
+
+	crReady := metav1.Condition{}
+	crReady.Type = "Ready"
+
+	// Compute Ready Logic for the CR
+	if ((apiServerReady.Status == metav1.ConditionTrue) &&
+		(persistenceAgentReady.Status == metav1.ConditionTrue) &&
+		(scheduledWorkflowReady.Status == metav1.ConditionTrue) &&
+		(databaseReady.Status == metav1.ConditionTrue) &&
+		(objectStorageReady.Status == metav1.ConditionTrue)) &&
+		(userInterfaceReady.Status == metav1.ConditionTrue || (userInterfaceReady.Status == metav1.ConditionFalse && !dspa.Spec.MlPipelineUI.Deploy)) {
+		crReady.Status = metav1.ConditionTrue
+	} else {
+		crReady.Status = metav1.ConditionFalse
+	}
+
+	crReady.ObservedGeneration = dspa.Generation
+	crReady.LastTransitionTime = metav1.Now()
+	crReady.Reason = "MinimumReplicasAvailable"
+	conditions = append(conditions, crReady)
+
+	if !reflect.DeepEqual(conditions, dspa.Status.Conditions) {
+		dspa.Status.Conditions = conditions
+	}
+
+	err = r.Status().Update(ctx, dspa)
+	if err != nil {
+		log.Info(err.Error())
+		return ctrl.Result{}, err
+	}
+
 	return ctrl.Result{}, nil
+}
+
+func (r *DSPAReconciler) buildCondition(typeStr string, generation int64, reason string) metav1.Condition {
+	condition := metav1.Condition{}
+	condition.Type = typeStr
+	condition.LastTransitionTime = metav1.Now()
+	condition.ObservedGeneration = generation
+	condition.Status = metav1.ConditionTrue
+	condition.Reason = reason
+
+	return condition
+}
+
+func (r *DSPAReconciler) isDeploymentAvailable(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication, name string) bool {
+	found := &appsv1.Deployment{}
+
+	// Every Deployment in DSPA is the name followed by the DSPA CR name
+	component := name + "-" + dspa.Name
+
+	err := r.Get(ctx, types.NamespacedName{Name: component, Namespace: dspa.Namespace}, found)
+	if err == nil {
+		for _, s := range found.Status.Conditions {
+			if s.Type == "Available" && s.Status == corev1.ConditionTrue {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // SetupWithManager sets up the controller with the Manager.
