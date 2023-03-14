@@ -37,11 +37,13 @@ function create_and_verify_data_science_pipelines_resources() {
 
 function check_data_science_pipeline_route() {
     header "Checking Routes of Data Science Pipeline availability"
+
     os::cmd::try_until_text "oc get pods -n ${DSPAPROJECT}  -l app=ds-pipeline-ui-sample --field-selector='status.phase=Running' -o jsonpath='{$.items[*].metadata.name}' | wc -w" "1" $odhdefaulttimeout $odhdefaultinterval
 }
 
 function setup_monitoring() {
     header "Enabling User Workload Monitoring on the cluster"
+
     os::cmd::expect_success "oc apply -n openshift-monitoring -f ${RESOURCEDIR}/enable-uwm.yaml"
 }
 
@@ -55,26 +57,24 @@ function test_metrics() {
 }
 
 function fetch_runs() {
+    header "Fetch the dsp route and verify it works"
+
     ROUTE=$(oc get route -n ${DSPAPROJECT}  ds-pipeline-ui-sample --template={{.spec.host}})
     SA_TOKEN=$(oc create token ds-pipeline-ui-sample -n ${DSPAPROJECT})
 
-    echo $ROUTE
-    echo $SA_TOKEN
-
-    oc -n ${DSPAPROJECT} get pods
     os::cmd::try_until_text "curl -s -k -H \"Authorization: Bearer ${SA_TOKEN}\" 'https://${ROUTE}/apis/v1beta1/runs'" "{}" $odhdefaulttimeout $odhdefaultinterval
-    oc -n ${DSPAPROJECT} get pods
 }
 
 function create_pipeline() {
     header "Creating a pipeline from data science pipelines stack"
+
     PIPELINE_ID=$(curl -s -k -H "Authorization: Bearer ${SA_TOKEN}" -F "uploadfile=@${RESOURCEDIR}/test-pipeline-run.yaml" "https://${ROUTE}/apis/v1beta1/pipelines/upload" | jq -r .id)
-    echo $PIPELINE_ID
     os::cmd::try_until_not_text "curl -s -k -H \"Authorization: Bearer ${SA_TOKEN}\" 'https://${ROUTE}/apis/v1beta1/pipelines/${PIPELINE_ID}' | jq" "null" $odhdefaulttimeout $odhdefaultinterval
 }
 
 function verify_pipeline_availabilty() {
     header "verify the pipelines exists"
+
     os::cmd::try_until_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' https://${ROUTE}/apis/v1beta1/pipelines | jq '.total_size'" "2" $odhdefaulttimeout $odhdefaultinterval
 }
 
@@ -99,22 +99,26 @@ EOF
 
 function verify_run_availabilty() {
     header "verify the run exists"
+
     os::cmd::try_until_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' https://${ROUTE}/apis/v1beta1/runs | jq '.total_size'" "1" $odhdefaulttimeout $odhdefaultinterval
 }
 
 function check_run_status() {
     header "Checking run status"
+
     os::cmd::try_until_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' https://${ROUTE}/apis/v1beta1/runs/${RUN_ID} | jq '.run.status'" "Completed" $odhdefaulttimeout $odhdefaultinterval
 }
 
 function delete_runs() {
     header "Deleting the runs"
+
     os::cmd::try_until_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' -X DELETE https://${ROUTE}/apis/v1beta1/runs/${RUN_ID} | jq" "" $odhdefaulttimeout $odhdefaultinterval
     os::cmd::try_until_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' https://${ROUTE}/apis/v1beta1/runs/${RUN_ID} | jq '.code'" "5" $odhdefaulttimeout $odhdefaultinterval
 }
 
 function delete_pipeline() {
     header "Deleting the pipeline"
+
     os::cmd::try_until_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' -X DELETE https://${ROUTE}/apis/v1beta1/pipelines/${PIPELINE_ID} | jq" "" $odhdefaulttimeout $odhdefaultinterval
 }
 
@@ -126,10 +130,6 @@ create_and_verify_data_science_pipelines_resources
 check_data_science_pipeline_route
 setup_monitoring
 test_metrics
-
-#echo "Debugging pause for 3 hours"
-#sleep 180m
-
 fetch_runs
 create_pipeline
 verify_pipeline_availabilty
