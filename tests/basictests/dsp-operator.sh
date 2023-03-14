@@ -52,13 +52,21 @@ function test_metrics() {
     os::cmd::try_until_text "oc -n openshift-monitoring exec -c prometheus prometheus-k8s-0 -- curl -k -H \"Authorization: Bearer $monitoring_token\" 'https://thanos-querier.openshift-monitoring:9091/api/v1/query' -d 'query=controller_runtime_max_concurrent_reconciles{namespace=\"opendatahub\"}' | jq '.data.result[0].value[1]'" "1" $odhdefaulttimeout $odhdefaultinterval
 }
 
-function create_pipeline() {
-    header "Creating a pipeline from data science pipelines stack"
-
+function fetch_runs() {
     ROUTE=$(oc get route -n ${DSPAPROJECT}  ds-pipeline-ui-sample --template={{.spec.host}})
     SA_TOKEN=$(oc create token ds-pipeline-ui-sample -n ${DSPAPROJECT})
+    echo $ROUTE
+    echo $SA_TOKEN
+    oc -n ${DSPAPROJECT} get pods
+    os::cmd::try_until_text "curl -s -k -H \"Authorization: Bearer ${SA_TOKEN}\" 'https://${ROUTE}/apis/v1beta1/runs'" "{}" $odhdefaulttimeout $odhdefaultinterval
+    oc -n ${DSPAPROJECT} get pods
+}
+
+function create_pipeline() {
+    header "Creating a pipeline from data science pipelines stack"
     PIPELINE_ID=$(curl -s -k -H "Authorization: Bearer ${SA_TOKEN}" -F "uploadfile=@${RESOURCEDIR}/test-pipeline-run.yaml" "https://${ROUTE}/apis/v1beta1/pipelines/upload" | jq -r .id)
-    os::cmd::try_until_not_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' https://${ROUTE}/apis/v1beta1/pipelines/${PIPELINE_ID} | jq" "null" $odhdefaulttimeout $odhdefaultinterval
+    echo $PIPELINE_ID
+    os::cmd::try_until_not_text "curl -s -k -H \"Authorization: Bearer ${SA_TOKEN}\" 'https://${ROUTE}/apis/v1beta1/pipelines/${PIPELINE_ID}' | jq" "null" $odhdefaulttimeout $odhdefaultinterval
 }
 
 function verify_pipeline_availabilty() {
@@ -118,6 +126,7 @@ test_metrics
 #echo "Debugging pause for 3 hours"
 #sleep 180m
 
+fetch_runs
 create_pipeline
 verify_pipeline_availabilty
 create_run
