@@ -63,6 +63,18 @@ const (
 	MariaDBImagePath              = "Images.MariaDB"
 )
 
+const (
+	DatabaseReady               = "DatabaseReady"
+	DataBaseFailedToDeploy      = "DataBaseFailedToDeploy"
+	ObjectStorageReady          = "ObjectStorageReady"
+	ObjectStorageFailedToDeploy = "ObjectStorageFailedToDeploy"
+	APIServerReady              = "APIServerReady"
+	PersistenceAgentReady       = "PersistenceAgentReady"
+	ScheduledWorkflowReady      = "ScheduledWorkflowReady"
+	UserInterfaceReady          = "UserInterfaceReady"
+	CrReady                     = "Ready"
+)
+
 // Any required Configmap paths can be added here,
 // they will be automatically included for required
 // validation check
