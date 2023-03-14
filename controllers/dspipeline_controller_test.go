@@ -17,6 +17,7 @@ package controllers
 
 import (
 	"fmt"
+
 	mfc "github.com/manifestival/controller-runtime-client"
 	mf "github.com/manifestival/manifestival"
 	. "github.com/onsi/ginkgo/v2"
@@ -55,6 +56,10 @@ var cases = map[string]TestCase{
 		Description: "custom Artifact configmap is provided, custom images override defaults",
 		Path:        "./testdata/deploy/case_3/cr.yaml",
 	},
+	"case_4": {
+		Description: "prove that the CR fields are used instead of config fields",
+		Path:        "./testdata/deploy/case_4/cr.yaml",
+	},
 }
 var deploymentsCreated = CaseComponentResources{
 	"case_0": {
@@ -71,6 +76,15 @@ var deploymentsCreated = CaseComponentResources{
 		"persistenceAgentDeployment":  "./testdata/results/case_2/persistence-agent/deployment.yaml",
 		"scheduledWorkflowDeployment": "./testdata/results/case_2/scheduled-workflow/deployment.yaml",
 		"viewerCrdDeployment":         "./testdata/results/case_2/viewer-crd/deployment.yaml",
+	},
+	"case_4": {
+		"apiserver":                   "./testdata/results/case_4/apiserver/deployment.yaml",
+		"mariadb":                     "./testdata/results/case_4/mariadb/deployment.yaml",
+		"minioDeployment":             "./testdata/results/case_4/minio/deployment.yaml",
+		"mlpipelinesUIDeployment":     "./testdata/results/case_4/mlpipelines-ui/deployment.yaml",
+		"persistenceAgentDeployment":  "./testdata/results/case_4/persistence-agent/deployment.yaml",
+		"scheduledWorkflowDeployment": "./testdata/results/case_4/scheduled-workflow/deployment.yaml",
+		"viewerCrdDeployment":         "./testdata/results/case_4/viewer-crd/deployment.yaml",
 	},
 }
 
