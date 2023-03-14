@@ -26,6 +26,8 @@ function verify_data_science_pipelines_operator_install() {
 function create_and_verify_data_science_pipelines_resources() {
     header "Testing Data Science Pipelines installation with help of DSPO CR"
 
+    os::cmd::expect_success "oc new-project ${DSPAPROJECT} || oc project ${DSPAPROJECT};"
+
     os::cmd::expect_success "oc apply -n ${DSPAPROJECT} -f ${RESOURCEDIR}/test-dspo-cr.yaml"
     os::cmd::try_until_text "oc get crd -n ${DSPAPROJECT} datasciencepipelinesapplications.datasciencepipelinesapplications.opendatahub.io" "datasciencepipelinesapplications.datasciencepipelinesapplications.opendatahub.io" $odhdefaulttimeout $odhdefaultinterval
     os::cmd::try_until_text "oc -n ${DSPAPROJECT} get pods -l app=ds-pipeline-sample -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}'" "True" $odhdefaulttimeout $odhdefaultinterval
@@ -55,8 +57,10 @@ function test_metrics() {
 function fetch_runs() {
     ROUTE=$(oc get route -n ${DSPAPROJECT}  ds-pipeline-ui-sample --template={{.spec.host}})
     SA_TOKEN=$(oc create token ds-pipeline-ui-sample -n ${DSPAPROJECT})
+
     echo $ROUTE
     echo $SA_TOKEN
+
     oc -n ${DSPAPROJECT} get pods
     os::cmd::try_until_text "curl -s -k -H \"Authorization: Bearer ${SA_TOKEN}\" 'https://${ROUTE}/apis/v1beta1/runs'" "{}" $odhdefaulttimeout $odhdefaultinterval
     oc -n ${DSPAPROJECT} get pods
@@ -71,7 +75,7 @@ function create_pipeline() {
 
 function verify_pipeline_availabilty() {
     header "verify the pipelines exists"
-    os::cmd::try_until_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' https://${ROUTE}/apis/v1beta1/pipelines | jq '.total_size'" "1" $odhdefaulttimeout $odhdefaultinterval
+    os::cmd::try_until_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' https://${ROUTE}/apis/v1beta1/pipelines | jq '.total_size'" "2" $odhdefaulttimeout $odhdefaultinterval
 }
 
 function create_run() {
@@ -114,9 +118,9 @@ function delete_pipeline() {
     os::cmd::try_until_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' -X DELETE https://${ROUTE}/apis/v1beta1/pipelines/${PIPELINE_ID} | jq" "" $odhdefaulttimeout $odhdefaultinterval
 }
 
-oc new-project ${DSPAPROJECT}
 
 echo "Testing Data Science Pipelines Operator functionality"
+
 verify_data_science_pipelines_operator_install
 create_and_verify_data_science_pipelines_resources
 check_data_science_pipeline_route
