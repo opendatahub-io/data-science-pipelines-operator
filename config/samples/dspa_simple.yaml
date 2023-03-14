@@ -2,7 +2,6 @@ apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
 kind: DataSciencePipelinesApplication
 metadata:
   name: sample
-  namespace: data-science-project
 spec:
   # One of minio or externalStorage must be specified for objectStorage
   # This example illustrates minimal deployment with minio
