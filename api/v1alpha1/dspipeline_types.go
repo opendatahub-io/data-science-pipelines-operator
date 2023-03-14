@@ -144,11 +144,12 @@ type MariaDB struct {
 }
 
 type ExternalDB struct {
-	Host           string          `json:"host,omitempty"`
-	Port           string          `json:"port,omitempty"`
-	Username       string          `json:"username,omitempty"`
-	DBName         string          `json:"pipelineDBName,omitempty"`
-	PasswordSecret *SecretKeyValue `json:"passwordSecret,omitempty"`
+	// +kubebuilder:validation:Required
+	Host           string          `json:"host"`
+	Port           string          `json:"port"`
+	Username       string          `json:"username"`
+	DBName         string          `json:"pipelineDBName"`
+	PasswordSecret *SecretKeyValue `json:"passwordSecret"`
 }
 
 type ObjectStorage struct {
@@ -186,22 +187,24 @@ type Resources struct {
 type ExternalStorage struct {
 	// +kubebuilder:validation:Required
 	Host                string `json:"host"`
-	Port                string `json:"port"`
 	Bucket              string `json:"bucket"`
 	Scheme              string `json:"scheme"`
+	Port                string `json:"port"`
 	*S3CredentialSecret `json:"s3CredentialsSecret"`
 }
 
 type S3CredentialSecret struct {
-	SecretName string `json:"secretName,omitempty"`
+	// +kubebuilder:validation:Required
+	SecretName string `json:"secretName"`
 	// The "Keys" in the k8sSecret key/value pairs. Not to be confused with the values.
-	AccessKey string `json:"accessKey,omitempty"`
-	SecretKey string `json:"secretKey,omitempty"`
+	AccessKey string `json:"accessKey"`
+	SecretKey string `json:"secretKey"`
 }
 
 type SecretKeyValue struct {
-	Name string `json:"name,omitempty"`
-	Key  string `json:"key,omitempty"`
+	// +kubebuilder:validation:Required
+	Name string `json:"name"`
+	Key  string `json:"key"`
 }
 
 type DSPAStatus struct {

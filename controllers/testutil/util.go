@@ -40,6 +40,19 @@ func ConfigMapsAreEqual(expected v1.ConfigMap, actual v1.ConfigMap) bool {
 	return true
 }
 
+func SecretsAreEqual(expected v1.Secret, actual v1.Secret) bool {
+	if expected.Name != actual.Name {
+		notEqualMsg("Secret Names are not equal.")
+		return false
+	}
+
+	if !reflect.DeepEqual(expected.Data, actual.Data) {
+		notEqualMsg("Secret's Data values")
+		return false
+	}
+	return true
+}
+
 func DeploymentsAreEqual(expectedDep appsv1.Deployment, actualDep appsv1.Deployment) bool {
 
 	if !reflect.DeepEqual(expectedDep.ObjectMeta.Labels, actualDep.ObjectMeta.Labels) {

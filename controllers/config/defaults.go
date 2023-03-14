@@ -29,13 +29,14 @@ const (
 	ArtifactScriptConfigMapKey        = "artifact_script"
 	DSPServicePrefix                  = "ds-pipeline"
 
-	MariaDBName             = "mlpipeline"
-	MariaDBHostPrefix       = "mariadb"
-	MariaDBHostPort         = "3306"
-	MariaDBUser             = "mlpipeline"
-	MariaDBSecretNamePrefix = "mariadb-"
-	MariaDBSecretKey        = "password"
-	MariaDBNamePVCSize      = "10Gi"
+	DBSecretNamePrefix = "ds-pipeline-db-"
+	DBSecretKey        = "password"
+
+	MariaDBName        = "mlpipeline"
+	MariaDBHostPrefix  = "mariadb"
+	MariaDBHostPort    = "3306"
+	MariaDBUser        = "mlpipeline"
+	MariaDBNamePVCSize = "10Gi"
 
 	MinioHostPrefix    = "minio"
 	MinioPort          = "9000"

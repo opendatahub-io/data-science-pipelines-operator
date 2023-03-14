@@ -197,22 +197,14 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, nil
 	}
 
-	usingCustomDB := params.UsingExternalDB(dspa)
-
-	if !usingCustomDB {
-		err = r.ReconcileDatabase(ctx, dspa, params)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
+	err = r.ReconcileDatabase(ctx, dspa, params)
+	if err != nil {
+		return ctrl.Result{}, err
 	}
 
-	usingCustomStorage := params.UsingExternalStorage(dspa)
-
-	if !usingCustomStorage {
-		err := r.ReconcileStorage(ctx, dspa, params)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
+	err = r.ReconcileStorage(ctx, dspa, params)
+	if err != nil {
+		return ctrl.Result{}, err
 	}
 
 	err = r.ReconcileCommon(dspa, params)
