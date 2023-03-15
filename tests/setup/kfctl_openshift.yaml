@@ -22,6 +22,9 @@ spec:
       repoRef:
         name: app
         path: config
+      parameters:
+        - name: IMAGES_DSPO
+          value: quay.io/opendatahub/data-science-pipelines-operator:latest
     name: data-science-pipelines-operator
   repos:
   - name: manifests
