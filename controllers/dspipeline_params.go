@@ -106,8 +106,8 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 
 	// Even if a secret is specified DSPO will deploy its own secret owned by DSPO
 	p.DBConnection.CredentialsSecret = &dspa.SecretKeyValue{
-		Name: config.MariaDBSecretNamePrefix + p.Name,
-		Key:  config.MariaDBSecretKey,
+		Name: config.DBSecretNamePrefix + p.Name,
+		Key:  config.DBSecretKey,
 	}
 
 	if usingExternalDB {
@@ -118,7 +118,6 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 		p.DBConnection.DBName = dsp.Spec.Database.ExternalDB.DBName
 		customCreds = dsp.Spec.Database.ExternalDB.PasswordSecret
 	} else {
-
 		// If no externalDB or mariaDB is specified, DSPO assumes
 		// MariaDB deployment with defaults.
 		if p.MariaDB == nil {
@@ -261,12 +260,14 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 		}
 	}
 
-	p.ObjectStorageConnection.Endpoint = fmt.Sprintf(
+	endpoint := fmt.Sprintf(
 		"%s://%s:%s",
 		p.ObjectStorageConnection.Scheme,
 		p.ObjectStorageConnection.Host,
 		p.ObjectStorageConnection.Port,
 	)
+
+	p.ObjectStorageConnection.Endpoint = endpoint
 
 	// Secret where DB credentials reside on cluster
 	var credsSecretName string

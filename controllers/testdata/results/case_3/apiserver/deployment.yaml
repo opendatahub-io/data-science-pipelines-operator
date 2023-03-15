@@ -28,7 +28,7 @@ spec:
             - --tls-key=/etc/tls/private/tls.key
             - --cookie-secret=SECRET
             - '--openshift-delegate-urls={"/": {"group":"route.openshift.io","resource":"routes","verb":"get","name":"ds-pipeline-testdsp3","namespace":"default"}}'
-            - '--openshift-sar={"namespace":"default", "resource": "routes", "resourceName":"ds-pipeline-testdsp3", "verb": "get"}'
+            - '--openshift-sar={"namespace":"default","resource":"routes","resourceName":"ds-pipeline-testdsp3","verb":"get","resourceAPIGroup":"route.openshift.io"}'
             - --skip-auth-regex='(^/metrics|^/apis/v1beta1/healthz)'
           image: registry.redhat.io/openshift4/ose-oauth-proxy:v4.12.0
           ports:
@@ -69,55 +69,55 @@ spec:
             - name: POD_NAMESPACE
               value: "default"
             - name: DBCONFIG_USER
-              value: "testuser"
+              value: "testuser3"
             - name: DBCONFIG_PASSWORD
               valueFrom:
                 secretKeyRef:
                   key: "password"
-                  name: "mariadb-testdsp3"
+                  name: "ds-pipeline-db-testdsp3"
             - name: DBCONFIG_DBNAME
-              value: "randomDBName"
+              value: "testdbname3"
             - name: DBCONFIG_HOST
-              value: "mariadb-testdsp3.default.svc.cluster.local"
+              value: "testdbhost3"
             - name: DBCONFIG_PORT
-              value: "3306"
+              value: "test3"
             - name: ARTIFACT_BUCKET
-              value: "mlpipeline"
+              value: "testbucket3"
             - name: ARTIFACT_ENDPOINT
-              value: "http://minio-testdsp3.default.svc.cluster.local:9000"
+              value: "https://teststoragehost3:80"
             - name: ARTIFACT_SCRIPT
               valueFrom:
                 configMapKeyRef:
-                  key: "artifact_script"
-                  name: "ds-pipeline-artifact-script-testdsp3"
+                  key: "somekey"
+                  name: "doesnotexist"
             - name: ARTIFACT_IMAGE
               value: artifact-manager:test3
             - name: ARCHIVE_LOGS
               value: "false"
             - name: TRACK_ARTIFACTS
-              value: "true"
+              value: "false"
             - name: STRIP_EOF
-              value: "true"
+              value: "false"
             - name: PIPELINE_RUNTIME
               value: "tekton"
             - name: DEFAULTPIPELINERUNNERSERVICEACCOUNT
               value: "pipeline-runner-testdsp3"
             - name: INJECT_DEFAULT_SCRIPT
-              value: "true"
+              value: "false"
             - name: APPLY_TEKTON_CUSTOM_RESOURCE
-              value: "true"
+              value: "false"
             - name: TERMINATE_STATUS
               value: "Cancelled"
             - name: AUTO_UPDATE_PIPELINE_DEFAULT_VERSION
-              value: "true"
+              value: "false"
             - name: DBCONFIG_CONMAXLIFETIMESEC
-              value: "125"
+              value: "120"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_HOST
               value: "ds-pipeline-visualizationserver"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
               value: "8888"
             - name: OBJECTSTORECONFIG_BUCKETNAME
-              value: "mlpipeline"
+              value: "testbucket3"
             - name: OBJECTSTORECONFIG_ACCESSKEY
               valueFrom:
                 secretKeyRef:
@@ -131,9 +131,9 @@ spec:
             - name: OBJECTSTORECONFIG_SECURE
               value: "false"
             - name: MINIO_SERVICE_SERVICE_HOST
-              value: "minio-testdsp3.default.svc.cluster.local"
+              value: "teststoragehost3"
             - name: MINIO_SERVICE_SERVICE_PORT
-              value: "9000"
+              value: "80"
             - name: CACHE_IMAGE
               value: ubi-minimal:test3
             - name: MOVERESULTS_IMAGE
@@ -174,11 +174,11 @@ spec:
             timeoutSeconds: 2
           resources:
             requests:
-              cpu: 1231m
-              memory: 1Gi
+              cpu: 250m
+              memory: 500Mi
             limits:
-              cpu: 2522m
-              memory: 5Gi
+              cpu: 500m
+              memory: 1Gi
       volumes:
         - name: proxy-tls
           secret:

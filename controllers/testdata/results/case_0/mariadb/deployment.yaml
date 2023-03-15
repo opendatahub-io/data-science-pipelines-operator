@@ -56,7 +56,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   key: "password"
-                  name: "mariadb-testdsp0"
+                  name: "ds-pipeline-db-testdsp0"
             - name: MYSQL_DATABASE
               value: "mlpipeline"
             - name: MYSQL_ALLOW_EMPTY_PASSWORD

@@ -4,98 +4,30 @@ metadata:
   name: testdsp3
 spec:
   apiServer:
+    enableOauth: true
     artifactScriptConfigMap:
       name: doesnotexist
       key: "somekey"
     deploy: true
-    image: api-server:test3
-    applyTektonCustomResource: true
-    archiveLogs: false
-    artifactImage: artifact-manager:test3
-    cacheImage: ubi-minimal:test3
-    moveResultsImage: busybox:test3
-    injectDefaultScript: true
-    stripEOF: true
-    terminateStatus: Cancelled
-    trackArtifacts: true
-    dbConfigConMaxLifetimeSec: 125
-    collectMetrics: true
-    autoUpdatePipelineDefaultVersion: true
-    resources:
-      requests:
-        cpu: "1231m"
-        memory: "1Gi"
-      limits:
-        cpu: "2522m"
-        memory: "5Gi"
-  persistenceAgent:
-    deploy: true
-    image: persistenceagent:test3
-    numWorkers: 5
-    resources:
-      requests:
-        cpu: "1233m"
-        memory: "1Gi"
-      limits:
-        cpu: "2524m"
-        memory: "5Gi"
-  scheduledWorkflow:
-    deploy: true
-    image: scheduledworkflow:test3
-    cronScheduleTimezone: EST
-    resources:
-      requests:
-        cpu: "1235m"
-        memory: "1Gi"
-      limits:
-        cpu: "2526m"
-        memory: "5Gi"
-  viewerCRD:
-    deploy: true
-    image: viewercontroller:test3
-    maxNumViewer: 25
-    resources:
-      requests:
-        cpu: "1237m"
-        memory: "1Gi"
-      limits:
-        cpu: "2528m"
-        memory: "5Gi"
-  mlpipelineUI:
-    deploy: true
-    image: frontend:test3
-    configMap: some-test-configmap
-    resources:
-      requests:
-        cpu: "1239m"
-        memory: "1Gi"
-      limits:
-        cpu: "2530m"
-        memory: "5Gi"
+  persistenceAgent: {}
+  scheduledWorkflow: {}
+  viewerCRD: {}
   database:
-    mariaDB:
-      deploy: true
-      image: mariadb:test3
-      username: testuser
-      pipelineDBName: randomDBName
-      pvcSize: 32Gi
-      resources:
-        requests:
-          cpu: "1212m"
-          memory: "1Gi"
-        limits:
-          cpu: "2554m"
-          memory: "5Gi"
+    externalDB:
+      host: testdbhost3
+      passwordSecret:
+        key: testpswkey3
+        name: testdbpswsecretname3
+      pipelineDBName: testdbname3
+      port: test3
+      username: testuser3
   objectStorage:
-    minio:
-      deploy: true
-      image: minio:test3
-      bucket: mlpipeline
-      pvcSize: 40Gi
-      resources:
-        requests:
-          cpu: "1334m"
-          memory: "1Gi"
-        limits:
-          cpu: "2535m"
-          memory: "5Gi"
+    externalStorage:
+      port: '80'
+      bucket: testbucket3
+      host: teststoragehost3
+      s3CredentialsSecret:
+        accessKey: testaccesskey3
+        secretKey: testsecretkey3
+        secretName: teststoragesecretname3
+      scheme: https

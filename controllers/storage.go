@@ -21,42 +21,59 @@ import (
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 )
 
+const storageSecret = "minio/secret.yaml.tmpl"
+
 var storageTemplates = []string{
 	"minio/deployment.yaml.tmpl",
 	"minio/pvc.yaml.tmpl",
 	"minio/service.yaml.tmpl",
-	"minio/secret.yaml.tmpl",
+	storageSecret,
 }
 
+// ReconcileStorage will set up Storage Connection.
 func (r *DSPAReconciler) ReconcileStorage(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,
 	params *DSPAParams) error {
 
-	// If no storage was specified, DSPO will deploy minio by default
-	// As such DSPO needs to update the CR with the state of minio
-	// to match desired with live state.
-	if dsp.Spec.ObjectStorage == nil || (dsp.Spec.ObjectStorage.Minio == nil && !params.UsingExternalStorage(dsp)) {
-		dsp.Spec.ObjectStorage = &dspav1alpha1.ObjectStorage{}
-		dsp.Spec.ObjectStorage.Minio = params.Minio.DeepCopy()
-		dsp.Spec.ObjectStorage.Minio.Deploy = true
-		if err := r.Update(ctx, dsp); err != nil {
-			return err
-		}
-	}
+	storageSpecified := dsp.Spec.ObjectStorage != nil
+	// Storage field can be specified as an empty obj, confirm that subfields are also specified
+	externalStorageSpecified := params.UsingExternalStorage(dsp)
+	minioSpecified := !storageSpecified || dsp.Spec.ObjectStorage.Minio != nil
+	deployMinio := !storageSpecified || (minioSpecified && dsp.Spec.ObjectStorage.Minio.Deploy)
 
-	if !dsp.Spec.ObjectStorage.Minio.Deploy {
-		r.Log.Info("Skipping Application of ObjectStorage Resources")
-		return nil
-	}
-
-	r.Log.Info("Applying Storage Resources")
-
-	for _, template := range storageTemplates {
-		err := r.Apply(dsp, params, template)
+	// If external storage is specified, it takes precedence
+	if externalStorageSpecified {
+		r.Log.Info("Deploying external storage secret.")
+		// If using external storage, we just need to create the secret
+		// for apiserver
+		err := r.Apply(dsp, params, storageSecret)
 		if err != nil {
 			return err
 		}
+	} else if deployMinio {
+		r.Log.Info("Applying object storage resources.")
+		for _, template := range storageTemplates {
+			err := r.Apply(dsp, params, template)
+			if err != nil {
+				return err
+			}
+		}
+		// If no storage was not specified, deploy minio by default.
+		// Update the CR with the state of minio to accurately portray
+		// desired state.
+		if !storageSpecified {
+			dsp.Spec.ObjectStorage = &dspav1alpha1.ObjectStorage{}
+			dsp.Spec.ObjectStorage.Minio = params.Minio.DeepCopy()
+			dsp.Spec.ObjectStorage.Minio.Deploy = true
+			if err := r.Update(ctx, dsp); err != nil {
+				return err
+			}
+		}
+	} else {
+		r.Log.Info("No externalstorage detected, and minio disabled. " +
+			"skipping application of storage Resources")
+		return nil
 	}
+	r.Log.Info("Finished applying storage Resources")
 
-	r.Log.Info("Finished applying Storage Resources")
 	return nil
 }
