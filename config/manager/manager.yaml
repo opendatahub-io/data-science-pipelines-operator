@@ -35,7 +35,7 @@ spec:
         - --leader-elect
         - --config
         - /home/config
-        image: controller:latest
+        image: $(IMAGES_DSPO)
         name: manager
         env:
           # Env vars are prioritized over --config
