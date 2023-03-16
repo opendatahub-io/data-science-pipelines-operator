@@ -19,8 +19,8 @@ function verify_data_science_pipelines_operator_install() {
     os::cmd::expect_success_and_text "echo ${#runningpods[@]}" "1"
 
     os::cmd::expect_success_and_text "oc get deployment -n ${ODHPROJECT} data-science-pipelines-operator-controller-manager" "data-science-pipelines-operator-controller-manager"
-    runningpods=($(oc get pods -n ${ODHPROJECT} --field-selector="status.phase=Running" -o jsonpath="{$.items[*].metadata.name}"))
-    os::cmd::expect_success_and_text "echo ${#runningpods[@]}" "3"
+    runningpods=($(oc get pods -n ${ODHPROJECT} --field-selector="status.phase=Running" | grep data-science-pipelines-operator | wc -l))
+    os::cmd::expect_success_and_text "echo $runningpods" "3"
 }
 
 function create_and_verify_data_science_pipelines_resources() {
