@@ -47,7 +47,7 @@ if [ -z "$PULL_NUMBER" ]; then
   echo "No pull number, not modifying kfctl_openshift.yaml"
 else
   IMAGE_TAG=${IMAGE_TAG:-"quay.io/opendatahub/data-science-pipelines-operator:pr-$PULL_NUMBER"}
-  sed -i "s#value: quay.io/opendatahub/data-science-pipelines-operator:latest#value: $IMAGE_TAG" ./kfctl_openshift.yaml
+  sed -i "s#value: quay.io/opendatahub/data-science-pipelines-operator:latest#value: $IMAGE_TAG#" ./kfctl_openshift.yaml
   if [ $REPO_NAME == $ODHREPO ]; then
     echo "Setting manifests in kfctl_openshift to use pull number: $PULL_NUMBER"
     sed -i "s#uri: https://github.com/opendatahub-io/${ODHREPO}/tarball/main#uri: https://api.github.com/repos/opendatahub-io/${ODHREPO}/tarball/pull/${PULL_NUMBER}/head#" ./kfctl_openshift.yaml
