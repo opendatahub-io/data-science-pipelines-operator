@@ -144,7 +144,7 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 	cd config/overlays/make-deploy \
 		&& $(KUSTOMIZE) edit set image controller=${IMG} \
 		&& $(KUSTOMIZE) edit set namespace ${OPERATOR_NS}
-	$(KUSTOMIZE) build config/overlays/make-deploy # | kubectl apply -f -
+	$(KUSTOMIZE) build config/overlays/make-deploy | kubectl apply -f -
 
 .PHONY: undeploy
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
