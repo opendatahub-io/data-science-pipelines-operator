@@ -121,6 +121,10 @@ spec:
                     type: boolean
                   terminateStatus:
                     default: Cancelled
+                    enum:
+                    - Cancelled
+                    - StoppedRunFinally
+                    - CancelledRunFinally
                     type: string
                   trackArtifacts:
                     default: true

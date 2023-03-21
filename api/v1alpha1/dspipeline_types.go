@@ -60,6 +60,7 @@ type APIServer struct {
 	// +kubebuilder:default:=true
 	// +kubebuilder:validation:Optional
 	StripEOF bool `json:"stripEOF"`
+	// +kubebuilder:validation:Enum=Cancelled;StoppedRunFinally;CancelledRunFinally
 	// +kubebuilder:default:=Cancelled
 	TerminateStatus string `json:"terminateStatus,omitempty"`
 	// +kubebuilder:default:=true
