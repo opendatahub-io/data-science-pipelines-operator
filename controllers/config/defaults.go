@@ -19,6 +19,7 @@ package config
 import (
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/spf13/viper"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 const (
@@ -82,16 +83,16 @@ func GetConfigRequiredFields() []string {
 
 // Default ResourceRequirements
 var (
-	APIServerResourceRequirements         = createResourceRequirement("250m", "500Mi", "500m", "1Gi")
-	PersistenceAgentResourceRequirements  = createResourceRequirement("120m", "500Mi", "250m", "1Gi")
-	ScheduledWorkflowResourceRequirements = createResourceRequirement("120m", "100Mi", "250m", "250Mi")
-	ViewerCRDResourceRequirements         = createResourceRequirement("120m", "100Mi", "250m", "500Mi")
-	MariaDBResourceRequirements           = createResourceRequirement("300m", "800Mi", "1", "1Gi")
-	MinioResourceRequirements             = createResourceRequirement("200m", "100Mi", "250m", "1Gi")
-	MlPipelineUIResourceRequirements      = createResourceRequirement("100m", "256Mi", "100m", "256Mi")
+	APIServerResourceRequirements         = createResourceRequirement(resource.MustParse("250m"), resource.MustParse("500Mi"), resource.MustParse("500m"), resource.MustParse("1Gi"))
+	PersistenceAgentResourceRequirements  = createResourceRequirement(resource.MustParse("120m"), resource.MustParse("500Mi"), resource.MustParse("250m"), resource.MustParse("1Gi"))
+	ScheduledWorkflowResourceRequirements = createResourceRequirement(resource.MustParse("120m"), resource.MustParse("100Mi"), resource.MustParse("250m"), resource.MustParse("250Mi"))
+	ViewerCRDResourceRequirements         = createResourceRequirement(resource.MustParse("120m"), resource.MustParse("100Mi"), resource.MustParse("250m"), resource.MustParse("500Mi"))
+	MariaDBResourceRequirements           = createResourceRequirement(resource.MustParse("300m"), resource.MustParse("800Mi"), resource.MustParse("1"), resource.MustParse("1Gi"))
+	MinioResourceRequirements             = createResourceRequirement(resource.MustParse("200m"), resource.MustParse("100Mi"), resource.MustParse("250m"), resource.MustParse("1Gi"))
+	MlPipelineUIResourceRequirements      = createResourceRequirement(resource.MustParse("100m"), resource.MustParse("256Mi"), resource.MustParse("100m"), resource.MustParse("256Mi"))
 )
 
-func createResourceRequirement(RequestsCPU string, RequestsMemory string, LimitsCPU string, LimitsMemory string) dspav1alpha1.ResourceRequirements {
+func createResourceRequirement(RequestsCPU resource.Quantity, RequestsMemory resource.Quantity, LimitsCPU resource.Quantity, LimitsMemory resource.Quantity) dspav1alpha1.ResourceRequirements {
 	return dspav1alpha1.ResourceRequirements{
 		Requests: &dspav1alpha1.Resources{
 			CPU:    RequestsCPU,

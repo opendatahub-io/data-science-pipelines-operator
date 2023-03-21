@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -139,7 +140,7 @@ type MariaDB struct {
 	// +kubebuilder:default:=mlpipeline
 	DBName string `json:"pipelineDBName,omitempty"`
 	// +kubebuilder:default:="10Gi"
-	PVCSize   string                `json:"pvcSize,omitempty"`
+	PVCSize   resource.Quantity     `json:"pvcSize,omitempty"`
 	Resources *ResourceRequirements `json:"resources,omitempty"`
 }
 
@@ -165,7 +166,7 @@ type Minio struct {
 	Bucket              string `json:"bucket,omitempty"`
 	*S3CredentialSecret `json:"s3CredentialsSecret,omitempty"`
 	// +kubebuilder:default:="10Gi"
-	PVCSize   string                `json:"pvcSize,omitempty"`
+	PVCSize   resource.Quantity     `json:"pvcSize,omitempty"`
 	Resources *ResourceRequirements `json:"resources,omitempty"`
 	// +kubebuilder:validation:Required
 	Image string `json:"image"`
@@ -180,8 +181,8 @@ type ResourceRequirements struct {
 }
 
 type Resources struct {
-	CPU    string `json:"cpu,omitempty"`
-	Memory string `json:"memory,omitempty"`
+	CPU    resource.Quantity `json:"cpu,omitempty"`
+	Memory resource.Quantity `json:"memory,omitempty"`
 }
 
 type ExternalStorage struct {
