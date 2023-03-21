@@ -32,6 +32,7 @@ var apiServerTemplates = []string{
 	"apiserver/sa_pipeline-runner.yaml.tmpl",
 	"apiserver/service.yaml.tmpl",
 	"apiserver/deployment.yaml.tmpl",
+	"apiserver/monitor.yaml.tmpl",
 }
 
 // serverRoute is a resource deployed conditionally
