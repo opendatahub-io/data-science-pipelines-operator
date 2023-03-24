@@ -19,6 +19,9 @@ spec:
     # by bypassing oauth proxy, all external
     # traffic should go through oauth proxy
     - from:
+        - namespaceSelector:
+            matchLabels:
+              name: openshift-user-workload-monitoring
         - podSelector:
             matchLabels:
               app: mariadb-{{.Name}}
