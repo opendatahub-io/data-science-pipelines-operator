@@ -62,10 +62,7 @@ func (r *DSPAReconciler) Apply(owner mf.Owner, params *DSPAParams, template stri
 		return err
 	}
 
-	if err = tmplManifest.Apply(); err != nil {
-		return err
-	}
-	return nil
+	return tmplManifest.Apply()
 }
 
 func (r *DSPAReconciler) ApplyWithoutOwner(params *DSPAParams, template string, fns ...mf.Transformer) error {
@@ -79,10 +76,7 @@ func (r *DSPAReconciler) ApplyWithoutOwner(params *DSPAParams, template string, 
 		return err
 	}
 
-	if err = tmplManifest.Apply(); err != nil {
-		return err
-	}
-	return nil
+	return tmplManifest.Apply()
 }
 
 func (r *DSPAReconciler) DeleteResource(params *DSPAParams, template string, fns ...mf.Transformer) error {
@@ -96,10 +90,7 @@ func (r *DSPAReconciler) DeleteResource(params *DSPAParams, template string, fns
 		return err
 	}
 
-	if err = tmplManifest.Delete(); err != nil {
-		return err
-	}
-	return nil
+	return tmplManifest.Delete()
 }
 
 func (r *DSPAReconciler) DeleteResourceIfItExists(ctx context.Context, obj client.Object, nn types.NamespacedName) error {
@@ -179,7 +170,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		if controllerutil.ContainsFinalizer(dspa, finalizerName) {
 			params.Name = dspa.Name
 			params.Namespace = dspa.Namespace
-			if err := r.cleanUpResources(ctx, req, dspa, params); err != nil {
+			if err := r.cleanUpResources(params); err != nil {
 				return ctrl.Result{}, err
 			}
 			controllerutil.RemoveFinalizer(dspa, finalizerName)
@@ -259,11 +250,6 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 // Clean Up any resources not handled by garbage collection, like Cluster ResourceRequirements
-func (r *DSPAReconciler) cleanUpResources(ctx context.Context, req ctrl.Request, dsp *dspav1alpha1.DataSciencePipelinesApplication, params *DSPAParams) error {
-	err := r.CleanUpCommon(params)
-	if err != nil {
-		return err
-	}
-
-	return nil
+func (r *DSPAReconciler) cleanUpResources(params *DSPAParams) error {
+	return r.CleanUpCommon(params)
 }
