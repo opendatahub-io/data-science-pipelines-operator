@@ -30,6 +30,7 @@ spec:
             - --tls-key=/etc/tls/private/tls.key
             - --cookie-secret=SECRET
             - '--openshift-delegate-urls={"/": {"group":"route.openshift.io","resource":"routes","verb":"get","name":"ds-pipeline-ui-{{.Name}}","namespace":"{{.Namespace}}"}}'
+            - '--openshift-sar={"namespace":"{{.Namespace}}","resource":"routes","resourceName":"ds-pipeline-ui-{{.Name}}","verb":"get","resourceAPIGroup":"route.openshift.io"}'
             - --skip-auth-regex='(^/metrics|^/apis/v1beta1/healthz)'
           image: registry.redhat.io/openshift4/ose-oauth-proxy:v4.12.0
           ports:
