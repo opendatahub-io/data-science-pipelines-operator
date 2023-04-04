@@ -19,16 +19,11 @@ jobs:
         run: |
           sudo apt-get -y update
           sudo apt-get -y install skopeo
-      - name: Login to quay.io
-        shell: bash
-        env:
-          QUAY_ROBOT_USERNAME: ${{ secrets.QUAY_ROBOT_USERNAME }}
-          QUAY_ROBOT_TOKEN: ${{ secrets.QUAY_ROBOT_TOKEN }}
-        run: |
-         skopeo login quay.io -u ${QUAY_ROBOT_USERNAME} -p ${QUAY_ROBOT_TOKEN}
       - name: Delete PR image
         shell: bash
         env:
           PR: ${{ github.event.pull_request.number }}
+          QUAY_ROBOT_USERNAME: ${{ secrets.QUAY_ROBOT_USERNAME }}
+          QUAY_ROBOT_TOKEN: ${{ secrets.QUAY_ROBOT_TOKEN }}
         run: |
-          skopeo delete docker://${QUAY_IMAGE_REPO}:pr-${{ env.PR }}
+          skopeo delete --creds ${QUAY_ROBOT_USERNAME}:${QUAY_ROBOT_TOKEN} docker://${QUAY_IMAGE_REPO}:pr-${{ env.PR }}
