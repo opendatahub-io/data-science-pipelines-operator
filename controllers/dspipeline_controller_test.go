@@ -22,12 +22,10 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
-	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/testutil"
+	util "github.com/opendatahub-io/data-science-pipelines-operator/controllers/testutil"
 	"github.com/spf13/viper"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
-	apierrs "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 type TestCase struct {
@@ -38,6 +36,8 @@ type TestCase struct {
 
 type CaseComponentResources map[string]ResourcePath
 type ResourcePath map[string]string
+
+type DSPA = dspav1alpha1.DataSciencePipelinesApplication
 
 const SecretKind = "Secret"
 
@@ -90,6 +90,14 @@ var deploymentsNotCreated = CaseComponentResources{
 	"case_0": {
 		"viewerCrdDeployment": "./testdata/results/case_0/viewer-crd/deployment.yaml",
 	},
+	"case_1": {
+		"apiserver":                   "./testdata/results/case_1/apiserver/deployment.yaml",
+		"mariadb":                     "./testdata/results/case_1/mariadb/deployment.yaml",
+		"minioDeployment":             "./testdata/results/case_1/minio/deployment.yaml",
+		"mlpipelinesUIDeployment":     "./testdata/results/case_1/mlpipelines-ui/deployment.yaml",
+		"persistenceAgentDeployment":  "./testdata/results/case_1/persistence-agent/deployment.yaml",
+		"scheduledWorkflowDeployment": "./testdata/results/case_1/scheduled-workflow/deployment.yaml",
+	},
 }
 
 var configMapsCreated = CaseComponentResources{
@@ -116,138 +124,19 @@ var configMapsNotCreated = CaseComponentResources{
 	},
 }
 
-func deployDSP(path string, opts mf.Option) {
-	dsp := &dspav1alpha1.DataSciencePipelinesApplication{}
-	err := convertToStructuredResource(path, dsp, opts)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(k8sClient.Create(ctx, dsp)).Should(Succeed())
-
-	dsp2 := &dspav1alpha1.DataSciencePipelinesApplication{}
-	Eventually(func() error {
-		namespacedNamed := types.NamespacedName{Name: dsp.Name, Namespace: WorkingNamespace}
-		return k8sClient.Get(ctx, namespacedNamed, dsp2)
-	}, timeout, interval).ShouldNot(HaveOccurred())
-}
-
-func deploySecret(path string, opts mf.Option) {
-	secret := &v1.Secret{}
-	err := convertToStructuredResource(path, secret, opts)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
-
-	secret2 := &v1.Secret{}
-	Eventually(func() error {
-		namespacedNamed := types.NamespacedName{Name: secret.Name, Namespace: WorkingNamespace}
-		return k8sClient.Get(ctx, namespacedNamed, secret2)
-	}, timeout, interval).ShouldNot(HaveOccurred())
-}
-
-func deleteDSP(path string, opts mf.Option) {
-	dsp := &dspav1alpha1.DataSciencePipelinesApplication{}
-	err := convertToStructuredResource(path, dsp, opts)
-	Expect(err).NotTo(HaveOccurred())
-
-	Eventually(func() error {
-		return k8sClient.Delete(ctx, dsp)
-	}, timeout, interval).ShouldNot(HaveOccurred())
-
-	dsp2 := &dspav1alpha1.DataSciencePipelinesApplication{}
-	Eventually(func() error {
-		namespacedNamed := types.NamespacedName{Name: dsp.Name, Namespace: WorkingNamespace}
-		err = k8sClient.Get(ctx, namespacedNamed, dsp2)
-		if err != nil {
-			if apierrs.IsNotFound(err) {
-				return nil
-			}
-			return err
-		}
-		return fmt.Errorf("resource still exists on cluster")
-
-	}, timeout, interval).ShouldNot(HaveOccurred())
-
-}
-
-func compareDeployments(path string, opts mf.Option) {
-	expectedDeployment := &appsv1.Deployment{}
-	Expect(convertToStructuredResource(path, expectedDeployment, opts)).NotTo(HaveOccurred())
-
-	actualDeployment := &appsv1.Deployment{}
-	Eventually(func() error {
-		namespacedNamed := types.NamespacedName{Name: expectedDeployment.Name, Namespace: WorkingNamespace}
-		return k8sClient.Get(ctx, namespacedNamed, actualDeployment)
-	}, timeout, interval).ShouldNot(HaveOccurred())
-
-	Expect(testutil.DeploymentsAreEqual(*expectedDeployment, *actualDeployment)).Should(BeTrue())
-
-}
-
-func compareConfigMaps(path string, opts mf.Option) {
-	expectedConfigMap := &v1.ConfigMap{}
-	Expect(convertToStructuredResource(path, expectedConfigMap, opts)).NotTo(HaveOccurred())
-
-	actualConfigMap := &v1.ConfigMap{}
-	Eventually(func() error {
-		namespacedNamed := types.NamespacedName{Name: expectedConfigMap.Name, Namespace: WorkingNamespace}
-		return k8sClient.Get(ctx, namespacedNamed, actualConfigMap)
-	}, timeout, interval).ShouldNot(HaveOccurred())
-
-	Expect(testutil.ConfigMapsAreEqual(*expectedConfigMap, *actualConfigMap)).Should(BeTrue())
-
-}
-
-func compareSecrets(path string, opts mf.Option) {
-	expectedSecret := &v1.Secret{}
-	Expect(convertToStructuredResource(path, expectedSecret, opts)).NotTo(HaveOccurred())
-
-	actualSecret := &v1.Secret{}
-	Eventually(func() error {
-		namespacedNamed := types.NamespacedName{Name: expectedSecret.Name, Namespace: WorkingNamespace}
-		return k8sClient.Get(ctx, namespacedNamed, actualSecret)
-	}, timeout, interval).ShouldNot(HaveOccurred())
-
-	Expect(testutil.SecretsAreEqual(*expectedSecret, *actualSecret)).Should(BeTrue())
-
-}
-
-func deploymentDoesNotExists(path string, opts mf.Option) {
-	expectedDeployment := &appsv1.Deployment{}
-	actualDeployment := &appsv1.Deployment{}
-	Expect(convertToStructuredResource(path, expectedDeployment, opts)).NotTo(HaveOccurred())
-
-	namespacedNamed := types.NamespacedName{
-		Name:      expectedDeployment.Name,
-		Namespace: WorkingNamespace,
-	}
-
-	Eventually(func() error {
-		return k8sClient.Get(ctx, namespacedNamed, actualDeployment)
-	}, timeout, interval).Should(HaveOccurred())
-
-	Expect(actualDeployment).To(Equal(&appsv1.Deployment{}))
-
-}
-
-func configMapDoesNotExists(path string, opts mf.Option) {
-	expectedConfigMap := &v1.ConfigMap{}
-	actualConfigMap := &v1.ConfigMap{}
-	Expect(convertToStructuredResource(path, expectedConfigMap, opts)).NotTo(HaveOccurred())
-
-	namespacedNamed := types.NamespacedName{
-		Name:      expectedConfigMap.Name,
-		Namespace: WorkingNamespace,
-	}
-
-	Eventually(func() error {
-		return k8sClient.Get(ctx, namespacedNamed, actualConfigMap)
-	}, timeout, interval).Should(HaveOccurred())
-
-	Expect(actualConfigMap).To(Equal(&v1.ConfigMap{}))
-
-}
-
 var _ = Describe("The DS Pipeline Controller", Ordered, func() {
 	client := mfc.NewClient(k8sClient)
 	opts := mf.UseClient(client)
+
+	uc := util.UtilContext{}
+	BeforeAll(func() {
+		uc = util.UtilContext{
+			Ctx:    ctx,
+			Ns:     WorkingNamespace,
+			Opts:   opts,
+			Client: k8sClient,
+		}
+	})
 
 	for tc := range cases {
 		// We assign local copies of all looping variables, as they are mutating
@@ -264,13 +153,13 @@ var _ = Describe("The DS Pipeline Controller", Ordered, func() {
 				viper.SetConfigFile(fmt.Sprintf("testdata/deploy/%s/config.yaml", testcase))
 				err := viper.ReadInConfig()
 				Expect(err).ToNot(HaveOccurred(), "Failed to read config file")
-				deployDSP(dspPath, opts)
+				util.DeployResource(uc, &DSPA{}, dspPath)
 				// Deploy any additional resources for this test case
 				if cases[testcase].AdditionalResources != nil {
 					for res, paths := range cases[testcase].AdditionalResources {
 						if res == SecretKind {
 							for _, p := range paths {
-								deploySecret(p, opts)
+								util.DeployResource(uc, &v1.Secret{}, p)
 							}
 						}
 					}
@@ -282,7 +171,7 @@ var _ = Describe("The DS Pipeline Controller", Ordered, func() {
 				component := component
 				deploymentPath := expectedDeployments[component]
 				It(fmt.Sprintf("[%s] Should create deployment for component %s", testcase, component), func() {
-					compareDeployments(deploymentPath, opts)
+					util.CompareResources(uc, &appsv1.Deployment{}, &appsv1.Deployment{}, deploymentPath)
 				})
 			}
 
@@ -290,30 +179,30 @@ var _ = Describe("The DS Pipeline Controller", Ordered, func() {
 			for component := range deploymentsNotCreated[testcase] {
 				deploymentPath := notExpectedDeployments[component]
 				It(fmt.Sprintf("[%s] Should NOT create deployments for component %s", testcase, component), func() {
-					deploymentDoesNotExists(deploymentPath, opts)
+					util.ResourceDoesNotExists(uc, &appsv1.Deployment{}, &appsv1.Deployment{}, deploymentPath)
 				})
 			}
 
 			for component := range configMapsCreated[testcase] {
 				It(fmt.Sprintf("[%s] Should create configmaps for component %s", testcase, component), func() {
-					compareConfigMaps(configMapsCreated[testcase][component], opts)
+					util.CompareResources(uc, &v1.ConfigMap{}, &v1.ConfigMap{}, configMapsCreated[testcase][component])
 				})
 			}
 
 			for component := range secretsCreated[testcase] {
 				It(fmt.Sprintf("[%s] Should create secrets for component %s", testcase, component), func() {
-					compareSecrets(secretsCreated[testcase][component], opts)
+					util.CompareResources(uc, &v1.Secret{}, &v1.Secret{}, secretsCreated[testcase][component])
 				})
 			}
 
 			for component := range configMapsNotCreated[testcase] {
 				It(fmt.Sprintf("[%s] Should NOT create configmaps for component %s", testcase, component), func() {
-					configMapDoesNotExists(configMapsNotCreated[testcase][component], opts)
+					util.ResourceDoesNotExists(uc, &v1.ConfigMap{}, &v1.ConfigMap{}, configMapsNotCreated[testcase][component])
 				})
 			}
 
 			It(fmt.Sprintf("Should successfully delete the Custom Resource for case %s", testcase), func() {
-				deleteDSP(dspPath, opts)
+				util.DeleteResource(uc, &DSPA{}, dspPath)
 			})
 		})
 	}
