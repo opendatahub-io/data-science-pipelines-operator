@@ -6,7 +6,6 @@ on:
 
 env:
   QUAY_IMAGE_REPO: ${{ secrets.QUAY_IMAGE_REPO }}
-
 jobs:
   delete-pr-quay-image:
     runs-on: ubuntu-latest
@@ -23,10 +22,10 @@ jobs:
       - name: Login to quay.io
         shell: bash
         env:
-          QUAY_TOKEN: ${{ secrets.QUAY_ROBOT_TOKEN }}
           QUAY_ROBOT_USERNAME: ${{ secrets.QUAY_ROBOT_USERNAME }}
+          QUAY_ROBOT_TOKEN: ${{ secrets.QUAY_ROBOT_TOKEN }}
         run: |
-         skopeo login quay.io -u ${QUAY_ROBOT_USERNAME} -p ${QUAY_TOKEN}
+         skopeo login quay.io -u ${QUAY_ROBOT_USERNAME} -p ${QUAY_ROBOT_TOKEN}
       - name: Delete PR image
         shell: bash
         env:
