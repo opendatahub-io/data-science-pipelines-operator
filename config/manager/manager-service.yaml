@@ -4,6 +4,7 @@ metadata:
   name: service
   labels:
     control-plane: controller-manager
+    app.kubernetes.io/created-by: data-science-pipelines-operator
 spec:
   ports:
     - name: metrics
