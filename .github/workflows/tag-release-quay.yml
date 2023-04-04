@@ -1,4 +1,4 @@
-name: quay.tag
+name: Image push per Github Tag
 
 # This GitHub action activates whenever a new tag is created on the repo
 # and creates a copy of the image of the associated commit hash with the
@@ -27,10 +27,10 @@ jobs:
       - name: Login to quay.io
         shell: bash
         env:
-          QUAY_TOKEN: ${{ secrets.QUAY_ROBOT_TOKEN }}
           QUAY_ROBOT_USERNAME: ${{ secrets.QUAY_ROBOT_USERNAME }}
+          QUAY_ROBOT_TOKEN: ${{ secrets.QUAY_ROBOT_TOKEN }}
         run: |
-         skopeo login quay.io -u ${QUAY_ROBOT_USERNAME} -p ${QUAY_TOKEN}
+         skopeo login quay.io -u ${QUAY_ROBOT_USERNAME} -p ${QUAY_ROBOT_TOKEN}
       - name: Get latest tag name
         id: tag
         run: echo "tag=$(git describe --tags --abbrev=0)" >> ${GITHUB_OUTPUT}
