@@ -38,71 +38,44 @@ var _ = Describe("The DS Pipeline Controller", Ordered, func() {
 		}
 	})
 
-	for tc := range util.Cases {
+	testcases := util.GenerateDeclarativeTestCases()
+
+	for caseCount, tc := range testcases {
 		// We assign local copies of all looping variables, as they are mutating
 		// we want the correct variables captured in each `It` closure, we do this
 		// by creating local variables
 		// https://onsi.github.io/ginkgo/#dynamically-generating-specs
 		testcase := tc
-		description := util.Cases[testcase].Description
-		dspPath := util.Cases[testcase].Path
-
+		description := testcase.Description
 		Context(description, func() {
-			It(fmt.Sprintf("Should successfully deploy the Custom Resource for case %s", testcase), func() {
+			paths := testcase.Deploy
+			It(fmt.Sprintf("[case %x] Should successfully deploy the Custom Resource (and additional resources)", caseCount), func() {
 				viper.New()
-				viper.SetConfigFile(fmt.Sprintf("testdata/deploy/%s/config.yaml", testcase))
+				viper.SetConfigFile(testcase.Config)
 				err := viper.ReadInConfig()
 				Expect(err).ToNot(HaveOccurred(), "Failed to read config file")
-				util.DeployResource(uc, dspPath)
-				// Deploy any additional resources for this test case
-				if util.Cases[testcase].AdditionalResources != nil {
-					for res, paths := range util.Cases[testcase].AdditionalResources {
-						if res == util.SecretKind {
-							for _, p := range paths {
-								util.DeployResource(uc, p)
-							}
-						}
-					}
+				for _, path := range paths {
+					util.DeployResource(uc, path)
 				}
 			})
 
-			expectedDeployments := util.DeploymentsCreated[testcase]
-			for component := range expectedDeployments {
-				component := component
-				deploymentPath := expectedDeployments[component]
-				It(fmt.Sprintf("[%s] Should create deployment for component %s", testcase, component), func() {
-					util.CompareResources(uc, deploymentPath)
-				})
-			}
+			It(fmt.Sprintf("[case %x] Should create expected resources", caseCount), func() {
+				for _, resourcesCreated := range testcase.Expected.Created {
+					util.CompareResources(uc, resourcesCreated)
+				}
+			})
 
-			notExpectedDeployments := util.DeploymentsNotCreated[testcase]
-			for component := range util.DeploymentsNotCreated[testcase] {
-				deploymentPath := notExpectedDeployments[component]
-				It(fmt.Sprintf("[%s] Should NOT create deployments for component %s", testcase, component), func() {
-					util.ResourceDoesNotExists(uc, deploymentPath)
-				})
-			}
+			It(fmt.Sprintf("[case %x] Should expect NOT to create some resources", caseCount), func() {
+				for _, resourcesNotCreated := range testcase.Expected.NotCreated {
+					util.ResourceDoesNotExists(uc, resourcesNotCreated)
+				}
+			})
 
-			for component := range util.ConfigMapsCreated[testcase] {
-				It(fmt.Sprintf("[%s] Should create configmaps for component %s", testcase, component), func() {
-					util.CompareResources(uc, util.ConfigMapsCreated[testcase][component])
-				})
-			}
-
-			for component := range util.SecretsCreated[testcase] {
-				It(fmt.Sprintf("[%s] Should create secrets for component %s", testcase, component), func() {
-					util.CompareResources(uc, util.SecretsCreated[testcase][component])
-				})
-			}
-
-			for component := range util.ConfigMapsNotCreated[testcase] {
-				It(fmt.Sprintf("[%s] Should NOT create configmaps for component %s", testcase, component), func() {
-					util.ResourceDoesNotExists(uc, util.ConfigMapsNotCreated[testcase][component])
-				})
-			}
-
-			It(fmt.Sprintf("Should successfully delete the Custom Resource for case %s", testcase), func() {
-				util.DeleteResource(uc, dspPath)
+			It(fmt.Sprintf("[case %x] Should successfully delete the Custom Resource (and additional resources)", testcase), func() {
+				for _, path := range testcase.Deploy {
+					p := path
+					util.DeleteResource(uc, p)
+				}
 			})
 		})
 	}

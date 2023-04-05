@@ -1,3 +1,4 @@
+# When a DSPA is deployed with all deployments disabled
 Images:
   ApiServer: api-server:test1
   Artifact: artifact-manager:test1

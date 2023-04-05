@@ -22,6 +22,7 @@ import (
 	mf "github.com/manifestival/manifestival"
 	_ "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"io/ioutil"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,6 +32,7 @@ import (
 const (
 	timeout  = time.Second * 10
 	interval = time.Millisecond * 2
+	CasesDir = "./testdata/declarative"
 )
 
 type UtilContext struct {
@@ -38,6 +40,18 @@ type UtilContext struct {
 	Ns     string
 	Opts   mf.Option
 	Client client.Client
+}
+
+type Case struct {
+	Description string
+	Config      string
+	Deploy      []string
+	Expected    Expectation
+}
+
+type Expectation struct {
+	Created    []string
+	NotCreated []string
 }
 
 // ResourceDoesNotExists will check against the client provided
@@ -131,4 +145,46 @@ func CompareResources(uc UtilContext, path string) {
 	result, err := CompareResourceProcs[rest](expected, actual)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(result).Should(BeTrue())
+}
+
+// GenerateDeclarativeTestCases dynamically generate
+// testcases based on resources located in the testdata
+// directory.
+func GenerateDeclarativeTestCases() []Case {
+	var testcases []Case
+
+	cases, err := ioutil.ReadDir(CasesDir)
+	Expect(err).ToNot(HaveOccurred(), "Failed to fetch cases in case dir.")
+	for _, testcase := range cases {
+		caseName := testcase.Name()
+		caseDir := fmt.Sprintf("%s/%s", CasesDir, caseName)
+		newCase := Case{}
+		caseDeployDir := fmt.Sprintf("%s/deploy", caseDir)
+		deploys, err := ioutil.ReadDir(caseDeployDir)
+		Expect(err).ToNot(HaveOccurred(), "Failed to read case.")
+		for _, f := range deploys {
+			newCase.Deploy = append(newCase.Deploy, fmt.Sprintf("%s/%s", caseDeployDir, f.Name()))
+		}
+
+		caseCreateDir := fmt.Sprintf("%s/expected/created", caseDir)
+		toCreate, err := ioutil.ReadDir(caseCreateDir)
+		Expect(err).ToNot(HaveOccurred(), "Failed to read 'create' dir.")
+		for _, f := range toCreate {
+			newCase.Expected.Created = append(newCase.Expected.Created, fmt.Sprintf("%s/%s", caseCreateDir, f.Name()))
+		}
+
+		caseNotCreateDir := fmt.Sprintf("%s/expected/not_created", caseDir)
+		toNotCreate, err := ioutil.ReadDir(caseNotCreateDir)
+		Expect(err).ToNot(HaveOccurred(), "Failed to read 'not_create' dir.")
+		for _, f := range toNotCreate {
+			newCase.Expected.NotCreated = append(newCase.Expected.NotCreated, fmt.Sprintf("%s/%s", caseNotCreateDir, f.Name()))
+		}
+		newCase.Description = fmt.Sprintf("[%s] - When a DSPA is deployed", caseName)
+
+		newCase.Config = fmt.Sprintf("%s/config.yaml", caseDir)
+
+		testcases = append(testcases, newCase)
+	}
+
+	return testcases
 }

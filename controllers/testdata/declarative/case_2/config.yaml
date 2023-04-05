@@ -1,3 +1,4 @@
+# When a complete DSPA is deployed with (defaults specified)
 Images:
   ApiServer: api-server:test2
   Artifact: artifact-manager:test2

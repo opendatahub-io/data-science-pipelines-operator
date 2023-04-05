@@ -1,3 +1,4 @@
+# When a minimal DSPA is deployed
 Images:
   ApiServer: api-server:test0
   Artifact: artifact-manager:test0

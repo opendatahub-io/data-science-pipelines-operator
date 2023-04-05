@@ -1,3 +1,4 @@
+# When a DSPA with a custom db/storage secret, and custom artifact script is deployed.
 Images:
   ApiServer: api-server:test3
   Artifact: artifact-manager:test3
