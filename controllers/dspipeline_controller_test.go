@@ -21,21 +21,15 @@ import (
 	mf "github.com/manifestival/manifestival"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	util "github.com/opendatahub-io/data-science-pipelines-operator/controllers/testutil"
 	"github.com/spf13/viper"
-	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
 )
 
-type DSPA = dspav1alpha1.DataSciencePipelinesApplication
-
 var _ = Describe("The DS Pipeline Controller", Ordered, func() {
-	client := mfc.NewClient(k8sClient)
-	opts := mf.UseClient(client)
-
 	uc := util.UtilContext{}
 	BeforeAll(func() {
+		client := mfc.NewClient(k8sClient)
+		opts := mf.UseClient(client)
 		uc = util.UtilContext{
 			Ctx:    ctx,
 			Ns:     WorkingNamespace,
@@ -77,7 +71,7 @@ var _ = Describe("The DS Pipeline Controller", Ordered, func() {
 				component := component
 				deploymentPath := expectedDeployments[component]
 				It(fmt.Sprintf("[%s] Should create deployment for component %s", testcase, component), func() {
-					util.CompareResources(uc, &appsv1.Deployment{}, &appsv1.Deployment{}, deploymentPath)
+					util.CompareResources(uc, deploymentPath)
 				})
 			}
 
@@ -85,30 +79,30 @@ var _ = Describe("The DS Pipeline Controller", Ordered, func() {
 			for component := range util.DeploymentsNotCreated[testcase] {
 				deploymentPath := notExpectedDeployments[component]
 				It(fmt.Sprintf("[%s] Should NOT create deployments for component %s", testcase, component), func() {
-					util.ResourceDoesNotExists(uc, &appsv1.Deployment{}, &appsv1.Deployment{}, deploymentPath)
+					util.ResourceDoesNotExists(uc, deploymentPath)
 				})
 			}
 
 			for component := range util.ConfigMapsCreated[testcase] {
 				It(fmt.Sprintf("[%s] Should create configmaps for component %s", testcase, component), func() {
-					util.CompareResources(uc, &v1.ConfigMap{}, &v1.ConfigMap{}, util.ConfigMapsCreated[testcase][component])
+					util.CompareResources(uc, util.ConfigMapsCreated[testcase][component])
 				})
 			}
 
 			for component := range util.SecretsCreated[testcase] {
 				It(fmt.Sprintf("[%s] Should create secrets for component %s", testcase, component), func() {
-					util.CompareResources(uc, &v1.Secret{}, &v1.Secret{}, util.SecretsCreated[testcase][component])
+					util.CompareResources(uc, util.SecretsCreated[testcase][component])
 				})
 			}
 
 			for component := range util.ConfigMapsNotCreated[testcase] {
 				It(fmt.Sprintf("[%s] Should NOT create configmaps for component %s", testcase, component), func() {
-					util.ResourceDoesNotExists(uc, &v1.ConfigMap{}, &v1.ConfigMap{}, util.ConfigMapsNotCreated[testcase][component])
+					util.ResourceDoesNotExists(uc, util.ConfigMapsNotCreated[testcase][component])
 				})
 			}
 
 			It(fmt.Sprintf("Should successfully delete the Custom Resource for case %s", testcase), func() {
-				util.DeleteResource(uc, &DSPA{}, dspPath)
+				util.DeleteResource(uc, dspPath)
 			})
 		})
 	}

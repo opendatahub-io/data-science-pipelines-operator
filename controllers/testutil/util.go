@@ -19,16 +19,11 @@ package testutil
 import (
 	"context"
 	"fmt"
-	mfc "github.com/manifestival/controller-runtime-client"
 	mf "github.com/manifestival/manifestival"
 	_ "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
-	"reflect"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
 )
@@ -45,14 +40,17 @@ type UtilContext struct {
 	Client client.Client
 }
 
-func ResourceDoesNotExists(uc UtilContext, expected, actual client.Object, path string) {
-	Expect(convertToStructuredResource(path, expected, uc.Opts, uc.Ns)).NotTo(HaveOccurred())
-	namespacedNamed := types.NamespacedName{
-		Name:      expected.GetName(),
-		Namespace: uc.Ns,
-	}
+// ResourceDoesNotExists will check against the client provided
+// by uc.Opts whether resource at path exists.
+func ResourceDoesNotExists(uc UtilContext, path string) {
+	manifest, err := mf.NewManifest(path, uc.Opts)
+	Expect(err).NotTo(HaveOccurred())
+	manifest, err = manifest.Transform(mf.InjectNamespace(uc.Ns))
+	Expect(err).NotTo(HaveOccurred())
+	u := manifest.Resources()[0]
+
 	Eventually(func() error {
-		err := uc.Client.Get(uc.Ctx, namespacedNamed, actual)
+		_, err := manifest.Client.Get(&u)
 		if err != nil {
 			if apierrs.IsNotFound(err) {
 				return nil
@@ -65,36 +63,36 @@ func ResourceDoesNotExists(uc UtilContext, expected, actual client.Object, path 
 
 }
 
+// DeployResource will deploy resource found in path by requesting
+// a generic apply request to the client provided via uc.Opts
 func DeployResource(uc UtilContext, path string) {
-	c := mfc.NewClient(uc.Client)
-	manifest, err := mf.NewManifest(path, mf.UseClient(c))
+	manifest, err := mf.NewManifest(path, uc.Opts)
 	Expect(err).NotTo(HaveOccurred())
-
 	manifest, err = manifest.Transform(mf.InjectNamespace(uc.Ns))
 	Expect(err).NotTo(HaveOccurred())
-
 	err = manifest.Apply()
 	Expect(err).NotTo(HaveOccurred())
 	u := manifest.Resources()[0]
-
 	Eventually(func() error {
 		_, err := manifest.Client.Get(&u)
 		return err
 	}, timeout, interval).ShouldNot(HaveOccurred())
 }
 
-func DeleteResource(uc UtilContext, res client.Object, path string) {
-	err := convertToStructuredResource(path, res, uc.Opts, uc.Ns)
+// DeleteResource will delete resource found in path by requesting
+// a generic delete request to the client provided via uc.Opts
+func DeleteResource(uc UtilContext, path string) {
+
+	manifest, err := mf.NewManifest(path, uc.Opts)
 	Expect(err).NotTo(HaveOccurred())
-	name := res.GetName()
+	manifest, err = manifest.Transform(mf.InjectNamespace(uc.Ns))
+	Expect(err).NotTo(HaveOccurred())
+	err = manifest.Delete()
+	Expect(err).NotTo(HaveOccurred())
+	u := manifest.Resources()[0]
 
 	Eventually(func() error {
-		return uc.Client.Delete(uc.Ctx, res)
-	}, timeout, interval).ShouldNot(HaveOccurred())
-
-	Eventually(func() error {
-		namespacedNamed := types.NamespacedName{Name: name, Namespace: uc.Ns}
-		err = uc.Client.Get(uc.Ctx, namespacedNamed, res)
+		_, err := manifest.Client.Get(&u)
 		if err != nil {
 			if apierrs.IsNotFound(err) {
 				return nil
@@ -107,148 +105,30 @@ func DeleteResource(uc UtilContext, res client.Object, path string) {
 
 }
 
-func CompareResources(uc UtilContext, expected, actual client.Object, path string) {
-	Expect(convertToStructuredResource(path, expected, uc.Opts, uc.Ns)).NotTo(HaveOccurred())
+// CompareResources compares expected resource found locally
+// in path and compares it against the resource found in the
+// k8s cluster accessed via client defined in uc.Opts.
+//
+// Resource type is inferred dynamically. The resource found
+// in path musth ave a supporting comparison procedure implemented.
+//
+// See testutil.CompareResourceProcs for supported procedures.
+func CompareResources(uc UtilContext, path string) {
+	manifest, err := mf.NewManifest(path, uc.Opts)
+	Expect(err).NotTo(HaveOccurred())
+	manifest, err = manifest.Transform(mf.InjectNamespace(uc.Ns))
+	Expect(err).NotTo(HaveOccurred())
+	expected := &manifest.Resources()[0]
+	var actual *unstructured.Unstructured
+
 	Eventually(func() error {
-		namespacedNamed := types.NamespacedName{Name: expected.GetName(), Namespace: uc.Ns}
-		return uc.Client.Get(uc.Ctx, namespacedNamed, actual)
+		var err error
+		actual, err = manifest.Client.Get(expected)
+		return err
 	}, timeout, interval).ShouldNot(HaveOccurred())
 
-	resType := reflect.TypeOf(expected).Elem().Name()
-	Expect(compareResourceProcs[resType](expected, actual)).Should(BeTrue())
-}
-
-func convertToStructuredResource(path string, out interface{}, opts mf.Option, namespace string) error {
-	m, err := mf.ManifestFrom(mf.Recursive(path), opts)
-	if err != nil {
-		return err
-	}
-	m, err = m.Transform(mf.InjectNamespace(namespace))
-	if err != nil {
-		return err
-	}
-	if err != nil {
-		return err
-	}
-	err = scheme.Scheme.Convert(&m.Resources()[0], out, nil)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func notEqualMsg(value string) {
-	print(fmt.Sprintf("%s are not equal.", value))
-}
-
-func configMapsAreEqual(expected, actual client.Object) bool {
-	expectedConfigMap := expected.(*v1.ConfigMap)
-	actualConfigMap := actual.(*v1.ConfigMap)
-	if expectedConfigMap.Name != actualConfigMap.Name {
-		notEqualMsg("Configmap Names are not equal.")
-		return false
-	}
-
-	if !reflect.DeepEqual(expectedConfigMap.Data, actualConfigMap.Data) {
-		notEqualMsg("Configmap's Data values")
-		return false
-	}
-	return true
-}
-
-func secretsAreEqual(expected, actual client.Object) bool {
-	expectedSecret := expected.(*v1.Secret)
-	actualSecret := actual.(*v1.Secret)
-	if expectedSecret.Name != actualSecret.Name {
-		notEqualMsg("Secret Names are not equal.")
-		return false
-	}
-
-	if !reflect.DeepEqual(expectedSecret.Data, actualSecret.Data) {
-		notEqualMsg("Secret's Data values")
-		return false
-	}
-	return true
-}
-
-func deploymentsAreEqual(expected, actual client.Object) bool {
-	expectedDep := expected.(*appsv1.Deployment)
-	actualDep := actual.(*appsv1.Deployment)
-	if !reflect.DeepEqual(expectedDep.ObjectMeta.Labels, actualDep.ObjectMeta.Labels) {
-		notEqualMsg("labels")
-		return false
-	}
-
-	if !reflect.DeepEqual(expectedDep.Spec.Selector, actualDep.Spec.Selector) {
-		notEqualMsg("selector")
-		return false
-	}
-
-	if !reflect.DeepEqual(expectedDep.Spec.Template.ObjectMeta, actualDep.Spec.Template.ObjectMeta) {
-		notEqualMsg("selector")
-		return false
-	}
-
-	if !reflect.DeepEqual(expectedDep.Spec.Template.Spec.Volumes, actualDep.Spec.Template.Spec.Volumes) {
-		notEqualMsg("Volumes")
-		return false
-	}
-
-	if len(expectedDep.Spec.Template.Spec.Containers) != len(actualDep.Spec.Template.Spec.Containers) {
-		notEqualMsg("Containers")
-		return false
-	}
-	for i := range expectedDep.Spec.Template.Spec.Containers {
-		expectedContainer := expectedDep.Spec.Template.Spec.Containers[i]
-		actualContainer := actualDep.Spec.Template.Spec.Containers[i]
-
-		if len(expectedContainer.Env) != len(actualContainer.Env) {
-			notEqualMsg("Container Env Lengths ")
-		}
-		// Check each env individually for a more meaningful response upon failure.
-		for i, expectedEnv := range expectedContainer.Env {
-			actualEnv := actualContainer.Env[i]
-			if !reflect.DeepEqual(expectedEnv, actualEnv) {
-				notEqualMsg(fmt.Sprintf("Container Env [expected: %s, actual: %s]", expectedEnv.Name, actualEnv.Name))
-				return false
-			}
-		}
-
-		if !reflect.DeepEqual(expectedContainer.Env, actualContainer.Env) {
-			notEqualMsg("Container Env")
-			return false
-		}
-		if !reflect.DeepEqual(expectedContainer.Ports, actualContainer.Ports) {
-			notEqualMsg("Container Ports")
-			return false
-		}
-		if !reflect.DeepEqual(expectedContainer.Resources, actualContainer.Resources) {
-			notEqualMsg("Container Resources")
-			return false
-		}
-		if !reflect.DeepEqual(expectedContainer.VolumeMounts, actualContainer.VolumeMounts) {
-			notEqualMsg("Container VolumeMounts")
-			return false
-		}
-		if !reflect.DeepEqual(expectedContainer.Args, actualContainer.Args) {
-			notEqualMsg("Container Args")
-			return false
-		}
-		if expectedContainer.Name != actualContainer.Name {
-			notEqualMsg("Container Name")
-			return false
-		}
-		if expectedContainer.Image != actualContainer.Image {
-			notEqualMsg("Container Image")
-			return false
-		}
-	}
-
-	return true
-}
-
-var compareResourceProcs = map[string]func(expected, actual client.Object) bool{
-	"Secret":     secretsAreEqual,
-	"ConfigMap":  configMapsAreEqual,
-	"Deployment": deploymentsAreEqual,
+	rest := expected.Object["kind"].(string)
+	result, err := CompareResourceProcs[rest](expected, actual)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(result).Should(BeTrue())
 }
