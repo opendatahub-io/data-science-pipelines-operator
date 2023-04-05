@@ -59,13 +59,13 @@ var _ = Describe("The DS Pipeline Controller", Ordered, func() {
 				viper.SetConfigFile(fmt.Sprintf("testdata/deploy/%s/config.yaml", testcase))
 				err := viper.ReadInConfig()
 				Expect(err).ToNot(HaveOccurred(), "Failed to read config file")
-				util.DeployResource(uc, &DSPA{}, dspPath)
+				util.DeployResource(uc, dspPath)
 				// Deploy any additional resources for this test case
 				if util.Cases[testcase].AdditionalResources != nil {
 					for res, paths := range util.Cases[testcase].AdditionalResources {
 						if res == util.SecretKind {
 							for _, p := range paths {
-								util.DeployResource(uc, &v1.Secret{}, p)
+								util.DeployResource(uc, p)
 							}
 						}
 					}

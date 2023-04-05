@@ -19,6 +19,7 @@ package testutil
 import (
 	"context"
 	"fmt"
+	mfc "github.com/manifestival/controller-runtime-client"
 	mf "github.com/manifestival/manifestival"
 	_ "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -64,14 +65,21 @@ func ResourceDoesNotExists(uc UtilContext, expected, actual client.Object, path 
 
 }
 
-func DeployResource(uc UtilContext, res client.Object, path string) {
-	err := convertToStructuredResource(path, res, uc.Opts, uc.Ns)
+func DeployResource(uc UtilContext, path string) {
+	c := mfc.NewClient(uc.Client)
+	manifest, err := mf.NewManifest(path, mf.UseClient(c))
 	Expect(err).NotTo(HaveOccurred())
-	name := res.GetName()
-	Expect(uc.Client.Create(uc.Ctx, res)).Should(Succeed())
+
+	manifest, err = manifest.Transform(mf.InjectNamespace(uc.Ns))
+	Expect(err).NotTo(HaveOccurred())
+
+	err = manifest.Apply()
+	Expect(err).NotTo(HaveOccurred())
+	u := manifest.Resources()[0]
+
 	Eventually(func() error {
-		namespacedNamed := types.NamespacedName{Name: name, Namespace: uc.Ns}
-		return uc.Client.Get(uc.Ctx, namespacedNamed, res)
+		_, err := manifest.Client.Get(&u)
+		return err
 	}, timeout, interval).ShouldNot(HaveOccurred())
 }
 
@@ -108,7 +116,6 @@ func CompareResources(uc UtilContext, expected, actual client.Object, path strin
 
 	resType := reflect.TypeOf(expected).Elem().Name()
 	Expect(compareResourceProcs[resType](expected, actual)).Should(BeTrue())
-
 }
 
 func convertToStructuredResource(path string, out interface{}, opts mf.Option, namespace string) error {
@@ -194,6 +201,19 @@ func deploymentsAreEqual(expected, actual client.Object) bool {
 	for i := range expectedDep.Spec.Template.Spec.Containers {
 		expectedContainer := expectedDep.Spec.Template.Spec.Containers[i]
 		actualContainer := actualDep.Spec.Template.Spec.Containers[i]
+
+		if len(expectedContainer.Env) != len(actualContainer.Env) {
+			notEqualMsg("Container Env Lengths ")
+		}
+		// Check each env individually for a more meaningful response upon failure.
+		for i, expectedEnv := range expectedContainer.Env {
+			actualEnv := actualContainer.Env[i]
+			if !reflect.DeepEqual(expectedEnv, actualEnv) {
+				notEqualMsg(fmt.Sprintf("Container Env [expected: %s, actual: %s]", expectedEnv.Name, actualEnv.Name))
+				return false
+			}
+		}
+
 		if !reflect.DeepEqual(expectedContainer.Env, actualContainer.Env) {
 			notEqualMsg("Container Env")
 			return false
