@@ -1,0 +1,52 @@
+name: Delete quay image of PR once merged
+on:
+  push:
+    branches:
+      - 'main'
+
+permissions:
+  pull-requests: read
+env:
+  QUAY_IMAGE_REPO: ${{ secrets.QUAY_IMAGE_REPO }}
+jobs:
+  delete-pr-quay-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: '0'
+      - name: Install skopeo
+        shell: bash
+        run: |
+          sudo apt-get -y update
+          sudo apt-get -y install skopeo
+      - name: Get Pull Request Number
+        uses: actions/github-script@v6
+        id: get_issue_number
+        with:
+          script: |
+            if (context.issue.number) {
+              // Return issue number if present
+              return context.issue.number;
+            } else {
+              // Otherwise return issue number from commit
+              return (
+                await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                  commit_sha: context.sha,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                })
+              ).data[0].number;
+            }
+          result-encoding: string
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Delete PR image
+        shell: bash
+        env:
+          PR: ${{steps.get_issue_number.outputs.result}}
+          QUAY_ROBOT_USERNAME: ${{ secrets.QUAY_ROBOT_USERNAME }}
+          QUAY_ROBOT_TOKEN: ${{ secrets.QUAY_ROBOT_TOKEN }}
+        run: |
+          skopeo delete --creds ${QUAY_ROBOT_USERNAME}:${QUAY_ROBOT_TOKEN} docker://${QUAY_IMAGE_REPO}:pr-${{ env.PR }}
