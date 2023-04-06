@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	mf "github.com/manifestival/manifestival"
-	_ "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"io/ioutil"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
