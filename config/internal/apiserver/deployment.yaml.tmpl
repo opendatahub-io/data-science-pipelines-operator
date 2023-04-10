@@ -190,8 +190,22 @@ spec:
               memory: {{.APIServer.Resources.Limits.Memory}}
               {{ end }}
             {{ end }}
+          volumeMounts:
+            - name: sample-config
+              mountPath: /config/sample_config.json
+              subPath: sample_config.json
+            - name: sample-pipeline
+              mountPath: /samples/
       serviceAccountName: ds-pipeline-{{.Name}}
       volumes:
         - name: proxy-tls
           secret:
             secretName: ds-pipelines-proxy-tls-{{.Name}}
+        # TODO: encap in if-exists block
+        - name: sample-config
+          configMap:
+            name: sample-config-{{.Name}}
+        - name: sample-pipeline
+          configMap:
+            name: sample-pipeline-{{.Name}}
+          
