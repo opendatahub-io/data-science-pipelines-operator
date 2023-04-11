@@ -22,6 +22,9 @@ spec:
         - namespaceSelector:
             matchLabels:
               name: openshift-user-workload-monitoring
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: redhat-ods-monitoring
         - podSelector:
             matchLabels:
               app: mariadb-{{.Name}}
