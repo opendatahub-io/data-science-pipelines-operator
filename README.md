@@ -200,6 +200,10 @@ echo https://$(oc get routes -n ${DSP_Namespace} ds-pipeline-ui-${DSP_CR_NAME} -
 
 ## Using the Graphical UI
 
+> Note the UI presented below is the upstream Kubeflow Pipelines UI, this is not supported in DSP and will be replaced 
+> with the ODH Dashboard UI. Until then, this UI can be deployed via DSPO for experimentation/development purposes. 
+> Note however that this UI is not a supported feature of DSPO/ODH.
+
 Navigate to the route retrieved in the last step. You will be presented with the MLPipelines UI. In this walkthrough we 
 will upload a pipeline and start a run based off it.
 
@@ -238,6 +242,9 @@ see these logs after clicking this step and navigating to "Logs."
 
 ## Using the API
 
+> Note: By default we use kfp-tekton v1.4 for this section so you will need [kfp-tekton v1.4.x sdk installed][kfp-tekton] 
+> in your environment
+
 In the previous step we submitted a generated `Pipeline` yaml via the GUI. We can also submit the `Pipeline` code 
 directly either locally or via a notebook.
 
@@ -260,6 +267,17 @@ token = os.getenv("OCP_AUTH_TOKEN")
 route = os.getenv("DSP_ROUTE")
 client = kfp_tekton.TektonClient(host=route, existing_token=token)
 
+client.create_run_from_pipeline_func(pipeline_func=flipcoin_pipeline, arguments={})
+```
+
+> Note: If you are in an unsecured cluster, you may encounter `CERTIFICATE_VERIFY_FAILED` error, to work around this 
+> you can pass in the self-signed certs to the kfp-tekton client. For instance, if running inside a notebook or pod
+> on the same cluster, you can do the following: 
+
+```python
+...
+cert = "/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+client = kfp_tekton.TektonClient(host=route, existing_token=token, ssl_ca_cert=cert)
 client.create_run_from_pipeline_func(pipeline_func=flipcoin_pipeline, arguments={})
 ```
 
@@ -349,3 +367,4 @@ without having to repeat these steps.
 [flipcoin example]: https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/docs/example_pipelines/condition.yaml
 [flipcoin code example]: https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/docs/example_pipelines/condition.py
 [installodh]: https://opendatahub.io/docs/getting-started/quick-installation.html
+[kfp-tekton]: https://github.com/kubeflow/kfp-tekton
