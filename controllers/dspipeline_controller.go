@@ -322,6 +322,8 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	for i, condition := range dspa.Status.Conditions {
 		if condition.Status != conditions[i].Status {
 			conditions[i].LastTransitionTime = metav1.Now()
+		} else {
+			conditions[i].LastTransitionTime = condition.LastTransitionTime
 		}
 	}
 	dspa.Status.Conditions = conditions
