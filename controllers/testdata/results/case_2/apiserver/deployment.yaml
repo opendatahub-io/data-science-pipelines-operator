@@ -179,9 +179,23 @@ spec:
             limits:
               cpu: 2522m
               memory: 5Gi
+          volumeMounts:
+            - mountPath: /config/sample_config.json
+              name: sample-config
+              subPath: sample_config.json
+            - mountPath: /samples/
+              name: sample-pipeline
       volumes:
         - name: proxy-tls
           secret:
             secretName: ds-pipelines-proxy-tls-testdsp2
             defaultMode: 420
+        - configMap:
+            defaultMode: 420
+            name: sample-config-testdsp2
+          name: sample-config
+        - configMap:
+            defaultMode: 420
+            name: sample-pipeline-testdsp2
+          name: sample-pipeline
       serviceAccountName: ds-pipeline-testdsp2
