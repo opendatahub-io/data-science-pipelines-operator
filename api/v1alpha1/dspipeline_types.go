@@ -76,6 +76,9 @@ type APIServer struct {
 	EnableRoute bool `json:"enableOauth"`
 	// +kubebuilder:default:=true
 	// +kubebuilder:validation:Optional
+	EnableSamplePipeline bool `json:"enableSamplePipeline"`
+	// +kubebuilder:default:=true
+	// +kubebuilder:validation:Optional
 	AutoUpdatePipelineDefaultVersion bool                  `json:"autoUpdatePipelineDefaultVersion"`
 	Resources                        *ResourceRequirements `json:"resources,omitempty"`
 }

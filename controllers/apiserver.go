@@ -19,6 +19,7 @@ import (
 	"context"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	v1 "github.com/openshift/api/route/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -33,13 +34,18 @@ var apiServerTemplates = []string{
 	"apiserver/service.yaml.tmpl",
 	"apiserver/deployment.yaml.tmpl",
 	"apiserver/monitor.yaml.tmpl",
-	"apiserver/sample-config.yaml.tmpl",
-	"apiserver/sample-pipeline.yaml.tmpl",
 }
 
 // serverRoute is a resource deployed conditionally
 // as such it is handled separately
 const serverRoute = "apiserver/route.yaml.tmpl"
+
+// Sample Pipeline and Config are resources deployed conditionally
+// as such it is handled separately
+var samplePipelineTemplates = map[string]string{
+	"sample-pipeline": "apiserver/sample-pipeline.yaml.tmpl",
+	"sample-config":   "apiserver/sample-config.yaml.tmpl",
+}
 
 func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication, params *DSPAParams) error {
 
@@ -68,6 +74,22 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1alph
 		err := r.DeleteResourceIfItExists(ctx, route, namespacedNamed)
 		if err != nil {
 			return err
+		}
+	}
+
+	for cmName, template := range samplePipelineTemplates {
+		if dsp.Spec.APIServer.EnableSamplePipeline {
+			err := r.Apply(dsp, params, template)
+			if err != nil {
+				return err
+			}
+		} else {
+			cm := &corev1.ConfigMap{}
+			namespacedNamed := types.NamespacedName{Name: cmName + "-" + dsp.Name, Namespace: dsp.Namespace}
+			err := r.DeleteResourceIfItExists(ctx, cm, namespacedNamed)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
