@@ -14,7 +14,7 @@ spec:
   selector:
     matchLabels:
       control-plane: controller-manager
-  replicas: 3
+  replicas: 1
   template:
     metadata:
       annotations:
@@ -78,8 +78,8 @@ spec:
             cpu: 1
             memory: 4Gi
           requests:
-            cpu: 1
-            memory: 2Gi
+            cpu: 10m
+            memory: 64Mi
         volumeMounts:
           - mountPath: /home/config
             name: config
