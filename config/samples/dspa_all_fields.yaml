@@ -157,11 +157,11 @@ status:
       lastTransitionTime: '2023-02-02T21:00:00Z'
       reason: MinimumReplicasAvailable
       message: 'some message'
-    - type: MLPIpelinesUIReady
+    - type: UserInterfaceReady
       status: "True"
       observedGeneration: 4
       lastTransitionTime: '2023-02-02T21:00:00Z'
-      reason: MinimumReplicasAvailable  # DeploymentDisabled
+      reason: MinimumReplicasAvailable
       message: 'some message'
     - type: PersistenceAgentReady
       status: "True"
@@ -182,11 +182,11 @@ status:
       status: "True"
       observedGeneration: 4
       lastTransitionTime: '2023-02-02T21:00:00Z'
-      reason: DataBaseUnreachable  # DataBaseFailedToDeploy, DataBaseReady
-      message: '500 gateway error received'
+      reason: DataBaseReady
+      message: ''
     - type: ObjectStorageReady
       status: "True"
       observedGeneration: 4
       lastTransitionTime: '2023-02-02T21:00:00Z'
-      reason: ObjectStorageUnreachable  # ObjectStorageFailedToDeploy, ObjectStorageReady
-      message: 'host unreachable'
+      reason: ObjectStorageReady
+      message: ''

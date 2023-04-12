@@ -42,11 +42,18 @@ fi
 
 echo "Saving the dump of the pods logs in the artifacts directory"
 oc get pods -o yaml -n ${ODHPROJECT} > ${ARTIFACT_DIR}/${ODHPROJECT}.pods.yaml
+oc get pods -o yaml -n data-science-pipelines-test > ${ARTIFACT_DIR}/data-science-pipelines-test.pods.yaml
 oc get pods -o yaml -n openshift-operators > ${ARTIFACT_DIR}/openshift-operators.pods.yaml
 echo "Saving the events in the artifacts directory"
 oc get events --sort-by='{.lastTimestamp}' > ${ARTIFACT_DIR}/${ODHPROJECT}.events.txt
+oc get events --sort-by='{.lastTimestamp}' -n data-science-pipelines-test > ${ARTIFACT_DIR}/data-science-pipelines-test.events.txt
 echo "Saving the logs from the opendatahub-operator pod in the artifacts directory"
 oc logs -n openshift-operators $(oc get pods -n openshift-operators -l name=opendatahub-operator -o jsonpath="{$.items[*].metadata.name}") > ${ARTIFACT_DIR}/opendatahub-operator.log 2> /dev/null || echo "No logs for openshift-operators/opendatahub-operator"
+echo "Saving the logs from the Data Science Pipelines Operator pods in the artifacts directory"
+for pod in $(oc get pods -n opendatahub -l control-plane=controller-manager -o jsonpath="{$.items[*].metadata.name}");
+do
+    oc logs -n opendatahub $pod > ${ARTIFACT_DIR}/$pod.log;
+done
 
 if [ "$success" -ne 1 ]; then
     exit 1
