@@ -114,10 +114,7 @@ func (r *DSPAReconciler) buildCondition(conditionType string, dspa *dspav1alpha1
 	condition.ObservedGeneration = dspa.Generation
 	condition.Status = metav1.ConditionFalse
 	condition.Reason = reason
-
-	if dspa.Status.Conditions == nil {
-		condition.LastTransitionTime = metav1.Now()
-	}
+	condition.LastTransitionTime = metav1.Now()
 
 	return condition
 }
@@ -225,27 +222,15 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	// Initialize conditions
 	var conditions []metav1.Condition
 
-	databaseReady := r.buildCondition(config.DatabaseReady, dspa, config.DatabaseReady)
 	err = r.ReconcileDatabase(ctx, dspa, params)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	if r.isDeploymentAvailable(ctx, dspa, "mariadb") {
-		databaseReady.Status = metav1.ConditionTrue
-	}
-	conditions = append(conditions, databaseReady)
-
-	objectStorageReady := r.buildCondition(config.ObjectStorageReady, dspa, config.ObjectStorageReady)
 	err = r.ReconcileStorage(ctx, dspa, params)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-
-	if r.isDeploymentAvailable(ctx, dspa, "minio") {
-		objectStorageReady.Status = metav1.ConditionTrue
-	}
-	conditions = append(conditions, objectStorageReady)
 
 	err = r.ReconcileCommon(dspa, params)
 	if err != nil {
@@ -285,16 +270,10 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 	conditions = append(conditions, scheduledWorkflowReady)
 
-	userInterfaceReady := r.buildCondition(config.UserInterfaceReady, dspa, config.MinimumReplicasAvailable)
 	err = r.ReconcileUI(dspa, params)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-
-	if r.isDeploymentAvailable(ctx, dspa, "ds-pipeline-ui") {
-		userInterfaceReady.Status = metav1.ConditionTrue
-	}
-	conditions = append(conditions, userInterfaceReady)
 
 	err = r.ReconcileViewerCRD(dspa, params)
 	if err != nil {
@@ -307,12 +286,9 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	crReady.Type = config.CrReady
 
 	// Compute Ready Logic for the CR
-	if ((apiServerReady.Status == metav1.ConditionTrue) &&
+	if (apiServerReady.Status == metav1.ConditionTrue) &&
 		(persistenceAgentReady.Status == metav1.ConditionTrue) &&
-		(scheduledWorkflowReady.Status == metav1.ConditionTrue) &&
-		(databaseReady.Status == metav1.ConditionTrue) &&
-		(objectStorageReady.Status == metav1.ConditionTrue)) &&
-		(userInterfaceReady.Status == metav1.ConditionTrue || (userInterfaceReady.Status == metav1.ConditionFalse && !dspa.Spec.MlPipelineUI.Deploy)) {
+		(scheduledWorkflowReady.Status == metav1.ConditionTrue) {
 		crReady.Status = metav1.ConditionTrue
 	} else {
 		crReady.Status = metav1.ConditionFalse
@@ -320,9 +296,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	conditions = append(conditions, crReady)
 
 	for i, condition := range dspa.Status.Conditions {
-		if condition.Status != conditions[i].Status {
-			conditions[i].LastTransitionTime = metav1.Now()
-		} else {
+		if condition.Status == conditions[i].Status {
 			conditions[i].LastTransitionTime = condition.LastTransitionTime
 		}
 	}
