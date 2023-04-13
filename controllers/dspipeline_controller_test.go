@@ -55,7 +55,7 @@ var cases = map[string]TestCase{
 		Path:        "./testdata/deploy/case_2/cr.yaml",
 	},
 	"case_3": {
-		Description: "custom Artifact configmap is provided, custom images override defaults",
+		Description: "custom Artifact configmap is provided, custom images override defaults, no sample pipeline",
 		Path:        "./testdata/deploy/case_3/cr.yaml",
 		AdditionalResources: map[string][]string{
 			SecretKind: {
@@ -110,7 +110,9 @@ var secretsCreated = CaseComponentResources{
 
 var configMapsNotCreated = CaseComponentResources{
 	"case_3": {
-		"apiserver": "./testdata/results/case_3/apiserver/configmap_artifact_script.yaml",
+		"apiserver":                "./testdata/results/case_3/apiserver/configmap_artifact_script.yaml",
+		"apiserver-sampleconfig":   "./testdata/results/case_3/apiserver/sample-config.yaml",
+		"apiserver-samplepipeline": "./testdata/results/case_3/apiserver/sample-pipeline.yaml",
 	},
 }
 

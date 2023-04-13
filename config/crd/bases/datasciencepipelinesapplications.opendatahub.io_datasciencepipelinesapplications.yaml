@@ -72,6 +72,9 @@ spec:
                   enableOauth:
                     default: true
                     type: boolean
+                  enableSamplePipeline:
+                    default: true
+                    type: boolean
                   image:
                     type: string
                   injectDefaultScript:

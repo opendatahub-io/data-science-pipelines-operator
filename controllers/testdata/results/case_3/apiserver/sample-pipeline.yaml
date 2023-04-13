@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sample-pipeline-testdsp3
+  namespace: default
+data:
+  sample-pipeline.yaml: |-
+    pipeline: placeholder
+    reason: |-
+      we're not actually checking the contents here,
+      just verifying the CM itself doesn't exist in this test
