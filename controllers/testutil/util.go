@@ -24,6 +24,7 @@ import (
 	"io/ioutil"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
 )
@@ -146,6 +147,18 @@ func CompareResources(uc UtilContext, path string) {
 	Expect(result).Should(BeTrue())
 }
 
+// DirExists checks whether dir at path exists
+func DirExists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
+}
+
 // GenerateDeclarativeTestCases dynamically generate
 // testcases based on resources located in the testdata
 // directory.
@@ -166,18 +179,27 @@ func GenerateDeclarativeTestCases() []Case {
 		}
 
 		caseCreateDir := fmt.Sprintf("%s/expected/created", caseDir)
-		toCreate, err := ioutil.ReadDir(caseCreateDir)
+		caseCreationsFound, err := DirExists(caseCreateDir)
 		Expect(err).ToNot(HaveOccurred(), "Failed to read 'create' dir.")
-		for _, f := range toCreate {
-			newCase.Expected.Created = append(newCase.Expected.Created, fmt.Sprintf("%s/%s", caseCreateDir, f.Name()))
+		if caseCreationsFound {
+			toCreate, err := ioutil.ReadDir(caseCreateDir)
+			Expect(err).ToNot(HaveOccurred(), "Failed to read 'create' dir.")
+			for _, f := range toCreate {
+				newCase.Expected.Created = append(newCase.Expected.Created, fmt.Sprintf("%s/%s", caseCreateDir, f.Name()))
+			}
 		}
 
 		caseNotCreateDir := fmt.Sprintf("%s/expected/not_created", caseDir)
-		toNotCreate, err := ioutil.ReadDir(caseNotCreateDir)
+		caseNoCreationsFound, err := DirExists(caseNotCreateDir)
 		Expect(err).ToNot(HaveOccurred(), "Failed to read 'not_create' dir.")
-		for _, f := range toNotCreate {
-			newCase.Expected.NotCreated = append(newCase.Expected.NotCreated, fmt.Sprintf("%s/%s", caseNotCreateDir, f.Name()))
+		if caseNoCreationsFound {
+			toNotCreate, err := ioutil.ReadDir(caseNotCreateDir)
+			Expect(err).ToNot(HaveOccurred(), "Failed to read 'not_create' dir.")
+			for _, f := range toNotCreate {
+				newCase.Expected.NotCreated = append(newCase.Expected.NotCreated, fmt.Sprintf("%s/%s", caseNotCreateDir, f.Name()))
+			}
 		}
+
 		newCase.Description = fmt.Sprintf("[%s] - When a DSPA is deployed", caseName)
 
 		newCase.Config = fmt.Sprintf("%s/config.yaml", caseDir)
