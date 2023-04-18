@@ -11,6 +11,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.8.4
 	github.com/onsi/gomega v1.27.1
 	github.com/openshift/api v3.9.0+incompatible
+	github.com/prometheus/client_golang v1.12.2
 	github.com/spf13/viper v1.4.0
 	go.uber.org/zap v1.21.0
 	k8s.io/api v0.25.0
@@ -63,7 +64,6 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pelletier/go-toml v1.2.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/prometheus/client_golang v1.12.2 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect

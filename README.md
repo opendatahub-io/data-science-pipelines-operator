@@ -19,6 +19,7 @@ Data Science Pipeline stacks onto individual OCP namespaces.
    1. [Cleanup ODH Installation](#cleanup-odh-installation)
    2. [Cleanup Standalone Installation](#cleanup-standalone-installation)
 5. [Run tests](#run-tests)
+6. [Metrics](#metrics)
 
 # Quickstart
 
@@ -358,6 +359,17 @@ pre-commit run --all-files
 You can find a more permanent location to install `setup-envtest` into on your local filesystem and export 
 `KUBEBUILDER_ASSETS` into your `.bashrc` or equivalent. By doing this you can always run `pre-commit run --all-files` 
 without having to repeat these steps.
+
+# Metrics
+
+The Data Science Pipelines Operator exposes standard operator-sdk metrics for controller monitoring purposes.  
+In addition to these metrics, DSPO also exposes several custom metrics for monitoring the status of the DataSciencePipelinesApplications that it owns.
+
+They are as follows:
+- `data_science_pipelines_application_apiserver_ready` - Gauge that indicates if the DSPA's APIServer is in a Ready state (1 => Ready, 0 => Not Ready)
+- `data_science_pipelines_application_persistenceagent_ready` - Gauge that indicates if the DSPA's PersistenceAgent is in a Ready state (1 => Ready, 0 => Not Ready)
+- `data_science_pipelines_application_scheduledworkflow_ready` - Gauge that indicates if the DSPA's ScheduledWorkflow manager is in a Ready state (1 => Ready, 0 => Not Ready)
+- `data_science_pipelines_application_ready` - Gauge that indicates if the DSPA is in a fully Ready state (1 => Ready, 0 => Not Ready)
 
 [cluster admin]: https://docs.openshift.com/container-platform/4.12/authentication/using-rbac.html#creating-cluster-admin_using-rbac
 [oc client]: https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/latest/openshift-client-linux.tar.gz
