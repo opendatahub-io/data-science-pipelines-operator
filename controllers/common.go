@@ -26,9 +26,9 @@ var commonTemplates = []string{
 const commonCusterRolebindingTemplate = "common/clusterrolebinding.yaml.tmpl"
 
 func (r *DSPAReconciler) ReconcileCommon(dsp *dspav1alpha1.DataSciencePipelinesApplication, params *DSPAParams) error {
-	r.Log.Info("Applying Common Resources")
+	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
 
-	r.Log.Info("Applying Common Resources")
+	log.Info("Applying Common Resources")
 	for _, template := range commonTemplates {
 		err := r.Apply(dsp, params, template)
 		if err != nil {
@@ -41,7 +41,7 @@ func (r *DSPAReconciler) ReconcileCommon(dsp *dspav1alpha1.DataSciencePipelinesA
 		return err
 	}
 
-	r.Log.Info("Finished applying Common Resources")
+	log.Info("Finished applying Common Resources")
 	return nil
 }
 

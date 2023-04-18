@@ -17,6 +17,7 @@ package controllers
 
 import (
 	"context"
+
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 )
 
@@ -33,6 +34,8 @@ var dbTemplates = []string{
 func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,
 	params *DSPAParams) error {
 
+	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
+
 	databaseSpecified := dsp.Spec.Database != nil
 	// DB field can be specified as an empty obj, confirm that subfields are also specified
 	// By default if Database is empty, we deploy mariadb
@@ -42,7 +45,7 @@ func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha
 
 	// If external db is specified, it takes precedence
 	if externalDBSpecified {
-		r.Log.Info("Deploying external db secret.")
+		log.Info("Deploying external db secret.")
 		// If using external DB, we just need to create the secret
 		// for apiserver
 		err := r.Apply(dsp, params, dbSecret)
@@ -50,7 +53,7 @@ func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha
 			return err
 		}
 	} else if deployMariaDB {
-		r.Log.Info("Applying mariaDB resources.")
+		log.Info("Applying mariaDB resources.")
 		for _, template := range dbTemplates {
 			err := r.Apply(dsp, params, template)
 			if err != nil {
@@ -69,11 +72,11 @@ func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha
 			}
 		}
 	} else {
-		r.Log.Info("No externalDB detected, and mariaDB disabled. " +
+		log.Info("No externalDB detected, and mariaDB disabled. " +
 			"skipping Application of DB Resources")
 		return nil
 	}
-	r.Log.Info("Finished applying Database Resources")
+	log.Info("Finished applying Database Resources")
 
 	return nil
 }
