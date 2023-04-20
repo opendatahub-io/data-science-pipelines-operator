@@ -11,8 +11,8 @@ require (
 	github.com/onsi/ginkgo/v2 v2.8.4
 	github.com/onsi/gomega v1.27.1
 	github.com/openshift/api v3.9.0+incompatible
-	github.com/spf13/viper v1.7.0
 	github.com/prometheus/client_golang v1.12.2
+	github.com/spf13/viper v1.7.0
 	go.uber.org/zap v1.21.0
 	k8s.io/api v0.25.0
 	k8s.io/apimachinery v0.25.0
