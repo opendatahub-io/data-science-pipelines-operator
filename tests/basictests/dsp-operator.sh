@@ -101,6 +101,29 @@ function verify_pipeline_availabilty() {
     os::cmd::try_until_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' https://${ROUTE}/apis/v1beta1/pipelines | jq '.total_size'" "2" $odhdefaulttimeout $odhdefaultinterval
 }
 
+function create_experiment() {
+  header "Creating an experiment"
+
+  EXPERIMENT_ID=$((curl -s -k -H "Authorization: Bearer ${SA_TOKEN}" \
+      -H "Content-Type: application/json" \
+      -X POST "https://${ROUTE}/apis/v1beta1/experiments" \
+      -d @- << EOF
+      {
+          "name": "test-experiment",
+          "description": "This is a test experiment"
+      }
+EOF
+        ) | jq -r .id)
+
+  os::cmd::try_until_not_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' https://${ROUTE}/apis/v1beta1/experiments/${EXPERIMENT_ID} | jq" "null" $odhdefaulttimeout $odhdefaultinterval
+}
+
+function verify_experiment_availabilty() {
+  header "Verify experiment exists"
+
+  os::cmd::try_until_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' https://${ROUTE}/apis/v1beta1/experiments | jq '.total_size'" "2" $odhdefaulttimeout $odhdefaultinterval
+}
+
 function create_run() {
     header "Creating the run from uploaded pipeline"
 
@@ -120,16 +143,54 @@ EOF
     os::cmd::try_until_not_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' https://${ROUTE}/apis/v1beta1/runs/${RUN_ID} | jq '" "null" $odhdefaulttimeout $odhdefaultinterval
 }
 
+function create_experiment_run() {
+    header "Creating a run that uses the test experiment"
+
+    RUN_ID_EXPT=$((curl -k -H "Authorization: Bearer ${SA_TOKEN}" \
+        -H "Content-Type: application/json" \
+        -X POST "https://${ROUTE}/apis/v1beta1/runs" \
+        -d @- << EOF
+        {
+            "name": "test-experiment-run",
+            "description": "This is a test run that uses the test experiment",
+            "pipeline_spec":{
+                "pipeline_id":"${PIPELINE_ID}"
+            },
+            "resource_references":[
+            {
+               "key":{
+                  "type":"EXPERIMENT",
+                  "id":"${EXPERIMENT_ID}"
+               },
+               "name":"Default",
+               "relationship":"OWNER"
+            }
+            ]
+        }
+EOF
+        ) | jq -r .run.id)
+
+    os::cmd::try_until_not_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' https://${ROUTE}/apis/v1beta1/runs/${RUN_ID_EXPT} | jq '" "null" $odhdefaulttimeout $odhdefaultinterval
+}
+
 function verify_run_availabilty() {
     header "verify the run exists"
 
-    os::cmd::try_until_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' https://${ROUTE}/apis/v1beta1/runs | jq '.total_size'" "1" $odhdefaulttimeout $odhdefaultinterval
+    os::cmd::try_until_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' https://${ROUTE}/apis/v1beta1/runs | jq '.total_size'" "2" $odhdefaulttimeout $odhdefaultinterval
 }
 
 function check_run_status() {
     header "Checking run status"
 
     os::cmd::try_until_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' https://${ROUTE}/apis/v1beta1/runs/${RUN_ID} | jq '.run.status'" "Completed" $odhdefaulttimeout $odhdefaultinterval
+    os::cmd::try_until_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' https://${ROUTE}/apis/v1beta1/runs/${RUN_ID_EXPT} | jq '.run.status'" "Completed" $odhdefaulttimeout $odhdefaultinterval
+}
+
+function delete_experiment() {
+  header "Deleting the experiment"
+
+  os::cmd::try_until_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' -X DELETE https://${ROUTE}/apis/v1beta1/experiments/${EXPERIMENT_ID} | jq" "" $odhdefaulttimeout $odhdefaultinterval
+  os::cmd::try_until_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' https://${ROUTE}/apis/v1beta1/experiments/${EXPERIMENT_ID} | jq '.code'" "5" $odhdefaulttimeout $odhdefaultinterval
 }
 
 function delete_runs() {
@@ -137,6 +198,8 @@ function delete_runs() {
 
     os::cmd::try_until_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' -X DELETE https://${ROUTE}/apis/v1beta1/runs/${RUN_ID} | jq" "" $odhdefaulttimeout $odhdefaultinterval
     os::cmd::try_until_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' https://${ROUTE}/apis/v1beta1/runs/${RUN_ID} | jq '.code'" "5" $odhdefaulttimeout $odhdefaultinterval
+    os::cmd::try_until_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' -X DELETE https://${ROUTE}/apis/v1beta1/runs/${RUN_ID_EXPT} | jq" "" $odhdefaulttimeout $odhdefaultinterval
+    os::cmd::try_until_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' https://${ROUTE}/apis/v1beta1/runs/${RUN_ID_EXPT} | jq '.code'" "5" $odhdefaulttimeout $odhdefaultinterval
 }
 
 function delete_pipeline() {
@@ -157,10 +220,14 @@ test_metrics
 fetch_runs
 create_pipeline
 verify_pipeline_availabilty
+create_experiment
+verify_experiment_availabilty
 create_run
+create_experiment_run
 verify_run_availabilty
 check_run_status
 delete_runs
+delete_experiment
 delete_pipeline
 
 os::test::junit::declare_suite_end
