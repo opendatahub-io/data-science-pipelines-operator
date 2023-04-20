@@ -58,6 +58,8 @@ func init() {
 
 	utilruntime.Must(dspav1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
+
+	controllers.InitMetrics()
 }
 
 func initConfig(configPath string) error {
