@@ -1,9 +1,0 @@
-Images:
-  ApiServer: api-server:test1
-  Artifact: artifact-manager:test1
-  PersistentAgent: persistenceagent:test1
-  ScheduledWorkflow: scheduledworkflow:test1
-  ViewerCRD: viewercontroller:test1
-  Cache: ubi-minimal:test1
-  MoveResultsImage: busybox:test1
-  MariaDB: mariadb:test1

@@ -1,0 +1,37 @@
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: testdsp3
+spec:
+  apiServer:
+    enableOauth: true
+    enableSamplePipeline: false
+    artifactScriptConfigMap:
+      name: doesnotexist
+      key: "somekey"
+    deploy: true
+  persistenceAgent: {}
+  scheduledWorkflow: {}
+  viewerCRD: {}
+  database:
+    externalDB:
+      host: testdbhost3
+      passwordSecret:
+        key: testpswkey3
+        name: testdbpswsecretname3
+      pipelineDBName: testdbname3
+      port: test3
+      username: testuser3
+  objectStorage:
+    externalStorage:
+      port: '80'
+      bucket: testbucket3
+      host: teststoragehost3
+      s3CredentialsSecret:
+        accessKey: testaccesskey3
+        secretKey: testsecretkey3
+        secretName: teststoragesecretname3
+      scheme: https
+  mlpipelineUI:
+    deploy: false
+    image: frontend:test3

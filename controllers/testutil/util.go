@@ -17,100 +17,195 @@ limitations under the License.
 package testutil
 
 import (
+	"context"
 	"fmt"
-	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
-	"reflect"
+	mf "github.com/manifestival/manifestival"
+	. "github.com/onsi/gomega"
+	"io/ioutil"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"os"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"time"
 )
 
-func notEqualMsg(value string) {
-	print(fmt.Sprintf("%s are not equal.", value))
+const (
+	timeout  = time.Second * 10
+	interval = time.Millisecond * 2
+	CasesDir = "./testdata/declarative"
+)
+
+type UtilContext struct {
+	Ctx    context.Context
+	Ns     string
+	Opts   mf.Option
+	Client client.Client
 }
 
-func ConfigMapsAreEqual(expected v1.ConfigMap, actual v1.ConfigMap) bool {
-	if expected.Name != actual.Name {
-		notEqualMsg("Configmap Names are not equal.")
-		return false
-	}
-
-	if !reflect.DeepEqual(expected.Data, actual.Data) {
-		notEqualMsg("Configmap's Data values")
-		return false
-	}
-	return true
+type Case struct {
+	Description string
+	Config      string
+	Deploy      []string
+	Expected    Expectation
 }
 
-func SecretsAreEqual(expected v1.Secret, actual v1.Secret) bool {
-	if expected.Name != actual.Name {
-		notEqualMsg("Secret Names are not equal.")
-		return false
-	}
-
-	if !reflect.DeepEqual(expected.Data, actual.Data) {
-		notEqualMsg("Secret's Data values")
-		return false
-	}
-	return true
+type Expectation struct {
+	Created    []string
+	NotCreated []string
 }
 
-func DeploymentsAreEqual(expectedDep appsv1.Deployment, actualDep appsv1.Deployment) bool {
+// ResourceDoesNotExists will check against the client provided
+// by uc.Opts whether resource at path exists.
+func ResourceDoesNotExists(uc UtilContext, path string) {
+	manifest, err := mf.NewManifest(path, uc.Opts)
+	Expect(err).NotTo(HaveOccurred())
+	manifest, err = manifest.Transform(mf.InjectNamespace(uc.Ns))
+	Expect(err).NotTo(HaveOccurred())
+	u := manifest.Resources()[0]
 
-	if !reflect.DeepEqual(expectedDep.ObjectMeta.Labels, actualDep.ObjectMeta.Labels) {
-		notEqualMsg("labels")
-		return false
+	Eventually(func() error {
+		_, err := manifest.Client.Get(&u)
+		if err != nil {
+			if apierrs.IsNotFound(err) {
+				return nil
+			}
+			return err
+		}
+		return fmt.Errorf("resource still exists on cluster")
+
+	}, timeout, interval).ShouldNot(HaveOccurred())
+
+}
+
+// DeployResource will deploy resource found in path by requesting
+// a generic apply request to the client provided via uc.Opts
+func DeployResource(uc UtilContext, path string) {
+	manifest, err := mf.NewManifest(path, uc.Opts)
+	Expect(err).NotTo(HaveOccurred())
+	manifest, err = manifest.Transform(mf.InjectNamespace(uc.Ns))
+	Expect(err).NotTo(HaveOccurred())
+	err = manifest.Apply()
+	Expect(err).NotTo(HaveOccurred())
+	u := manifest.Resources()[0]
+	Eventually(func() error {
+		_, err := manifest.Client.Get(&u)
+		return err
+	}, timeout, interval).ShouldNot(HaveOccurred())
+}
+
+// DeleteResource will delete resource found in path by requesting
+// a generic delete request to the client provided via uc.Opts
+func DeleteResource(uc UtilContext, path string) {
+
+	manifest, err := mf.NewManifest(path, uc.Opts)
+	Expect(err).NotTo(HaveOccurred())
+	manifest, err = manifest.Transform(mf.InjectNamespace(uc.Ns))
+	Expect(err).NotTo(HaveOccurred())
+	err = manifest.Delete()
+	Expect(err).NotTo(HaveOccurred())
+	u := manifest.Resources()[0]
+
+	Eventually(func() error {
+		_, err := manifest.Client.Get(&u)
+		if err != nil {
+			if apierrs.IsNotFound(err) {
+				return nil
+			}
+			return err
+		}
+		return fmt.Errorf("resource still exists on cluster")
+
+	}, timeout, interval).ShouldNot(HaveOccurred())
+
+}
+
+// CompareResources compares expected resource found locally
+// in path and compares it against the resource found in the
+// k8s cluster accessed via client defined in uc.Opts.
+//
+// Resource type is inferred dynamically. The resource found
+// in path musth ave a supporting comparison procedure implemented.
+//
+// See testutil.CompareResourceProcs for supported procedures.
+func CompareResources(uc UtilContext, path string) {
+	manifest, err := mf.NewManifest(path, uc.Opts)
+	Expect(err).NotTo(HaveOccurred())
+	manifest, err = manifest.Transform(mf.InjectNamespace(uc.Ns))
+	Expect(err).NotTo(HaveOccurred())
+	expected := &manifest.Resources()[0]
+	var actual *unstructured.Unstructured
+
+	Eventually(func() error {
+		var err error
+		actual, err = manifest.Client.Get(expected)
+		return err
+	}, timeout, interval).ShouldNot(HaveOccurred())
+
+	rest := expected.Object["kind"].(string)
+	result, err := CompareResourceProcs[rest](expected, actual)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(result).Should(BeTrue())
+}
+
+// DirExists checks whether dir at path exists
+func DirExists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
+}
+
+// GenerateDeclarativeTestCases dynamically generate
+// testcases based on resources located in the testdata
+// directory.
+func GenerateDeclarativeTestCases() []Case {
+	var testcases []Case
+
+	cases, err := ioutil.ReadDir(CasesDir)
+	Expect(err).ToNot(HaveOccurred(), "Failed to fetch cases in case dir.")
+	for _, testcase := range cases {
+		caseName := testcase.Name()
+		caseDir := fmt.Sprintf("%s/%s", CasesDir, caseName)
+		newCase := Case{}
+		caseDeployDir := fmt.Sprintf("%s/deploy", caseDir)
+		deploys, err := ioutil.ReadDir(caseDeployDir)
+		Expect(err).ToNot(HaveOccurred(), "Failed to read case.")
+		for _, f := range deploys {
+			newCase.Deploy = append(newCase.Deploy, fmt.Sprintf("%s/%s", caseDeployDir, f.Name()))
+		}
+
+		caseCreateDir := fmt.Sprintf("%s/expected/created", caseDir)
+		caseCreationsFound, err := DirExists(caseCreateDir)
+		Expect(err).ToNot(HaveOccurred(), "Failed to read 'create' dir.")
+		if caseCreationsFound {
+			toCreate, err := ioutil.ReadDir(caseCreateDir)
+			Expect(err).ToNot(HaveOccurred(), "Failed to read 'create' dir.")
+			for _, f := range toCreate {
+				newCase.Expected.Created = append(newCase.Expected.Created, fmt.Sprintf("%s/%s", caseCreateDir, f.Name()))
+			}
+		}
+
+		caseNotCreateDir := fmt.Sprintf("%s/expected/not_created", caseDir)
+		caseNoCreationsFound, err := DirExists(caseNotCreateDir)
+		Expect(err).ToNot(HaveOccurred(), "Failed to read 'not_create' dir.")
+		if caseNoCreationsFound {
+			toNotCreate, err := ioutil.ReadDir(caseNotCreateDir)
+			Expect(err).ToNot(HaveOccurred(), "Failed to read 'not_create' dir.")
+			for _, f := range toNotCreate {
+				newCase.Expected.NotCreated = append(newCase.Expected.NotCreated, fmt.Sprintf("%s/%s", caseNotCreateDir, f.Name()))
+			}
+		}
+
+		newCase.Description = fmt.Sprintf("[%s] - When a DSPA is deployed", caseName)
+
+		newCase.Config = fmt.Sprintf("%s/config.yaml", caseDir)
+
+		testcases = append(testcases, newCase)
 	}
 
-	if !reflect.DeepEqual(expectedDep.Spec.Selector, actualDep.Spec.Selector) {
-		notEqualMsg("selector")
-		return false
-	}
-
-	if !reflect.DeepEqual(expectedDep.Spec.Template.ObjectMeta, actualDep.Spec.Template.ObjectMeta) {
-		notEqualMsg("selector")
-		return false
-	}
-
-	if !reflect.DeepEqual(expectedDep.Spec.Template.Spec.Volumes, actualDep.Spec.Template.Spec.Volumes) {
-		notEqualMsg("Volumes")
-		return false
-	}
-
-	if len(expectedDep.Spec.Template.Spec.Containers) != len(actualDep.Spec.Template.Spec.Containers) {
-		notEqualMsg("Containers")
-		return false
-	}
-	for i := range expectedDep.Spec.Template.Spec.Containers {
-		expectedContainer := expectedDep.Spec.Template.Spec.Containers[i]
-		actualContainer := actualDep.Spec.Template.Spec.Containers[i]
-		if !reflect.DeepEqual(expectedContainer.Env, actualContainer.Env) {
-			notEqualMsg("Container Env")
-			return false
-		}
-		if !reflect.DeepEqual(expectedContainer.Ports, actualContainer.Ports) {
-			notEqualMsg("Container Ports")
-			return false
-		}
-		if !reflect.DeepEqual(expectedContainer.Resources, actualContainer.Resources) {
-			notEqualMsg("Container Resources")
-			return false
-		}
-		if !reflect.DeepEqual(expectedContainer.VolumeMounts, actualContainer.VolumeMounts) {
-			notEqualMsg("Container VolumeMounts")
-			return false
-		}
-		if !reflect.DeepEqual(expectedContainer.Args, actualContainer.Args) {
-			notEqualMsg("Container Args")
-			return false
-		}
-		if expectedContainer.Name != actualContainer.Name {
-			notEqualMsg("Container Name")
-			return false
-		}
-		if expectedContainer.Image != actualContainer.Image {
-			notEqualMsg("Container Image")
-			return false
-		}
-	}
-
-	return true
+	return testcases
 }

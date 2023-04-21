@@ -1,0 +1,10 @@
+# When a DSPA with a custom db/storage secret, and custom artifact script is deployed.
+Images:
+  ApiServer: api-server:test3
+  Artifact: artifact-manager:test3
+  PersistentAgent: persistenceagent:test3
+  ScheduledWorkflow: scheduledworkflow:test3
+  ViewerCRD: viewercontroller:test3
+  Cache: ubi-minimal:test3
+  MoveResultsImage: busybox:test3
+  MariaDB: mariadb:test3

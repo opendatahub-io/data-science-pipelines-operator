@@ -10,3 +10,9 @@ linters:
     - typecheck
     - unused
     - revive
+linters-settings:
+  revive:
+    rules:
+      - name: dot-imports
+        severity: warning
+        disabled: true

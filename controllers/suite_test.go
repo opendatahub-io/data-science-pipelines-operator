@@ -18,8 +18,6 @@ package controllers
 
 import (
 	"context"
-	"github.com/manifestival/manifestival"
-	mf "github.com/manifestival/manifestival"
 	buildv1 "github.com/openshift/api/build/v1"
 	imagev1 "github.com/openshift/api/image/v1"
 	routev1 "github.com/openshift/api/route/v1"
@@ -139,22 +137,3 @@ var _ = AfterSuite(func() {
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })
-
-func convertToStructuredResource(path string, out interface{}, opts manifestival.Option) error {
-	m, err := mf.ManifestFrom(mf.Recursive(path), opts)
-	if err != nil {
-		return err
-	}
-	m, err = m.Transform(mf.InjectNamespace(WorkingNamespace))
-	if err != nil {
-		return err
-	}
-	if err != nil {
-		return err
-	}
-	err = scheme.Scheme.Convert(&m.Resources()[0], out, nil)
-	if err != nil {
-		return err
-	}
-	return nil
-}
