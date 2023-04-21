@@ -32,12 +32,14 @@ var scheduledWorkflowTemplates = []string{
 func (r *DSPAReconciler) ReconcileScheduledWorkflow(dsp *dspav1alpha1.DataSciencePipelinesApplication,
 	params *DSPAParams) error {
 
+	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
+
 	if !dsp.Spec.ScheduledWorkflow.Deploy {
-		r.Log.Info("Skipping Application of ScheduledWorkflow Resources")
+		log.Info("Skipping Application of ScheduledWorkflow Resources")
 		return nil
 	}
 
-	r.Log.Info("Applying ScheduledWorkflow Resources")
+	log.Info("Applying ScheduledWorkflow Resources")
 
 	for _, template := range scheduledWorkflowTemplates {
 		err := r.Apply(dsp, params, template)
@@ -46,6 +48,6 @@ func (r *DSPAReconciler) ReconcileScheduledWorkflow(dsp *dspav1alpha1.DataScienc
 		}
 	}
 
-	r.Log.Info("Finished applying ScheduledWorkflow Resources")
+	log.Info("Finished applying ScheduledWorkflow Resources")
 	return nil
 }

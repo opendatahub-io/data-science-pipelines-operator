@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 )
 
@@ -34,6 +35,8 @@ var storageTemplates = []string{
 func (r *DSPAReconciler) ReconcileStorage(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,
 	params *DSPAParams) error {
 
+	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
+
 	storageSpecified := dsp.Spec.ObjectStorage != nil
 	// Storage field can be specified as an empty obj, confirm that subfields are also specified
 	externalStorageSpecified := params.UsingExternalStorage(dsp)
@@ -42,7 +45,7 @@ func (r *DSPAReconciler) ReconcileStorage(ctx context.Context, dsp *dspav1alpha1
 
 	// If external storage is specified, it takes precedence
 	if externalStorageSpecified {
-		r.Log.Info("Deploying external storage secret.")
+		log.Info("Deploying external storage secret.")
 		// If using external storage, we just need to create the secret
 		// for apiserver
 		err := r.Apply(dsp, params, storageSecret)
@@ -50,7 +53,7 @@ func (r *DSPAReconciler) ReconcileStorage(ctx context.Context, dsp *dspav1alpha1
 			return err
 		}
 	} else if deployMinio {
-		r.Log.Info("Applying object storage resources.")
+		log.Info("Applying object storage resources.")
 		for _, template := range storageTemplates {
 			err := r.Apply(dsp, params, template)
 			if err != nil {
@@ -69,11 +72,11 @@ func (r *DSPAReconciler) ReconcileStorage(ctx context.Context, dsp *dspav1alpha1
 			}
 		}
 	} else {
-		r.Log.Info("No externalstorage detected, and minio disabled. " +
+		log.Info("No externalstorage detected, and minio disabled. " +
 			"skipping application of storage Resources")
 		return nil
 	}
-	r.Log.Info("Finished applying storage Resources")
+	log.Info("Finished applying storage Resources")
 
 	return nil
 }

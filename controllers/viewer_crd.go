@@ -30,12 +30,14 @@ var viewerCRDTemplates = []string{
 func (r *DSPAReconciler) ReconcileViewerCRD(dsp *dspav1alpha1.DataSciencePipelinesApplication,
 	params *DSPAParams) error {
 
+	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
+
 	if !dsp.Spec.ViewerCRD.Deploy {
-		r.Log.Info("Skipping Application of ViewerCRD Resources")
+		log.Info("Skipping Application of ViewerCRD Resources")
 		return nil
 	}
 
-	r.Log.Info("Applying ViewerCRD Resources")
+	log.Info("Applying ViewerCRD Resources")
 
 	for _, template := range viewerCRDTemplates {
 		err := r.Apply(dsp, params, template)
@@ -44,6 +46,6 @@ func (r *DSPAReconciler) ReconcileViewerCRD(dsp *dspav1alpha1.DataSciencePipelin
 		}
 	}
 
-	r.Log.Info("Finished applying ViewerCRD Resources")
+	log.Info("Finished applying ViewerCRD Resources")
 	return nil
 }

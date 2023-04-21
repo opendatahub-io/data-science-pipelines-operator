@@ -163,7 +163,7 @@ func (r *DSPAReconciler) isDeploymentAvailable(ctx context.Context, dspa *dspav1
 //+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;list;watch;create;update;patch;delete
 
 func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("namespace", req.Namespace)
+	log := r.Log.WithValues("namespace", req.Namespace).WithValues("dspa_name", req.Name)
 
 	log.V(1).Info("DataSciencePipelinesApplication Reconciler called.")
 

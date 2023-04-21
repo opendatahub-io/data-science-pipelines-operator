@@ -17,6 +17,7 @@ package controllers
 
 import (
 	"context"
+
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	v1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -48,13 +49,14 @@ var samplePipelineTemplates = map[string]string{
 }
 
 func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication, params *DSPAParams) error {
+	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
 
 	if !dsp.Spec.APIServer.Deploy {
 		r.Log.Info("Skipping Application of APIServer Resources")
 		return nil
 	}
 
-	r.Log.Info("Applying APIServer Resources")
+	log.Info("Applying APIServer Resources")
 
 	for _, template := range apiServerTemplates {
 		err := r.Apply(dsp, params, template)
@@ -93,6 +95,6 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1alph
 		}
 	}
 
-	r.Log.Info("Finished applying APIServer Resources")
+	log.Info("Finished applying APIServer Resources")
 	return nil
 }
