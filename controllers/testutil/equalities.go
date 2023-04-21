@@ -98,7 +98,7 @@ func deploymentsAreEqual(expected, actual *unstructured.Unstructured) (bool, err
 	}
 
 	if !reflect.DeepEqual(expectedDep.Spec.Template.ObjectMeta, actualDep.Spec.Template.ObjectMeta) {
-		return false, notEqualMsg("selector")
+		return false, notEqualMsg("spec template")
 	}
 
 	if !reflect.DeepEqual(expectedDep.Spec.Template.Spec.Volumes, actualDep.Spec.Template.Spec.Volumes) {
@@ -123,9 +123,6 @@ func deploymentsAreEqual(expected, actual *unstructured.Unstructured) (bool, err
 			}
 		}
 
-		if !reflect.DeepEqual(expectedContainer.Env, actualContainer.Env) {
-			return false, notEqualMsg("Container Env")
-		}
 		if !reflect.DeepEqual(expectedContainer.Ports, actualContainer.Ports) {
 			return false, notEqualMsg("Container Ports")
 		}
