@@ -13,8 +13,8 @@ spec:
       scheme: https
       s3CredentialsSecret:
         secretName: somesecret-db-sample
-        accessKey: somekey
-        secretKey: somekey
+        accessKey: AWS_ACCESS_KEY_ID
+        secretKey: AWS_SECRET_ACCESS_KEY
   # Optional
   mlpipelineUI:
     # Image field is required
