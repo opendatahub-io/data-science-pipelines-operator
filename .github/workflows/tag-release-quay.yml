@@ -1,6 +1,6 @@
 name: Image push per Github Tag
 
-# This GitHub action activates whenever a new tag is created on the repo
+# This GitHub action activates whenever a new tag is created on the repo under "opendatahub-io"
 # and creates a copy of the image of the associated commit hash with the
 # appropriate tag name.
 
@@ -14,6 +14,7 @@ env:
 jobs:
   copy-tag-to-quay:
     runs-on: ubuntu-latest
+    if: github.repository == 'opendatahub-io/data-science-pipelines-operator'
     steps:
       - name: Git checkout
         uses: actions/checkout@v3
