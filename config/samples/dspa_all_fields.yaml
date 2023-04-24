@@ -128,8 +128,8 @@ spec:
       # otherwise operator will not deploy DSPA
       s3CredentialsSecret:
         secretName: somesecret-sample
-        accessKey: accesskey
-        secretKey: secretkey
+        accessKey: AWS_ACCESS_KEY_ID
+        secretKey: AWS_SECRET_ACCESS_KEY
 #    externalStorage:
 #      host: minio.com
 #      port: "9092"
