@@ -1,0 +1,347 @@
+LAST SEEN   TYPE      REASON                   OBJECT                                                           MESSAGE
+15s         Normal    Scheduled                pod/conditional-execution-pipeline-test-0f152-print-msg-2-pod    Successfully assigned test-dspa/conditional-execution-pipeline-test-0f152-print-msg-2-pod to ip-10-0-179-59.ec2.internal by ip-10-0-177-169
+6m13s       Normal    Scheduled                pod/minio-sample-6f88dcdbd6-gh2f2                                Successfully assigned test-dspa/minio-sample-6f88dcdbd6-gh2f2 to ip-10-0-204-216.ec2.internal by ip-10-0-177-169
+6m15s       Warning   FailedScheduling         pod/minio-sample-6f88dcdbd6-gh2f2                                running PreBind plugin "VolumeBinding": binding volumes: provisioning failed for PVC "minio-sample"
+30s         Normal    Scheduled                pod/conditional-execution-pipeline-test-871ac-random-num-2-pod   Successfully assigned test-dspa/conditional-execution-pipeline-test-871ac-random-num-2-pod to ip-10-0-179-59.ec2.internal by ip-10-0-177-169
+23s         Normal    Scheduled                pod/conditional-execution-pipeline-test-871ac-condition-5-pod    Successfully assigned test-dspa/conditional-execution-pipeline-test-871ac-condition-5-pod to ip-10-0-179-59.ec2.internal by ip-10-0-177-169
+38s         Normal    Scheduled                pod/conditional-execution-pipeline-test-0f152-condition-1-pod    Successfully assigned test-dspa/conditional-execution-pipeline-test-0f152-condition-1-pod to ip-10-0-179-59.ec2.internal by ip-10-0-177-169
+37s         Normal    Scheduled                pod/conditional-execution-pipeline-test-871ac-condition-4-pod    Successfully assigned test-dspa/conditional-execution-pipeline-test-871ac-condition-4-pod to ip-10-0-179-59.ec2.internal by ip-10-0-177-169
+37s         Normal    Scheduled                pod/conditional-execution-pipeline-test-871ac-condition-1-pod    Successfully assigned test-dspa/conditional-execution-pipeline-test-871ac-condition-1-pod to ip-10-0-179-59.ec2.internal by ip-10-0-177-169
+6m16s       Normal    Scheduled                pod/ds-pipeline-persistenceagent-sample-55c588c9c6-fqk2r         Successfully assigned test-dspa/ds-pipeline-persistenceagent-sample-55c588c9c6-fqk2r to ip-10-0-204-216.ec2.internal by ip-10-0-177-169
+6m16s       Normal    Scheduled                pod/ds-pipeline-sample-7fd4b894c8-pvrch                          Successfully assigned test-dspa/ds-pipeline-sample-7fd4b894c8-pvrch to ip-10-0-179-59.ec2.internal by ip-10-0-177-169
+29s         Normal    Scheduled                pod/conditional-execution-pipeline-test-0f152-random-num-pod     Successfully assigned test-dspa/conditional-execution-pipeline-test-0f152-random-num-pod to ip-10-0-179-59.ec2.internal by ip-10-0-177-169
+6m16s       Normal    Scheduled                pod/ds-pipeline-scheduledworkflow-sample-f88b99c56-4hv9k         Successfully assigned test-dspa/ds-pipeline-scheduledworkflow-sample-f88b99c56-4hv9k to ip-10-0-204-216.ec2.internal by ip-10-0-177-169
+45s         Normal    Scheduled                pod/conditional-execution-pipeline-test-871ac-flip-coin-pod      Successfully assigned test-dspa/conditional-execution-pipeline-test-871ac-flip-coin-pod to ip-10-0-179-59.ec2.internal by ip-10-0-177-169
+6m15s       Normal    Scheduled                pod/ds-pipeline-ui-sample-8596f747c4-kfkml                       Successfully assigned test-dspa/ds-pipeline-ui-sample-8596f747c4-kfkml to ip-10-0-204-216.ec2.internal by ip-10-0-177-169
+16s         Normal    Scheduled                pod/conditional-execution-pipeline-test-871ac-print-msg-3-pod    Successfully assigned test-dspa/conditional-execution-pipeline-test-871ac-print-msg-3-pod to ip-10-0-179-59.ec2.internal by ip-10-0-177-169
+38s         Normal    Scheduled                pod/conditional-execution-pipeline-test-0f152-condition-4-pod    Successfully assigned test-dspa/conditional-execution-pipeline-test-0f152-condition-4-pod to ip-10-0-179-59.ec2.internal by ip-10-0-177-169
+23s         Normal    Scheduled                pod/conditional-execution-pipeline-test-871ac-condition-6-pod    Successfully assigned test-dspa/conditional-execution-pipeline-test-871ac-condition-6-pod to ip-10-0-179-59.ec2.internal by ip-10-0-177-169
+6m14s       Warning   FailedScheduling         pod/mariadb-sample-85784fff-schd5                                running PreBind plugin "VolumeBinding": binding volumes: provisioning failed for PVC "mariadb-sample"
+22s         Normal    Scheduled                pod/conditional-execution-pipeline-test-0f152-condition-2-pod    Successfully assigned test-dspa/conditional-execution-pipeline-test-0f152-condition-2-pod to ip-10-0-179-59.ec2.internal by ip-10-0-177-169
+6m13s       Normal    Scheduled                pod/mariadb-sample-85784fff-schd5                                Successfully assigned test-dspa/mariadb-sample-85784fff-schd5 to ip-10-0-204-216.ec2.internal by ip-10-0-177-169
+44s         Normal    Scheduled                pod/conditional-execution-pipeline-test-0f152-flip-coin-pod      Successfully assigned test-dspa/conditional-execution-pipeline-test-0f152-flip-coin-pod to ip-10-0-179-59.ec2.internal by ip-10-0-177-169
+22s         Normal    Scheduled                pod/conditional-execution-pipeline-test-0f152-condition-3-pod    Successfully assigned test-dspa/conditional-execution-pipeline-test-0f152-condition-3-pod to ip-10-0-179-59.ec2.internal by ip-10-0-177-169
+6m17s       Normal    WaitForFirstConsumer     persistentvolumeclaim/minio-sample                               waiting for first consumer to be created before binding
+6m17s       Normal    ScalingReplicaSet        deployment/minio-sample                                          Scaled up replica set minio-sample-6f88dcdbd6 to 1
+6m17s       Normal    SuccessfulCreate         replicaset/minio-sample-6f88dcdbd6                               Created pod: minio-sample-6f88dcdbd6-gh2f2
+6m17s       Normal    ScalingReplicaSet        deployment/mariadb-sample                                        Scaled up replica set mariadb-sample-85784fff to 1
+6m17s       Normal    WaitForFirstConsumer     persistentvolumeclaim/mariadb-sample                             waiting for first consumer to be created before binding
+6m17s       Normal    Provisioning             persistentvolumeclaim/minio-sample                               External provisioner is provisioning volume for claim "test-dspa/minio-sample"
+6m17s       Normal    Provisioning             persistentvolumeclaim/mariadb-sample                             External provisioner is provisioning volume for claim "test-dspa/mariadb-sample"
+6m17s       Normal    ExternalProvisioning     persistentvolumeclaim/mariadb-sample                             waiting for a volume to be created, either by external provisioner "ebs.csi.aws.com" or manually created by system administrator
+6m17s       Normal    SuccessfulCreate         replicaset/mariadb-sample-85784fff                               Created pod: mariadb-sample-85784fff-schd5
+6m16s       Normal    ScalingReplicaSet        deployment/ds-pipeline-scheduledworkflow-sample                  Scaled up replica set ds-pipeline-scheduledworkflow-sample-f88b99c56 to 1
+6m16s       Normal    WaitForPodScheduled      persistentvolumeclaim/minio-sample                               waiting for pod minio-sample-6f88dcdbd6-gh2f2 to be scheduled
+6m16s       Normal    WaitForPodScheduled      persistentvolumeclaim/mariadb-sample                             waiting for pod mariadb-sample-85784fff-schd5 to be scheduled
+6m16s       Normal    SuccessfulCreate         replicaset/ds-pipeline-scheduledworkflow-sample-f88b99c56        Created pod: ds-pipeline-scheduledworkflow-sample-f88b99c56-4hv9k
+6m16s       Warning   FailedCreate             replicaset/ds-pipeline-scheduledworkflow-sample-f88b99c56        Error creating: pods "ds-pipeline-scheduledworkflow-sample-f88b99c56-" is forbidden: error looking up service account test-dspa/ds-pipeline-scheduledworkflow-sample: serviceaccount "ds-pipeline-scheduledworkflow-sample" not found
+6m16s       Normal    ScalingReplicaSet        deployment/ds-pipeline-sample                                    Scaled up replica set ds-pipeline-sample-7fd4b894c8 to 1
+6m16s       Normal    SuccessfulCreate         replicaset/ds-pipeline-sample-7fd4b894c8                         Created pod: ds-pipeline-sample-7fd4b894c8-pvrch
+6m16s       Warning   FailedMount              pod/ds-pipeline-sample-7fd4b894c8-pvrch                          MountVolume.SetUp failed for volume "proxy-tls" : secret "ds-pipelines-proxy-tls-sample" not found
+6m16s       Normal    ScalingReplicaSet        deployment/ds-pipeline-persistenceagent-sample                   Scaled up replica set ds-pipeline-persistenceagent-sample-55c588c9c6 to 1
+6m16s       Normal    SuccessfulCreate         replicaset/ds-pipeline-persistenceagent-sample-55c588c9c6        Created pod: ds-pipeline-persistenceagent-sample-55c588c9c6-fqk2r
+6m16s       Warning   FailedCreate             replicaset/ds-pipeline-persistenceagent-sample-55c588c9c6        Error creating: pods "ds-pipeline-persistenceagent-sample-55c588c9c6-" is forbidden: error looking up service account test-dspa/ds-pipeline-persistenceagent-sample: serviceaccount "ds-pipeline-persistenceagent-sample" not found
+6m16s       Warning   FailedCreate             replicaset/ds-pipeline-ui-sample-8596f747c4                      Error creating: pods "ds-pipeline-ui-sample-8596f747c4-" is forbidden: error looking up service account test-dspa/ds-pipeline-ui-sample: serviceaccount "ds-pipeline-ui-sample" not found
+6m16s       Normal    SuccessfulCreate         replicaset/ds-pipeline-ui-sample-8596f747c4                      Created pod: ds-pipeline-ui-sample-8596f747c4-kfkml
+6m16s       Normal    ScalingReplicaSet        deployment/ds-pipeline-ui-sample                                 Scaled up replica set ds-pipeline-ui-sample-8596f747c4 to 1
+6m14s       Normal    Started                  pod/ds-pipeline-persistenceagent-sample-55c588c9c6-fqk2r         Started container ds-pipeline-persistenceagent
+6m14s       Normal    AddedInterface           pod/ds-pipeline-persistenceagent-sample-55c588c9c6-fqk2r         Add eth0 [10.128.9.65/23] from ovn-kubernetes
+6m14s       Normal    AddedInterface           pod/ds-pipeline-scheduledworkflow-sample-f88b99c56-4hv9k         Add eth0 [10.128.9.66/23] from ovn-kubernetes
+6m14s       Normal    Pulled                   pod/ds-pipeline-scheduledworkflow-sample-f88b99c56-4hv9k         Container image "quay.io/opendatahub/ds-pipelines-scheduledworkflow:main-766729f" already present on machine
+6m14s       Normal    Pulled                   pod/ds-pipeline-sample-7fd4b894c8-pvrch                          Container image "registry.redhat.io/openshift4/ose-oauth-proxy:v4.12.0" already present on machine
+6m14s       Normal    AddedInterface           pod/ds-pipeline-sample-7fd4b894c8-pvrch                          Add eth0 [10.128.7.154/23] from ovn-kubernetes
+6m14s       Normal    ExternalProvisioning     persistentvolumeclaim/minio-sample                               waiting for a volume to be created, either by external provisioner "ebs.csi.aws.com" or manually created by system administrator
+6m14s       Normal    Created                  pod/ds-pipeline-scheduledworkflow-sample-f88b99c56-4hv9k         Created container ds-pipeline-scheduledworkflow
+6m14s       Normal    Created                  pod/ds-pipeline-persistenceagent-sample-55c588c9c6-fqk2r         Created container ds-pipeline-persistenceagent
+6m14s       Normal    Pulled                   pod/ds-pipeline-persistenceagent-sample-55c588c9c6-fqk2r         Container image "quay.io/opendatahub/ds-pipelines-persistenceagent:main-766729f" already present on machine
+6m13s       Normal    Pulled                   pod/ds-pipeline-ui-sample-8596f747c4-kfkml                       Container image "registry.redhat.io/openshift4/ose-oauth-proxy:v4.12.0" already present on machine
+6m13s       Normal    ProvisioningSucceeded    persistentvolumeclaim/mariadb-sample                             Successfully provisioned volume pvc-1df4f0e8-f7ab-4e77-aef0-3e398a28265d
+6m13s       Normal    Pulled                   pod/ds-pipeline-sample-7fd4b894c8-pvrch                          Successfully pulled image "quay.io/opendatahub/ds-pipelines-api-server:main-766729f" in 141.875886ms
+6m13s       Normal    Started                  pod/ds-pipeline-sample-7fd4b894c8-pvrch                          Started container oauth-proxy
+6m13s       Normal    Created                  pod/ds-pipeline-sample-7fd4b894c8-pvrch                          Created container oauth-proxy
+6m13s       Normal    ProvisioningSucceeded    persistentvolumeclaim/minio-sample                               Successfully provisioned volume pvc-bddefb4b-8587-4bdb-b086-f0116eba1aa2
+6m13s       Normal    AddedInterface           pod/ds-pipeline-ui-sample-8596f747c4-kfkml                       Add eth0 [10.128.9.67/23] from ovn-kubernetes
+6m13s       Normal    Started                  pod/ds-pipeline-scheduledworkflow-sample-f88b99c56-4hv9k         Started container ds-pipeline-scheduledworkflow
+6m12s       Normal    Pulled                   pod/ds-pipeline-ui-sample-8596f747c4-kfkml                       Container image "quay.io/opendatahub/odh-ml-pipelines-frontend-container:beta-ui" already present on machine
+6m12s       Normal    Started                  pod/ds-pipeline-ui-sample-8596f747c4-kfkml                       Started container oauth-proxy
+6m12s       Normal    Created                  pod/ds-pipeline-ui-sample-8596f747c4-kfkml                       Created container oauth-proxy
+6m11s       Normal    Created                  pod/ds-pipeline-ui-sample-8596f747c4-kfkml                       Created container ds-pipeline-ui
+6m11s       Normal    Started                  pod/ds-pipeline-ui-sample-8596f747c4-kfkml                       Started container ds-pipeline-ui
+6m10s       Normal    SuccessfulAttachVolume   pod/mariadb-sample-85784fff-schd5                                AttachVolume.Attach succeeded for volume "pvc-1df4f0e8-f7ab-4e77-aef0-3e398a28265d"
+6m10s       Normal    SuccessfulAttachVolume   pod/minio-sample-6f88dcdbd6-gh2f2                                AttachVolume.Attach succeeded for volume "pvc-bddefb4b-8587-4bdb-b086-f0116eba1aa2"
+6m8s        Normal    AddedInterface           pod/mariadb-sample-85784fff-schd5                                Add eth0 [10.128.9.68/23] from ovn-kubernetes
+6m8s        Normal    Pulled                   pod/mariadb-sample-85784fff-schd5                                Container image "registry.redhat.io/rhel8/mariadb-103:1-188" already present on machine
+6m8s        Normal    AddedInterface           pod/minio-sample-6f88dcdbd6-gh2f2                                Add eth0 [10.128.9.69/23] from ovn-kubernetes
+6m8s        Normal    Started                  pod/minio-sample-6f88dcdbd6-gh2f2                                Started container minio
+6m8s        Normal    Started                  pod/mariadb-sample-85784fff-schd5                                Started container mariadb
+6m8s        Normal    Created                  pod/mariadb-sample-85784fff-schd5                                Created container mariadb
+6m8s        Normal    Pulled                   pod/minio-sample-6f88dcdbd6-gh2f2                                Container image "quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance" already present on machine
+6m8s        Normal    Created                  pod/minio-sample-6f88dcdbd6-gh2f2                                Created container minio
+6m4s        Warning   Unhealthy                pod/ds-pipeline-ui-sample-8596f747c4-kfkml                       Liveness probe failed: wget: can't connect to remote host: Connection refused
+6m3s        Warning   Unhealthy                pod/ds-pipeline-ui-sample-8596f747c4-kfkml                       Readiness probe failed: wget: can't connect to remote host: Connection refused
+6m          Normal    Killing                  pod/ds-pipeline-sample-7fd4b894c8-pvrch                          Container ds-pipeline-api-server failed liveness probe, will be restarted
+6m          Warning   Unhealthy                pod/ds-pipeline-sample-7fd4b894c8-pvrch                          Liveness probe failed:
+6m          Warning   Unhealthy                pod/ds-pipeline-sample-7fd4b894c8-pvrch                          Readiness probe failed:
+5m30s       Normal    Pulled                   pod/ds-pipeline-sample-7fd4b894c8-pvrch                          Successfully pulled image "quay.io/opendatahub/ds-pipelines-api-server:main-766729f" in 164.096432ms
+5m30s       Normal    Started                  pod/ds-pipeline-sample-7fd4b894c8-pvrch                          Started container ds-pipeline-api-server
+5m30s       Normal    Created                  pod/ds-pipeline-sample-7fd4b894c8-pvrch                          Created container ds-pipeline-api-server
+5m30s       Normal    Pulling                  pod/ds-pipeline-sample-7fd4b894c8-pvrch                          Pulling image "quay.io/opendatahub/ds-pipelines-api-server:main-766729f"
+45s         Normal    Started                  pipelinerun/conditional-execution-pipeline-test-871ac            
+45s         Normal    Running                  pipelinerun/conditional-execution-pipeline-test-871ac            Tasks Completed: 0 (Failed: 0, Cancelled 0), Incomplete: 13, Skipped: 0
+45s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-871ac-flip-coin      pod status "Initialized":"False"; message: "containers with incomplete status: [prepare]"
+45s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-871ac-flip-coin      Pending
+45s         Normal    Started                  taskrun/conditional-execution-pipeline-test-871ac-flip-coin      
+44s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-0f152-flip-coin      Pending
+44s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-0f152-flip-coin      pod status "Initialized":"False"; message: "containers with incomplete status: [prepare]"
+44s         Normal    Started                  pipelinerun/conditional-execution-pipeline-test-0f152            
+44s         Normal    Running                  pipelinerun/conditional-execution-pipeline-test-0f152            Tasks Completed: 0 (Failed: 0, Cancelled 0), Incomplete: 13, Skipped: 0
+44s         Normal    Started                  taskrun/conditional-execution-pipeline-test-0f152-flip-coin      
+43s         Normal    Pulled                   pod/conditional-execution-pipeline-test-0f152-flip-coin-pod      Container image "registry.redhat.io/openshift-pipelines/pipelines-entrypoint-rhel8@sha256:cfe684391c62abaa2baa61b9defb68795e86ed16bde9c316a386b0a2bd29d55e" already present on machine
+43s         Normal    AddedInterface           pod/conditional-execution-pipeline-test-871ac-flip-coin-pod      Add eth0 [10.128.7.156/23] from ovn-kubernetes
+43s         Normal    Created                  pod/conditional-execution-pipeline-test-871ac-flip-coin-pod      Created container prepare
+43s         Normal    Pulled                   pod/conditional-execution-pipeline-test-871ac-flip-coin-pod      Container image "registry.redhat.io/openshift-pipelines/pipelines-entrypoint-rhel8@sha256:cfe684391c62abaa2baa61b9defb68795e86ed16bde9c316a386b0a2bd29d55e" already present on machine
+43s         Normal    AddedInterface           pod/conditional-execution-pipeline-test-0f152-flip-coin-pod      Add eth0 [10.128.7.157/23] from ovn-kubernetes
+43s         Normal    Created                  pod/conditional-execution-pipeline-test-0f152-flip-coin-pod      Created container prepare
+42s         Normal    Started                  pod/conditional-execution-pipeline-test-0f152-flip-coin-pod      Started container prepare
+42s         Normal    Started                  pod/conditional-execution-pipeline-test-871ac-flip-coin-pod      Started container step-main
+42s         Normal    Created                  pod/conditional-execution-pipeline-test-871ac-flip-coin-pod      Created container step-main
+42s         Normal    Pulling                  pod/conditional-execution-pipeline-test-871ac-flip-coin-pod      Pulling image "registry.access.redhat.com/ubi8/ubi-micro"
+42s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-0f152-flip-coin      pod status "Ready":"False"; message: "containers with unready status: [step-main step-move-all-results-to-tekton-home step-copy-artifacts]"
+42s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-871ac-flip-coin      pod status "Ready":"False"; message: "containers with unready status: [step-main step-move-all-results-to-tekton-home step-copy-artifacts]"
+42s         Normal    Pulled                   pod/conditional-execution-pipeline-test-871ac-flip-coin-pod      Container image "quay.io/opendatahub/python:3.7-slim-buster" already present on machine
+42s         Normal    Started                  pod/conditional-execution-pipeline-test-871ac-flip-coin-pod      Started container prepare
+42s         Normal    Pulled                   pod/conditional-execution-pipeline-test-0f152-flip-coin-pod      Successfully pulled image "registry.access.redhat.com/ubi8/ubi-micro" in 191.530417ms
+42s         Normal    Pulling                  pod/conditional-execution-pipeline-test-0f152-flip-coin-pod      Pulling image "registry.access.redhat.com/ubi8/ubi-micro"
+42s         Normal    Started                  pod/conditional-execution-pipeline-test-0f152-flip-coin-pod      Started container step-main
+42s         Normal    Created                  pod/conditional-execution-pipeline-test-0f152-flip-coin-pod      Created container step-main
+42s         Normal    Pulled                   pod/conditional-execution-pipeline-test-0f152-flip-coin-pod      Container image "quay.io/opendatahub/python:3.7-slim-buster" already present on machine
+41s         Normal    Pulled                   pod/conditional-execution-pipeline-test-871ac-flip-coin-pod      Successfully pulled image "registry.access.redhat.com/ubi8/ubi-micro" in 522.649579ms
+41s         Normal    Running                  taskrun/conditional-execution-pipeline-test-0f152-flip-coin      Not all Steps in the Task have finished executing
+41s         Normal    Started                  pod/conditional-execution-pipeline-test-0f152-flip-coin-pod      Started container step-copy-artifacts
+41s         Normal    Created                  pod/conditional-execution-pipeline-test-871ac-flip-coin-pod      Created container step-move-all-results-to-tekton-home
+41s         Normal    Started                  pod/conditional-execution-pipeline-test-871ac-flip-coin-pod      Started container step-move-all-results-to-tekton-home
+41s         Normal    Created                  pod/conditional-execution-pipeline-test-0f152-flip-coin-pod      Created container step-move-all-results-to-tekton-home
+41s         Normal    Started                  pod/conditional-execution-pipeline-test-0f152-flip-coin-pod      Started container step-move-all-results-to-tekton-home
+41s         Normal    Pulled                   pod/conditional-execution-pipeline-test-0f152-flip-coin-pod      Container image "quay.io/opendatahub/ds-pipelines-artifact-manager:main-766729f" already present on machine
+41s         Normal    Pulled                   pod/conditional-execution-pipeline-test-871ac-flip-coin-pod      Container image "quay.io/opendatahub/ds-pipelines-artifact-manager:main-766729f" already present on machine
+41s         Normal    Started                  pod/conditional-execution-pipeline-test-871ac-flip-coin-pod      Started container step-copy-artifacts
+41s         Normal    Created                  pod/conditional-execution-pipeline-test-871ac-flip-coin-pod      Created container step-copy-artifacts
+41s         Normal    Created                  pod/conditional-execution-pipeline-test-0f152-flip-coin-pod      Created container step-copy-artifacts
+39s         Normal    Running                  taskrun/conditional-execution-pipeline-test-871ac-flip-coin      Not all Steps in the Task have finished executing
+38s         Normal    Succeeded                taskrun/conditional-execution-pipeline-test-0f152-flip-coin      All Steps have completed executing
+38s         Normal    Running                  pipelinerun/conditional-execution-pipeline-test-0f152            Tasks Completed: 1 (Failed: 0, Cancelled 0), Incomplete: 12, Skipped: 0
+38s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-0f152-condition-4    Pending
+38s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-0f152-condition-1    Pending
+38s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-0f152-condition-1    pod status "Initialized":"False"; message: "containers with incomplete status: [prepare place-scripts]"
+38s         Normal    Started                  taskrun/conditional-execution-pipeline-test-0f152-condition-1    
+37s         Normal    Running                  pipelinerun/conditional-execution-pipeline-test-871ac            Tasks Completed: 1 (Failed: 0, Cancelled 0), Incomplete: 12, Skipped: 0
+37s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-871ac-condition-1    Pending
+37s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-871ac-condition-1    pod status "Initialized":"False"; message: "containers with incomplete status: [prepare place-scripts]"
+37s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-871ac-condition-4    pod status "Initialized":"False"; message: "containers with incomplete status: [prepare place-scripts]"
+37s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-871ac-condition-4    Pending
+37s         Normal    Started                  taskrun/conditional-execution-pipeline-test-871ac-condition-4    
+37s         Normal    Started                  taskrun/conditional-execution-pipeline-test-871ac-condition-1    
+37s         Normal    Succeeded                taskrun/conditional-execution-pipeline-test-871ac-flip-coin      All Steps have completed executing
+37s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-0f152-condition-4    pod status "Initialized":"False"; message: "containers with incomplete status: [prepare place-scripts]"
+37s         Normal    Started                  taskrun/conditional-execution-pipeline-test-0f152-condition-4    
+35s         Normal    AddedInterface           pod/conditional-execution-pipeline-test-0f152-condition-1-pod    Add eth0 [10.128.7.158/23] from ovn-kubernetes
+35s         Normal    Pulled                   pod/conditional-execution-pipeline-test-871ac-condition-4-pod    Container image "registry.redhat.io/openshift-pipelines/pipelines-entrypoint-rhel8@sha256:cfe684391c62abaa2baa61b9defb68795e86ed16bde9c316a386b0a2bd29d55e" already present on machine
+35s         Normal    Created                  pod/conditional-execution-pipeline-test-0f152-condition-1-pod    Created container prepare
+35s         Normal    AddedInterface           pod/conditional-execution-pipeline-test-871ac-condition-4-pod    Add eth0 [10.128.7.161/23] from ovn-kubernetes
+35s         Normal    Pulled                   pod/conditional-execution-pipeline-test-0f152-condition-1-pod    Container image "registry.redhat.io/openshift-pipelines/pipelines-entrypoint-rhel8@sha256:cfe684391c62abaa2baa61b9defb68795e86ed16bde9c316a386b0a2bd29d55e" already present on machine
+35s         Normal    AddedInterface           pod/conditional-execution-pipeline-test-0f152-condition-4-pod    Add eth0 [10.128.7.159/23] from ovn-kubernetes
+35s         Normal    Pulled                   pod/conditional-execution-pipeline-test-0f152-condition-4-pod    Container image "registry.redhat.io/openshift-pipelines/pipelines-entrypoint-rhel8@sha256:cfe684391c62abaa2baa61b9defb68795e86ed16bde9c316a386b0a2bd29d55e" already present on machine
+35s         Normal    Started                  pod/conditional-execution-pipeline-test-0f152-condition-4-pod    Started container prepare
+35s         Normal    Created                  pod/conditional-execution-pipeline-test-0f152-condition-4-pod    Created container prepare
+34s         Normal    Created                  pod/conditional-execution-pipeline-test-0f152-condition-1-pod    Created container place-scripts
+34s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-0f152-condition-4    pod status "Initialized":"False"; message: "containers with incomplete status: [place-scripts]"
+34s         Normal    Started                  pod/conditional-execution-pipeline-test-0f152-condition-4-pod    Started container place-scripts
+34s         Normal    Created                  pod/conditional-execution-pipeline-test-871ac-condition-4-pod    Created container prepare
+34s         Normal    Started                  pod/conditional-execution-pipeline-test-871ac-condition-4-pod    Started container prepare
+34s         Normal    Pulled                   pod/conditional-execution-pipeline-test-871ac-condition-4-pod    Container image "registry.redhat.io/ubi8/ubi-minimal@sha256:6910799b75ad41f00891978575a0d955be2f800c51b955af73926e7ab59a41c3" already present on machine
+34s         Normal    Created                  pod/conditional-execution-pipeline-test-871ac-condition-4-pod    Created container place-scripts
+34s         Normal    Started                  pod/conditional-execution-pipeline-test-871ac-condition-4-pod    Started container place-scripts
+34s         Normal    Created                  pod/conditional-execution-pipeline-test-0f152-condition-4-pod    Created container place-scripts
+34s         Normal    Started                  pod/conditional-execution-pipeline-test-0f152-condition-1-pod    Started container place-scripts
+34s         Normal    Pulled                   pod/conditional-execution-pipeline-test-0f152-condition-4-pod    Container image "registry.redhat.io/ubi8/ubi-minimal@sha256:6910799b75ad41f00891978575a0d955be2f800c51b955af73926e7ab59a41c3" already present on machine
+34s         Normal    Started                  pod/conditional-execution-pipeline-test-871ac-condition-1-pod    Started container prepare
+34s         Normal    Created                  pod/conditional-execution-pipeline-test-871ac-condition-1-pod    Created container prepare
+34s         Normal    Pulled                   pod/conditional-execution-pipeline-test-871ac-condition-1-pod    Container image "registry.redhat.io/openshift-pipelines/pipelines-entrypoint-rhel8@sha256:cfe684391c62abaa2baa61b9defb68795e86ed16bde9c316a386b0a2bd29d55e" already present on machine
+34s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-871ac-condition-4    pod status "Initialized":"False"; message: "containers with incomplete status: [place-scripts]"
+34s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-0f152-condition-1    pod status "Initialized":"False"; message: "containers with incomplete status: [place-scripts]"
+34s         Normal    AddedInterface           pod/conditional-execution-pipeline-test-871ac-condition-1-pod    Add eth0 [10.128.7.160/23] from ovn-kubernetes
+34s         Normal    Pulled                   pod/conditional-execution-pipeline-test-0f152-condition-1-pod    Container image "registry.redhat.io/ubi8/ubi-minimal@sha256:6910799b75ad41f00891978575a0d955be2f800c51b955af73926e7ab59a41c3" already present on machine
+34s         Normal    Started                  pod/conditional-execution-pipeline-test-0f152-condition-1-pod    Started container prepare
+33s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-871ac-condition-4    pod status "Ready":"False"; message: "containers with unready status: [step-unnamed-0]"
+33s         Normal    Started                  pod/conditional-execution-pipeline-test-871ac-condition-1-pod    Started container place-scripts
+33s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-0f152-condition-1    pod status "Ready":"False"; message: "containers with unready status: [step-unnamed-0]"
+33s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-0f152-condition-4    pod status "Ready":"False"; message: "containers with unready status: [step-unnamed-0]"
+33s         Normal    Pulled                   pod/conditional-execution-pipeline-test-871ac-condition-4-pod    Container image "quay.io/opendatahub/python:3.7-slim-buster" already present on machine
+33s         Normal    Pulled                   pod/conditional-execution-pipeline-test-0f152-condition-4-pod    Container image "quay.io/opendatahub/python:3.7-slim-buster" already present on machine
+33s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-871ac-condition-1    pod status "Initialized":"False"; message: "containers with incomplete status: [place-scripts]"
+33s         Normal    Pulled                   pod/conditional-execution-pipeline-test-0f152-condition-1-pod    Container image "quay.io/opendatahub/python:3.7-slim-buster" already present on machine
+33s         Normal    Pulled                   pod/conditional-execution-pipeline-test-871ac-condition-1-pod    Container image "registry.redhat.io/ubi8/ubi-minimal@sha256:6910799b75ad41f00891978575a0d955be2f800c51b955af73926e7ab59a41c3" already present on machine
+33s         Normal    Created                  pod/conditional-execution-pipeline-test-871ac-condition-1-pod    Created container place-scripts
+32s         Normal    Pulled                   pod/conditional-execution-pipeline-test-871ac-condition-1-pod    Container image "quay.io/opendatahub/python:3.7-slim-buster" already present on machine
+32s         Normal    Running                  taskrun/conditional-execution-pipeline-test-871ac-condition-4    Not all Steps in the Task have finished executing
+32s         Normal    Created                  pod/conditional-execution-pipeline-test-871ac-condition-1-pod    Created container step-unnamed-0
+32s         Normal    Started                  pod/conditional-execution-pipeline-test-871ac-condition-1-pod    Started container step-unnamed-0
+32s         Normal    Running                  taskrun/conditional-execution-pipeline-test-0f152-condition-1    Not all Steps in the Task have finished executing
+32s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-871ac-condition-1    pod status "Ready":"False"; message: "containers with unready status: [step-unnamed-0]"
+32s         Normal    Created                  pod/conditional-execution-pipeline-test-0f152-condition-4-pod    Created container step-unnamed-0
+32s         Normal    Started                  pod/conditional-execution-pipeline-test-0f152-condition-4-pod    Started container step-unnamed-0
+32s         Normal    Created                  pod/conditional-execution-pipeline-test-0f152-condition-1-pod    Created container step-unnamed-0
+32s         Normal    Created                  pod/conditional-execution-pipeline-test-871ac-condition-4-pod    Created container step-unnamed-0
+32s         Normal    Running                  taskrun/conditional-execution-pipeline-test-0f152-condition-4    Not all Steps in the Task have finished executing
+32s         Normal    Started                  pod/conditional-execution-pipeline-test-871ac-condition-4-pod    Started container step-unnamed-0
+32s         Normal    Started                  pod/conditional-execution-pipeline-test-0f152-condition-1-pod    Started container step-unnamed-0
+31s         Normal    Succeeded                taskrun/conditional-execution-pipeline-test-871ac-condition-4    All Steps have completed executing
+31s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-871ac-random-num-2   Pending
+31s         Normal    Succeeded                taskrun/conditional-execution-pipeline-test-0f152-condition-4    All Steps have completed executing
+31s         Normal    Started                  taskrun/conditional-execution-pipeline-test-871ac-random-num-2   
+31s         Normal    Running                  taskrun/conditional-execution-pipeline-test-871ac-condition-1    Not all Steps in the Task have finished executing
+31s         Normal    Running                  pipelinerun/conditional-execution-pipeline-test-871ac            Tasks Completed: 2 (Failed: 0, Cancelled 0), Incomplete: 11, Skipped: 0
+31s         Normal    Running                  pipelinerun/conditional-execution-pipeline-test-0f152            Tasks Completed: 2 (Failed: 0, Cancelled 0), Incomplete: 6, Skipped: 5
+30s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-871ac-random-num-2   pod status "Initialized":"False"; message: "containers with incomplete status: [prepare]"
+30s         Normal    Succeeded                taskrun/conditional-execution-pipeline-test-871ac-condition-1    All Steps have completed executing
+30s         Normal    Running                  pipelinerun/conditional-execution-pipeline-test-0f152            Tasks Completed: 3 (Failed: 0, Cancelled 0), Incomplete: 5, Skipped: 5
+30s         Normal    Running                  pipelinerun/conditional-execution-pipeline-test-871ac            Tasks Completed: 3 (Failed: 0, Cancelled 0), Incomplete: 5, Skipped: 5
+30s         Normal    Succeeded                taskrun/conditional-execution-pipeline-test-0f152-condition-1    All Steps have completed executing
+30s         Normal    Started                  taskrun/conditional-execution-pipeline-test-0f152-random-num     
+30s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-0f152-random-num     Pending
+29s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-0f152-random-num     pod status "Initialized":"False"; message: "containers with incomplete status: [prepare]"
+29s         Normal    Pulled                   pod/conditional-execution-pipeline-test-871ac-random-num-2-pod   Container image "registry.redhat.io/openshift-pipelines/pipelines-entrypoint-rhel8@sha256:cfe684391c62abaa2baa61b9defb68795e86ed16bde9c316a386b0a2bd29d55e" already present on machine
+29s         Normal    AddedInterface           pod/conditional-execution-pipeline-test-871ac-random-num-2-pod   Add eth0 [10.128.7.162/23] from ovn-kubernetes
+28s         Normal    Pulled                   pod/conditional-execution-pipeline-test-0f152-random-num-pod     Container image "registry.redhat.io/openshift-pipelines/pipelines-entrypoint-rhel8@sha256:cfe684391c62abaa2baa61b9defb68795e86ed16bde9c316a386b0a2bd29d55e" already present on machine
+28s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-871ac-random-num-2   pod status "Ready":"False"; message: "containers with unready status: [step-main step-move-all-results-to-tekton-home step-copy-artifacts]"
+28s         Normal    AddedInterface           pod/conditional-execution-pipeline-test-0f152-random-num-pod     Add eth0 [10.128.7.163/23] from ovn-kubernetes
+28s         Normal    Pulled                   pod/conditional-execution-pipeline-test-871ac-random-num-2-pod   Container image "quay.io/opendatahub/python:3.7-slim-buster" already present on machine
+28s         Normal    Started                  pod/conditional-execution-pipeline-test-871ac-random-num-2-pod   Started container prepare
+28s         Normal    Created                  pod/conditional-execution-pipeline-test-871ac-random-num-2-pod   Created container prepare
+27s         Normal    Started                  pod/conditional-execution-pipeline-test-0f152-random-num-pod     Started container prepare
+27s         Normal    Created                  pod/conditional-execution-pipeline-test-0f152-random-num-pod     Created container prepare
+27s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-0f152-random-num     pod status "Ready":"False"; message: "containers with unready status: [step-main step-move-all-results-to-tekton-home step-copy-artifacts]"
+27s         Normal    Running                  taskrun/conditional-execution-pipeline-test-871ac-random-num-2   Not all Steps in the Task have finished executing
+27s         Normal    Started                  pod/conditional-execution-pipeline-test-871ac-random-num-2-pod   Started container step-copy-artifacts
+27s         Normal    Created                  pod/conditional-execution-pipeline-test-871ac-random-num-2-pod   Created container step-copy-artifacts
+27s         Normal    Pulled                   pod/conditional-execution-pipeline-test-871ac-random-num-2-pod   Container image "quay.io/opendatahub/ds-pipelines-artifact-manager:main-766729f" already present on machine
+27s         Normal    Started                  pod/conditional-execution-pipeline-test-871ac-random-num-2-pod   Started container step-move-all-results-to-tekton-home
+27s         Normal    Created                  pod/conditional-execution-pipeline-test-871ac-random-num-2-pod   Created container step-move-all-results-to-tekton-home
+27s         Normal    Pulled                   pod/conditional-execution-pipeline-test-871ac-random-num-2-pod   Successfully pulled image "registry.access.redhat.com/ubi8/ubi-micro" in 91.792039ms
+27s         Normal    Pulling                  pod/conditional-execution-pipeline-test-871ac-random-num-2-pod   Pulling image "registry.access.redhat.com/ubi8/ubi-micro"
+27s         Normal    Started                  pod/conditional-execution-pipeline-test-871ac-random-num-2-pod   Started container step-main
+27s         Normal    Created                  pod/conditional-execution-pipeline-test-871ac-random-num-2-pod   Created container step-main
+27s         Normal    Created                  pod/conditional-execution-pipeline-test-0f152-random-num-pod     Created container step-main
+27s         Normal    Pulled                   pod/conditional-execution-pipeline-test-0f152-random-num-pod     Container image "quay.io/opendatahub/python:3.7-slim-buster" already present on machine
+26s         Normal    Pulling                  pod/conditional-execution-pipeline-test-0f152-random-num-pod     Pulling image "registry.access.redhat.com/ubi8/ubi-micro"
+26s         Normal    Started                  pod/conditional-execution-pipeline-test-0f152-random-num-pod     Started container step-move-all-results-to-tekton-home
+26s         Normal    Running                  taskrun/conditional-execution-pipeline-test-0f152-random-num     Not all Steps in the Task have finished executing
+26s         Normal    Started                  pod/conditional-execution-pipeline-test-0f152-random-num-pod     Started container step-main
+26s         Normal    Started                  pod/conditional-execution-pipeline-test-0f152-random-num-pod     Started container step-copy-artifacts
+26s         Normal    Created                  pod/conditional-execution-pipeline-test-0f152-random-num-pod     Created container step-copy-artifacts
+26s         Normal    Pulled                   pod/conditional-execution-pipeline-test-0f152-random-num-pod     Container image "quay.io/opendatahub/ds-pipelines-artifact-manager:main-766729f" already present on machine
+26s         Normal    Pulled                   pod/conditional-execution-pipeline-test-0f152-random-num-pod     Successfully pulled image "registry.access.redhat.com/ubi8/ubi-micro" in 125.121512ms
+26s         Normal    Created                  pod/conditional-execution-pipeline-test-0f152-random-num-pod     Created container step-move-all-results-to-tekton-home
+24s         Normal    Running                  pipelinerun/conditional-execution-pipeline-test-871ac            Tasks Completed: 4 (Failed: 0, Cancelled 0), Incomplete: 4, Skipped: 5
+24s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-871ac-condition-5    Pending
+24s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-871ac-condition-6    Pending
+24s         Normal    Started                  taskrun/conditional-execution-pipeline-test-871ac-condition-6    
+24s         Normal    Succeeded                taskrun/conditional-execution-pipeline-test-871ac-random-num-2   All Steps have completed executing
+23s         Normal    Started                  taskrun/conditional-execution-pipeline-test-871ac-condition-5    
+23s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-871ac-condition-5    pod status "Initialized":"False"; message: "containers with incomplete status: [prepare place-scripts]"
+23s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-871ac-condition-6    pod status "Initialized":"False"; message: "containers with incomplete status: [prepare place-scripts]"
+23s         Normal    Succeeded                taskrun/conditional-execution-pipeline-test-0f152-random-num     All Steps have completed executing
+23s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-0f152-condition-2    Pending
+22s         Normal    Running                  pipelinerun/conditional-execution-pipeline-test-0f152            Tasks Completed: 4 (Failed: 0, Cancelled 0), Incomplete: 4, Skipped: 5
+22s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-0f152-condition-3    pod status "Initialized":"False"; message: "containers with incomplete status: [prepare place-scripts]"
+22s         Normal    Pulled                   pod/conditional-execution-pipeline-test-871ac-condition-5-pod    Container image "registry.redhat.io/openshift-pipelines/pipelines-entrypoint-rhel8@sha256:cfe684391c62abaa2baa61b9defb68795e86ed16bde9c316a386b0a2bd29d55e" already present on machine
+22s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-0f152-condition-3    Pending
+22s         Normal    Started                  taskrun/conditional-execution-pipeline-test-0f152-condition-3    
+22s         Normal    AddedInterface           pod/conditional-execution-pipeline-test-871ac-condition-5-pod    Add eth0 [10.128.7.164/23] from ovn-kubernetes
+22s         Normal    Started                  taskrun/conditional-execution-pipeline-test-0f152-condition-2    
+22s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-0f152-condition-2    pod status "Initialized":"False"; message: "containers with incomplete status: [prepare place-scripts]"
+21s         Normal    AddedInterface           pod/conditional-execution-pipeline-test-0f152-condition-3-pod    Add eth0 [10.128.7.167/23] from ovn-kubernetes
+21s         Normal    Started                  pod/conditional-execution-pipeline-test-871ac-condition-6-pod    Started container prepare
+21s         Normal    Created                  pod/conditional-execution-pipeline-test-871ac-condition-6-pod    Created container prepare
+21s         Normal    Pulled                   pod/conditional-execution-pipeline-test-871ac-condition-6-pod    Container image "registry.redhat.io/openshift-pipelines/pipelines-entrypoint-rhel8@sha256:cfe684391c62abaa2baa61b9defb68795e86ed16bde9c316a386b0a2bd29d55e" already present on machine
+21s         Normal    AddedInterface           pod/conditional-execution-pipeline-test-871ac-condition-6-pod    Add eth0 [10.128.7.165/23] from ovn-kubernetes
+21s         Normal    Pulled                   pod/conditional-execution-pipeline-test-0f152-condition-3-pod    Container image "registry.redhat.io/openshift-pipelines/pipelines-entrypoint-rhel8@sha256:cfe684391c62abaa2baa61b9defb68795e86ed16bde9c316a386b0a2bd29d55e" already present on machine
+21s         Normal    Created                  pod/conditional-execution-pipeline-test-871ac-condition-5-pod    Created container prepare
+20s         Normal    Pulled                   pod/conditional-execution-pipeline-test-0f152-condition-3-pod    Container image "registry.redhat.io/ubi8/ubi-minimal@sha256:6910799b75ad41f00891978575a0d955be2f800c51b955af73926e7ab59a41c3" already present on machine
+20s         Normal    Pulled                   pod/conditional-execution-pipeline-test-0f152-condition-2-pod    Container image "registry.redhat.io/openshift-pipelines/pipelines-entrypoint-rhel8@sha256:cfe684391c62abaa2baa61b9defb68795e86ed16bde9c316a386b0a2bd29d55e" already present on machine
+20s         Normal    Created                  pod/conditional-execution-pipeline-test-0f152-condition-2-pod    Created container prepare
+20s         Normal    Pulled                   pod/conditional-execution-pipeline-test-0f152-condition-2-pod    Container image "registry.redhat.io/ubi8/ubi-minimal@sha256:6910799b75ad41f00891978575a0d955be2f800c51b955af73926e7ab59a41c3" already present on machine
+20s         Normal    Pulled                   pod/conditional-execution-pipeline-test-871ac-condition-6-pod    Container image "registry.redhat.io/ubi8/ubi-minimal@sha256:6910799b75ad41f00891978575a0d955be2f800c51b955af73926e7ab59a41c3" already present on machine
+20s         Normal    AddedInterface           pod/conditional-execution-pipeline-test-0f152-condition-2-pod    Add eth0 [10.128.7.166/23] from ovn-kubernetes
+20s         Normal    Started                  pod/conditional-execution-pipeline-test-0f152-condition-3-pod    Started container prepare
+20s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-0f152-condition-2    pod status "Initialized":"False"; message: "containers with incomplete status: [place-scripts]"
+20s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-871ac-condition-6    pod status "Initialized":"False"; message: "containers with incomplete status: [place-scripts]"
+20s         Normal    Pulled                   pod/conditional-execution-pipeline-test-871ac-condition-5-pod    Container image "registry.redhat.io/ubi8/ubi-minimal@sha256:6910799b75ad41f00891978575a0d955be2f800c51b955af73926e7ab59a41c3" already present on machine
+20s         Normal    Started                  pod/conditional-execution-pipeline-test-0f152-condition-2-pod    Started container prepare
+20s         Normal    Created                  pod/conditional-execution-pipeline-test-0f152-condition-3-pod    Created container prepare
+20s         Normal    Started                  pod/conditional-execution-pipeline-test-871ac-condition-5-pod    Started container prepare
+19s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-871ac-condition-5    pod status "Ready":"False"; message: "containers with unready status: [step-unnamed-0]"
+19s         Normal    Started                  pod/conditional-execution-pipeline-test-871ac-condition-5-pod    Started container place-scripts
+19s         Normal    Pulled                   pod/conditional-execution-pipeline-test-871ac-condition-6-pod    Container image "quay.io/opendatahub/python:3.7-slim-buster" already present on machine
+19s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-0f152-condition-3    pod status "Initialized":"False"; message: "containers with incomplete status: [place-scripts]"
+19s         Normal    Started                  pod/conditional-execution-pipeline-test-871ac-condition-6-pod    Started container place-scripts
+19s         Normal    Pulled                   pod/conditional-execution-pipeline-test-871ac-condition-5-pod    Container image "quay.io/opendatahub/python:3.7-slim-buster" already present on machine
+19s         Normal    Created                  pod/conditional-execution-pipeline-test-871ac-condition-5-pod    Created container place-scripts
+19s         Normal    Created                  pod/conditional-execution-pipeline-test-0f152-condition-3-pod    Created container place-scripts
+19s         Normal    Pulled                   pod/conditional-execution-pipeline-test-0f152-condition-2-pod    Container image "quay.io/opendatahub/python:3.7-slim-buster" already present on machine
+19s         Normal    Created                  pod/conditional-execution-pipeline-test-871ac-condition-6-pod    Created container place-scripts
+19s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-871ac-condition-6    pod status "Ready":"False"; message: "containers with unready status: [step-unnamed-0]"
+19s         Normal    Pulled                   pod/conditional-execution-pipeline-test-0f152-condition-3-pod    Container image "quay.io/opendatahub/python:3.7-slim-buster" already present on machine
+19s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-871ac-condition-5    pod status "Initialized":"False"; message: "containers with incomplete status: [place-scripts]"
+19s         Normal    Started                  pod/conditional-execution-pipeline-test-0f152-condition-2-pod    Started container place-scripts
+19s         Normal    Started                  pod/conditional-execution-pipeline-test-0f152-condition-3-pod    Started container place-scripts
+19s         Normal    Created                  pod/conditional-execution-pipeline-test-0f152-condition-2-pod    Created container place-scripts
+18s         Normal    Created                  pod/conditional-execution-pipeline-test-871ac-condition-5-pod    Created container step-unnamed-0
+18s         Normal    Created                  pod/conditional-execution-pipeline-test-871ac-condition-6-pod    Created container step-unnamed-0
+18s         Normal    Started                  pod/conditional-execution-pipeline-test-871ac-condition-6-pod    Started container step-unnamed-0
+18s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-0f152-condition-3    pod status "Ready":"False"; message: "containers with unready status: [step-unnamed-0]"
+18s         Normal    Created                  pod/conditional-execution-pipeline-test-0f152-condition-3-pod    Created container step-unnamed-0
+18s         Normal    Started                  pod/conditional-execution-pipeline-test-0f152-condition-3-pod    Started container step-unnamed-0
+18s         Normal    Started                  pod/conditional-execution-pipeline-test-0f152-condition-2-pod    Started container step-unnamed-0
+18s         Normal    Started                  pod/conditional-execution-pipeline-test-871ac-condition-5-pod    Started container step-unnamed-0
+18s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-0f152-condition-2    pod status "Ready":"False"; message: "containers with unready status: [step-unnamed-0]"
+18s         Normal    Created                  pod/conditional-execution-pipeline-test-0f152-condition-2-pod    Created container step-unnamed-0
+17s         Normal    Running                  taskrun/conditional-execution-pipeline-test-0f152-condition-3    Not all Steps in the Task have finished executing
+17s         Normal    Running                  taskrun/conditional-execution-pipeline-test-871ac-condition-6    Not all Steps in the Task have finished executing
+17s         Normal    Running                  taskrun/conditional-execution-pipeline-test-0f152-condition-2    Not all Steps in the Task have finished executing
+17s         Normal    Succeeded                taskrun/conditional-execution-pipeline-test-871ac-condition-5    All Steps have completed executing
+17s         Normal    Running                  taskrun/conditional-execution-pipeline-test-871ac-condition-5    Not all Steps in the Task have finished executing
+16s         Normal    Started                  taskrun/conditional-execution-pipeline-test-871ac-print-msg-3    
+16s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-871ac-print-msg-3    Pending
+16s         Normal    Running                  pipelinerun/conditional-execution-pipeline-test-871ac            Tasks Completed: 5 (Failed: 0, Cancelled 0), Incomplete: 3, Skipped: 5
+16s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-871ac-print-msg-3    pod status "Initialized":"False"; message: "containers with incomplete status: [prepare]"
+15s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-0f152-print-msg-2    Pending
+15s         Normal    Succeeded                taskrun/conditional-execution-pipeline-test-0f152-condition-2    All Steps have completed executing
+15s         Normal    Started                  taskrun/conditional-execution-pipeline-test-0f152-print-msg-2    
+15s         Normal    Succeeded                taskrun/conditional-execution-pipeline-test-0f152-condition-3    All Steps have completed executing
+15s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-0f152-print-msg-2    pod status "Initialized":"False"; message: "containers with incomplete status: [prepare]"
+15s         Normal    Succeeded                taskrun/conditional-execution-pipeline-test-871ac-condition-6    All Steps have completed executing
+15s         Normal    Running                  pipelinerun/conditional-execution-pipeline-test-871ac            Tasks Completed: 6 (Failed: 0, Cancelled 0), Incomplete: 1, Skipped: 6
+15s         Normal    Running                  pipelinerun/conditional-execution-pipeline-test-0f152            Tasks Completed: 6 (Failed: 0, Cancelled 0), Incomplete: 1, Skipped: 6
+14s         Normal    AddedInterface           pod/conditional-execution-pipeline-test-871ac-print-msg-3-pod    Add eth0 [10.128.7.168/23] from ovn-kubernetes
+14s         Normal    Pulled                   pod/conditional-execution-pipeline-test-871ac-print-msg-3-pod    Container image "registry.redhat.io/openshift-pipelines/pipelines-entrypoint-rhel8@sha256:cfe684391c62abaa2baa61b9defb68795e86ed16bde9c316a386b0a2bd29d55e" already present on machine
+13s         Normal    Pulled                   pod/conditional-execution-pipeline-test-0f152-print-msg-2-pod    Container image "registry.redhat.io/openshift-pipelines/pipelines-entrypoint-rhel8@sha256:cfe684391c62abaa2baa61b9defb68795e86ed16bde9c316a386b0a2bd29d55e" already present on machine
+13s         Normal    Created                  pod/conditional-execution-pipeline-test-871ac-print-msg-3-pod    Created container prepare
+13s         Normal    Created                  pod/conditional-execution-pipeline-test-0f152-print-msg-2-pod    Created container prepare
+13s         Normal    Started                  pod/conditional-execution-pipeline-test-0f152-print-msg-2-pod    Started container prepare
+13s         Normal    AddedInterface           pod/conditional-execution-pipeline-test-0f152-print-msg-2-pod    Add eth0 [10.128.7.169/23] from ovn-kubernetes
+13s         Normal    Started                  pod/conditional-execution-pipeline-test-871ac-print-msg-3-pod    Started container prepare
+12s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-0f152-print-msg-2    pod status "Ready":"False"; message: "containers with unready status: [step-main]"
+12s         Normal    Pending                  taskrun/conditional-execution-pipeline-test-871ac-print-msg-3    pod status "Ready":"False"; message: "containers with unready status: [step-main]"
+12s         Normal    Started                  pod/conditional-execution-pipeline-test-0f152-print-msg-2-pod    Started container step-main
+12s         Normal    Created                  pod/conditional-execution-pipeline-test-0f152-print-msg-2-pod    Created container step-main
+12s         Normal    Pulled                   pod/conditional-execution-pipeline-test-871ac-print-msg-3-pod    Container image "quay.io/opendatahub/python:3.7-slim-buster" already present on machine
+12s         Normal    Created                  pod/conditional-execution-pipeline-test-871ac-print-msg-3-pod    Created container step-main
+12s         Normal    Started                  pod/conditional-execution-pipeline-test-871ac-print-msg-3-pod    Started container step-main
+12s         Normal    Pulled                   pod/conditional-execution-pipeline-test-0f152-print-msg-2-pod    Container image "quay.io/opendatahub/python:3.7-slim-buster" already present on machine
+11s         Normal    Running                  taskrun/conditional-execution-pipeline-test-871ac-print-msg-3    Not all Steps in the Task have finished executing
+11s         Normal    Running                  taskrun/conditional-execution-pipeline-test-0f152-print-msg-2    Not all Steps in the Task have finished executing
+10s         Normal    Succeeded                pipelinerun/conditional-execution-pipeline-test-0f152            Tasks Completed: 7 (Failed: 0, Cancelled 0), Skipped: 6
+10s         Normal    Succeeded                taskrun/conditional-execution-pipeline-test-0f152-print-msg-2    All Steps have completed executing
+9s          Normal    Succeeded                taskrun/conditional-execution-pipeline-test-871ac-print-msg-3    All Steps have completed executing
+9s          Normal    Succeeded                pipelinerun/conditional-execution-pipeline-test-871ac            Tasks Completed: 7 (Failed: 0, Cancelled 0), Skipped: 6

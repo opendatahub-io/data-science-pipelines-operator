@@ -1,0 +1,1217 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    annotations:
+      alm-examples: |-
+        [
+          {
+            "apiVersion": "kfdef.apps.kubeflow.org/v1",
+            "kind": "KfDef",
+            "metadata": {
+              "name": "opendatahub",
+              "namespace": "opendatahub"
+            },
+            "spec": {
+              "applications": [
+                {
+                  "kustomizeConfig": {
+                    "repoRef": {
+                      "name": "manifests",
+                      "path": "odh-common"
+                    }
+                  },
+                  "name": "odh-common"
+                },
+                {
+                  "kustomizeConfig": {
+                    "repoRef": {
+                      "name": "manifests",
+                      "path": "odh-dashboard"
+                    }
+                  },
+                  "name": "odh-dashboard"
+                },
+                {
+                  "kustomizeConfig": {
+                    "repoRef": {
+                      "name": "manifests",
+                      "path": "prometheus/cluster"
+                    }
+                  },
+                  "name": "prometheus-cluster"
+                },
+                {
+                  "kustomizeConfig": {
+                    "repoRef": {
+                      "name": "manifests",
+                      "path": "prometheus/operator"
+                    }
+                  },
+                  "name": "prometheus-operator"
+                },
+                {
+                  "kustomizeConfig": {
+                    "repoRef": {
+                      "name": "manifests",
+                      "path": "grafana/cluster"
+                    }
+                  },
+                  "name": "grafana-cluster"
+                },
+                {
+                  "kustomizeConfig": {
+                    "repoRef": {
+                      "name": "manifests",
+                      "path": "grafana/grafana"
+                    }
+                  },
+                  "name": "grafana-instance"
+                },
+                {
+                  "kustomizeConfig": {
+                    "repoRef": {
+                      "name": "manifests",
+                      "path": "odh-notebook-controller"
+                    }
+                  },
+                  "name": "odh-notebook-controller"
+                },
+                {
+                  "kustomizeConfig": {
+                    "repoRef": {
+                      "name": "manifests",
+                      "path": "notebook-images"
+                    }
+                  },
+                  "name": "notebook-images"
+                },
+                {
+                  "kustomizeConfig": {
+                    "overlays": [
+                      "odh-model-controller"
+                    ],
+                    "repoRef": {
+                      "name": "manifests",
+                      "path": "model-mesh"
+                    }
+                  },
+                  "name": "model-mesh"
+                },
+                {
+                  "kustomizeConfig": {
+                    "repoRef": {
+                      "name": "manifests",
+                      "path": "data-science-pipelines-operator"
+                    }
+                  },
+                  "name": "data-science-pipelines-operator"
+                },
+                {
+                  "kustomizeConfig": {
+                    "repoRef": {
+                      "name": "manifests",
+                      "path": "trustyai-service"
+                    }
+                  },
+                  "name": "trustyai"
+                }
+              ],
+              "repos": [
+                {
+                  "name": "manifests",
+                  "uri": "https://github.com/opendatahub-io/odh-manifests/tarball/v1.5"
+                }
+              ]
+            }
+          },
+          {
+            "apiVersion": "dashboard.opendatahub.io/v1",
+            "kind": "OdhApplication",
+            "metadata": {
+              "name": "example-odhapplication",
+              "annotations": {
+                "opendatahub.io/categories": "Getting started,Model development,Model training,Notebook environments,Package management,Data Management"
+              }
+            },
+            "spec": {
+              "displayName": "ODHAPPLICATION DISPLAY NAME",
+              "provider": "PROVIDER_NAME",
+              "description": "Description of your ODHApplication",
+              "kfdefApplications": [
+                "<NAME OF THE ODH APPLICATION IN KFDEF>"
+              ],
+              "route": "<APPLICATION_OCP_ROUTE_OBJECT_NAME>",
+              "img": "<svg xmlns=\"http://www.w3.org/2000/svg\" role=\"img\" viewBox=\"-1.13 -1.13 58.50 48.94\"><title>Open Data Hub logo</title><g><g><g fill=\"#4d5258\" stroke-width=\".006\"><path fill=\"#bbb\" d=\"M112.30231 22.797083c-.2034 0-.35737.143517-.35737.337407 0 .192939.15397.339307.35737.339307.20339 0 .35736-.147318.35736-.339307 0-.19294-.15397-.337407-.35736-.337407zm.002.131161c.1112 0 .20149.08934.20149.206246 0 .116904-.0903.208146-.20149.208146-.1112 0-.2053-.09124-.2053-.208146 0-.116904.0931-.206246.2053-.206246zM113.04141 22.801836h-.28228v.665308h.15017v-.190088h.13211c.16918 0 .26612-.08934.26612-.244263 0-.147319-.0969-.230957-.26612-.230957zm-.008.349762h-.12451v-.225255h.12451c.0836 0 .13116.03707.13116.111202 0 .07603-.0475.114053-.13116.114053zM113.40328 22.801836v.665308h.51703v-.124508h-.36687v-.147318h.32125V23.07081h-.32125v-.144467h.35642v-.124507zM114.03814 22.801836v.665308h.14352v-.426748l.3222.426748h.13686v-.665308h-.14257v.427698L114.175 22.801836z\" transform=\"translate(-789.851 -124.305) scale(7.05736)\"/><path d=\"M115.29685 22.801836h-.28228v.665308h.27658c.21004 0 .35546-.136863.35546-.332654 0-.196741-.14351-.332654-.34976-.332654zm.004.538899h-.13591v-.412491h.12926c.11405 0 .19959.08459.19959.207196 0 .121657-.0817.205295-.19294.205295zM116.21878 23.467144h.16062l-.28418-.665308h-.15492l-.28894.665308h.15493l.0523-.12926h.30794zm-.3108-.249966l.1055-.25852.10455.25852zM116.31525 22.801836v.127359h.20244v.537949h.15017v-.537949h.2034v-.127359zM117.37527 23.467144h.16063l-.28419-.665308h-.15492l-.28893.665308h.15492l.0523-.12926h.30795zm-.31079-.249966l.1055-.25852.10454.25852zM117.83433 22.801836v.665308h.15017v-.262322h.30129v.262322h.15017v-.665308h-.15017v.277528h-.30129v-.277528zM118.72025 23.188665v-.386829h-.15017v.386829c0 .175831.11785.285132.30224.285132.18343 0 .29844-.109301.29844-.285132v-.386829h-.15017v.386829c0 .09599-.0589.153971-.14827.153971-.0893 0-.15207-.05798-.15207-.153971zM119.61059 22.801836h-.30604v.665308h.31649c.15492 0 .25092-.07033.25092-.184385 0-.08744-.0532-.152071-.13876-.168228.0713-.01806.115-.07413.115-.146368 0-.102648-.0912-.166327-.23761-.166327zm-.008.268024h-.14826v-.145418h.14826c.0561 0 .0913.02566.0913.07128 0 .04657-.0352.07413-.0913.07413zm0 .274677h-.14826v-.158723h.14826c.0713 0 .11406.02946.11406.07794 0 .05132-.0428.08079-.11406.08079z\" transform=\"translate(-789.851 -124.305) scale(7.05736)\"/></g><g fill=\"#58595b\" stroke-width=\".01\"><path d=\"M112.19192 24.15027h.0381l-.13717-.306759h-.0364l-.1376.306759h.0372l.0342-.07844h.16696zm-.18712-.110871l.0688-.157763.0697.157763zM112.27858 23.843511v.306759h.0351v-.306759zM112.64205 23.843511h-.11525v.306759h.0351v-.09729h.0802c.0758 0 .11964-.039.11964-.10649 0-.0653-.0438-.102983-.11964-.102983zm-.001.177044h-.0789V23.87594h.0789c.0552 0 .0872.02454.0872.07143 0 .0482-.032.07318-.0872.07318zM112.81775 23.825105v.325165h.0342v-.325165zM113.1137 24.15027l-.00044-.152503c-.00044-.04908-.032-.07932-.089-.07932-.0394 0-.0644.01139-.0942.03111l.0145.0241c.0241-.01709.0478-.02673.0732-.02673.0408 0 .0618.0206.0618.05434v.01446h-.0758c-.0543.000439-.0863.02586-.0863.06617 0 .03944.0307.06968.0784.06968.0368 0 .0662-.01227.0846-.03725v.03593zm-.11131-.02717c-.0324 0-.053-.01709-.053-.04251 0-.02585.0202-.03769.0587-.03769h.0719v.02805c-.009.03287-.0386.05215-.0776.05215zM113.29915 24.108201c-.0127.0074-.025.01139-.0368.01183-.0197 0-.0307-.01139-.0307-.03944v-.127086h.0732v-.02673h-.0732v-.06048h-.0337v.06048h-.0333v.02673h.0333v.132783c0 .04558.025.06573.0587.0653.0184 0 .0359-.0061.0521-.01709zM113.44228 23.854466c.0118 0 .0245.0044.0351.01183l.014-.02629c-.014-.01052-.032-.01622-.0495-.01622-.0386-.000438-.0741.02717-.0741.07713v.02586h-.0298v.02673h.0298v.196764h.0337v-.196764h.0662v-.02673h-.0662v-.03024c0-.02717.0184-.04251.0408-.04207zM113.59236 23.918448c-.0684 0-.11701.04777-.11701.11613 0 .06924.0486.117007.11701.117007.0684 0 .117-.04777.117-.117007 0-.06836-.0486-.11613-.117-.11613zm0 .03024c.0482 0 .0828.0355.0828.08633 0 .05171-.0346.08677-.0828.08677-.0482 0-.0828-.03506-.0828-.08677 0-.05083.0346-.08633.0828-.08633zM113.80323 23.971035v-.05127h-.0342v.230508h.0342V24.02757c.004-.04645.0342-.07669.0828-.07581v-.0333c-.039.000438-.0675.01884-.0828.05259zM114.22747 23.918448c-.0443.000438-.0767.01972-.0911.06004-.01-.03813-.0394-.06004-.0828-.06004-.0416.000438-.0727.01753-.0881.05346v-.05215h-.0337v.230508h.0337v-.113501c0-.04996.0285-.08458.0758-.08589.0403 0 .064.02454.064.06617v.133221h.0346v-.113501c0-.04996.0276-.08458.0754-.08589.0399 0 .064.02454.064.06617v.133221h.0342V24.00828c0-.05609-.032-.08984-.0859-.08984zM114.63474 23.918448c-.0403 0-.0719.01884-.089.05083v-.04952h-.0342v.315525h.0342v-.134536c.0171.03199.0487.05083.0898.05083.0653 0 .11-.04777.11-.11613 0-.0688-.0456-.117007-.11088-.117007zm-.006.202899c-.0486 0-.0828-.03593-.0828-.08677 0-.0504.0342-.08677.0828-.08677.0482 0 .0824.03681.0824.08677 0 .0504-.0342.08677-.0824.08677zM114.89934 23.918448c-.0684 0-.11701.04777-.11701.11613 0 .06924.0486.117007.11701.117007.0684 0 .117-.04777.117-.117007 0-.06836-.0486-.11613-.117-.11613zm0 .03024c.0482 0 .0828.0355.0828.08633 0 .05171-.0346.08677-.0828.08677-.0482 0-.0828-.03506-.0828-.08677 0-.05083.0346-.08633.0828-.08633zM115.02844 23.919762l.0863.230508h.0355l.0675-.188876.0679.188876h.0355l.0855-.230508h-.0355l-.0675.195888-.0679-.195888h-.0359l-.067.195888-.0684-.195888zM115.53009 23.918448c-.067.000438-.11438.04777-.11438.116568 0 .0688.0469.116569.11481.116569.0386 0 .071-.01402.0929-.03813l-.0189-.01972c-.018.01884-.0429.02936-.0714.02936-.0451 0-.078-.0298-.0837-.07538h.18844c.004-.07801-.0333-.129277-.1078-.129277zm-.0806.102107c.005-.0447.0364-.07362.0806-.07362.0451 0 .0749.02892.0771.07362zM115.73075 23.971035v-.05127h-.0342v.230508h.0342V24.02757c.004-.04645.0342-.07669.0828-.07581v-.0333c-.039.000438-.0675.01884-.0828.05259zM115.95034 23.918448c-.067.000438-.11438.04777-.11438.116568 0 .0688.0469.116569.11482.116569.0386 0 .071-.01402.0929-.03813l-.0188-.01972c-.018.01884-.0429.02936-.0714.02936-.0451 0-.078-.0298-.0837-.07538h.18843c.004-.07801-.0333-.129277-.1078-.129277zm-.0806.102107c.005-.0447.0364-.07362.0806-.07362.0451 0 .0749.02892.0771.07362zM116.29474 23.825105v.144615c-.0171-.03287-.0491-.05171-.0903-.05171-.0653 0-.11087.04777-.11087.116569 0 .0688.0456.117445.11131.117445.0412 0 .0727-.01884.0898-.05127v.04952h.0342v-.325165zm-.0833.297557c-.0491 0-.0837-.03637-.0837-.08721 0-.05083.0346-.08765.0837-.08765.0486 0 .0833.03681.0833.08765 0 .05083-.0346.08721-.0833.08721zM116.65984 23.918448c-.0403 0-.0719.01884-.089.05083v-.144177h-.0342v.325165h.0342v-.04952c.0171.03199.0486.05083.0898.05083.0653 0 .11-.04777.11-.11613 0-.0688-.0456-.117007-.11087-.117007zm-.006.202899c-.0486 0-.0828-.03593-.0828-.08677 0-.0504.0342-.08677.0828-.08677.0482 0 .0824.03681.0824.08677 0 .0504-.0342.08677-.0824.08677zM116.89657 24.183138l.10605-.263376h-.0351l-.0732.191944-.0767-.191944h-.0359l.0955.228756-.01.02191c-.009.02191-.0241.03331-.0421.03331-.0114 0-.0219-.0035-.0324-.01095l-.0145.02717c.014.01139.0294.01665.0486.01665.0307 0 .0548-.01841.0692-.05346zM117.29947 23.842634c-.0898 0-.16083.06793-.16083.154257 0 .08633.071.154694.16083.154694.0894 0 .16039-.06836.16039-.154694 0-.08633-.071-.154257-.16039-.154257zm0 .03243c.0684 0 .12446.0539.12446.121828 0 .06792-.0561.122703-.12446.122703-.0684 0-.12533-.05478-.12533-.122703 0-.06793.057-.121828.12533-.121828zM117.64414 23.918448c-.0403 0-.0719.01884-.089.05083v-.04952h-.0342v.315525h.0342v-.134536c.0171.03199.0486.05083.0898.05083.0653 0 .10999-.04777.10999-.11613 0-.0688-.0456-.117007-.11087-.117007zm-.006.202899c-.0486 0-.0828-.03593-.0828-.08677 0-.0504.0342-.08677.0828-.08677.0482 0 .0824.03681.0824.08677 0 .0504-.0342.08677-.0824.08677zM117.9061 23.918448c-.067.000438-.11437.04777-.11437.116568 0 .0688.0469.116569.11481.116569.0386 0 .071-.01402.0929-.03813l-.0189-.01972c-.018.01884-.0429.02936-.0714.02936-.0451 0-.078-.0298-.0837-.07538h.18844c.004-.07801-.0333-.129277-.10781-.129277zm-.0806.102107c.005-.0447.0364-.07362.0806-.07362.0451 0 .0749.02892.0771.07362zM118.19616 23.918448c-.0421.000438-.0732.01709-.0894.05215v-.05084h-.0342v.230508h.0342v-.12358c.004-.0447.032-.07494.0776-.07537.0408 0 .0653.02454.0653.06573v.133221h.0342v-.141986c0-.05609-.0324-.08984-.0876-.08984zM118.65836 23.901795l.0149-.03111c-.0254-.01709-.0618-.02848-.0973-.02848-.0635 0-.10605.03068-.10605.07888 0 .109995.17266.06661.17222.148559 0 .0298-.0276.04777-.0719.04777-.0346 0-.0736-.01578-.1021-.04295l-.0158.03024c.0289.02761.0727.04689.11745.04689.0657 0 .11087-.03287.11087-.0837.00044-.11131-.17223-.06968-.17223-.149436 0-.02629.0259-.04207.0653-.04207.0245 0 .057.0075.0846.02542zM118.84168 23.918448c-.0684 0-.11701.04777-.11701.11613 0 .06924.0486.117007.11701.117007.0684 0 .11701-.04777.11701-.117007 0-.06836-.0487-.11613-.11701-.11613zm0 .03024c.0482 0 .0828.0355.0828.08633 0 .05171-.0346.08677-.0828.08677-.0482 0-.0828-.03506-.0828-.08677 0-.05083.0346-.08633.0828-.08633zM119.18446 23.919762v.113063c0 .04996-.0281.08502-.0758.08589-.0399 0-.064-.02454-.064-.06573v-.133222h-.0342v.141986c0 .05565.0324.08984.0863.08984.0416-.000438.0723-.01753.0876-.05346v.05215h.0342v-.230508zM119.33586 23.971035v-.05127h-.0342v.230508h.0342V24.02757c.004-.04645.0342-.07669.0828-.07581v-.0333c-.039.000438-.0675.01884-.0828.05259zM119.62557 23.976294l.0188-.02366c-.021-.02147-.0517-.03418-.089-.03418-.0666 0-.11438.0482-.11438.116568 0 .0688.0473.116569.11438.116569.0399 0 .0719-.0149.0925-.03988l-.0197-.02016c-.0162.01928-.0412.0298-.0714.0298-.0478 0-.082-.03506-.082-.08633 0-.05083.0342-.08589.082-.08589.028 0 .0513.01008.0688.02717zM119.78997 23.918448c-.067.000438-.11437.04777-.11437.116568 0 .0688.0469.116569.11481.116569.0386 0 .071-.01402.0929-.03813l-.0189-.01972c-.018.01884-.0429.02936-.0714.02936-.0451 0-.078-.0298-.0837-.07538h.18844c.004-.07801-.0333-.129277-.10781-.129277zm-.0806.102107c.005-.0447.0364-.07362.0806-.07362.0451 0 .0749.02892.0771.07362z\" transform=\"translate(-789.851 -124.305) scale(7.05736)\"/></g></g><g><g><path fill=\"#a586f3\" d=\"m 7808.8125,2097.1875 c -9.6898,0.1378 -17.423,8.1233 -17.25,17.8125 v 329.875 c -0.8781,10.2195 7.1804,19 17.4375,19 10.2571,0 19.0227,-8.7805 18.1446,-19 v -77.7324 l 0.4179,-6.1426 c 0,-55.1597 44.2153,-99.5625 99.375,-99.5625 55.1596,0 99.5625,44.4028 99.5625,99.5625 0.01,0.1837 0.015,0.3674 0.027,0.5508 -0.026,0.4409 -0.035,0.8826 -0.027,1.3242 v 110 c 0,9.6822 7.849,17.5312 17.5312,17.5312 9.6823,0 17.5313,-7.849 17.5313,-17.5312 v -110 c 0,-0.3245 -0.012,-0.6488 -0.031,-0.9727 0.018,-0.3004 0.029,-0.6013 0.031,-0.9023 1e-4,-74.075 -60.55,-134.4374 -134.625,-134.4375 -39.9177,1e-4 -75.8465,17.5354 -100.5,45.293 V 2115 c 0.1749,-9.8356 -7.7881,-17.8833 -17.625,-17.8125 z\" color=\"#000\" transform=\"translate(-449.265 -129.165) scale(.06159)\" style=\"text-indent:0;text-align:start;text-decoration-line:none;text-decoration-style:solid;text-decoration-color:#000;text-transform:none;text-orientation:mixed;shape-padding:0;isolation:auto;mix-blend-mode:normal;solid-color:#000;solid-opacity:1\" overflow=\"visible\"/><path fill=\"#5ed3ee\" d=\"m 7765.8027,2098.123 c -0.038,5e-4 -0.077,0 -0.1152,0 -9.6898,0.1378 -17.423,8.1233 -17.25,17.8125 V 2361 c 0,41.9333 -26.0162,79.2671 -65.4375,93.5625 -39.4213,14.2954 -83.5594,2.3741 -110.4375,-29.8125 -26.878,-32.1865 -30.6579,-77.5719 -9.5625,-113.8125 21.0955,-36.2406 62.4262,-55.2897 103.6875,-47.8125 9.5173,1.7397 18.6463,-4.5547 20.4043,-14.0686 1.758,-9.514 -4.5187,-18.6551 -14.0293,-20.4314 -55.6354,-10.082 -111.8054,15.8219 -140.25,64.6875 -28.4446,48.8656 -23.3039,110.5381 12.9375,153.9375 36.2415,43.3993 95.908,59.4005 149.0625,40.125 44.7667,-16.2337 77.0286,-54.658 86.0977,-100.1562 0,0 1.9812,-4.7686 2.5898,-9.1563 0.6086,-4.3877 0,-17.0625 0,-17.0625 v -245.0625 c 0.1769,-9.865 -7.8313,-17.9263 -17.6973,-17.8145 z\" color=\"#000\" transform=\"translate(-449.265 -129.165) scale(.06159)\" style=\"text-indent:0;text-align:start;text-decoration-line:none;text-decoration-style:solid;text-decoration-color:#000;text-transform:none;text-orientation:mixed;shape-padding:0;isolation:auto;mix-blend-mode:normal;solid-color:#000;solid-opacity:1\" overflow=\"visible\"/><g fill=\"none\" stroke-width=\".365\" transform=\"translate(-449.265 -83.342) scale(5.91262)\"><circle cx=\"79.677\" cy=\"16.823\" r=\".645\" stroke=\"#c6ea70\"/><path stroke=\"#dff3b1\" stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"m 80.808656,18.234303 a 1.8088735,1.8088735 0 0 1 -2.309183,-0.03848 1.8088735,1.8088735 0 0 1 -0.389241,-2.276466 1.8088735,1.8088735 0 0 1 2.165211,-0.803532\"/><path stroke=\"#f2fadf\" stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"m 82.216272,17.248644 a 2.455857,2.4425189 0 0 1 -2.468226,2.016391 2.455857,2.4425189 0 0 1 -2.383743,-2.114547 2.455857,2.4425189 0 0 1 1.733108,-2.668494\"/></g></g></g></g></svg>",
+              "category": "Open Data Hub",
+              "support": "open data hub",
+              "docsLink": "http://REPLACE.THIS.URL",
+              "quickStart": "example-odhquickstart",
+              "getStartedLink": "http://REPLACE.THIS.URL",
+              "getStartedMarkDown": "# Header for Getting Started MarkDown section\nHere is where you add information about your ODHApplication in markdown format\n\n1. List item\n1. List item\n1. List item"
+            }
+          },
+          {
+            "apiVersion": "dashboard.opendatahub.io/v1",
+            "kind": "OdhDocument",
+            "metadata": {
+              "name": "example-odhdocument",
+              "annotations": {
+                "opendatahub.io/categories": "Getting started"
+              }
+            },
+            "spec": {
+              "displayName": "Example ODHDocument",
+              "appName": "<EXAMPLE-ODHAPPLICATION-CUSTOM-RESOURCE-NAME>",
+              "type": "how-to",
+              "description": "This is an example of an ODHDocument custom resource",
+              "url": "http://REPLACE.THIS.URL",
+              "durationMinutes": 5
+            }
+          },
+          {
+            "apiVersion": "console.openshift.io/v1",
+            "kind": "OdhQuickStart",
+            "metadata": {
+              "name": "example-odhquickstart",
+              "annotations": {
+                "opendatahub.io/categories": "Getting started"
+              }
+            },
+            "spec": {
+              "displayName": "Example ODHQuickstart Name",
+              "appName": "<EXAMPLE-ODHAPPLICATION-CUSTOM-RESOURCE-NAME>",
+              "durationMinutes": 5,
+              "description": "Description of an example quickstart",
+              "introduction": "### Introduction Header\nThis is the body of the introduction for an ODHQuickstart",
+              "tasks": [
+                {
+                  "title": "Title of the first task",
+                  "description": "### Description header for the first task\n1. First Step\n2. Second Step\n3. Third Step",
+                  "review": {
+                    "instructions": "#### Header for the review instructions\nThis is the body of the review instructions for the first task",
+                    "failedTaskHelp": "This task is not verified yet. Try the task again."
+                  },
+                  "summary": {
+                    "success": "Success Message",
+                    "failed": "Failure Message"
+                  }
+                },
+                {
+                  "title": "Title of the second task",
+                  "description": "### Description header for the second task\n1. First Step\n2. Second Step\n3. Third Step",
+                  "review": {
+                    "instructions": "#### Header for the review instructions\nThis is the body of the review instructions for the second task",
+                    "failedTaskHelp": "This task is not verified yet. Try the task again."
+                  },
+                  "summary": {
+                    "success": "Success Message",
+                    "failed": "Failure Message"
+                  }
+                }
+              ],
+              "conclusion": "Message for the conclusion of the ODHQuickstart",
+              "nextQuickStart": null
+            }
+          }
+        ]
+      capabilities: Deep Insights
+      categories: AI/Machine Learning, Big Data
+      certified: "False"
+      containerImage: quay.io/opendatahub/opendatahub-operator:v1.5.0
+      createdAt: "2022-10-18T00:00:00Z"
+      description: Open Data Hub Operator for deployment and management of Open Data
+        Hub
+      k8s.ovn.org/pod-networks: '{"default":{"ip_addresses":["10.128.6.6/23"],"mac_address":"0a:58:0a:80:06:06","gateway_ips":["10.128.6.1"],"ip_address":"10.128.6.6/23","gateway_ip":"10.128.6.1"}}'
+      k8s.v1.cni.cncf.io/network-status: |-
+        [{
+            "name": "ovn-kubernetes",
+            "interface": "eth0",
+            "ips": [
+                "10.128.6.6"
+            ],
+            "mac": "0a:58:0a:80:06:06",
+            "default": true,
+            "dns": {}
+        }]
+      k8s.v1.cni.cncf.io/networks-status: |-
+        [{
+            "name": "ovn-kubernetes",
+            "interface": "eth0",
+            "ips": [
+                "10.128.6.6"
+            ],
+            "mac": "0a:58:0a:80:06:06",
+            "default": true,
+            "dns": {}
+        }]
+      kubectl.kubernetes.io/default-container: manager
+      olm.operatorGroup: global-operators
+      olm.operatorNamespace: openshift-operators
+      olm.targetNamespaces: ""
+      openshift.io/scc: anyuid
+      operatorframework.io/properties: '{"properties":[{"type":"olm.gvk","value":{"group":"console.openshift.io","kind":"OdhQuickStart","version":"v1"}},{"type":"olm.gvk","value":{"group":"dashboard.opendatahub.io","kind":"OdhApplication","version":"v1"}},{"type":"olm.gvk","value":{"group":"dashboard.opendatahub.io","kind":"OdhDocument","version":"v1"}},{"type":"olm.gvk","value":{"group":"kfdef.apps.kubeflow.org","kind":"KfDef","version":"v1"}},{"type":"olm.gvk","value":{"group":"opendatahub.io","kind":"OdhDashboardConfig","version":"v1alpha"}},{"type":"olm.package","value":{"packageName":"opendatahub-operator","version":"1.5.0"}}]}'
+      operators.operatorframework.io/builder: operator-sdk-v1.24.1
+      operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
+      repository: https://github.com/opendatahub-io/opendatahub-operator
+      support: Open Data Hub
+    creationTimestamp: "2023-04-19T03:32:39Z"
+    generateName: opendatahub-operator-controller-manager-786bcc75b8-
+    labels:
+      control-plane: controller-manager
+      pod-template-hash: 786bcc75b8
+    name: opendatahub-operator-controller-manager-786bcc75b8-tqj7x
+    namespace: openshift-operators
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ReplicaSet
+      name: opendatahub-operator-controller-manager-786bcc75b8
+      uid: 0e50fa23-44b0-47af-af93-6ca8c2da29fb
+    resourceVersion: "103783"
+    uid: 322c185d-415a-4e09-8a34-b4552c2e4f87
+  spec:
+    containers:
+    - args:
+      - --secure-listen-address=0.0.0.0:8443
+      - --upstream=http://127.0.0.1:8080/
+      - --logtostderr=true
+      - --v=0
+      env:
+      - name: OPERATOR_CONDITION_NAME
+        value: opendatahub-operator.v1.5.0
+      image: gcr.io/kubebuilder/kube-rbac-proxy:v0.13.0
+      imagePullPolicy: IfNotPresent
+      name: kube-rbac-proxy
+      ports:
+      - containerPort: 8443
+        name: https
+        protocol: TCP
+      resources:
+        limits:
+          cpu: 500m
+          memory: 128Mi
+        requests:
+          cpu: 5m
+          memory: 64Mi
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+          - MKNOD
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-jwrbz
+        readOnly: true
+    - args:
+      - --health-probe-bind-address=:8081
+      - --metrics-bind-address=127.0.0.1:8080
+      - --leader-elect
+      command:
+      - /manager
+      env:
+      - name: OPERATOR_CONDITION_NAME
+        value: opendatahub-operator.v1.5.0
+      image: quay.io/opendatahub/opendatahub-operator:v1.5.0
+      imagePullPolicy: Always
+      livenessProbe:
+        failureThreshold: 3
+        httpGet:
+          path: /healthz
+          port: 8081
+          scheme: HTTP
+        initialDelaySeconds: 15
+        periodSeconds: 20
+        successThreshold: 1
+        timeoutSeconds: 1
+      name: manager
+      readinessProbe:
+        failureThreshold: 3
+        httpGet:
+          path: /readyz
+          port: 8081
+          scheme: HTTP
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 1
+      resources: {}
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+          - MKNOD
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-jwrbz
+        readOnly: true
+    dnsPolicy: ClusterFirst
+    enableServiceLinks: true
+    imagePullSecrets:
+    - name: opendatahub-operator-controller-manager-dockercfg-fhmsp
+    nodeName: ip-10-0-179-59.ec2.internal
+    preemptionPolicy: PreemptLowerPriority
+    priority: 0
+    restartPolicy: Always
+    schedulerName: default-scheduler
+    securityContext:
+      runAsNonRoot: true
+      seLinuxOptions:
+        level: s0:c20,c10
+    serviceAccount: opendatahub-operator-controller-manager
+    serviceAccountName: opendatahub-operator-controller-manager
+    terminationGracePeriodSeconds: 10
+    tolerations:
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoSchedule
+      key: node.kubernetes.io/memory-pressure
+      operator: Exists
+    volumes:
+    - name: kube-api-access-jwrbz
+      projected:
+        defaultMode: 420
+        sources:
+        - serviceAccountToken:
+            expirationSeconds: 3607
+            path: token
+        - configMap:
+            items:
+            - key: ca.crt
+              path: ca.crt
+            name: kube-root-ca.crt
+        - downwardAPI:
+            items:
+            - fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+              path: namespace
+        - configMap:
+            items:
+            - key: service-ca.crt
+              path: service-ca.crt
+            name: openshift-service-ca.crt
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2023-04-19T03:32:39Z"
+      status: "True"
+      type: Initialized
+    - lastProbeTime: null
+      lastTransitionTime: "2023-04-19T03:33:00Z"
+      status: "True"
+      type: Ready
+    - lastProbeTime: null
+      lastTransitionTime: "2023-04-19T03:33:00Z"
+      status: "True"
+      type: ContainersReady
+    - lastProbeTime: null
+      lastTransitionTime: "2023-04-19T03:32:39Z"
+      status: "True"
+      type: PodScheduled
+    containerStatuses:
+    - containerID: cri-o://dcba736714dac6a45642ef99c4764ec1be833ce6cb5a47bebc1ef1639ae6472a
+      image: gcr.io/kubebuilder/kube-rbac-proxy:v0.13.0
+      imageID: gcr.io/kubebuilder/kube-rbac-proxy@sha256:a2523c532c0c3d51a5396a901d7ded23e402a9a1492c783aae27af6d0c1d2ec5
+      lastState: {}
+      name: kube-rbac-proxy
+      ready: true
+      restartCount: 0
+      started: true
+      state:
+        running:
+          startedAt: "2023-04-19T03:32:43Z"
+    - containerID: cri-o://48ffdfd30aa2ea8cd00ec668ecd973b65df7051a7c664e8f3b221926672135a5
+      image: quay.io/opendatahub/opendatahub-operator:v1.5.0
+      imageID: quay.io/opendatahub/opendatahub-operator@sha256:8fcf7f297336a8072f02ff7607fa1af8222faf7e5fa78a59ae7ee5c3ca0f9272
+      lastState: {}
+      name: manager
+      ready: true
+      restartCount: 0
+      started: true
+      state:
+        running:
+          startedAt: "2023-04-19T03:32:49Z"
+    hostIP: 10.0.179.59
+    phase: Running
+    podIP: 10.128.6.6
+    podIPs:
+    - ip: 10.128.6.6
+    qosClass: Burstable
+    startTime: "2023-04-19T03:32:39Z"
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    annotations:
+      alm-examples: |-
+        [
+          {
+            "apiVersion": "operator.tekton.dev/v1alpha1",
+            "kind": "OpenShiftPipelinesAsCode",
+            "metadata": {
+              "name": "pipelines-as-code"
+            },
+            "spec": {
+              "targetNamespace": "openshift-pipelines"
+            }
+          },
+          {
+            "apiVersion": "operator.tekton.dev/v1alpha1",
+            "kind": "TektonAddon",
+            "metadata": {
+              "name": "addon"
+            },
+            "spec": {
+              "targetNamespace": "openshift-pipelines"
+            }
+          },
+          {
+            "apiVersion": "operator.tekton.dev/v1alpha1",
+            "kind": "TektonChain",
+            "metadata": {
+              "name": "chain"
+            },
+            "spec": {
+              "targetNamespace": "openshift-pipelines"
+            }
+          },
+          {
+            "apiVersion": "operator.tekton.dev/v1alpha1",
+            "kind": "TektonConfig",
+            "metadata": {
+              "name": "config"
+            },
+            "spec": {
+              "addon": {
+                "params": [
+                  {
+                    "name": "clusterTasks",
+                    "value": "true"
+                  },
+                  {
+                    "name": "pipelineTemplates",
+                    "value": "true"
+                  },
+                  {
+                    "name": "communityClusterTasks",
+                    "value": "true"
+                  }
+                ]
+              },
+              "params": [
+                {
+                  "name": "createRbacResource",
+                  "value": "true"
+                }
+              ],
+              "profile": "all",
+              "pruner": {
+                "keep": 100,
+                "resources": [
+                  "pipelinerun",
+                  "taskrun"
+                ],
+                "schedule": "0 8 * * *"
+              },
+              "targetNamespace": "openshift-pipelines"
+            }
+          },
+          {
+            "apiVersion": "operator.tekton.dev/v1alpha1",
+            "kind": "TektonHub",
+            "metadata": {
+              "name": "hub"
+            },
+            "spec": {
+              "api": {
+                "catalogRefreshInterval": "30m"
+              }
+            }
+          },
+          {
+            "apiVersion": "operator.tekton.dev/v1alpha1",
+            "kind": "TektonInstallerSet",
+            "metadata": {
+              "name": "foo"
+            },
+            "spec": {
+              "manifests": []
+            }
+          },
+          {
+            "apiVersion": "operator.tekton.dev/v1alpha1",
+            "kind": "TektonPipeline",
+            "metadata": {
+              "name": "pipeline"
+            },
+            "spec": {
+              "targetNamespace": "openshift-pipelines"
+            }
+          },
+          {
+            "apiVersion": "operator.tekton.dev/v1alpha1",
+            "kind": "TektonTrigger",
+            "metadata": {
+              "name": "trigger"
+            },
+            "spec": {
+              "targetNamespace": "openshift-pipelines"
+            }
+          }
+        ]
+      capabilities: Full Lifecycle
+      categories: Developer Tools, Integration & Delivery
+      certified: "false"
+      description: Red Hat OpenShift Pipelines is a cloud-native CI/CD solution for
+        building pipelines using Tekton concepts which run natively on OpenShift and
+        Kubernetes.
+      k8s.ovn.org/pod-networks: '{"default":{"ip_addresses":["10.128.8.14/23"],"mac_address":"0a:58:0a:80:08:0e","gateway_ips":["10.128.8.1"],"ip_address":"10.128.8.14/23","gateway_ip":"10.128.8.1"}}'
+      k8s.v1.cni.cncf.io/network-status: |-
+        [{
+            "name": "ovn-kubernetes",
+            "interface": "eth0",
+            "ips": [
+                "10.128.8.14"
+            ],
+            "mac": "0a:58:0a:80:08:0e",
+            "default": true,
+            "dns": {}
+        }]
+      k8s.v1.cni.cncf.io/networks-status: |-
+        [{
+            "name": "ovn-kubernetes",
+            "interface": "eth0",
+            "ips": [
+                "10.128.8.14"
+            ],
+            "mac": "0a:58:0a:80:08:0e",
+            "default": true,
+            "dns": {}
+        }]
+      olm.operatorGroup: global-operators
+      olm.operatorNamespace: openshift-operators
+      olm.skipRange: '>=1.9.0 <1.10.0'
+      olm.targetNamespaces: ""
+      openshift.io/scc: restricted-v2
+      operatorframework.io/properties: '{"properties":[{"type":"olm.gvk","value":{"group":"operator.tekton.dev","kind":"OpenShiftPipelinesAsCode","version":"v1alpha1"}},{"type":"olm.gvk","value":{"group":"operator.tekton.dev","kind":"TektonAddon","version":"v1alpha1"}},{"type":"olm.gvk","value":{"group":"operator.tekton.dev","kind":"TektonChain","version":"v1alpha1"}},{"type":"olm.gvk","value":{"group":"operator.tekton.dev","kind":"TektonConfig","version":"v1alpha1"}},{"type":"olm.gvk","value":{"group":"operator.tekton.dev","kind":"TektonHub","version":"v1alpha1"}},{"type":"olm.gvk","value":{"group":"operator.tekton.dev","kind":"TektonInstallerSet","version":"v1alpha1"}},{"type":"olm.gvk","value":{"group":"operator.tekton.dev","kind":"TektonPipeline","version":"v1alpha1"}},{"type":"olm.gvk","value":{"group":"operator.tekton.dev","kind":"TektonTrigger","version":"v1alpha1"}},{"type":"olm.maxOpenShiftVersion","value":"4.13"},{"type":"olm.package","value":{"packageName":"openshift-pipelines-operator-rh","version":"1.10.0"}}]}'
+      operators.openshift.io/infrastructure-features: '["disconnected","proxy-aware"]'
+      operators.openshift.io/valid-subscription: '["OpenShift Container Platform",
+        "OpenShift Platform Plus"]'
+      operators.operatorframework.io/builder: operator-sdk-v1.25.0
+      operators.operatorframework.io/internal-objects: '["tektoninstallersets.operator.tekton.dev",
+        "tektonconfigs.operator.tekton.dev","tektonpipelines.operator.tekton.dev","tektontriggers.operator.tekton.dev","tektonaddons.operator.tekton.dev",
+        "tektonhubs.operator.tekton.dev", "tektonchains.operator.tekton.dev", "openshiftpipelinesascodes.operator.tekton.dev"]'
+      operators.operatorframework.io/project_layout: unknown
+      repository: https://github.com/tektoncd/operator
+      seccomp.security.alpha.kubernetes.io/pod: runtime/default
+      support: Red Hat
+    creationTimestamp: "2023-04-19T03:29:23Z"
+    generateName: openshift-pipelines-operator-65dc8cc68b-
+    labels:
+      app: openshift-pipelines-operator
+      name: openshift-pipelines-operator
+      pod-template-hash: 65dc8cc68b
+    name: openshift-pipelines-operator-65dc8cc68b-kg4vs
+    namespace: openshift-operators
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ReplicaSet
+      name: openshift-pipelines-operator-65dc8cc68b
+      uid: 57ad023e-7c6d-4b97-a447-d0c6fac7a76c
+    resourceVersion: "99512"
+    uid: a7729290-8f82-4c3f-b96b-ac10f2b3b64b
+  spec:
+    containers:
+    - args:
+      - -controllers
+      - tektonconfig,tektonpipeline,tektontrigger,tektonhub,tektonchain,tektonaddon,openshiftpipelinesascode
+      - -unique-process-name
+      - tekton-operator-lifecycle
+      env:
+      - name: SYSTEM_NAMESPACE
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.namespace
+      - name: PLATFORM
+        value: openshift
+      - name: POD_NAME
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.name
+      - name: OPERATOR_NAME
+        value: redhat-openshift-pipelines-operator
+      - name: IMAGE_PIPELINES_PROXY
+        value: registry.redhat.io/openshift-pipelines/pipelines-operator-proxy-rhel8@sha256:469cbd7ecd32c70578766f438eac380250aeac84ad9148a1cfa90bb2cb964f3f
+      - name: IMAGE_JOB_PRUNER_TKN
+        value: registry.redhat.io/openshift-pipelines/pipelines-cli-tkn-rhel8@sha256:73678b0df721ed07d8398bbfd27a06dcb9d1218938ad6c2fb0f2d640013109aa
+      - name: METRICS_DOMAIN
+        value: tekton.dev/operator
+      - name: VERSION
+        value: 1.10.0
+      - name: AUTOINSTALL_COMPONENTS
+        valueFrom:
+          configMapKeyRef:
+            key: AUTOINSTALL_COMPONENTS
+            name: tekton-config-defaults
+      - name: DEFAULT_TARGET_NAMESPACE
+        valueFrom:
+          configMapKeyRef:
+            key: DEFAULT_TARGET_NAMESPACE
+            name: tekton-config-defaults
+      - name: CONFIG_OBSERVABILITY_NAME
+        value: tekton-config-observability
+      - name: IMAGE_HUB_TEKTON_HUB_DB
+        value: registry.redhat.io/rhel8/postgresql-13@sha256:d3872cca802419af86eab8b0a566ae94c85cec6a8786a3b97f43ca5fcb095248
+      - name: IMAGE_ADDONS_PARAM_BUILDER_IMAGE
+        value: registry.redhat.io/rhel8/buildah@sha256:ac0b8714cc260c94435cab46fe41b3de0ccbc3d93e38c395fa9d52ac49e521fe
+      - name: IMAGE_ADDONS_PARAM_KN_IMAGE
+        value: registry.redhat.io/openshift-serverless-1/client-kn-rhel8@sha256:89fb53858bb93ada958faff761915f45d01e3364b5e5df4ba05b01c4b8cde587
+      - name: IMAGE_ADDONS_MVN_SETTINGS
+        value: registry.redhat.io/ubi8/ubi-minimal@sha256:6910799b75ad41f00891978575a0d955be2f800c51b955af73926e7ab59a41c3
+      - name: IMAGE_ADDONS_SKOPEO_COPY
+        value: registry.redhat.io/rhel8/skopeo@sha256:52579594e3057f7a5f7a4665d0b5ceeb1204e24e020a45553d6aae7c6820bb31
+      - name: IMAGE_ADDONS_GENERATE
+        value: registry.redhat.io/ocp-tools-4-tech-preview/source-to-image-rhel8@sha256:98d8cb3a255641ca6a1bce854e5e2460c20de9fb9b28e3cc67eb459f122873dd
+      - name: IMAGE_ADDONS_GEN_ENV_FILE
+        value: registry.redhat.io/ocp-tools-4-tech-preview/source-to-image-rhel8@sha256:98d8cb3a255641ca6a1bce854e5e2460c20de9fb9b28e3cc67eb459f122873dd
+      - name: IMAGE_PIPELINES_TEKTON_PIPELINES_CONTROLLER
+        value: registry.redhat.io/openshift-pipelines/pipelines-controller-rhel8@sha256:f6ed30cfda39be48b26e45b5e60c81ae4b12665192f9ec2321348711e6779787
+      - name: IMAGE_PIPELINES_WEBHOOK
+        value: registry.redhat.io/openshift-pipelines/pipelines-webhook-rhel8@sha256:5c44c38f3c51fc5896f5623cdceea1ba219728fe8b1ad7d6ce73a91f882d3d89
+      - name: IMAGE_PIPELINES_CONTROLLER
+        value: registry.redhat.io/openshift-pipelines/pipelines-resolvers-rhel8@sha256:730ce571dbc7cdc09adcf8ce80a817d8a1ca501409e51d4965b330173b857127
+      - name: IMAGE_PIPELINES_ARG__ENTRYPOINT_IMAGE
+        value: registry.redhat.io/openshift-pipelines/pipelines-entrypoint-rhel8@sha256:cfe684391c62abaa2baa61b9defb68795e86ed16bde9c316a386b0a2bd29d55e
+      - name: IMAGE_PIPELINES_ARG__GIT_IMAGE
+        value: registry.redhat.io/openshift-pipelines/pipelines-git-init-rhel8@sha256:e29585c67da42f3800f250c9c60159453af6ee7b4fff5669e27e17f34136a1d3
+      - name: IMAGE_ADDONS_PARAM_GITINITIMAGE
+        value: registry.redhat.io/openshift-pipelines/pipelines-git-init-rhel8@sha256:e29585c67da42f3800f250c9c60159453af6ee7b4fff5669e27e17f34136a1d3
+      - name: IMAGE_PIPELINES_ARG__IMAGEDIGEST_EXPORTER_IMAGE
+        value: registry.redhat.io/openshift-pipelines/pipelines-imagedigestexporter-rhel8@sha256:e292de9ec5968257b59d3333903d448190049b4d2f5583a665548538a23b4316
+      - name: IMAGE_PIPELINES_ARG__WORKINGDIRINIT_IMAGE
+        value: registry.redhat.io/openshift-pipelines/pipelines-workingdirinit-rhel8@sha256:073e2318403c26e67483b4a60500ad085e6f36abaca3e8769784dbc6b9fc5b95
+      - name: IMAGE_PIPELINES_ARG__PR_IMAGE
+        value: registry.redhat.io/openshift-pipelines/pipelines-pullrequest-init-rhel8@sha256:1504baf55f81f615fc31d483e6a19dc14ceef64ba6cf592a8553eb0a23badc09
+      - name: IMAGE_PIPELINES_ARG__NOP_IMAGE
+        value: registry.redhat.io/openshift-pipelines/pipelines-nop-rhel8@sha256:42818b807af59b10269218e554f517c1968c62f6e91167d8d114bee1065411ff
+      - name: IMAGE_PIPELINES_ARG__SHELL_IMAGE
+        value: registry.redhat.io/ubi8/ubi-minimal@sha256:6910799b75ad41f00891978575a0d955be2f800c51b955af73926e7ab59a41c3
+      - name: IMAGE_TRIGGERS_TEKTON_TRIGGERS_CONTROLLER
+        value: registry.redhat.io/openshift-pipelines/pipelines-triggers-controller-rhel8@sha256:edb9cea8b08921539cc38f54d224cd5f227189eddd201688f3df88fcd6b259d2
+      - name: IMAGE_TRIGGERS_WEBHOOK
+        value: registry.redhat.io/openshift-pipelines/pipelines-triggers-webhook-rhel8@sha256:3b82a7a4512dc76480688d79b3f9c94c40816003971e64886c5ebcbc27e4eff2
+      - name: IMAGE_TRIGGERS_TEKTON_TRIGGERS_CORE_INTERCEPTORS
+        value: registry.redhat.io/openshift-pipelines/pipelines-triggers-core-interceptors-rhel8@sha256:9381834535c906ec49f1be09e58692aa61d8f4d6d42911b50547d845356481db
+      - name: IMAGE_TRIGGERS_ARG__EL_IMAGE
+        value: registry.redhat.io/openshift-pipelines/pipelines-triggers-eventlistenersink-rhel8@sha256:17493e3180dc2508c2a920d19e2870bc15e0ec1ea8ccd5f0decbe3328e7d8444
+      - name: IMAGE_ADDONS_PARAM_TKN_IMAGE
+        value: registry.redhat.io/openshift-pipelines/pipelines-cli-tkn-rhel8@sha256:73678b0df721ed07d8398bbfd27a06dcb9d1218938ad6c2fb0f2d640013109aa
+      - name: IMAGE_ADDONS_TKN_CLI_SERVE
+        value: registry.redhat.io/openshift-pipelines/pipelines-serve-tkn-cli-rhel8@sha256:ec5378e861d0ce43275355162aca77e46a15b65f0b0faccdaa67945254319577
+      - name: IMAGE_CHAINS_TEKTON_CHAINS_CONTROLLER
+        value: registry.redhat.io/openshift-pipelines/pipelines-chains-controller-rhel8@sha256:f4ad9be541f927d0b0348d4515639f490657e699ca2b0fdfb8552f144793beca
+      - name: IMAGE_HUB_TEKTON_HUB_DB_MIGRATION
+        value: registry.redhat.io/openshift-pipelines/pipelines-hub-db-migration-rhel8@sha256:2925f408570ee3e71522f8e81287aadb8207bf73ba0df15624b95ad63ad80219
+      - name: IMAGE_HUB_TEKTON_HUB_API
+        value: registry.redhat.io/openshift-pipelines/pipelines-hub-api-rhel8@sha256:2d7e64f13df190bdb03010bafca6f29d088f9cde15608c7672c67604c8ae4746
+      - name: IMAGE_HUB_TEKTON_HUB_UI
+        value: registry.redhat.io/openshift-pipelines/pipelines-hub-ui-rhel8@sha256:166f58f4a9ef49d0c7375e426de4db25d879e8234312d734812b556c7afc82c4
+      - name: IMAGE_PAC_PAC_CONTROLLER
+        value: registry.redhat.io/openshift-pipelines/pipelines-pipelines-as-code-rhel8@sha256:6ba7db7a829bdac4db7554a4643283d0e97fc7a407ed7b6297888124fb5af3f3
+      - name: IMAGE_PAC_PAC_WEBHOOK
+        value: registry.redhat.io/openshift-pipelines/pipelines-pipelines-as-code-rhel8@sha256:6ba7db7a829bdac4db7554a4643283d0e97fc7a407ed7b6297888124fb5af3f3
+      - name: IMAGE_PAC_PAC_WATCHER
+        value: registry.redhat.io/openshift-pipelines/pipelines-pipelines-as-code-rhel8@sha256:6ba7db7a829bdac4db7554a4643283d0e97fc7a407ed7b6297888124fb5af3f3
+      - name: OPERATOR_CONDITION_NAME
+        value: openshift-pipelines-operator-rh.v1.10.0
+      image: registry.redhat.io/openshift-pipelines/pipelines-rhel8-operator@sha256:7f80c464361e1acb656abebdac9cc48562416d8e72a0c2394f188972f1150a32
+      imagePullPolicy: Always
+      name: openshift-pipelines-operator-lifecycle
+      resources: {}
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        runAsUser: 1000400000
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-spccc
+        readOnly: true
+    - args:
+      - -controllers
+      - tektoninstallerset
+      - -unique-process-name
+      - tekton-operator-cluster-operations
+      env:
+      - name: SYSTEM_NAMESPACE
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.namespace
+      - name: POD_NAME
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.name
+      - name: OPERATOR_NAME
+        value: redhat-openshift-pipelines-operator
+      - name: PROFILING_PORT
+        value: "9009"
+      - name: VERSION
+        value: v0.65.1
+      - name: METRICS_DOMAIN
+        value: tekton.dev/operator
+      - name: OPERATOR_CONDITION_NAME
+        value: openshift-pipelines-operator-rh.v1.10.0
+      image: registry.redhat.io/openshift-pipelines/pipelines-rhel8-operator@sha256:7f80c464361e1acb656abebdac9cc48562416d8e72a0c2394f188972f1150a32
+      imagePullPolicy: Always
+      name: openshift-pipelines-operator-cluster-operations
+      resources: {}
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        runAsUser: 1000400000
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-spccc
+        readOnly: true
+    dnsPolicy: ClusterFirst
+    enableServiceLinks: true
+    imagePullSecrets:
+    - name: openshift-pipelines-operator-dockercfg-qmrw7
+    nodeName: ip-10-0-204-216.ec2.internal
+    preemptionPolicy: PreemptLowerPriority
+    priority: 0
+    restartPolicy: Always
+    schedulerName: default-scheduler
+    securityContext:
+      fsGroup: 1000400000
+      runAsNonRoot: true
+      seLinuxOptions:
+        level: s0:c20,c10
+      seccompProfile:
+        type: RuntimeDefault
+    serviceAccount: openshift-pipelines-operator
+    serviceAccountName: openshift-pipelines-operator
+    terminationGracePeriodSeconds: 30
+    tolerations:
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+    volumes:
+    - name: kube-api-access-spccc
+      projected:
+        defaultMode: 420
+        sources:
+        - serviceAccountToken:
+            expirationSeconds: 3607
+            path: token
+        - configMap:
+            items:
+            - key: ca.crt
+              path: ca.crt
+            name: kube-root-ca.crt
+        - downwardAPI:
+            items:
+            - fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+              path: namespace
+        - configMap:
+            items:
+            - key: service-ca.crt
+              path: service-ca.crt
+            name: openshift-service-ca.crt
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2023-04-19T03:29:23Z"
+      status: "True"
+      type: Initialized
+    - lastProbeTime: null
+      lastTransitionTime: "2023-04-19T03:29:40Z"
+      status: "True"
+      type: Ready
+    - lastProbeTime: null
+      lastTransitionTime: "2023-04-19T03:29:40Z"
+      status: "True"
+      type: ContainersReady
+    - lastProbeTime: null
+      lastTransitionTime: "2023-04-19T03:29:23Z"
+      status: "True"
+      type: PodScheduled
+    containerStatuses:
+    - containerID: cri-o://c969602f28b3d8f4e1b8e7764eb9db9f18b2ddffe564c9595d43a33b868514a3
+      image: registry.redhat.io/openshift-pipelines/pipelines-rhel8-operator@sha256:7f80c464361e1acb656abebdac9cc48562416d8e72a0c2394f188972f1150a32
+      imageID: registry.redhat.io/openshift-pipelines/pipelines-rhel8-operator@sha256:24c1e5ec148ee164b4740a102fbfb289afb8dd76441bb2bdb72eb9f7fb94f3e9
+      lastState: {}
+      name: openshift-pipelines-operator-cluster-operations
+      ready: true
+      restartCount: 0
+      started: true
+      state:
+        running:
+          startedAt: "2023-04-19T03:29:39Z"
+    - containerID: cri-o://d742ada18d83d8ea35080a2c14c0c1158ecc3d6943a30c5986416770dd59bdc1
+      image: registry.redhat.io/openshift-pipelines/pipelines-rhel8-operator@sha256:7f80c464361e1acb656abebdac9cc48562416d8e72a0c2394f188972f1150a32
+      imageID: registry.redhat.io/openshift-pipelines/pipelines-rhel8-operator@sha256:24c1e5ec148ee164b4740a102fbfb289afb8dd76441bb2bdb72eb9f7fb94f3e9
+      lastState: {}
+      name: openshift-pipelines-operator-lifecycle
+      ready: true
+      restartCount: 0
+      started: true
+      state:
+        running:
+          startedAt: "2023-04-19T03:29:37Z"
+    hostIP: 10.0.204.216
+    phase: Running
+    podIP: 10.128.8.14
+    podIPs:
+    - ip: 10.128.8.14
+    qosClass: BestEffort
+    startTime: "2023-04-19T03:29:23Z"
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    annotations:
+      alm-examples: |-
+        [
+          {
+            "apiVersion": "operator.tekton.dev/v1alpha1",
+            "kind": "OpenShiftPipelinesAsCode",
+            "metadata": {
+              "name": "pipelines-as-code"
+            },
+            "spec": {
+              "targetNamespace": "openshift-pipelines"
+            }
+          },
+          {
+            "apiVersion": "operator.tekton.dev/v1alpha1",
+            "kind": "TektonAddon",
+            "metadata": {
+              "name": "addon"
+            },
+            "spec": {
+              "targetNamespace": "openshift-pipelines"
+            }
+          },
+          {
+            "apiVersion": "operator.tekton.dev/v1alpha1",
+            "kind": "TektonChain",
+            "metadata": {
+              "name": "chain"
+            },
+            "spec": {
+              "targetNamespace": "openshift-pipelines"
+            }
+          },
+          {
+            "apiVersion": "operator.tekton.dev/v1alpha1",
+            "kind": "TektonConfig",
+            "metadata": {
+              "name": "config"
+            },
+            "spec": {
+              "addon": {
+                "params": [
+                  {
+                    "name": "clusterTasks",
+                    "value": "true"
+                  },
+                  {
+                    "name": "pipelineTemplates",
+                    "value": "true"
+                  },
+                  {
+                    "name": "communityClusterTasks",
+                    "value": "true"
+                  }
+                ]
+              },
+              "params": [
+                {
+                  "name": "createRbacResource",
+                  "value": "true"
+                }
+              ],
+              "profile": "all",
+              "pruner": {
+                "keep": 100,
+                "resources": [
+                  "pipelinerun",
+                  "taskrun"
+                ],
+                "schedule": "0 8 * * *"
+              },
+              "targetNamespace": "openshift-pipelines"
+            }
+          },
+          {
+            "apiVersion": "operator.tekton.dev/v1alpha1",
+            "kind": "TektonHub",
+            "metadata": {
+              "name": "hub"
+            },
+            "spec": {
+              "api": {
+                "catalogRefreshInterval": "30m"
+              }
+            }
+          },
+          {
+            "apiVersion": "operator.tekton.dev/v1alpha1",
+            "kind": "TektonInstallerSet",
+            "metadata": {
+              "name": "foo"
+            },
+            "spec": {
+              "manifests": []
+            }
+          },
+          {
+            "apiVersion": "operator.tekton.dev/v1alpha1",
+            "kind": "TektonPipeline",
+            "metadata": {
+              "name": "pipeline"
+            },
+            "spec": {
+              "targetNamespace": "openshift-pipelines"
+            }
+          },
+          {
+            "apiVersion": "operator.tekton.dev/v1alpha1",
+            "kind": "TektonTrigger",
+            "metadata": {
+              "name": "trigger"
+            },
+            "spec": {
+              "targetNamespace": "openshift-pipelines"
+            }
+          }
+        ]
+      capabilities: Full Lifecycle
+      categories: Developer Tools, Integration & Delivery
+      certified: "false"
+      description: Red Hat OpenShift Pipelines is a cloud-native CI/CD solution for
+        building pipelines using Tekton concepts which run natively on OpenShift and
+        Kubernetes.
+      k8s.ovn.org/pod-networks: '{"default":{"ip_addresses":["10.128.8.13/23"],"mac_address":"0a:58:0a:80:08:0d","gateway_ips":["10.128.8.1"],"ip_address":"10.128.8.13/23","gateway_ip":"10.128.8.1"}}'
+      k8s.v1.cni.cncf.io/network-status: |-
+        [{
+            "name": "ovn-kubernetes",
+            "interface": "eth0",
+            "ips": [
+                "10.128.8.13"
+            ],
+            "mac": "0a:58:0a:80:08:0d",
+            "default": true,
+            "dns": {}
+        }]
+      k8s.v1.cni.cncf.io/networks-status: |-
+        [{
+            "name": "ovn-kubernetes",
+            "interface": "eth0",
+            "ips": [
+                "10.128.8.13"
+            ],
+            "mac": "0a:58:0a:80:08:0d",
+            "default": true,
+            "dns": {}
+        }]
+      olm.operatorGroup: global-operators
+      olm.operatorNamespace: openshift-operators
+      olm.skipRange: '>=1.9.0 <1.10.0'
+      olm.targetNamespaces: ""
+      openshift.io/scc: restricted-v2
+      operatorframework.io/properties: '{"properties":[{"type":"olm.gvk","value":{"group":"operator.tekton.dev","kind":"OpenShiftPipelinesAsCode","version":"v1alpha1"}},{"type":"olm.gvk","value":{"group":"operator.tekton.dev","kind":"TektonAddon","version":"v1alpha1"}},{"type":"olm.gvk","value":{"group":"operator.tekton.dev","kind":"TektonChain","version":"v1alpha1"}},{"type":"olm.gvk","value":{"group":"operator.tekton.dev","kind":"TektonConfig","version":"v1alpha1"}},{"type":"olm.gvk","value":{"group":"operator.tekton.dev","kind":"TektonHub","version":"v1alpha1"}},{"type":"olm.gvk","value":{"group":"operator.tekton.dev","kind":"TektonInstallerSet","version":"v1alpha1"}},{"type":"olm.gvk","value":{"group":"operator.tekton.dev","kind":"TektonPipeline","version":"v1alpha1"}},{"type":"olm.gvk","value":{"group":"operator.tekton.dev","kind":"TektonTrigger","version":"v1alpha1"}},{"type":"olm.maxOpenShiftVersion","value":"4.13"},{"type":"olm.package","value":{"packageName":"openshift-pipelines-operator-rh","version":"1.10.0"}}]}'
+      operators.openshift.io/infrastructure-features: '["disconnected","proxy-aware"]'
+      operators.openshift.io/valid-subscription: '["OpenShift Container Platform",
+        "OpenShift Platform Plus"]'
+      operators.operatorframework.io/builder: operator-sdk-v1.25.0
+      operators.operatorframework.io/internal-objects: '["tektoninstallersets.operator.tekton.dev",
+        "tektonconfigs.operator.tekton.dev","tektonpipelines.operator.tekton.dev","tektontriggers.operator.tekton.dev","tektonaddons.operator.tekton.dev",
+        "tektonhubs.operator.tekton.dev", "tektonchains.operator.tekton.dev", "openshiftpipelinesascodes.operator.tekton.dev"]'
+      operators.operatorframework.io/project_layout: unknown
+      repository: https://github.com/tektoncd/operator
+      seccomp.security.alpha.kubernetes.io/pod: runtime/default
+      support: Red Hat
+    creationTimestamp: "2023-04-19T03:29:23Z"
+    generateName: tekton-operator-webhook-64b9d86ccb-
+    labels:
+      app: tekton-operator
+      name: tekton-operator-webhook
+      pod-template-hash: 64b9d86ccb
+    name: tekton-operator-webhook-64b9d86ccb-4lsd9
+    namespace: openshift-operators
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ReplicaSet
+      name: tekton-operator-webhook-64b9d86ccb
+      uid: a5da2c6b-bf1d-4503-9fcb-b3afbb25fe62
+    resourceVersion: "99507"
+    uid: 9fd0b6f3-e148-43e7-814e-d4195d35a4d7
+  spec:
+    containers:
+    - env:
+      - name: SYSTEM_NAMESPACE
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.namespace
+      - name: CONFIG_LOGGING_NAME
+        value: config-logging
+      - name: WEBHOOK_SERVICE_NAME
+        value: tekton-operator-webhook
+      - name: WEBHOOK_SECRET_NAME
+        value: tekton-operator-webhook-certs
+      - name: METRICS_DOMAIN
+        value: tekton.dev/operator
+      - name: PLATFORM
+        value: openshift
+      - name: OPERATOR_CONDITION_NAME
+        value: openshift-pipelines-operator-rh.v1.10.0
+      image: registry.redhat.io/openshift-pipelines/pipelines-operator-webhook-rhel8@sha256:ef6cb160d7c64e7ee8ddf70cc4b8a1f83720cc32c30ba103998ad05f016752c7
+      imagePullPolicy: IfNotPresent
+      name: tekton-operator-webhook
+      ports:
+      - containerPort: 8443
+        name: https-webhook
+        protocol: TCP
+      resources: {}
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        runAsUser: 1000400000
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-hc8b9
+        readOnly: true
+    dnsPolicy: ClusterFirst
+    enableServiceLinks: true
+    imagePullSecrets:
+    - name: openshift-pipelines-operator-dockercfg-qmrw7
+    nodeName: ip-10-0-204-216.ec2.internal
+    preemptionPolicy: PreemptLowerPriority
+    priority: 0
+    restartPolicy: Always
+    schedulerName: default-scheduler
+    securityContext:
+      fsGroup: 1000400000
+      runAsNonRoot: true
+      seLinuxOptions:
+        level: s0:c20,c10
+      seccompProfile:
+        type: RuntimeDefault
+    serviceAccount: openshift-pipelines-operator
+    serviceAccountName: openshift-pipelines-operator
+    terminationGracePeriodSeconds: 30
+    tolerations:
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+    volumes:
+    - name: kube-api-access-hc8b9
+      projected:
+        defaultMode: 420
+        sources:
+        - serviceAccountToken:
+            expirationSeconds: 3607
+            path: token
+        - configMap:
+            items:
+            - key: ca.crt
+              path: ca.crt
+            name: kube-root-ca.crt
+        - downwardAPI:
+            items:
+            - fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+              path: namespace
+        - configMap:
+            items:
+            - key: service-ca.crt
+              path: service-ca.crt
+            name: openshift-service-ca.crt
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2023-04-19T03:29:23Z"
+      status: "True"
+      type: Initialized
+    - lastProbeTime: null
+      lastTransitionTime: "2023-04-19T03:29:40Z"
+      status: "True"
+      type: Ready
+    - lastProbeTime: null
+      lastTransitionTime: "2023-04-19T03:29:40Z"
+      status: "True"
+      type: ContainersReady
+    - lastProbeTime: null
+      lastTransitionTime: "2023-04-19T03:29:23Z"
+      status: "True"
+      type: PodScheduled
+    containerStatuses:
+    - containerID: cri-o://82eaa17ba380e4863f236f28e8cf4901101686e2311da36b1fd6982327a89420
+      image: registry.redhat.io/openshift-pipelines/pipelines-operator-webhook-rhel8@sha256:ef6cb160d7c64e7ee8ddf70cc4b8a1f83720cc32c30ba103998ad05f016752c7
+      imageID: registry.redhat.io/openshift-pipelines/pipelines-operator-webhook-rhel8@sha256:54b5ee4cd4273dce7b07a459a11c810eae0557269f386fcd571e306452d61e7b
+      lastState: {}
+      name: tekton-operator-webhook
+      ready: true
+      restartCount: 0
+      started: true
+      state:
+        running:
+          startedAt: "2023-04-19T03:29:39Z"
+    hostIP: 10.0.204.216
+    phase: Running
+    podIP: 10.128.8.13
+    podIPs:
+    - ip: 10.128.8.13
+    qosClass: BestEffort
+    startTime: "2023-04-19T03:29:23Z"
+kind: List
+metadata:
+  resourceVersion: ""

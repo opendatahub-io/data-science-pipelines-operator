@@ -1,0 +1,91 @@
+diff --git a/tests/basictests/dsp-operator.sh b/tests/basictests/dsp-operator.sh
+index ed8b456..64c0724 100755
+--- a/tests/basictests/dsp-operator.sh
++++ b/tests/basictests/dsp-operator.sh
+@@ -79,7 +79,6 @@ function verify_pipeline_availabilty() {
+ 
+ function create_experiment() {
+   header "Creating an experiment"
+-
+   EXPERIMENT_ID=$((curl -s -k -H "Authorization: Bearer ${SA_TOKEN}" \
+       -H "Content-Type: application/json" \
+       -X POST "https://${ROUTE}/apis/v1beta1/experiments" \
+@@ -89,7 +88,7 @@ function create_experiment() {
+           "description": "This is a test experiment"
+       }
+ EOF
+-        ) | jq -r .metadata.id)
++        ) | jq -r .id)
+ 
+   os::cmd::try_until_not_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' https://${ROUTE}/apis/v1beta1/experiments/${EXPERIMENT_ID} | jq" "null" $odhdefaulttimeout $odhdefaultinterval
+ }
+@@ -120,24 +119,35 @@ EOF
+ }
+ 
+ function create_experiment_run() {
+-  header "Creating a run that uses the experiment"
+-
+-  RUN_ID=$((curl -s -k -H "Authorization: Bearer ${SA_TOKEN}" \
+-      -H "Content-Type: application/json" \
+-      -X POST "https://${ROUTE}/apis/v1beta1/runs" \
+-      -d @- << EOF
+-      {
+-          "experiment_id": "${EXPERIMENT_ID}",
+-          "name": "test-experiment-run",
+-          "description": "This is a test run that uses the experiment",
+-          "pipeline_spec": {
+-            "pipeline_id":"${PIPELINE_ID}"
+-          }
+-      }
++    header "Creating a run that uses the test experiment"
++    echo "Experiment created with ID: ${EXPERIMENT_ID}"
++    set -x
++    RUN_ID_EXPT=$((curl -k -H "Authorization: Bearer ${SA_TOKEN}" \
++        -H "Content-Type: application/json" \
++        -X POST "https://${ROUTE}/apis/v1beta1/runs" \
++        -d @- << EOF
++        {
++            "name": "test-experiment-run",
++            "description": "This is a test run that uses the test experiment",
++            "pipeline_spec":{
++                "pipeline_id":"${PIPELINE_ID}"
++            },
++            "resource_references":[
++            {
++               "key":{
++                  "type":"EXPERIMENT",
++                  "id":"${EXPERIMENT_ID}"
++               },
++               "name":"Default",
++               "relationship":"OWNER"
++            }
++            ]
++        }
+ EOF
+-        ) | jq -r .metadata.id)
+-
+-  os::cmd::try_until_not_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' https://${ROUTE}/apis/v1beta1/runs/${RUN_ID} | jq '" "null" $odhdefaulttimeout $odhdefaultinterval
++        ) | jq -r .run.id)
++    echo "Run created with ID: ${RUN_ID_EXPT}"
++    set +x
++    os::cmd::try_until_not_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' https://${ROUTE}/apis/v1beta1/runs/${RUN_ID_EXPT} | jq '" "null" $odhdefaulttimeout $odhdefaultinterval
+ }
+ 
+ function verify_run_availabilty() {
+@@ -150,6 +160,7 @@ function check_run_status() {
+     header "Checking run status"
+ 
+     os::cmd::try_until_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' https://${ROUTE}/apis/v1beta1/runs/${RUN_ID} | jq '.run.status'" "Completed" $odhdefaulttimeout $odhdefaultinterval
++    os::cmd::try_until_text "curl -s -k -H 'Authorization: Bearer ${SA_TOKEN}' https://${ROUTE}/apis/v1beta1/runs/${RUN_ID_EXPT} | jq '.run.status'" "Completed" $odhdefaulttimeout $odhdefaultinterval
+ }
+ 
+ function delete_experiment() {
+@@ -187,7 +198,7 @@ create_experiment
+ verify_experiment_availabilty
+ create_run
+ create_experiment_run
+-verify_run_availabilty  
++verify_run_availabilty
+ check_run_status
+ delete_experiment
+ delete_runs
