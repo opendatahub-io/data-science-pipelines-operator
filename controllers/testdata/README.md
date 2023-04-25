@@ -85,7 +85,6 @@ Images:
   Artifact: artifact-manager:test4
   PersistentAgent: persistenceagent:test4
   ScheduledWorkflow: scheduledworkflow:test4
-  ViewerCRD: viewercontroller:test4
   Cache: ubi-minimal:test4
   MoveResultsImage: busybox:test4
   MlPipelineUI: frontend:test4

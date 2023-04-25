@@ -49,6 +49,6 @@ func (r *DSPAReconciler) ReconcileUI(dsp *dspav1alpha1.DataSciencePipelinesAppli
 		}
 	}
 
-	log.Info("Applying MlPipelineUI Resources")
+	log.Info("Finished applying MlPipelineUI Resources")
 	return nil
 }

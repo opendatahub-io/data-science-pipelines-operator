@@ -48,8 +48,6 @@ spec:
             value: $(IMAGES_PERSISTENTAGENT)
           - name: IMAGES_SCHEDULEDWORKFLOW
             value: $(IMAGES_SCHEDULEDWORKFLOW)
-          - name: IMAGES_VIEWERCRD
-            value: $(IMAGES_VIEWERCRD)
           - name: IMAGES_CACHE
             value: $(IMAGES_CACHE)
           - name: IMAGES_MOVERESULTSIMAGE

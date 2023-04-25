@@ -12,7 +12,6 @@ spec:
     deploy: true
   persistenceAgent: {}
   scheduledWorkflow: {}
-  viewerCRD: {}
   database:
     externalDB:
       host: testdbhost3

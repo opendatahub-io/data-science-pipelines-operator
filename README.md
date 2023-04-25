@@ -195,7 +195,6 @@ When a `DataSciencePipelinesApplication` is deployed, the following components a
 * APIServer 
 * Persistence Agent
 * Scheduled Workflow controller
-* Viewer CRD controller
 * MLPipelines UI
 
 If specified in the `DataSciencePipelinesApplication` resource, the following components may also be additionally deployed: 

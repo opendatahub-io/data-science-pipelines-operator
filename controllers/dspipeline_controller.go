@@ -275,11 +275,6 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	err = r.ReconcileViewerCRD(dspa, params)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
 	log.Info("Updating CR status")
 
 	crReady := r.buildCondition(config.CrReady, dspa, config.MinimumReplicasAvailable)
