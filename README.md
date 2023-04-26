@@ -9,8 +9,10 @@ Data Science Pipeline stacks onto individual OCP namespaces.
    1. [Pre-requisites](#pre-requisites)
    2. [Deploy the Operator via ODH](#deploy-the-operator-via-odh)
    3. [Deploy the Operator standalone](#deploy-the-operator-standalone)
-   4. [Deploy DSP instance](#deploy-dsp-instance)
-      1. [Deploy another DSP instance](#deploy-another-dsp-instance)
+   4. [Deploy DSPA instance](#deploy-dsp-instance)
+      1. [Deploy another DSPA instance](#deploy-another-dsp-instance)
+      2. [Deploy a DSPA with custom credentials](#deploy-a-dsp-with-custom-credentials)
+      3. [Deploy a DSPA with External Object Storage](#deploy-a-dsp-with-external-object-storage)
 2. [DataSciencePipelinesApplication Component Overview](#datasciencepipelinesapplication-component-overview)
 3. [Using a DataSciencePipelinesApplication](#using-a-datasciencepipelinesapplication)
    1. [Using the Graphical UI](#using-the-graphical-ui)
@@ -170,6 +172,22 @@ Notice the introduction of 2 `secrets` `testdbsecret`, `teststoragesecret` and 2
 `custom-artifact-script`. The `secrets` allow you to provide your own credentials for the DB and MariaDB connections. 
 
 These can be configured by the end user as needed.
+
+### Deploy a DSP with external Object Storage
+
+To specify a custom Object Storage (example an AWS s3 bucket) you will need to provide DSPO with your S3 credentials in 
+the form of a k8s `Secret`, see an example of such a secret here `config/samples/external-object-storage/storage-creds.yaml`.
+
+DSPO can deploy a DSPA instance and use this S3 bucket for storing its metadata and pipeline artifacts. A sample 
+configuration for a DSPA that does this is found in `config/samples/external-object-storage`, you can update this as 
+needed, and deploy this DSPA by running the following:
+
+```bash
+DSP_Namespace_3=test-ds-project-4
+oc new-project ${DSP_Namespace_4}
+cd ${WORKING_DIR}/config/samples/external-object-storage
+kustomize build . | oc -n ${DSP_Namespace_3} apply -f -
+```
 
 # DataSciencePipelinesApplication Component Overview
 
