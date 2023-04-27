@@ -311,10 +311,12 @@ spec:
                         type: object
                       scheme:
                         type: string
+                      secure:
+                        default: true
+                        type: boolean
                     required:
                     - bucket
                     - host
-                    - port
                     - s3CredentialsSecret
                     - scheme
                     type: object

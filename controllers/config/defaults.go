@@ -45,10 +45,9 @@ const (
 	MinioDefaultBucket = "mlpipeline"
 	MinioPVCSize       = "10Gi"
 
-	ObjectStoreConnectionSecure = false
-	ObjectStorageSecretName     = "mlpipeline-minio-artifact" // hardcoded in kfp-tekton
-	ObjectStorageAccessKey      = "accesskey"
-	ObjectStorageSecretKey      = "secretkey"
+	ObjectStorageSecretName = "mlpipeline-minio-artifact" // hardcoded in kfp-tekton
+	ObjectStorageAccessKey  = "accesskey"
+	ObjectStorageSecretKey  = "secretkey"
 )
 
 // DSPO Config File Paths

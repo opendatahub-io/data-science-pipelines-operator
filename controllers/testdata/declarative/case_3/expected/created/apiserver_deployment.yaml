@@ -129,7 +129,7 @@ spec:
                   key: "secretkey"
                   name: "mlpipeline-minio-artifact"
             - name: OBJECTSTORECONFIG_SECURE
-              value: "false"
+              value: "true"
             - name: MINIO_SERVICE_SERVICE_HOST
               value: "teststoragehost3"
             - name: MINIO_SERVICE_SERVICE_PORT

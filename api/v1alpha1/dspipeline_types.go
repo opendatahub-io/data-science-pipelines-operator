@@ -194,8 +194,12 @@ type ExternalStorage struct {
 	Host                string `json:"host"`
 	Bucket              string `json:"bucket"`
 	Scheme              string `json:"scheme"`
-	Port                string `json:"port"`
 	*S3CredentialSecret `json:"s3CredentialsSecret"`
+	// +kubebuilder:default:=true
+	// +kubebuilder:validation:Optional
+	Secure bool `json:"secure"`
+	// +kubebuilder:validation:Optional
+	Port string `json:"port"`
 }
 
 type S3CredentialSecret struct {
