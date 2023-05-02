@@ -70,6 +70,12 @@ metadata:
 
 We can do this by first creating a folder `controllers/testdata/declarative/case_4`
 Then adding the DSPA cr in: `controllers/testdata/declarative/case_4/deploy/dspa.yaml` (we want to the test case to `deploy` this DSPA)
+
+> Note you can add multiple resources in the ../deploy folder, and the test case will deploy all of them 
+> If certain resources are dependent on others, they should be ordered alphabetically in the order they shoudl be
+> deployed. For example resource 00_res.yaml will be deployed before 01_res.yaml, so ensure that 00_res.yaml does not 
+> depend on 01_res.yaml.
+
 Then adding the configmap resource in: `controllers/testdata/declarative/case_4/expected/created/configmap.yaml`
 Each case requires a configmap, we can add one like this: 
 
