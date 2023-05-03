@@ -1,0 +1,31 @@
+apiVersion: kfdef.apps.kubeflow.org/v1
+kind: KfDef
+metadata:
+  name: data-science-pipelines-operator
+spec:
+  applications:
+    - kustomizeConfig:
+        parameters:
+          - name: IMAGES_APISERVER
+            value: quay.io/opendatahub/ds-pipelines-api-server:main
+          - name: IMAGES_ARTIFACT
+            value: quay.io/opendatahub/ds-pipelines-artifact-manager:main
+          - name: IMAGES_PERSISTENTAGENT
+            value: quay.io/opendatahub/ds-pipelines-persistenceagent:main
+          - name: IMAGES_SCHEDULEDWORKFLOW
+            value: quay.io/opendatahub/ds-pipelines-scheduledworkflow:main
+          - name: IMAGES_CACHE
+            value: registry.access.redhat.com/ubi8/ubi-minimal:8.7
+          - name: IMAGES_DSPO
+            value: quay.io/opendatahub/data-science-pipelines-operator:main
+          - name: IMAGES_MOVERESULTSIMAGE
+            value: registry.access.redhat.com/ubi8/ubi-micro:8.7
+          - name: IMAGES_MARIADB
+            value: registry.redhat.io/rhel8/mariadb-103:1-188
+        repoRef:
+          name: manifests
+          path: config
+      name: data-science-pipelines-operator
+  repos:
+    - name: manifests
+      uri: "https://github.com/opendatahub-io/data-science-pipelines-operator/tarball/main"
