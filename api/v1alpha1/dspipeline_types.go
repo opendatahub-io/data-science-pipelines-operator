@@ -29,8 +29,6 @@ type DSPASpec struct {
 	*PersistenceAgent `json:"persistenceAgent,omitempty"`
 	// +kubebuilder:default:={deploy: true}
 	*ScheduledWorkflow `json:"scheduledWorkflow,omitempty"`
-	// +kubebuilder:default:={deploy: false}
-	*ViewerCRD `json:"viewerCRD,omitempty"`
 	// +kubebuilder:default:={mariaDB: {deploy: true}}
 	*Database `json:"database,omitempty"`
 	// +kubebuilder:validation:Optional
@@ -106,16 +104,6 @@ type ScheduledWorkflow struct {
 	// +kubebuilder:default:=UTC
 	CronScheduleTimezone string                `json:"cronScheduleTimezone,omitempty"`
 	Resources            *ResourceRequirements `json:"resources,omitempty"`
-}
-
-type ViewerCRD struct {
-	// +kubebuilder:default:=false
-	// +kubebuilder:validation:Optional
-	Deploy bool   `json:"deploy"`
-	Image  string `json:"image,omitempty"`
-	// +kubebuilder:default:=50
-	MaxNumViewer int                   `json:"maxNumViewer,omitempty"`
-	Resources    *ResourceRequirements `json:"resources,omitempty"`
 }
 
 type MlPipelineUI struct {

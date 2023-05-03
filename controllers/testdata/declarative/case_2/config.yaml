@@ -4,7 +4,6 @@ Images:
   Artifact: artifact-manager:test2
   PersistentAgent: persistenceagent:test2
   ScheduledWorkflow: scheduledworkflow:test2
-  ViewerCRD: viewercontroller:test2
   Cache: ubi-minimal:test2
   MoveResultsImage: busybox:test2
   MariaDB: mariadb:test2

@@ -49,17 +49,6 @@ spec:
       limits:
         cpu: "2526m"
         memory: "5Gi"
-  viewerCRD:
-    deploy: true
-    image: viewercontroller:test2
-    maxNumViewer: 25
-    resources:
-      requests:
-        cpu: "1237m"
-        memory: "1Gi"
-      limits:
-        cpu: "2528m"
-        memory: "5Gi"
   mlpipelineUI:
     deploy: true
     image: frontend:test2

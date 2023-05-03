@@ -41,7 +41,6 @@ type DSPAParams struct {
 	APIServer            *dspa.APIServer
 	APIServerServiceName string
 	ScheduledWorkflow    *dspa.ScheduledWorkflow
-	ViewerCRD            *dspa.ViewerCRD
 	PersistenceAgent     *dspa.PersistenceAgent
 	MlPipelineUI         *dspa.MlPipelineUI
 	MariaDB              *dspa.MariaDB
@@ -356,7 +355,6 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.APIServer = dsp.Spec.APIServer.DeepCopy()
 	p.APIServerServiceName = fmt.Sprintf("%s-%s", config.DSPServicePrefix, p.Name)
 	p.ScheduledWorkflow = dsp.Spec.ScheduledWorkflow.DeepCopy()
-	p.ViewerCRD = dsp.Spec.ViewerCRD.DeepCopy()
 	p.PersistenceAgent = dsp.Spec.PersistenceAgent.DeepCopy()
 	p.MlPipelineUI = dsp.Spec.MlPipelineUI.DeepCopy()
 	p.MariaDB = dsp.Spec.MariaDB.DeepCopy()
@@ -387,10 +385,6 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	if p.ScheduledWorkflow != nil {
 		p.ScheduledWorkflow.Image = config.GetStringConfigWithDefault(config.ScheduledWorkflowImagePath, config.DefaultImageValue)
 		setResourcesDefault(config.ScheduledWorkflowResourceRequirements, &p.ScheduledWorkflow.Resources)
-	}
-	if p.ViewerCRD != nil {
-		p.ViewerCRD.Image = config.GetStringConfigWithDefault(config.ViewerCRDImagePath, config.DefaultImageValue)
-		setResourcesDefault(config.ViewerCRDResourceRequirements, &p.ViewerCRD.Resources)
 	}
 	if p.MlPipelineUI != nil {
 		if dsp.Spec.MlPipelineUI.Image == "" {

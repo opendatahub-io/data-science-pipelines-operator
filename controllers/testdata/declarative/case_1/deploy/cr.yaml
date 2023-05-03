@@ -9,8 +9,6 @@ spec:
     deploy: false
   scheduledWorkflow:
     deploy: false
-  viewerCRD:
-    deploy: false
   mlpipelineUI:
     deploy: false
     image: frontend:test0

@@ -45,10 +45,6 @@ spec:
             matchLabels:
               app: ds-pipeline-scheduledworkflow-{{.Name}}
               component: data-science-pipelines
-        - podSelector:
-            matchLabels:
-              app: ds-pipeline-viewer-crd-{{.Name}}
-              component: data-science-pipelines
       ports:
         - protocol: TCP
           port: 8888
