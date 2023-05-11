@@ -30,7 +30,7 @@ var (
 		},
 		[]string{
 			"dspa_name",
-			"namespace",
+			"dspa_namespace",
 		},
 	)
 	PersistenceAgentReadyMetric = prometheus.NewGaugeVec(
@@ -40,7 +40,7 @@ var (
 		},
 		[]string{
 			"dspa_name",
-			"namespace",
+			"dspa_namespace",
 		},
 	)
 	ScheduledWorkflowReadyMetric = prometheus.NewGaugeVec(
@@ -50,7 +50,7 @@ var (
 		},
 		[]string{
 			"dspa_name",
-			"namespace",
+			"dspa_namespace",
 		},
 	)
 	CrReadyMetric = prometheus.NewGaugeVec(
@@ -60,7 +60,7 @@ var (
 		},
 		[]string{
 			"dspa_name",
-			"namespace",
+			"dspa_namespace",
 		},
 	)
 )
