@@ -197,13 +197,7 @@ func (r *DSPAReconciler) ReconcileStorage(ctx context.Context, dsp *dspav1alpha1
 
 	// If external storage is specified, it takes precedence
 	if externalStorageSpecified {
-		log.Info("Deploying external storage secret.")
-		// If using external storage, we just need to create the secret
-		// for apiserver
-		err := r.Apply(dsp, params, storageSecret)
-		if err != nil {
-			return err
-		}
+		log.Info("Using externalStorage, bypassing object storage deployment.")
 	} else if deployMinio {
 		log.Info("Applying object storage resources.")
 		for _, template := range storageTemplates {
@@ -224,7 +218,7 @@ func (r *DSPAReconciler) ReconcileStorage(ctx context.Context, dsp *dspav1alpha1
 			}
 		}
 	} else {
-		log.Info("No externalstorage detected, and minio disabled. " +
+		log.Info("No externalStorage detected, and minio disabled. " +
 			"skipping application of storage Resources")
 		return nil
 	}
