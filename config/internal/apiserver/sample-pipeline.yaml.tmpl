@@ -151,19 +151,19 @@ data:
                     _parsed_args = vars(_parser.parse_args())
 
                     _outputs = data_prep(**_parsed_args)
-                  image: image-registry.openshift-image-registry.svc:5000/openshift/python:latest
+                  image: registry.access.redhat.com/ubi8/python-38
                   env:
                   - name: ORIG_PR_NAME
                     valueFrom:
                       fieldRef:
                         fieldPath: metadata.labels['custom.tekton.dev/originalPipelineRun']
-                - image: busybox
+                - image: registry.access.redhat.com/ubi8/ubi-minimal
                   name: output-taskrun-name
                   command:
                   - sh
                   - -ec
                   - echo -n "$(context.taskRun.name)" > "$(results.taskrun-name.path)"
-                - image: busybox
+                - image: registry.access.redhat.com/ubi8/ubi-minimal
                   name: copy-results-artifacts
                   command:
                   - sh
@@ -292,7 +292,7 @@ data:
                     _parsed_args = vars(_parser.parse_args())
 
                     _outputs = train_model(**_parsed_args)
-                  image: image-registry.openshift-image-registry.svc:5000/openshift/python:latest
+                  image: registry.access.redhat.com/ubi8/python-38
                   env:
                   - name: ORIG_PR_NAME
                     valueFrom:
@@ -440,7 +440,7 @@ data:
                     _parsed_args = vars(_parser.parse_args())
 
                     _outputs = evaluate_model(**_parsed_args)
-                  image: image-registry.openshift-image-registry.svc:5000/openshift/python:latest
+                  image: registry.access.redhat.com/ubi8/python-38
                   env:
                   - name: ORIG_PR_NAME
                     valueFrom:
@@ -520,7 +520,7 @@ data:
                     _parsed_args = vars(_parser.parse_args())
 
                     _outputs = validate_model(**_parsed_args)
-                  image: image-registry.openshift-image-registry.svc:5000/openshift/python:latest
+                  image: registry.access.redhat.com/ubi8/python-38
                   env:
                   - name: ORIG_PR_NAME
                     valueFrom:
