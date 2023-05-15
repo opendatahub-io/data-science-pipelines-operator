@@ -102,13 +102,7 @@ func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha
 
 	// If external db is specified, it takes precedence
 	if externalDBSpecified {
-		log.Info("Deploying external db secret.")
-		// If using external DB, we just need to create the secret
-		// for apiserver
-		err := r.Apply(dsp, params, dbSecret)
-		if err != nil {
-			return err
-		}
+		log.Info("Using externalDB, bypassing database deployment.")
 	} else if deployMariaDB || deployDefaultDB {
 		log.Info("Applying mariaDB resources.")
 		for _, template := range dbTemplates {
