@@ -276,6 +276,12 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	log.Info("Updating CR status")
+	// Refresh DSPA before updating
+	err = r.Get(ctx, req.NamespacedName, dspa)
+	if err != nil {
+		log.Info(err.Error())
+		return ctrl.Result{}, err
+	}
 
 	crReady := r.buildCondition(config.CrReady, dspa, config.MinimumReplicasAvailable)
 	crReady.Type = config.CrReady
@@ -297,6 +303,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 	dspa.Status.Conditions = conditions
 
+	// Update Status
 	err = r.Status().Update(ctx, dspa)
 	if err != nil {
 		log.Info(err.Error())
