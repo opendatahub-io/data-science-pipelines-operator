@@ -7,3 +7,4 @@ Images:
   Cache: ubi-minimal:test2
   MoveResultsImage: busybox:test2
   MariaDB: mariadb:test2
+  OAuthProxy: oauth-proxy:test2

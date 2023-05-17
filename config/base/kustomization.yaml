@@ -29,6 +29,13 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.IMAGES_ARTIFACT
+  - name: IMAGES_OAUTHPROXY
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGES_OAUTHPROXY
   - name: IMAGES_PERSISTENTAGENT
     objref:
       kind: ConfigMap

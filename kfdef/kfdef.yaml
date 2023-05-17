@@ -22,6 +22,8 @@ spec:
             value: registry.access.redhat.com/ubi8/ubi-micro:8.7
           - name: IMAGES_MARIADB
             value: registry.redhat.io/rhel8/mariadb-103:1-188
+          - name: IMAGES_OAUTHPROXY
+            value: registry.redhat.io/openshift4/ose-oauth-proxy:v4.12.0
         repoRef:
           name: manifests
           path: config

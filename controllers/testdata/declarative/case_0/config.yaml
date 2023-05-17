@@ -9,3 +9,4 @@ Images:
   MlPipelineUI: frontend:test0
   MariaDB: mariadb:test0
   Minio: minio:test0
+  OAuthProxy: oauth-proxy:test0

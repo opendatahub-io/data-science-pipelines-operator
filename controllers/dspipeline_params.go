@@ -40,6 +40,7 @@ type DSPAParams struct {
 	Owner                mf.Owner
 	APIServer            *dspa.APIServer
 	APIServerServiceName string
+	OAuthProxy           string
 	ScheduledWorkflow    *dspa.ScheduledWorkflow
 	PersistenceAgent     *dspa.PersistenceAgent
 	MlPipelineUI         *dspa.MlPipelineUI
@@ -359,6 +360,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.MlPipelineUI = dsp.Spec.MlPipelineUI.DeepCopy()
 	p.MariaDB = dsp.Spec.MariaDB.DeepCopy()
 	p.Minio = dsp.Spec.Minio.DeepCopy()
+	p.OAuthProxy = config.GetStringConfigWithDefault(config.OAuthProxyImagePath, config.DefaultImageValue)
 
 	// TODO: If p.<component> is nil we should create defaults
 
