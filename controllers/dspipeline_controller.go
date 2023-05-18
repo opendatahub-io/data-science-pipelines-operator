@@ -318,36 +318,37 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 func (r *DSPAReconciler) PublishMetrics(dspa *dspav1alpha1.DataSciencePipelinesApplication,
 	apiServerReady, persistenceAgentReady, scheduledWorkflowReady,
 	crReady metav1.Condition) {
-	r.Log.Info("Publishing Ready Metrics")
+	log := r.Log.WithValues("namespace", dspa.Namespace).WithValues("dspa_name", dspa.Name)
+	log.Info("Publishing Ready Metrics")
 	if apiServerReady.Status == metav1.ConditionTrue {
-		r.Log.Info("APIServer Ready")
+		log.Info("APIServer Ready")
 		APIServerReadyMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(1)
 	} else {
-		r.Log.Info("APIServer Not Ready")
+		log.Info("APIServer Not Ready")
 		APIServerReadyMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(0)
 	}
 
 	if persistenceAgentReady.Status == metav1.ConditionTrue {
-		r.Log.Info("PersistanceAgent Ready")
+		log.Info("PersistanceAgent Ready")
 		PersistenceAgentReadyMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(1)
 	} else {
-		r.Log.Info("PersistanceAgent Not Ready")
+		log.Info("PersistanceAgent Not Ready")
 		PersistenceAgentReadyMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(0)
 	}
 
 	if scheduledWorkflowReady.Status == metav1.ConditionTrue {
-		r.Log.Info("ScheduledWorkflow Ready")
+		log.Info("ScheduledWorkflow Ready")
 		ScheduledWorkflowReadyMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(1)
 	} else {
-		r.Log.Info("ScheduledWorkflow Not Ready")
+		log.Info("ScheduledWorkflow Not Ready")
 		ScheduledWorkflowReadyMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(0)
 	}
 
 	if crReady.Status == metav1.ConditionTrue {
-		r.Log.Info("CR Fully Ready")
+		log.Info("CR Fully Ready")
 		CrReadyMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(1)
 	} else {
-		r.Log.Info("CR Not Ready")
+		log.Info("CR Not Ready")
 		CrReadyMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(0)
 	}
 }
