@@ -127,6 +127,9 @@ func (r *DSPAReconciler) isDeploymentAvailable(ctx context.Context, dspa *dspav1
 
 	err := r.Get(ctx, types.NamespacedName{Name: component, Namespace: dspa.Namespace}, found)
 	if err == nil {
+		if found.Spec.Replicas != nil && *found.Spec.Replicas == 0 {
+			return false
+		}
 		for _, s := range found.Status.Conditions {
 			if s.Type == "Available" && s.Status == corev1.ConditionTrue {
 				return true
