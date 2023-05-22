@@ -18,11 +18,12 @@ package testutil
 
 import (
 	"fmt"
+	"reflect"
+
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes/scheme"
-	"reflect"
 )
 
 // CompareResourceProcs maps object kind's to their associated comparison procedures.
@@ -119,7 +120,7 @@ func deploymentsAreEqual(expected, actual *unstructured.Unstructured) (bool, err
 		for i, expectedEnv := range expectedContainer.Env {
 			actualEnv := actualContainer.Env[i]
 			if !reflect.DeepEqual(expectedEnv, actualEnv) {
-				return false, notEqualMsg(fmt.Sprintf("Container Env [expected: %s, actual: %s]", expectedEnv.Name, actualEnv.Name))
+				return false, notEqualMsg(fmt.Sprintf("Container Env [expected: %s=%s, actual: %s=%s]", expectedEnv.Name, expectedEnv.Value, actualEnv.Name, actualEnv.Value))
 			}
 		}
 
@@ -139,7 +140,7 @@ func deploymentsAreEqual(expected, actual *unstructured.Unstructured) (bool, err
 			return false, notEqualMsg("Container Name")
 		}
 		if expectedContainer.Image != actualContainer.Image {
-			return false, notEqualMsg("Container Image")
+			return false, notEqualMsg(fmt.Sprintf("Container Image [expected: %s, actual: %s]", expectedContainer.Image, actualContainer.Image))
 		}
 	}
 
