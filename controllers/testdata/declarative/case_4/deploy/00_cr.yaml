@@ -9,9 +9,9 @@ spec:
     enableSamplePipeline: false
     applyTektonCustomResource: true
     archiveLogs: false
-    artifactImage: artifact-manager:test4
-    cacheImage: ubi-minimal:test4
-    moveResultsImage: busybox:test4
+    artifactImage: this-artifact-manager-image-from-cr-should-be-used:test4
+    cacheImage: this-ubi-minimal-image-from-cr-should-be-used:test4
+    moveResultsImage: this-busybox-image-from-cr-should-be-used:test4
     injectDefaultScript: true
     stripEOF: true
     enableOauth: true
@@ -29,7 +29,7 @@ spec:
         memory: "5Gi"
   persistenceAgent:
     deploy: true
-    image: persistenceagent:test4
+    image: this-persistenceagent-image-from-cr-should-be-used:test4
     numWorkers: 5
     resources:
       requests:
@@ -40,7 +40,7 @@ spec:
         memory: "5Gi"
   scheduledWorkflow:
     deploy: true
-    image: scheduledworkflow:test4
+    image: this-scheduledworkflow-image-from-cr-should-be-used:test4
     cronScheduleTimezone: EST
     resources:
       requests:
@@ -51,7 +51,7 @@ spec:
         memory: "5Gi"
   mlpipelineUI:
     deploy: true
-    image: frontend:test4
+    image: this-frontend-image-from-cr-should-be-used:test4
     configMap: some-test-configmap
     resources:
       requests:
@@ -63,7 +63,7 @@ spec:
   database:
     mariaDB:
       deploy: true
-      image: mariadb:test4
+      image: this-mariadb-image-from-cr-should-be-used:test4
       username: testuser
       pipelineDBName: randomDBName
       pvcSize: 32Gi
@@ -77,7 +77,7 @@ spec:
   objectStorage:
     minio:
       deploy: true
-      image: minio:test4
+      image: this-minio-image-from-cr-should-be-used:test4
       bucket: mlpipeline
       pvcSize: 40Gi
       resources:
