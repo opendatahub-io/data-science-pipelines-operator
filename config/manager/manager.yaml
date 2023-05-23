@@ -38,6 +38,8 @@ spec:
             value: $(IMAGES_APISERVER)
           - name: IMAGES_ARTIFACT
             value: $(IMAGES_ARTIFACT)
+          - name: IMAGES_OAUTHPROXY
+            value: $(IMAGES_OAUTHPROXY)
           - name: IMAGES_PERSISTENTAGENT
             value: $(IMAGES_PERSISTENTAGENT)
           - name: IMAGES_SCHEDULEDWORKFLOW

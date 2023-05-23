@@ -59,6 +59,7 @@ const (
 	APIServerCacheImagePath       = "Images.Cache"
 	APIServerMoveResultsImagePath = "Images.MoveResultsImage"
 	MariaDBImagePath              = "Images.MariaDB"
+	OAuthProxyImagePath           = "Images.OAuthProxy"
 )
 
 const (
@@ -80,6 +81,7 @@ var requiredFields = []string{
 	APIServerCacheImagePath,
 	APIServerMoveResultsImagePath,
 	MariaDBImagePath,
+	OAuthProxyImagePath,
 }
 
 func GetConfigRequiredFields() []string {

@@ -30,7 +30,7 @@ spec:
             - '--openshift-delegate-urls={"/": {"group":"route.openshift.io","resource":"routes","verb":"get","name":"ds-pipeline-testdsp3","namespace":"default"}}'
             - '--openshift-sar={"namespace":"default","resource":"routes","resourceName":"ds-pipeline-testdsp3","verb":"get","resourceAPIGroup":"route.openshift.io"}'
             - --skip-auth-regex='(^/metrics|^/apis/v1beta1/healthz)'
-          image: registry.redhat.io/openshift4/ose-oauth-proxy:v4.12.0
+          image: oauth-proxy:test3
           ports:
             - containerPort: 8443
               name: oauth
