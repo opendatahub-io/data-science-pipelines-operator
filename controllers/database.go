@@ -25,8 +25,6 @@ import (
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 )
 
-const dbSecret = "mariadb/secret.yaml.tmpl"
-
 var dbTemplates = []string{
 	"mariadb/deployment.yaml.tmpl",
 	"mariadb/pvc.yaml.tmpl",

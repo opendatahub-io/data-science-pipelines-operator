@@ -34,3 +34,6 @@ spec:
   mlpipelineUI:
     deploy: false
     image: frontend:test3
+  devtools:
+    enableDatabaseSecret: true
+    enableStorageSecret: true
