@@ -24,6 +24,12 @@ spec:
             value: registry.redhat.io/rhel8/mariadb-103:1-188
           - name: IMAGES_OAUTHPROXY
             value: registry.redhat.io/openshift4/ose-oauth-proxy:v4.12.0
+          - name: IMAGES_MLMDENVOY
+            value: quay.io/opendatahub/ds-pipelines-metadata-envoy:1.7.0
+          - name: IMAGES_MLMDGRPC
+            value: quay.io/opendatahub/ds-pipelines-metadata-grpc:1.0.0
+          - name: IMAGES_MLMDWRITER
+            value: quay.io/opendatahub/ds-pipelines-metadata-writer:1.1.0
         repoRef:
           name: manifests
           path: config

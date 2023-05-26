@@ -50,7 +50,7 @@ type DSPAReconciler struct {
 func (r *DSPAReconciler) Apply(owner mf.Owner, params *DSPAParams, template string, fns ...mf.Transformer) error {
 	tmplManifest, err := config.Manifest(r.Client, r.TemplatesPath+template, params)
 	if err != nil {
-		return fmt.Errorf("error loading template yaml: %w", err)
+		return fmt.Errorf("error loading template (%s) yaml: %w", template, err)
 	}
 	tmplManifest, err = tmplManifest.Transform(
 		mf.InjectOwner(owner),
@@ -70,7 +70,7 @@ func (r *DSPAReconciler) Apply(owner mf.Owner, params *DSPAParams, template stri
 func (r *DSPAReconciler) ApplyWithoutOwner(params *DSPAParams, template string, fns ...mf.Transformer) error {
 	tmplManifest, err := config.Manifest(r.Client, r.TemplatesPath+template, params)
 	if err != nil {
-		return fmt.Errorf("error loading template yaml: %w", err)
+		return fmt.Errorf("error loading template (%s) yaml: %w", template, err)
 	}
 
 	tmplManifest, err = tmplManifest.Transform(fns...)
@@ -84,7 +84,7 @@ func (r *DSPAReconciler) ApplyWithoutOwner(params *DSPAParams, template string, 
 func (r *DSPAReconciler) DeleteResource(params *DSPAParams, template string, fns ...mf.Transformer) error {
 	tmplManifest, err := config.Manifest(r.Client, r.TemplatesPath+template, params)
 	if err != nil {
-		return fmt.Errorf("error loading template yaml: %w", err)
+		return fmt.Errorf("error loading template (%s) yaml: %w", template, err)
 	}
 
 	tmplManifest, err = tmplManifest.Transform(fns...)
@@ -274,6 +274,11 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	conditions = append(conditions, scheduledWorkflowReady)
 
 	err = r.ReconcileUI(dspa, params)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	err = r.ReconcileMLMD(dspa, params)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

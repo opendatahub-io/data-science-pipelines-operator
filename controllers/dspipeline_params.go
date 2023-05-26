@@ -46,6 +46,7 @@ type DSPAParams struct {
 	MlPipelineUI         *dspa.MlPipelineUI
 	MariaDB              *dspa.MariaDB
 	Minio                *dspa.Minio
+	MLMD                 *dspa.MLMD
 	DBConnection
 	ObjectStorageConnection
 }
@@ -83,6 +84,13 @@ func (p *DSPAParams) UsingExternalDB(dsp *dspa.DataSciencePipelinesApplication) 
 func (p *DSPAParams) UsingExternalStorage(dsp *dspa.DataSciencePipelinesApplication) bool {
 	if dsp.Spec.ObjectStorage != nil && dsp.Spec.ObjectStorage.ExternalStorage != nil {
 		return true
+	}
+	return false
+}
+
+func (p *DSPAParams) UsingMLMD(dsp *dspa.DataSciencePipelinesApplication) bool {
+	if dsp.Spec.MLMD != nil {
+		return dsp.Spec.MLMD.Deploy
 	}
 	return false
 }
@@ -337,6 +345,41 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 	return nil
 }
 
+func (p *DSPAParams) SetupMLMD(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, log logr.Logger) error {
+	if p.MLMD != nil {
+		if p.MLMD.Envoy == nil {
+			p.MLMD.Envoy = &dspa.Envoy{
+				Image: config.GetStringConfigWithDefault(config.MlmdEnvoyImagePath, config.DefaultImageValue),
+			}
+		}
+		if p.MLMD.GRPC == nil {
+			p.MLMD.GRPC = &dspa.GRPC{
+				Image: config.GetStringConfigWithDefault(config.MlmdGRPCImagePath, config.DefaultImageValue),
+			}
+		}
+		if p.MLMD.Writer == nil {
+			p.MLMD.Writer = &dspa.Writer{
+				Image: config.GetStringConfigWithDefault(config.MlmdWriterImagePath, config.DefaultImageValue),
+			}
+		}
+
+		mlmdEnvoyImageFromConfig := config.GetStringConfigWithDefault(config.MlmdEnvoyImagePath, config.DefaultImageValue)
+		mlmdGRPCImageFromConfig := config.GetStringConfigWithDefault(config.MlmdGRPCImagePath, config.DefaultImageValue)
+		mlmdWriterImageFromConfig := config.GetStringConfigWithDefault(config.MlmdWriterImagePath, config.DefaultImageValue)
+
+		setStringDefault(mlmdEnvoyImageFromConfig, &p.MLMD.Envoy.Image)
+		setStringDefault(mlmdGRPCImageFromConfig, &p.MLMD.GRPC.Image)
+		setStringDefault(mlmdWriterImageFromConfig, &p.MLMD.Writer.Image)
+
+		setResourcesDefault(config.MlmdEnvoyResourceRequirements, &p.MLMD.Envoy.Resources)
+		setResourcesDefault(config.MlmdGRPCResourceRequirements, &p.MLMD.GRPC.Resources)
+		setResourcesDefault(config.MlmdWriterResourceRequirements, &p.MLMD.Writer.Resources)
+
+		setStringDefault(config.MlmdGrpcPort, &p.MLMD.GRPC.Port)
+	}
+	return nil
+}
+
 func setStringDefault(defaultValue string, value *string) {
 	if *value == "" {
 		*value = defaultValue
@@ -361,6 +404,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.MariaDB = dsp.Spec.MariaDB.DeepCopy()
 	p.Minio = dsp.Spec.Minio.DeepCopy()
 	p.OAuthProxy = config.GetStringConfigWithDefault(config.OAuthProxyImagePath, config.DefaultImageValue)
+	p.MLMD = dsp.Spec.MLMD.DeepCopy()
 
 	// TODO: If p.<component> is nil we should create defaults
 
@@ -404,7 +448,12 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		setResourcesDefault(config.MlPipelineUIResourceRequirements, &p.MlPipelineUI.Resources)
 	}
 
-	err := p.SetupDBParams(ctx, dsp, client, log)
+	err := p.SetupMLMD(ctx, dsp, client, log)
+	if err != nil {
+		return err
+	}
+
+	err = p.SetupDBParams(ctx, dsp, client, log)
 	if err != nil {
 		return err
 	}

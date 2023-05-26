@@ -71,6 +71,27 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.IMAGES_MARIADB
+  - name: IMAGES_MLMDENVOY
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGES_MLMDENVOY
+  - name: IMAGES_MLMDGRPC
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGES_MLMDGRPC
+  - name: IMAGES_MLMDWRITER
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGES_MLMDWRITER
   - name: IMAGES_DSPO
     objref:
       kind: ConfigMap

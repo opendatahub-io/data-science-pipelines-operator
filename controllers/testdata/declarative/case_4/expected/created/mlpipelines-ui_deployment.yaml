@@ -46,6 +46,10 @@ spec:
               value: ds-pipeline-testdsp4
             - name: ML_PIPELINE_SERVICE_PORT
               value: '8888'
+            - name: METADATA_ENVOY_SERVICE_SERVICE_HOST
+              value: ds-pipeline-metadata-envoy-testdsp4
+            - name: METADATA_ENVOY_SERVICE_SERVICE_PORT
+              value: "9090"
           image: this-frontend-image-from-cr-should-be-used:test4
           imagePullPolicy: IfNotPresent
           livenessProbe:

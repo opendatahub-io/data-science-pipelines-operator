@@ -56,6 +56,12 @@ spec:
             value: $(IMAGES_MOVERESULTSIMAGE)
           - name: IMAGES_MARIADB
             value: $(IMAGES_MARIADB)
+          - name: IMAGES_MLMDENVOY
+            value: $(IMAGES_MLMDENVOY)
+          - name: IMAGES_MLMDGRPC
+            value: $(IMAGES_MLMDGRPC)
+          - name: IMAGES_MLMDWRITER
+            value: $(IMAGES_MLMDWRITER)
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
