@@ -366,10 +366,15 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 
 	if p.APIServer != nil {
 
-		p.APIServer.Image = config.GetStringConfigWithDefault(config.APIServerImagePath, config.DefaultImageValue)
-		p.APIServer.ArtifactImage = config.GetStringConfigWithDefault(config.APIServerArtifactImagePath, config.DefaultImageValue)
-		p.APIServer.CacheImage = config.GetStringConfigWithDefault(config.APIServerCacheImagePath, config.DefaultImageValue)
-		p.APIServer.MoveResultsImage = config.GetStringConfigWithDefault(config.APIServerMoveResultsImagePath, config.DefaultImageValue)
+		serverImageFromConfig := config.GetStringConfigWithDefault(config.APIServerImagePath, config.DefaultImageValue)
+		artifactImageFromConfig := config.GetStringConfigWithDefault(config.APIServerArtifactImagePath, config.DefaultImageValue)
+		cacheImageFromConfig := config.GetStringConfigWithDefault(config.APIServerCacheImagePath, config.DefaultImageValue)
+		moveResultsImageFromConfig := config.GetStringConfigWithDefault(config.APIServerMoveResultsImagePath, config.DefaultImageValue)
+
+		setStringDefault(serverImageFromConfig, &p.APIServer.Image)
+		setStringDefault(artifactImageFromConfig, &p.APIServer.ArtifactImage)
+		setStringDefault(cacheImageFromConfig, &p.APIServer.CacheImage)
+		setStringDefault(moveResultsImageFromConfig, &p.APIServer.MoveResultsImage)
 
 		setResourcesDefault(config.APIServerResourceRequirements, &p.APIServer.Resources)
 
@@ -381,11 +386,13 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		}
 	}
 	if p.PersistenceAgent != nil {
-		p.PersistenceAgent.Image = config.GetStringConfigWithDefault(config.PersistenceAgentImagePath, config.DefaultImageValue)
+		persistenceAgentImageFromConfig := config.GetStringConfigWithDefault(config.PersistenceAgentImagePath, config.DefaultImageValue)
+		setStringDefault(persistenceAgentImageFromConfig, &p.PersistenceAgent.Image)
 		setResourcesDefault(config.PersistenceAgentResourceRequirements, &p.PersistenceAgent.Resources)
 	}
 	if p.ScheduledWorkflow != nil {
-		p.ScheduledWorkflow.Image = config.GetStringConfigWithDefault(config.ScheduledWorkflowImagePath, config.DefaultImageValue)
+		scheduledWorkflowImageFromConfig := config.GetStringConfigWithDefault(config.ScheduledWorkflowImagePath, config.DefaultImageValue)
+		setStringDefault(scheduledWorkflowImageFromConfig, &p.ScheduledWorkflow.Image)
 		setResourcesDefault(config.ScheduledWorkflowResourceRequirements, &p.ScheduledWorkflow.Resources)
 	}
 	if p.MlPipelineUI != nil {

@@ -1,0 +1,10 @@
+# When a DSPA with a custom db/storage secret, and custom artifact script is deployed.
+Images:
+  ApiServer: this-apiserver-image-from-config-should-not-be-used:test4
+  Artifact: this-artifact-manager-image-from-config-should-not-be-used:test4
+  PersistentAgent: this-persistenceagent-image-from-config-should-not-be-used:test4
+  ScheduledWorkflow: this-scheduledworkflow-image-from-config-should-not-be-used:test4
+  Cache: this-ubi-minimal-image-from-config-should-not-be-used:test4
+  MoveResultsImage: this-busybox-image-from-config-should-not-be-used:test4
+  MariaDB: this-mariadb-image-from-config-should-not-be-used:test4
+  OAuthProxy: oauth-proxy:test4
