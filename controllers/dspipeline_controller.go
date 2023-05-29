@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-
 	"github.com/go-logr/logr"
 	mf "github.com/manifestival/manifestival"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
@@ -119,7 +118,12 @@ func (r *DSPAReconciler) buildCondition(conditionType string, dspa *dspav1alpha1
 	return condition
 }
 
-func (r *DSPAReconciler) isDeploymentAvailable(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication, name string) bool {
+// isDeploymentInCondition evaluates if condition with "name" is in condition of type "conditionType".
+// this procedure is valid only for conditions with bool status type, for conditions of non bool type
+// results are undefined.
+func (r *DSPAReconciler) isDeploymentInCondition(ctx context.Context,
+	dspa *dspav1alpha1.DataSciencePipelinesApplication, name string,
+	conditionType appsv1.DeploymentConditionType) (bool, appsv1.DeploymentCondition) {
 	found := &appsv1.Deployment{}
 
 	// Every Deployment in DSPA is the name followed by the DSPA CR name
@@ -128,15 +132,15 @@ func (r *DSPAReconciler) isDeploymentAvailable(ctx context.Context, dspa *dspav1
 	err := r.Get(ctx, types.NamespacedName{Name: component, Namespace: dspa.Namespace}, found)
 	if err == nil {
 		if found.Spec.Replicas != nil && *found.Spec.Replicas == 0 {
-			return false
+			return false, appsv1.DeploymentCondition{}
 		}
 		for _, s := range found.Status.Conditions {
-			if s.Type == "Available" && s.Status == corev1.ConditionTrue {
-				return true
+			if s.Type == conditionType && s.Status == corev1.ConditionTrue {
+				return true, s
 			}
 		}
 	}
-	return false
+	return false, appsv1.DeploymentCondition{}
 }
 
 //+kubebuilder:rbac:groups=datasciencepipelinesapplications.opendatahub.io,resources=datasciencepipelinesapplications,verbs=get;list;watch;create;update;patch;delete
@@ -222,9 +226,6 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, nil
 	}
 
-	// Initialize conditions
-	var conditions []metav1.Condition
-
 	err = r.ReconcileDatabase(ctx, dspa, params)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -240,38 +241,20 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	apiServerReady := r.buildCondition(config.APIServerReady, dspa, config.MinimumReplicasAvailable)
 	err = r.ReconcileAPIServer(ctx, dspa, params)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	if r.isDeploymentAvailable(ctx, dspa, "ds-pipeline") {
-		apiServerReady.Status = metav1.ConditionTrue
-	}
-	conditions = append(conditions, apiServerReady)
-
-	persistenceAgentReady := r.buildCondition(config.PersistenceAgentReady, dspa, config.MinimumReplicasAvailable)
 	err = r.ReconcilePersistenceAgent(dspa, params)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	if r.isDeploymentAvailable(ctx, dspa, "ds-pipeline-persistenceagent") {
-		persistenceAgentReady.Status = metav1.ConditionTrue
-	}
-	conditions = append(conditions, persistenceAgentReady)
-
-	scheduledWorkflowReady := r.buildCondition(config.ScheduledWorkflowReady, dspa, config.MinimumReplicasAvailable)
 	err = r.ReconcileScheduledWorkflow(dspa, params)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-
-	if r.isDeploymentAvailable(ctx, dspa, "ds-pipeline-scheduledworkflow") {
-		scheduledWorkflowReady.Status = metav1.ConditionTrue
-	}
-	conditions = append(conditions, scheduledWorkflowReady)
 
 	err = r.ReconcileUI(dspa, params)
 	if err != nil {
@@ -291,6 +274,62 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
+	conditions := r.GenerateStatus(ctx, dspa)
+	dspa.Status.Conditions = conditions
+
+	// Update Status
+	err = r.Status().Update(ctx, dspa)
+	if err != nil {
+		log.Info(err.Error())
+		return ctrl.Result{}, err
+	}
+
+	r.PublishMetrics(
+		dspa,
+		GetConditionByType(config.APIServerReady, conditions),
+		GetConditionByType(config.PersistenceAgentReady, conditions),
+		GetConditionByType(config.ScheduledWorkflowReady, conditions),
+		GetConditionByType(config.CrReady, conditions),
+	)
+
+	return ctrl.Result{}, nil
+}
+
+// GetConditionByType returns condition of type T if it exists in conditions, otherwise
+// return empty condition struct.
+func GetConditionByType(t string, conditions []metav1.Condition) metav1.Condition {
+	for _, c := range conditions {
+		if c.Type == t {
+			return c
+		}
+	}
+	return metav1.Condition{}
+}
+
+func (r *DSPAReconciler) GenerateStatus(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication) []metav1.Condition {
+	var conditions []metav1.Condition
+
+	apiServerReady := r.buildCondition(config.APIServerReady, dspa, config.MinimumReplicasAvailable)
+	deploymentAvailable, _ := r.isDeploymentInCondition(ctx, dspa, "ds-pipeline", appsv1.DeploymentAvailable)
+	if deploymentAvailable {
+		apiServerReady.Status = metav1.ConditionTrue
+	}
+	conditions = append(conditions, apiServerReady)
+
+	persistenceAgentReady := r.buildCondition(config.PersistenceAgentReady, dspa, config.MinimumReplicasAvailable)
+	deploymentAvailable, _ = r.isDeploymentInCondition(ctx, dspa, "ds-pipeline-persistenceagent", appsv1.DeploymentAvailable)
+	if deploymentAvailable {
+		persistenceAgentReady.Status = metav1.ConditionTrue
+	}
+	conditions = append(conditions, persistenceAgentReady)
+
+	scheduledWorkflowReady := r.buildCondition(config.ScheduledWorkflowReady, dspa, config.MinimumReplicasAvailable)
+	deploymentAvailable, _ = r.isDeploymentInCondition(ctx, dspa, "ds-pipeline-scheduledworkflow", appsv1.DeploymentAvailable)
+	if deploymentAvailable {
+		scheduledWorkflowReady.Status = metav1.ConditionTrue
+	}
+	conditions = append(conditions, scheduledWorkflowReady)
+
 	crReady := r.buildCondition(config.CrReady, dspa, config.MinimumReplicasAvailable)
 	crReady.Type = config.CrReady
 
@@ -309,18 +348,8 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			conditions[i].LastTransitionTime = condition.LastTransitionTime
 		}
 	}
-	dspa.Status.Conditions = conditions
 
-	// Update Status
-	err = r.Status().Update(ctx, dspa)
-	if err != nil {
-		log.Info(err.Error())
-		return ctrl.Result{}, err
-	}
-
-	r.PublishMetrics(dspa, apiServerReady, persistenceAgentReady, scheduledWorkflowReady, crReady)
-
-	return ctrl.Result{}, nil
+	return conditions
 }
 
 func (r *DSPAReconciler) PublishMetrics(dspa *dspav1alpha1.DataSciencePipelinesApplication,
