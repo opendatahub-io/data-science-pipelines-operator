@@ -23,6 +23,11 @@ function verify_data_science_pipelines_operator_install() {
     os::cmd::expect_success_and_text "echo $runningpods" "1"
 }
 
+function verify_data_science_pipelines_operator_service_monitor() {
+    header "Testing Data Science Pipelines operator's service monitor"
+    os::cmd::expect_success_and_text "oc get servicemonitor -n ${ODHPROJECT} data-science-pipelines-operator-service-monitor" "data-science-pipelines-operator-service-monitor"
+}
+
 function create_and_verify_data_science_pipelines_resources() {
     header "Testing Data Science Pipelines installation with help of DSPO CR"
 
@@ -71,11 +76,15 @@ function setup_monitoring() {
 }
 
 function test_metrics() {
-    header "Checking metrics for total number of runs, should be 1 since we have spun up 1 run"
+    header "Checking metrics for Data Science Pipelines Operator and Application"
 
     cluster_version=$(oc get -o json clusterversion | jq '.items[0].status.desired.version')
     monitoring_token=$(oc create token thanos-querier -n openshift-monitoring)
     monitoring_route=$(oc get route thanos-querier -n openshift-monitoring --template={{.spec.host}})
+
+    # Query DSPO metrics
+    os::cmd::try_until_text "oc -n openshift-monitoring exec -c prometheus prometheus-k8s-0 -- curl -k -H \"Authorization: Bearer $monitoring_token\" 'https://$monitoring_route/api/v1/query' -d 'query=controller_runtime_max_concurrent_reconciles{controller=\"datasciencepipelinesapplication\"}' | jq -r '.data.result[0].value[1]'" "1" $odhdefaulttimeout $odhdefaultinterval
+    # Query DSPA metrics
     os::cmd::try_until_text "oc -n openshift-monitoring exec -c prometheus prometheus-k8s-0 -- curl -k -H \"Authorization: Bearer $monitoring_token\" 'https://thanos-querier.openshift-monitoring:9091/api/v1/query' -d 'query=controller_runtime_max_concurrent_reconciles{namespace=\"opendatahub\"}' | jq '.data.result[0].value[1]'" "1" $odhdefaulttimeout $odhdefaultinterval
 }
 
@@ -250,6 +259,7 @@ function delete_recurring_run() {
 echo "Testing Data Science Pipelines Operator functionality"
 
 verify_data_science_pipelines_operator_install
+verify_data_science_pipelines_operator_service_monitor
 create_and_verify_data_science_pipelines_resources
 check_custom_resource_conditions
 check_data_science_pipeline_route
