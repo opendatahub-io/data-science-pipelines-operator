@@ -9,4 +9,4 @@ spec:
       port: metrics
   selector:
     matchLabels:
-      app.kubernetes.io/name: data-science-pipelines-operator
+      control-plane: controller-manager
