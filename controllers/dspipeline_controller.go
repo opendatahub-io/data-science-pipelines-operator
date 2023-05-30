@@ -34,6 +34,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const finalizerName = "datasciencepipelinesapplications.opendatahub.io/finalizer"
@@ -118,29 +121,14 @@ func (r *DSPAReconciler) buildCondition(conditionType string, dspa *dspav1alpha1
 	return condition
 }
 
-// isDeploymentInCondition evaluates if condition with "name" is in condition of type "conditionType".
-// this procedure is valid only for conditions with bool status type, for conditions of non bool type
-// results are undefined.
-func (r *DSPAReconciler) isDeploymentInCondition(ctx context.Context,
-	dspa *dspav1alpha1.DataSciencePipelinesApplication, name string,
-	conditionType appsv1.DeploymentConditionType) (bool, appsv1.DeploymentCondition) {
-	found := &appsv1.Deployment{}
-
-	// Every Deployment in DSPA is the name followed by the DSPA CR name
-	component := name + "-" + dspa.Name
-
-	err := r.Get(ctx, types.NamespacedName{Name: component, Namespace: dspa.Namespace}, found)
-	if err == nil {
-		if found.Spec.Replicas != nil && *found.Spec.Replicas == 0 {
-			return false, appsv1.DeploymentCondition{}
-		}
-		for _, s := range found.Status.Conditions {
-			if s.Type == conditionType && s.Status == corev1.ConditionTrue {
-				return true, s
-			}
+func GetDeploymentCondition(status appsv1.DeploymentStatus, condType appsv1.DeploymentConditionType) *appsv1.DeploymentCondition {
+	for i := range status.Conditions {
+		c := status.Conditions[i]
+		if c.Type == condType {
+			return &c
 		}
 	}
-	return false, appsv1.DeploymentCondition{}
+	return nil
 }
 
 //+kubebuilder:rbac:groups=datasciencepipelinesapplications.opendatahub.io,resources=datasciencepipelinesapplications,verbs=get;list;watch;create;update;patch;delete
@@ -274,7 +262,11 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	conditions := r.GenerateStatus(ctx, dspa)
+	err, conditions := r.GenerateStatus(ctx, dspa)
+	if err != nil {
+		log.Info(err.Error())
+		return ctrl.Result{}, err
+	}
 	dspa.Status.Conditions = conditions
 
 	// Update Status
@@ -306,40 +298,162 @@ func GetConditionByType(t string, conditions []metav1.Condition) metav1.Conditio
 	return metav1.Condition{}
 }
 
-func (r *DSPAReconciler) GenerateStatus(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication) []metav1.Condition {
+// isDeploymentInCondition evaluates if condition with "name" is in condition of type "conditionType".
+// this procedure is valid only for conditions with bool status type, for conditions of non bool type
+// results are undefined.
+func (r *DSPAReconciler) handleReadyCondition(
+	ctx context.Context,
+	dspa *dspav1alpha1.DataSciencePipelinesApplication,
+	name string,
+	condition string,
+) (error, metav1.Condition) {
+	readyCondition := r.buildCondition(condition, dspa, config.MinimumReplicasAvailable)
+	deployment := &appsv1.Deployment{}
+
+	// Every Deployment in DSPA is the name followed by the DSPA CR name
+	component := name + "-" + dspa.Name
+
+	err := r.Get(ctx, types.NamespacedName{Name: component, Namespace: dspa.Namespace}, deployment)
+	if err != nil {
+		return err, metav1.Condition{}
+	}
+
+	// First check if deployment is scaled down, if it is, component is deemed not ready
+	if deployment.Spec.Replicas != nil && *deployment.Spec.Replicas == 0 {
+		readyCondition.Reason = config.MinimumReplicasAvailable
+		readyCondition.Status = metav1.ConditionFalse
+		readyCondition.Message = fmt.Sprintf("Deployment for component \"%s\" is scaled down.", component)
+		return nil, readyCondition
+	}
+
+	// At this point component is not minimally available, possible scenarios:
+	// 1. Component deployment has encountered errors
+	// 2. Component is still deploying
+	// We check for (1), and if no errors are found we presume (2)
+
+	progressingCond := GetDeploymentCondition(deployment.Status, appsv1.DeploymentProgressing)
+	availableCond := GetDeploymentCondition(deployment.Status, appsv1.DeploymentAvailable)
+	replicaFailureCond := GetDeploymentCondition(deployment.Status, appsv1.DeploymentReplicaFailure)
+
+	if availableCond != nil && availableCond.Status == corev1.ConditionTrue {
+		// If this DSPA component is minimally available, we are done.
+		readyCondition.Reason = config.MinimumReplicasAvailable
+		readyCondition.Status = metav1.ConditionTrue
+		readyCondition.Message = fmt.Sprintf("Component [%s] is minimally available.", component)
+		return nil, readyCondition
+	}
+
+	// There are two possible reasons for progress failing, deadline and replica create error:
+	// https://github.com/kubernetes/kubernetes/blob/release-1.27/pkg/controller/deployment/util/deployment_util.go#L69
+	// We check for both to investigate potential issues during deployment
+	if progressingCond != nil && progressingCond.Status == corev1.ConditionFalse &&
+		(progressingCond.Reason == "ProgressDeadlineExceeded" || progressingCond.Reason == "ReplicaSetCreateError") {
+		readyCondition.Reason = config.FailingToDeploy
+		readyCondition.Status = metav1.ConditionFalse
+		readyCondition.Message = fmt.Sprintf("Component [%s] has failed to progress. Reason: [%s]. "+
+			"Message: [%s]", component, progressingCond.Reason, progressingCond.Message)
+		return nil, readyCondition
+	}
+
+	if replicaFailureCond != nil && replicaFailureCond.Status == corev1.ConditionTrue {
+		readyCondition.Reason = config.FailingToDeploy
+		readyCondition.Status = metav1.ConditionFalse
+		readyCondition.Message = fmt.Sprintf("Component's replica [%s] has failed to create. Reason: [%s]. "+
+			"Message: [%s]", component, replicaFailureCond.Reason, replicaFailureCond.Message)
+		return nil, readyCondition
+	}
+
+	// Search through the pods associated with this deployment
+	// if a failed pod is encountered, report Ready=false with failure
+	// message
+	podList := &corev1.PodList{}
+	opts := []client.ListOption{
+		client.MatchingLabels(deployment.Spec.Selector.MatchLabels),
+	}
+	err = r.Client.List(ctx, podList, opts...)
+	if err != nil {
+		return err, metav1.Condition{}
+	}
+
+	hasPodFailures := false
+	podFailureMessage := ""
+	// We loop through all pods within this deployment and inspect their statuses for failures
+	// Any failure detected in any pod results in FailingToDeploy status
+	for _, p := range podList.Items {
+		if p.Status.Phase == corev1.PodFailed {
+			hasPodFailures = true
+			podFailureMessage += fmt.Sprintf("Pod named [%s] that is associated with this component [%s] "+
+				"is in failed phase.", p.Name, component)
+		}
+		// We loop through the containers in each pod, as in some cases the Pod can be in pending state
+		// but an individual container may be failing due to runtime errors.
+		for _, c := range p.Status.ContainerStatuses {
+			if c.State.Waiting != nil && c.State.Waiting.Reason == "CrashLoopBackOff" {
+				readyCondition.Reason = config.FailingToDeploy
+				readyCondition.Status = metav1.ConditionFalse
+				// We concatenate messages from all failing containers.
+				readyCondition.Message = fmt.Sprintf("Component [%s] is in CrashLoopBackOff. "+
+					"Message from pod: [%s]", component, c.State.Waiting.Message)
+				return nil, readyCondition
+			}
+		}
+	}
+
+	if hasPodFailures {
+		readyCondition.Status = metav1.ConditionFalse
+		readyCondition.Reason = config.FailingToDeploy
+		readyCondition.Message = podFailureMessage
+		return nil, readyCondition
+	}
+
+	// No errors encountered, assume deployment is progressing successfully
+	// If this DSPA component is minimally available, we are done.
+	readyCondition.Reason = config.Deploying
+	readyCondition.Status = metav1.ConditionFalse
+	readyCondition.Message = fmt.Sprintf("Component [%s] is deploying.", component)
+	return nil, readyCondition
+
+}
+
+func (r *DSPAReconciler) GenerateStatus(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication) (error, []metav1.Condition) {
+
+	err, apiServerReady := r.handleReadyCondition(ctx, dspa, "ds-pipeline", config.APIServerReady)
+	if err != nil {
+		return err, []metav1.Condition{}
+	}
+	err, persistenceAgentReady := r.handleReadyCondition(ctx, dspa, "ds-pipeline-persistenceagent", config.PersistenceAgentReady)
+	if err != nil {
+		return err, []metav1.Condition{}
+	}
+	err, scheduledWorkflowReady := r.handleReadyCondition(ctx, dspa, "ds-pipeline-scheduledworkflow", config.ScheduledWorkflowReady)
+	if err != nil {
+		return err, []metav1.Condition{}
+	}
 	var conditions []metav1.Condition
-
-	apiServerReady := r.buildCondition(config.APIServerReady, dspa, config.MinimumReplicasAvailable)
-	deploymentAvailable, _ := r.isDeploymentInCondition(ctx, dspa, "ds-pipeline", appsv1.DeploymentAvailable)
-	if deploymentAvailable {
-		apiServerReady.Status = metav1.ConditionTrue
-	}
 	conditions = append(conditions, apiServerReady)
-
-	persistenceAgentReady := r.buildCondition(config.PersistenceAgentReady, dspa, config.MinimumReplicasAvailable)
-	deploymentAvailable, _ = r.isDeploymentInCondition(ctx, dspa, "ds-pipeline-persistenceagent", appsv1.DeploymentAvailable)
-	if deploymentAvailable {
-		persistenceAgentReady.Status = metav1.ConditionTrue
-	}
 	conditions = append(conditions, persistenceAgentReady)
-
-	scheduledWorkflowReady := r.buildCondition(config.ScheduledWorkflowReady, dspa, config.MinimumReplicasAvailable)
-	deploymentAvailable, _ = r.isDeploymentInCondition(ctx, dspa, "ds-pipeline-scheduledworkflow", appsv1.DeploymentAvailable)
-	if deploymentAvailable {
-		scheduledWorkflowReady.Status = metav1.ConditionTrue
-	}
 	conditions = append(conditions, scheduledWorkflowReady)
 
+	// Compute Ready Logic for the CR
 	crReady := r.buildCondition(config.CrReady, dspa, config.MinimumReplicasAvailable)
 	crReady.Type = config.CrReady
 
-	// Compute Ready Logic for the CR
-	if (apiServerReady.Status == metav1.ConditionTrue) &&
-		(persistenceAgentReady.Status == metav1.ConditionTrue) &&
-		(scheduledWorkflowReady.Status == metav1.ConditionTrue) {
+	componentConditions := []metav1.Condition{apiServerReady, persistenceAgentReady, scheduledWorkflowReady}
+	allReady := true
+	failureMessages := ""
+	for _, c := range componentConditions {
+		if c.Status == metav1.ConditionFalse {
+			allReady = false
+			failureMessages += fmt.Sprintf("%s \n", c.Message)
+		}
+	}
+
+	if allReady {
 		crReady.Status = metav1.ConditionTrue
+		crReady.Message = "All components are ready."
 	} else {
 		crReady.Status = metav1.ConditionFalse
+		crReady.Message = failureMessages
 	}
 	conditions = append(conditions, crReady)
 
@@ -349,7 +463,7 @@ func (r *DSPAReconciler) GenerateStatus(ctx context.Context, dspa *dspav1alpha1.
 		}
 	}
 
-	return conditions
+	return nil, conditions
 }
 
 func (r *DSPAReconciler) PublishMetrics(dspa *dspav1alpha1.DataSciencePipelinesApplication,
@@ -403,6 +517,33 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&rbacv1.Role{}).
 		Owns(&rbacv1.RoleBinding{}).
 		Owns(&routev1.Route{}).
+		// Watch for Pods belonging to DSPA
+		Watches(&source.Kind{Type: &corev1.Pod{}},
+			handler.EnqueueRequestsFromMapFunc(func(o client.Object) []reconcile.Request {
+				log := r.Log.WithValues("namespace", o.GetNamespace())
+
+				component, hasComponentLabel := o.GetLabels()["component"]
+
+				if !hasComponentLabel || (component != "data-science-pipelines") {
+					return []reconcile.Request{}
+				}
+
+				dspaName, hasDSPALabel := o.GetLabels()["dspa"]
+				if !hasDSPALabel {
+					msg := fmt.Sprintf("Pod with data-science-pipelines label encountered, but is missing dspa "+
+						"label, could not reconcile on [Pod: %s] ", o.GetName())
+					log.V(1).Info(msg)
+					return []reconcile.Request{}
+				}
+
+				log.V(1).Info(fmt.Sprintf("Reconcile event triggered by [Pod: %s] ", o.GetName()))
+				namespacedName := types.NamespacedName{
+					Name:      dspaName,
+					Namespace: o.GetNamespace(),
+				}
+				reconcileRequests := append([]reconcile.Request{}, reconcile.Request{NamespacedName: namespacedName})
+				return reconcileRequests
+			})).
 		// TODO: Add watcher for ui cluster rbac since it has no owner
 		Complete(r)
 }
