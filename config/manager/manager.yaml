@@ -4,18 +4,24 @@ metadata:
   name: controller-manager
   namespace: datasciencepipelinesapplications-controller
   labels:
-    app.kubernetes.io/name: data-science-pipelines-operator
+    control-plane: controller-manager
+    app.kubernetes.io/name: deployment
+    app.kubernetes.io/instance: controller-manager
+    app.kubernetes.io/component: manager
+    app.kubernetes.io/created-by: data-science-pipelines-operator
+    app.kubernetes.io/part-of: data-science-pipelines-operator
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/name: data-science-pipelines-operator
+      control-plane: controller-manager
   replicas: 1
   template:
     metadata:
       annotations:
         kubectl.kubernetes.io/default-container: manager
       labels:
-        app.kubernetes.io/name: data-science-pipelines-operator
+        control-plane: controller-manager
+        app.kubernetes.io/created-by: data-science-pipelines-operator
     spec:
       securityContext:
         runAsNonRoot: true
