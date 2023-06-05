@@ -23,6 +23,26 @@ import (
 
 // Prometheus metrics gauges
 var (
+	DBAvailableMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "data_science_pipelines_application_database_available",
+			Help: "Data Science Pipelines Application - Database Availability Status",
+		},
+		[]string{
+			"dspa_name",
+			"dspa_namespace",
+		},
+	)
+	ObjectStoreAvailableMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "data_science_pipelines_application_object_store_available",
+			Help: "Data Science Pipelines Application - Object Store Availability Status",
+		},
+		[]string{
+			"dspa_name",
+			"dspa_namespace",
+		},
+	)
 	APIServerReadyMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "data_science_pipelines_application_apiserver_ready",

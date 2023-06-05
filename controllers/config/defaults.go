@@ -69,6 +69,8 @@ const (
 
 // DSPA Status Condition Types
 const (
+	DatabaseAvailable      = "DatabaseAvailable"
+	ObjectStoreAvailable   = "ObjectStoreAvailable"
 	APIServerReady         = "APIServerReady"
 	PersistenceAgentReady  = "PersistenceAgentReady"
 	ScheduledWorkflowReady = "ScheduledWorkflowReady"
@@ -81,9 +83,10 @@ const (
 // kubectl get output, and in summarizing
 // occurrences of causes
 const (
-	MinimumReplicasAvailable = "MinimumReplicasAvailable"
-	FailingToDeploy          = "FailingToDeploy"
-	Deploying                = "Deploying"
+	MinimumReplicasAvailable    = "MinimumReplicasAvailable"
+	FailingToDeploy             = "FailingToDeploy"
+	Deploying                   = "Deploying"
+	ComponentDeploymentNotFound = "ComponentDeploymentNotFound"
 )
 
 // Any required Configmap paths can be added here,

@@ -17,6 +17,11 @@ package controllers
 
 import (
 	"context"
+	"database/sql"
+	b64 "encoding/base64"
+	"fmt"
+
+	_ "github.com/go-sql-driver/mysql"
 
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 )
@@ -29,6 +34,48 @@ var dbTemplates = []string{
 	"mariadb/sa.yaml.tmpl",
 	"mariadb/service.yaml.tmpl",
 	dbSecret,
+}
+
+func (r *DSPAReconciler) VerifyMySQLDBConnection(host, port, username, password, dbname string) bool {
+	connectionString := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", username, password, host, port, dbname)
+	db, err := sql.Open("mysql", connectionString)
+	if err != nil {
+		return false
+	}
+	defer db.Close()
+
+	testStatement := "SELECT 1;"
+	_, err = db.Exec(testStatement)
+	return err == nil
+}
+
+func (r *DSPAReconciler) isDatabaseAccessible(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,
+	params *DSPAParams) bool {
+	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
+
+	log.Info("Performing Database Health Check")
+	databaseSpecified := dsp.Spec.Database != nil
+	usingExternalDB := params.UsingExternalDB(dsp)
+	usingMariaDB := !databaseSpecified || dsp.Spec.Database.MariaDB != nil
+	if usingMariaDB || usingExternalDB {
+		decodePass, _ := b64.StdEncoding.DecodeString(params.DBConnection.Password)
+		db_connect := r.VerifyMySQLDBConnection(params.DBConnection.Host,
+			params.DBConnection.Port,
+			params.DBConnection.Username,
+			string(decodePass),
+			params.DBConnection.DBName)
+		if db_connect {
+			log.Info("Database Health Check Successful")
+		} else {
+			log.Info("Unable to connect to Database")
+		}
+		return db_connect
+
+	}
+
+	log.Info(fmt.Sprintf("Could not connect to Database: Unsupported Type"))
+	// Only MariaDB and Mysql-Compliant Database supported.
+	return false
 }
 
 func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,
