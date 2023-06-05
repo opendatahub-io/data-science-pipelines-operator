@@ -6,17 +6,20 @@ metadata:
   labels:
     app: ds-pipeline-metadata-grpc-{{.Name}}
     component: data-science-pipelines
+    dspa: {{.Name}}
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: ds-pipeline-metadata-grpc-{{.Name}}
       component: data-science-pipelines
+      dspa: {{.Name}}
   template:
     metadata:
       labels:
         app: ds-pipeline-metadata-grpc-{{.Name}}
         component: data-science-pipelines
+        dspa: {{.Name}}
     spec:
       containers:
         - args:

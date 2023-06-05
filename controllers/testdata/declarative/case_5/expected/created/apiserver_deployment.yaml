@@ -6,16 +6,19 @@ metadata:
   labels:
     app: ds-pipeline-testdsp5
     component: data-science-pipelines
+    dspa: testdsp5
 spec:
   selector:
     matchLabels:
       app: ds-pipeline-testdsp5
       component: data-science-pipelines
+      dspa: testdsp5
   template:
     metadata:
       labels:
         app: ds-pipeline-testdsp5
         component: data-science-pipelines
+        dspa: testdsp5
     spec:
       containers:
         - env:

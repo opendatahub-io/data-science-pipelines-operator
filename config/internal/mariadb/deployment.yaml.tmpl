@@ -7,6 +7,7 @@ metadata:
   labels:
     app: mariadb-{{.Name}}
     component: data-science-pipelines
+    dspa: {{.Name}}
 spec:
   strategy:
     # Need this since backing PVC is ReadWriteOnce,
@@ -17,11 +18,13 @@ spec:
     matchLabels:
       app: mariadb-{{.Name}}
       component: data-science-pipelines
+      dspa: {{.Name}}
   template:
     metadata:
       labels:
         app: mariadb-{{.Name}}
         component: data-science-pipelines
+        dspa: {{.Name}}
     spec:
       containers:
         - name: mariadb

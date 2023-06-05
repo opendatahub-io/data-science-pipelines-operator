@@ -6,11 +6,13 @@ metadata:
   labels:
     app: ds-pipeline-persistenceagent-testdsp0
     component: data-science-pipelines
+    dspa: testdsp0
 spec:
   selector:
     matchLabels:
       app: ds-pipeline-persistenceagent-testdsp0
       component: data-science-pipelines
+      dspa: testdsp0
   template:
     metadata:
       annotations:
@@ -18,6 +20,7 @@ spec:
       labels:
         app: ds-pipeline-persistenceagent-testdsp0
         component: data-science-pipelines
+        dspa: testdsp0
     spec:
       containers:
         - env:

@@ -6,11 +6,13 @@ metadata:
   labels:
     app: minio-testdsp4
     component: data-science-pipelines
+    dspa: testdsp4
 spec:
   selector:
     matchLabels:
       app: minio-testdsp4
       component: data-science-pipelines
+      dspa: testdsp4
   strategy:
     type: Recreate
   template:
@@ -18,6 +20,7 @@ spec:
       labels:
         app: minio-testdsp4
         component: data-science-pipelines
+        dspa: testdsp4
     spec:
       containers:
         - args:
