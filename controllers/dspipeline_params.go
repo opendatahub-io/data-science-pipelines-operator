@@ -320,8 +320,8 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 			p.ObjectStorageConnection.SecretAccessKey = base64.StdEncoding.EncodeToString([]byte(generatedPass))
 			createNewSecret = true
 		} else {
-			log.Error(err, fmt.Sprintf("Storage secret %s was specified in CR but does not exist.",
-				p.ObjectStorageConnection.CredentialsSecret.SecretName))
+			log.Error(err, fmt.Sprintf("Storage secret [%s] was specified in CR but does not exist.",
+				credsSecretName))
 			return err
 		}
 	} else if err != nil {
