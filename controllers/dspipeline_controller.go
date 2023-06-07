@@ -23,6 +23,7 @@ import (
 	mf "github.com/manifestival/manifestival"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/util"
 	routev1 "github.com/openshift/api/route/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -119,16 +120,6 @@ func (r *DSPAReconciler) buildCondition(conditionType string, dspa *dspav1alpha1
 	condition.LastTransitionTime = metav1.Now()
 
 	return condition
-}
-
-func GetDeploymentCondition(status appsv1.DeploymentStatus, condType appsv1.DeploymentConditionType) *appsv1.DeploymentCondition {
-	for i := range status.Conditions {
-		c := status.Conditions[i]
-		if c.Type == condType {
-			return &c
-		}
-	}
-	return nil
 }
 
 //+kubebuilder:rbac:groups=datasciencepipelinesapplications.opendatahub.io,resources=datasciencepipelinesapplications,verbs=get;list;watch;create;update;patch;delete
@@ -278,24 +269,13 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	r.PublishMetrics(
 		dspa,
-		GetConditionByType(config.APIServerReady, conditions),
-		GetConditionByType(config.PersistenceAgentReady, conditions),
-		GetConditionByType(config.ScheduledWorkflowReady, conditions),
-		GetConditionByType(config.CrReady, conditions),
+		util.GetConditionByType(config.APIServerReady, conditions),
+		util.GetConditionByType(config.PersistenceAgentReady, conditions),
+		util.GetConditionByType(config.ScheduledWorkflowReady, conditions),
+		util.GetConditionByType(config.CrReady, conditions),
 	)
 
 	return ctrl.Result{}, nil
-}
-
-// GetConditionByType returns condition of type T if it exists in conditions, otherwise
-// return empty condition struct.
-func GetConditionByType(t string, conditions []metav1.Condition) metav1.Condition {
-	for _, c := range conditions {
-		if c.Type == t {
-			return c
-		}
-	}
-	return metav1.Condition{}
 }
 
 // isDeploymentInCondition evaluates if condition with "name" is in condition of type "conditionType".
@@ -331,9 +311,9 @@ func (r *DSPAReconciler) handleReadyCondition(
 	// 2. Component is still deploying
 	// We check for (1), and if no errors are found we presume (2)
 
-	progressingCond := GetDeploymentCondition(deployment.Status, appsv1.DeploymentProgressing)
-	availableCond := GetDeploymentCondition(deployment.Status, appsv1.DeploymentAvailable)
-	replicaFailureCond := GetDeploymentCondition(deployment.Status, appsv1.DeploymentReplicaFailure)
+	progressingCond := util.GetDeploymentCondition(deployment.Status, appsv1.DeploymentProgressing)
+	availableCond := util.GetDeploymentCondition(deployment.Status, appsv1.DeploymentAvailable)
+	replicaFailureCond := util.GetDeploymentCondition(deployment.Status, appsv1.DeploymentReplicaFailure)
 
 	if availableCond != nil && availableCond.Status == corev1.ConditionTrue {
 		// If this DSPA component is minimally available, we are done.
