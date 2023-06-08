@@ -59,3 +59,11 @@ spec:
               memory: {{.MLMD.Envoy.Resources.Limits.Memory}}
               {{ end }}
             {{ end }}
+          volumeMounts:
+            - mountPath: /etc/envoy.yaml
+              name: envoy-config
+              subPath: envoy.yaml
+      volumes:
+        - name: envoy-config
+          configMap:
+            name: ds-pipeline-metadata-envoy-config-{{.Name}}

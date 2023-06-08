@@ -20,6 +20,7 @@ import (
 )
 
 var mlmdTemplates = []string{
+	"ml-metadata/metadata-envoy.configmap.yaml.tmpl",
 	"ml-metadata/metadata-envoy.deployment.yaml.tmpl",
 	"ml-metadata/metadata-envoy.service.yaml.tmpl",
 	"ml-metadata/metadata-grpc.deployment.yaml.tmpl",
