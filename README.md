@@ -30,7 +30,9 @@ To get started you will first need to satisfy the following pre-requisites:
 ## Pre-requisites
 1. An OpenShift cluster that is 4.9 or higher.
 2. You will need to be logged into this cluster as [cluster admin] via [oc client].
-3. The OpenShift Cluster must have OpenShift Pipelines 1.7.2 or higher installed. Instructions [here][OCP Pipelines Operator].
+3. The OpenShift Cluster must have OpenShift Pipelines 1.8 or higher installed. We recommend channel pipelines-1.8
+   on OCP 4.10 and pipelines-1.9 or pipelines-1.10 for OCP 4.11, 4.12 and 4.13.
+   Instructions [here][OCP Pipelines Operator].
 4. Based on installation type you will need one of the following:
    1. For Standalone method: You will need to have [Kustomize] version 4.5+ installed
    2. For ODH method: The Open Data Hub operator needs to be installed. You can install it via [OperatorHub][installodh].
@@ -260,7 +262,7 @@ see these logs after clicking this step and navigating to "Logs."
 
 ## Using the API
 
-> Note: By default we use kfp-tekton v1.4 for this section so you will need [kfp-tekton v1.4.x sdk installed][kfp-tekton] 
+> Note: By default we use kfp-tekton 1.5.x for this section so you will need [kfp-tekton v1.5.x sdk installed][kfp-tekton] 
 > in your environment
 
 In the previous step we submitted a generated `Pipeline` yaml via the GUI. We can also submit the `Pipeline` code 
