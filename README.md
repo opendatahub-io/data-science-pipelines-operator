@@ -197,14 +197,82 @@ When a `DataSciencePipelinesApplication` is deployed, the following components a
 * APIServer 
 * Persistence Agent
 * Scheduled Workflow controller
-* MLPipelines UI
 
 If specified in the `DataSciencePipelinesApplication` resource, the following components may also be additionally deployed: 
 * MariaDB
 * Minio
+* MLPipelines UI
+* MLMD (ML Metadata)
 
 To understand how these components interact with each other please refer to the upstream 
 [Kubeflow Pipelines Architectural Overview] documentation.
+
+## Deploying Optional Components
+
+### MariaDB
+To deploy a standalone MariaDB metadata database (rather than providing your own database connection details), simply add a `mariaDB` item under the `spec.database` in your DSPA definition with an `deploy` key set to `true`.  All other fields are defaultable/optional, see [All Fields DSPA Example](./config/samples/dspa_all_fields.yaml) for full details.  Note that this component is mutually exclusive with externally-provided databases (defined by `spec.database.externalDB`).
+
+```
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: sample
+spec:
+   ...
+  database:
+    mariaDB:   # mutually exclusive with externalDB
+      deploy: true
+
+```
+
+### Minio
+To deploy a Minio Object Storage component (rather than providing your own object storage connection details), simply add a `minio` item under the `spec.objectStorage` in your DSPA definition with an `image` key set to a valid minio component container image.  All other fields are defaultable/optional, see [All Fields DSPA Example](./config/samples/dspa_all_fields.yaml) for full details.  Note that this component is mutually exclusive with externally-provided object stores (defined by `spec.objectStorage.externalStorage`).
+
+```
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: sample
+spec:
+   ...
+  objectStorage:
+    minio:  # mutually exclusive with externalStorage
+      deploy: true
+      # Image field is required
+      image: 'quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance'
+```
+
+### ML Pipelines UI
+To deploy the standalone DS Pipelines UI component, simply add a `spec.mlpipelineUI` item to your DSPA with an `image` key set to a valid ui component container image.  All other fields are defaultable/optional, see [All Fields DSPA Example](./config/samples/dspa_all_fields.yaml) for full details.
+
+```
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: sample
+spec:
+   ...
+  mlpipelineUI:
+    deploy: true
+    # Image field is required
+    image: 'quay.io/opendatahub/odh-ml-pipelines-frontend-container:beta-ui'
+```
+
+
+### ML Metadata
+To deploy the ML Metadata artifact linage/metadata component, simply add a `spec.mlmd` item to your DSPA with `deploy` set to `true`.  All other fields are defaultable/optional, see [All Fields DSPA Example](./config/samples/dspa_all_fields.yaml) for full details.
+
+```
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: sample
+spec:
+   ...
+   mlmd:
+      deploy: true
+```
+
 
 # Using a DataSciencePipelinesApplication
 
