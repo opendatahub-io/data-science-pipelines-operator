@@ -45,6 +45,10 @@ spec:
               value: ds-pipeline-{{.Name}}
             - name: ML_PIPELINE_SERVICE_PORT
               value: '8888'
+            - name: METADATA_ENVOY_SERVICE_SERVICE_HOST
+              value: ds-pipeline-metadata-envoy-{{.Name}}
+            - name: METADATA_ENVOY_SERVICE_SERVICE_PORT
+              value: "9090"
           image: {{.MlPipelineUI.Image}}
           imagePullPolicy: IfNotPresent
           livenessProbe:
