@@ -25,10 +25,11 @@ import (
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 )
 
-var dbTemplates = []string{
+var mariadbTemplates = []string{
 	"mariadb/deployment.yaml.tmpl",
 	"mariadb/pvc.yaml.tmpl",
 	"mariadb/service.yaml.tmpl",
+<<<<<<< HEAD
 	"mariadb/mariadb-sa.yaml.tmpl",
 	dbSecret,
 }
@@ -81,6 +82,9 @@ func (r *DSPAReconciler) isDatabaseAccessible(ctx context.Context, dsp *dspav1al
 		log.Info("Unable to connect to Database")
 	}
 	return dbHealthCheckPassed
+=======
+	"mariadb/secret.yaml.tmpl",
+>>>>>>> 24a957a (DSPO to manage credential secrets if using deployed storage/db)
 }
 
 func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,
@@ -103,7 +107,7 @@ func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha
 		log.Info("Using externalDB, bypassing database deployment.")
 	} else if deployMariaDB || deployDefaultDB {
 		log.Info("Applying mariaDB resources.")
-		for _, template := range dbTemplates {
+		for _, template := range mariadbTemplates {
 			err := r.Apply(dsp, params, template)
 			if err != nil {
 				return err

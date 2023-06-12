@@ -31,7 +31,7 @@ import (
 	"net/http"
 )
 
-var storageTemplates = []string{
+var minioTemplates = []string{
 	"minio/deployment.yaml.tmpl",
 	"minio/pvc.yaml.tmpl",
 	"minio/service.yaml.tmpl",
@@ -198,7 +198,7 @@ func (r *DSPAReconciler) ReconcileStorage(ctx context.Context, dsp *dspav1alpha1
 		log.Info("Using externalStorage, bypassing object storage deployment.")
 	} else if deployMinio {
 		log.Info("Applying object storage resources.")
-		for _, template := range storageTemplates {
+		for _, template := range minioTemplates {
 			err := r.Apply(dsp, params, template)
 			if err != nil {
 				return err
