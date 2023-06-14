@@ -6,17 +6,20 @@ metadata:
   labels:
     app: ds-pipeline-metadata-writer-testdsp5
     component: data-science-pipelines
+    dspa: testdsp5
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: ds-pipeline-metadata-writer-testdsp5
       component: data-science-pipelines
+      dspa: testdsp5
   template:
     metadata:
       labels:
         app: ds-pipeline-metadata-writer-testdsp5
         component: data-science-pipelines
+        dspa: testdsp5
     spec:
       containers:
         - env:

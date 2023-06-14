@@ -67,12 +67,23 @@ const (
 	MlmdWriterImagePath           = "Images.MlmdWriter"
 )
 
+// DSPA Status Condition Types
 const (
-	APIServerReady           = "APIServerReady"
-	PersistenceAgentReady    = "PersistenceAgentReady"
-	ScheduledWorkflowReady   = "ScheduledWorkflowReady"
-	CrReady                  = "Ready"
+	APIServerReady         = "APIServerReady"
+	PersistenceAgentReady  = "PersistenceAgentReady"
+	ScheduledWorkflowReady = "ScheduledWorkflowReady"
+	CrReady                = "Ready"
+)
+
+// DSPA Ready Status Condition Reasons
+// As per k8s api convention: Reason is intended
+// to be used in concise output, such as one-line
+// kubectl get output, and in summarizing
+// occurrences of causes
+const (
 	MinimumReplicasAvailable = "MinimumReplicasAvailable"
+	FailingToDeploy          = "FailingToDeploy"
+	Deploying                = "Deploying"
 )
 
 // Any required Configmap paths can be added here,
