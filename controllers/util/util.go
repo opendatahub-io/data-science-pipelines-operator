@@ -21,11 +21,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// GetConditionByType returns condition of type T if it exists in conditions, otherwise
+// GetConditionByType returns condition of type condType if it exists in conditions, otherwise
 // return empty condition struct.
-func GetConditionByType(t string, conditions []metav1.Condition) metav1.Condition {
+func GetConditionByType(condType string, conditions []metav1.Condition) metav1.Condition {
 	for _, c := range conditions {
-		if c.Type == t {
+		if c.Type == condType {
 			return c
 		}
 	}
@@ -33,8 +33,7 @@ func GetConditionByType(t string, conditions []metav1.Condition) metav1.Conditio
 }
 
 func GetDeploymentCondition(status appsv1.DeploymentStatus, condType appsv1.DeploymentConditionType) *appsv1.DeploymentCondition {
-	for i := range status.Conditions {
-		c := status.Conditions[i]
+	for _, c := range status.Conditions {
 		if c.Type == condType {
 			return &c
 		}

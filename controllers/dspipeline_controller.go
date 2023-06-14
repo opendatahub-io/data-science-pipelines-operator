@@ -253,7 +253,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	err, conditions := r.GenerateStatus(ctx, dspa)
+	conditions, err := r.GenerateStatus(ctx, dspa)
 	if err != nil {
 		log.Info(err.Error())
 		return ctrl.Result{}, err
@@ -278,7 +278,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	return ctrl.Result{}, nil
 }
 
-// isDeploymentInCondition evaluates if condition with "name" is in condition of type "conditionType".
+// handleReadyCondition evaluates if condition with "name" is in condition of type "conditionType".
 // this procedure is valid only for conditions with bool status type, for conditions of non bool type
 // results are undefined.
 func (r *DSPAReconciler) handleReadyCondition(
@@ -286,7 +286,7 @@ func (r *DSPAReconciler) handleReadyCondition(
 	dspa *dspav1alpha1.DataSciencePipelinesApplication,
 	name string,
 	condition string,
-) (error, metav1.Condition) {
+) (metav1.Condition, error) {
 	readyCondition := r.buildCondition(condition, dspa, config.MinimumReplicasAvailable)
 	deployment := &appsv1.Deployment{}
 
@@ -295,7 +295,7 @@ func (r *DSPAReconciler) handleReadyCondition(
 
 	err := r.Get(ctx, types.NamespacedName{Name: component, Namespace: dspa.Namespace}, deployment)
 	if err != nil {
-		return err, metav1.Condition{}
+		return metav1.Condition{}, err
 	}
 
 	// First check if deployment is scaled down, if it is, component is deemed not ready
@@ -303,7 +303,7 @@ func (r *DSPAReconciler) handleReadyCondition(
 		readyCondition.Reason = config.MinimumReplicasAvailable
 		readyCondition.Status = metav1.ConditionFalse
 		readyCondition.Message = fmt.Sprintf("Deployment for component \"%s\" is scaled down.", component)
-		return nil, readyCondition
+		return readyCondition, nil
 	}
 
 	// At this point component is not minimally available, possible scenarios:
@@ -320,7 +320,7 @@ func (r *DSPAReconciler) handleReadyCondition(
 		readyCondition.Reason = config.MinimumReplicasAvailable
 		readyCondition.Status = metav1.ConditionTrue
 		readyCondition.Message = fmt.Sprintf("Component [%s] is minimally available.", component)
-		return nil, readyCondition
+		return readyCondition, nil
 	}
 
 	// There are two possible reasons for progress failing, deadline and replica create error:
@@ -332,7 +332,7 @@ func (r *DSPAReconciler) handleReadyCondition(
 		readyCondition.Status = metav1.ConditionFalse
 		readyCondition.Message = fmt.Sprintf("Component [%s] has failed to progress. Reason: [%s]. "+
 			"Message: [%s]", component, progressingCond.Reason, progressingCond.Message)
-		return nil, readyCondition
+		return readyCondition, nil
 	}
 
 	if replicaFailureCond != nil && replicaFailureCond.Status == corev1.ConditionTrue {
@@ -340,7 +340,7 @@ func (r *DSPAReconciler) handleReadyCondition(
 		readyCondition.Status = metav1.ConditionFalse
 		readyCondition.Message = fmt.Sprintf("Component's replica [%s] has failed to create. Reason: [%s]. "+
 			"Message: [%s]", component, replicaFailureCond.Reason, replicaFailureCond.Message)
-		return nil, readyCondition
+		return readyCondition, nil
 	}
 
 	// Search through the pods associated with this deployment
@@ -352,7 +352,7 @@ func (r *DSPAReconciler) handleReadyCondition(
 	}
 	err = r.Client.List(ctx, podList, opts...)
 	if err != nil {
-		return err, metav1.Condition{}
+		return metav1.Condition{}, err
 	}
 
 	hasPodFailures := false
@@ -374,7 +374,7 @@ func (r *DSPAReconciler) handleReadyCondition(
 				// We concatenate messages from all failing containers.
 				readyCondition.Message = fmt.Sprintf("Component [%s] is in CrashLoopBackOff. "+
 					"Message from pod: [%s]", component, c.State.Waiting.Message)
-				return nil, readyCondition
+				return readyCondition, nil
 			}
 		}
 	}
@@ -383,7 +383,7 @@ func (r *DSPAReconciler) handleReadyCondition(
 		readyCondition.Status = metav1.ConditionFalse
 		readyCondition.Reason = config.FailingToDeploy
 		readyCondition.Message = podFailureMessage
-		return nil, readyCondition
+		return readyCondition, nil
 	}
 
 	// No errors encountered, assume deployment is progressing successfully
@@ -391,23 +391,23 @@ func (r *DSPAReconciler) handleReadyCondition(
 	readyCondition.Reason = config.Deploying
 	readyCondition.Status = metav1.ConditionFalse
 	readyCondition.Message = fmt.Sprintf("Component [%s] is deploying.", component)
-	return nil, readyCondition
+	return readyCondition, nil
 
 }
 
-func (r *DSPAReconciler) GenerateStatus(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication) (error, []metav1.Condition) {
+func (r *DSPAReconciler) GenerateStatus(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication) ([]metav1.Condition, error) {
 
-	err, apiServerReady := r.handleReadyCondition(ctx, dspa, "ds-pipeline", config.APIServerReady)
+	apiServerReady, err := r.handleReadyCondition(ctx, dspa, "ds-pipeline", config.APIServerReady)
 	if err != nil {
-		return err, []metav1.Condition{}
+		return []metav1.Condition{}, err
 	}
-	err, persistenceAgentReady := r.handleReadyCondition(ctx, dspa, "ds-pipeline-persistenceagent", config.PersistenceAgentReady)
+	persistenceAgentReady, err := r.handleReadyCondition(ctx, dspa, "ds-pipeline-persistenceagent", config.PersistenceAgentReady)
 	if err != nil {
-		return err, []metav1.Condition{}
+		return []metav1.Condition{}, err
 	}
-	err, scheduledWorkflowReady := r.handleReadyCondition(ctx, dspa, "ds-pipeline-scheduledworkflow", config.ScheduledWorkflowReady)
+	scheduledWorkflowReady, err := r.handleReadyCondition(ctx, dspa, "ds-pipeline-scheduledworkflow", config.ScheduledWorkflowReady)
 	if err != nil {
-		return err, []metav1.Condition{}
+		return []metav1.Condition{}, err
 	}
 	var conditions []metav1.Condition
 	conditions = append(conditions, apiServerReady)
@@ -443,7 +443,7 @@ func (r *DSPAReconciler) GenerateStatus(ctx context.Context, dspa *dspav1alpha1.
 		}
 	}
 
-	return nil, conditions
+	return conditions, nil
 }
 
 func (r *DSPAReconciler) PublishMetrics(dspa *dspav1alpha1.DataSciencePipelinesApplication,
