@@ -19,8 +19,8 @@ import (
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 )
 
-const dbSecret = "devtools/database.secret.yaml.tmpl"
-const storageSecret = "devtools/storage.secret.yaml.tmpl"
+const devDBSecret = "devtools/database.secret.yaml.tmpl"
+const devStorageSecret = "devtools/storage.secret.yaml.tmpl"
 
 func (r *DSPAReconciler) ReconcileDevtools(dsp *dspav1alpha1.DataSciencePipelinesApplication, params *DSPAParams) error {
 
@@ -34,7 +34,7 @@ func (r *DSPAReconciler) ReconcileDevtools(dsp *dspav1alpha1.DataSciencePipeline
 
 		if dbSecretEnabled {
 			log.Info("Database secret creation requested")
-			err := r.Apply(dsp, params, dbSecret)
+			err := r.Apply(dsp, params, devDBSecret)
 			if err != nil {
 				return err
 			}
@@ -42,7 +42,7 @@ func (r *DSPAReconciler) ReconcileDevtools(dsp *dspav1alpha1.DataSciencePipeline
 
 		if storageSecretEnabled {
 			log.Info("Object Storage secret creation requested")
-			err := r.Apply(dsp, params, storageSecret)
+			err := r.Apply(dsp, params, devStorageSecret)
 			if err != nil {
 				return err
 			}

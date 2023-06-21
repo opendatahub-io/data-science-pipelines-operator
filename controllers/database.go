@@ -25,11 +25,12 @@ import (
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 )
 
+const dbSecret = "mariadb/secret.yaml.tmpl"
+
 var mariadbTemplates = []string{
 	"mariadb/deployment.yaml.tmpl",
 	"mariadb/pvc.yaml.tmpl",
 	"mariadb/service.yaml.tmpl",
-<<<<<<< HEAD
 	"mariadb/mariadb-sa.yaml.tmpl",
 	dbSecret,
 }
@@ -82,9 +83,6 @@ func (r *DSPAReconciler) isDatabaseAccessible(ctx context.Context, dsp *dspav1al
 		log.Info("Unable to connect to Database")
 	}
 	return dbHealthCheckPassed
-=======
-	"mariadb/secret.yaml.tmpl",
->>>>>>> 24a957a (DSPO to manage credential secrets if using deployed storage/db)
 }
 
 func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,

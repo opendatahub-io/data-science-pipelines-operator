@@ -31,6 +31,8 @@ import (
 	"net/http"
 )
 
+const storageSecret = "minio/secret.yaml.tmpl"
+
 var minioTemplates = []string{
 	"minio/deployment.yaml.tmpl",
 	"minio/pvc.yaml.tmpl",

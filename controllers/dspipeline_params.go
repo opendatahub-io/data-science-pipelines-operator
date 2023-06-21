@@ -129,28 +129,79 @@ func passwordGen(n int) string {
 	return string(b)
 }
 
+func (p *DSPAParams) RetrieveSecret(ctx context.Context, client client.Client, secretName, secretKey string, log logr.Logger) (string, error) {
+	secret := &v1.Secret{}
+	namespacedName := types.NamespacedName{
+		Name:      secretName,
+		Namespace: p.Namespace,
+	}
+	err := client.Get(ctx, namespacedName, secret)
+	if err != nil {
+		log.V(1).Info(fmt.Sprintf("Unable to retrieve secret [%s].", secretName))
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(secret.Data[secretKey]), nil
+}
+
+func (p *DSPAParams) GenerateDBSecret(ctx context.Context, client client.Client, secret *dspa.SecretKeyValue, log logr.Logger) error {
+	val, err := p.RetrieveSecret(ctx, client, secret.Name, secret.Key, log)
+	if err != nil && apierrs.IsNotFound(err) {
+		generatedPass := passwordGen(12)
+		p.DBConnection.Password = base64.StdEncoding.EncodeToString([]byte(generatedPass)) //TODO: it's ugly setting this class value here, just return a generic val instead
+	} else if err != nil {
+		log.Error(err, "Unable to create DB secret...")
+		return err
+	} else {
+		log.Info(fmt.Sprintf("Secret [%s] already exists, using stored value.", secret.Name))
+		p.DBConnection.Password = val
+	}
+	return nil
+}
+
+func (p *DSPAParams) GenerateObjectStoreSecret(ctx context.Context, client client.Client, secret *dspa.S3CredentialSecret, log logr.Logger) error {
+	val, err := p.RetrieveSecret(ctx, client, secret.SecretName, secret.AccessKey, log)
+	if err != nil && apierrs.IsNotFound(err) {
+		generatedPass := passwordGen(16)
+		p.ObjectStorageConnection.AccessKeyID = base64.StdEncoding.EncodeToString([]byte(generatedPass)) //TODO: it's ugly setting this class value here, just return a generic val instead
+	} else if err != nil {
+		log.Error(err, "Unable to retrieve or create ObjectStore secret...")
+		return err
+	} else {
+		log.Info(fmt.Sprintf("Secret [%s] already exists, using stored value.", secret.SecretName))
+		p.ObjectStorageConnection.AccessKeyID = val
+	}
+
+	val, err = p.RetrieveSecret(ctx, client, secret.SecretName, secret.SecretKey, log)
+	if err != nil && apierrs.IsNotFound(err) {
+		generatedPass := passwordGen(24)
+		p.ObjectStorageConnection.SecretAccessKey = base64.StdEncoding.EncodeToString([]byte(generatedPass)) //TODO: it's ugly setting this class value here, just return a generic val instead
+	} else if err != nil {
+		log.Error(err, "Unable to retrieve or create ObjectStore secret...")
+		return err
+	} else {
+		log.Info(fmt.Sprintf("Secret [%s] already exists, using stored value.", secret.SecretName))
+		p.ObjectStorageConnection.SecretAccessKey = val
+	}
+	return nil
+}
+
 // SetupDBParams Populates the DB connection Parameters.
 // If an external secret is specified, SetupDBParams will retrieve DB credentials from it.
 // If DSPO is managing a dynamically created secret, then SetupDBParams generates the creds.
 func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, log logr.Logger) error {
 
 	usingExternalDB := p.UsingExternalDB(dsp)
-
-	var customCreds *dspa.SecretKeyValue
-
-	// Even if a secret is specified DSPO will deploy its own secret owned by DSPO
-	p.DBConnection.CredentialsSecret = &dspa.SecretKeyValue{
-		Name: config.DBSecretNamePrefix + p.Name,
-		Key:  config.DBSecretKey,
-	}
-
 	if usingExternalDB {
 		// Assume validation for CR ensures these values exist
 		p.DBConnection.Host = dsp.Spec.Database.ExternalDB.Host
 		p.DBConnection.Port = dsp.Spec.Database.ExternalDB.Port
 		p.DBConnection.Username = dsp.Spec.Database.ExternalDB.Username
 		p.DBConnection.DBName = dsp.Spec.Database.ExternalDB.DBName
-		customCreds = dsp.Spec.Database.ExternalDB.PasswordSecret
+		p.DBConnection.CredentialsSecret = dsp.Spec.Database.ExternalDB.PasswordSecret
+
+		// Retreive DB Password from specified secret.  Handle errors (empty password) later
+		password, _ := p.RetrieveSecret(ctx, client, p.DBConnection.CredentialsSecret.Name, p.DBConnection.CredentialsSecret.Key, log)
+		p.DBConnection.Password = password
 	} else {
 		// If no externalDB or mariaDB is specified, DSPO assumes
 		// MariaDB deployment with defaults.
@@ -164,6 +215,7 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 				PVCSize:   resource.MustParse(config.MariaDBNamePVCSize),
 			}
 		}
+
 		// If MariaDB was specified, ensure missing fields are
 		// populated with defaults.
 		if p.MariaDB.Image == "" {
@@ -181,59 +233,24 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 		p.DBConnection.Port = config.MariaDBHostPort
 		p.DBConnection.Username = p.MariaDB.Username
 		p.DBConnection.DBName = p.MariaDB.DBName
+
+		// If custom DB Secret provided, use its values.  Otherwise generate a default
 		if p.MariaDB.PasswordSecret != nil {
-			customCreds = p.MariaDB.PasswordSecret
-		}
-	}
-
-	// Secret where DB credentials reside on cluster
-	var credsSecretName string
-	var credsPasswordKey string
-
-	customCredentialsSpecified := customCreds != nil
-	if customCredentialsSpecified {
-		credsSecretName = customCreds.Name
-		credsPasswordKey = customCreds.Key
-	} else {
-		credsSecretName = p.DBConnection.CredentialsSecret.Name
-		credsPasswordKey = p.DBConnection.CredentialsSecret.Key
-	}
-
-	dbSecret := &v1.Secret{}
-	namespacedName := types.NamespacedName{
-		Name:      credsSecretName,
-		Namespace: p.Namespace,
-	}
-
-	createNewSecret := false
-
-	// Attempt to fetch the specified DB secret
-	err := client.Get(ctx, namespacedName, dbSecret)
-	if err != nil && apierrs.IsNotFound(err) {
-		if !customCredentialsSpecified {
-			generatedPass := passwordGen(12)
-			p.DBConnection.Password = base64.StdEncoding.EncodeToString([]byte(generatedPass))
-			createNewSecret = true
+			p.DBConnection.CredentialsSecret = p.MariaDB.PasswordSecret
 		} else {
-			log.Error(err, fmt.Sprintf("DB secret [%s] was specified in CR but does not exist.",
-				credsSecretName))
+			p.DBConnection.CredentialsSecret = &dspa.SecretKeyValue{
+				Name: config.DefaultDBSecretNamePrefix + p.Name,
+				Key:  config.DefaultDBSecretKey,
+			}
+		}
+		err := p.GenerateDBSecret(ctx, client, p.DBConnection.CredentialsSecret, log)
+		if err != nil {
 			return err
 		}
-	} else if err != nil {
-		log.Error(err, "Unable to fetch DB secret...")
-		return err
 	}
-
-	// Password was dynamically generated, no need to retrieve it from fetched secret
-	if createNewSecret {
-		return nil
-	}
-
-	p.DBConnection.Password = base64.StdEncoding.EncodeToString(dbSecret.Data[credsPasswordKey])
-
 	if p.DBConnection.Password == "" {
 		return fmt.Errorf(fmt.Sprintf("DB Password from secret [%s] for key [%s] was not successfully retrieved, "+
-			"ensure that the secret with this key exist.", credsSecretName, credsPasswordKey))
+			"ensure that the secret with this key exist.", p.DBConnection.CredentialsSecret.Name, p.DBConnection.CredentialsSecret.Key))
 	}
 	return nil
 }
@@ -244,16 +261,6 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, log logr.Logger) error {
 
 	usingExternalObjectStorage := p.UsingExternalStorage(dsp)
-
-	var customCreds *dspa.S3CredentialSecret
-
-	// Even if a secret is specified DSPO will deploy its own secret owned by DSPO
-	p.ObjectStorageConnection.CredentialsSecret = &dspa.S3CredentialSecret{
-		SecretName: config.ObjectStorageSecretName,
-		AccessKey:  config.ObjectStorageAccessKey,
-		SecretKey:  config.ObjectStorageSecretKey,
-	}
-
 	if usingExternalObjectStorage {
 		// Assume validation for CR ensures these values exist
 		p.ObjectStorageConnection.Bucket = dsp.Spec.ObjectStorage.ExternalStorage.Bucket
@@ -272,7 +279,13 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 
 		// Port can be empty, which is fine.
 		p.ObjectStorageConnection.Port = dsp.Spec.ObjectStorage.ExternalStorage.Port
-		customCreds = dsp.Spec.ObjectStorage.ExternalStorage.S3CredentialSecret
+		p.ObjectStorageConnection.CredentialsSecret = dsp.Spec.ObjectStorage.ExternalStorage.S3CredentialSecret
+
+		// Retrieve ObjStore Creds from specified secret.  Handle issues (empty creds) later.
+		accesskey, _ := p.RetrieveSecret(ctx, client, p.ObjectStorageConnection.CredentialsSecret.SecretName, p.ObjectStorageConnection.CredentialsSecret.AccessKey, log)
+		secretkey, _ := p.RetrieveSecret(ctx, client, p.ObjectStorageConnection.CredentialsSecret.SecretName, p.ObjectStorageConnection.CredentialsSecret.SecretKey, log)
+		p.ObjectStorageConnection.AccessKeyID = accesskey
+		p.ObjectStorageConnection.SecretAccessKey = secretkey
 	} else {
 		if p.Minio == nil {
 			return fmt.Errorf("either [spec.objectStorage.minio] or [spec.objectStorage.externalStorage] " +
@@ -302,7 +315,17 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 		p.ObjectStorageConnection.Secure = util.BoolPointer(false)
 
 		if p.Minio.S3CredentialSecret != nil {
-			customCreds = p.Minio.S3CredentialSecret
+			p.ObjectStorageConnection.CredentialsSecret = p.Minio.S3CredentialSecret
+		} else {
+			p.ObjectStorageConnection.CredentialsSecret = &dspa.S3CredentialSecret{
+				SecretName: config.DefaultObjectStorageSecretName,
+				AccessKey:  config.DefaultObjectStorageAccessKey,
+				SecretKey:  config.DefaultObjectStorageSecretKey,
+			}
+		}
+		err := p.GenerateObjectStoreSecret(ctx, client, p.ObjectStorageConnection.CredentialsSecret, log)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -322,62 +345,12 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 
 	p.ObjectStorageConnection.Endpoint = endpoint
 
-	// Secret where credentials reside on cluster
-	var credsSecretName string
-	var credsAccessKey string
-	var credsSecretKey string
-
-	customCredentialsSpecified := customCreds != nil
-	if customCredentialsSpecified {
-		credsSecretName = customCreds.SecretName
-		credsAccessKey = customCreds.AccessKey
-		credsSecretKey = customCreds.SecretKey
-	} else {
-		credsSecretName = p.ObjectStorageConnection.CredentialsSecret.SecretName
-		credsAccessKey = p.ObjectStorageConnection.CredentialsSecret.AccessKey
-		credsSecretKey = p.ObjectStorageConnection.CredentialsSecret.SecretKey
-	}
-
-	storageSecret := &v1.Secret{}
-	namespacedName := types.NamespacedName{
-		Name:      credsSecretName,
-		Namespace: p.Namespace,
-	}
-
-	createNewSecret := false
-
-	// Attempt to fetch the specified storage secret
-	err := client.Get(ctx, namespacedName, storageSecret)
-	if err != nil && apierrs.IsNotFound(err) {
-		if !customCredentialsSpecified {
-			generatedPass := passwordGen(16)
-			p.ObjectStorageConnection.AccessKeyID = base64.StdEncoding.EncodeToString([]byte(generatedPass))
-			generatedPass = passwordGen(24)
-			p.ObjectStorageConnection.SecretAccessKey = base64.StdEncoding.EncodeToString([]byte(generatedPass))
-			createNewSecret = true
-		} else {
-			log.Error(err, fmt.Sprintf("Storage secret [%s] was specified in CR but does not exist.",
-				credsSecretName))
-			return err
-		}
-	} else if err != nil {
-		log.Error(err, "Unable to fetch Storage secret...")
-		return err
-	}
-
-	// Password was dynamically generated, no need to retrieve it from fetched secret
-	if createNewSecret {
-		return nil
-	}
-
-	p.ObjectStorageConnection.AccessKeyID = base64.StdEncoding.EncodeToString(storageSecret.Data[credsAccessKey])
-	p.ObjectStorageConnection.SecretAccessKey = base64.StdEncoding.EncodeToString(storageSecret.Data[credsSecretKey])
-
 	if p.ObjectStorageConnection.AccessKeyID == "" || p.ObjectStorageConnection.SecretAccessKey == "" {
 		return fmt.Errorf(fmt.Sprintf("Object Storage Password from secret [%s] for keys [%s, %s] was not "+
-			"successfully retrieved, ensure that the secret with this key exist.", credsSecretName, credsAccessKey, credsSecretKey))
+			"successfully retrieved, ensure that the secret with this key exist.",
+			p.ObjectStorageConnection.CredentialsSecret.SecretName,
+			p.ObjectStorageConnection.CredentialsSecret.AccessKey, p.ObjectStorageConnection.CredentialsSecret.SecretKey))
 	}
-
 	return nil
 
 }
