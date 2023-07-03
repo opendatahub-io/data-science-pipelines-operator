@@ -155,6 +155,16 @@ rules:
   verbs:
   - '*'
 - apiGroups:
+  - mcad.ibm.com
+  resources:
+  - appwrappers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+- apiGroups:
   - monitoring.coreos.com
   resources:
   - servicemonitors
@@ -178,6 +188,18 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - ray.io
+  resources:
+  - rayclusters
+  - rayjobs
+  - rayservices
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:
@@ -229,25 +251,3 @@ rules:
   - '*'
   verbs:
   - '*'
-- apiGroups:
-    - mcad.ibm.com
-  resources:
-    - appwrappers
-  verbs:
-    - create
-    - get
-    - list
-    - patch
-    - delete
-- apiGroups:
-    - ray.io
-  resources:
-    - rayclusters
-    - rayjobs
-    - rayservices
-  verbs:
-    - create
-    - get
-    - list
-    - patch
-    - delete
