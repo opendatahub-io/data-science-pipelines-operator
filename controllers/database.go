@@ -36,7 +36,8 @@ var dbTemplates = []string{
 	dbSecret,
 }
 
-func (r *DSPAReconciler) VerifyMySQLDBConnection(host, port, username, password, dbname string) bool {
+// extract to var for mocking in testing
+var ConnectAndQueryDatabase = func(host, port, username, password, dbname string) bool {
 	connectionString := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", username, password, host, port, dbname)
 	db, err := sql.Open("mysql", connectionString)
 	if err != nil {
@@ -57,25 +58,23 @@ func (r *DSPAReconciler) isDatabaseAccessible(ctx context.Context, dsp *dspav1al
 	databaseSpecified := dsp.Spec.Database != nil
 	usingExternalDB := params.UsingExternalDB(dsp)
 	usingMariaDB := !databaseSpecified || dsp.Spec.Database.MariaDB != nil
-	if usingMariaDB || usingExternalDB {
-		decodePass, _ := b64.StdEncoding.DecodeString(params.DBConnection.Password)
-		db_connect := r.VerifyMySQLDBConnection(params.DBConnection.Host,
-			params.DBConnection.Port,
-			params.DBConnection.Username,
-			string(decodePass),
-			params.DBConnection.DBName)
-		if db_connect {
-			log.Info("Database Health Check Successful")
-		} else {
-			log.Info("Unable to connect to Database")
-		}
-		return db_connect
-
+	if !usingMariaDB && !usingExternalDB {
+		log.Info("Could not connect to Database: Unsupported Type")
+		return false
 	}
 
-	log.Info(fmt.Sprintf("Could not connect to Database: Unsupported Type"))
-	// Only MariaDB and Mysql-Compliant Database supported.
-	return false
+	decodePass, _ := b64.StdEncoding.DecodeString(params.DBConnection.Password)
+	db_connect := ConnectAndQueryDatabase(params.DBConnection.Host,
+		params.DBConnection.Port,
+		params.DBConnection.Username,
+		string(decodePass),
+		params.DBConnection.DBName)
+	if db_connect {
+		log.Info("Database Health Check Successful")
+	} else {
+		log.Info("Unable to connect to Database")
+	}
+	return db_connect
 }
 
 func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,

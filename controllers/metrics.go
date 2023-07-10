@@ -87,7 +87,9 @@ var (
 
 // InitMetrics initialize prometheus metrics
 func InitMetrics() {
-	metrics.Registry.MustRegister(APIServerReadyMetric,
+	metrics.Registry.MustRegister(DBAvailableMetric,
+		ObjectStoreAvailableMetric,
+		APIServerReadyMetric,
 		PersistenceAgentReadyMetric,
 		ScheduledWorkflowReadyMetric,
 		CrReadyMetric)

@@ -22,7 +22,8 @@ import (
 	"fmt"
 	"net/http"
 
-	minio "github.com/minio/minio-go/v7"
+	"github.com/go-logr/logr"
+	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 )
@@ -43,7 +44,7 @@ func joinHostPort(host, port string) string {
 	return fmt.Sprintf("%s:%s", host, port)
 }
 
-func createCredentialProvidersChain(endpoint, accessKey, secretKey string) *credentials.Credentials {
+func createCredentialProvidersChain(accessKey, secretKey string) *credentials.Credentials {
 	// first try with static api key
 	if accessKey != "" && secretKey != "" {
 		return credentials.NewStaticV4(accessKey, secretKey, "")
@@ -59,6 +60,26 @@ func createCredentialProvidersChain(endpoint, accessKey, secretKey string) *cred
 		},
 	}
 	return credentials.New(&credentials.Chain{Providers: providers})
+}
+
+var ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint string, accesskey, secretkey []byte, secure bool) bool {
+	cred := createCredentialProvidersChain(string(accesskey), string(secretkey))
+	minioClient, err := minio.New(endpoint, &minio.Options{
+		Creds:  cred,
+		Secure: secure,
+	})
+	if err != nil {
+		log.Info(fmt.Sprintf("Could not connect to object storage endpoint: %s", endpoint))
+		return false
+	}
+
+	_, err = minioClient.ListBuckets(ctx)
+	if err != nil {
+		log.Info(fmt.Sprintf("Could not perform ListBuckets health check on object storage endpoint: %s", endpoint))
+		return false
+	}
+
+	return true
 }
 
 func (r *DSPAReconciler) isObjectStorageAccessible(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,
@@ -79,24 +100,13 @@ func (r *DSPAReconciler) isObjectStorageAccessible(ctx context.Context, dsp *dsp
 		return false
 	}
 
-	cred := createCredentialProvidersChain(endpoint, string(accesskey), string(secretkey))
-	minioClient, err := minio.New(endpoint, &minio.Options{
-		Creds:  cred,
-		Secure: params.ObjectStorageConnection.Secure,
-	})
-	if err != nil {
-		log.Info(fmt.Sprintf("Could not connect to object storage endpoint: %s", endpoint))
-		return false
+	verified := ConnectAndQueryObjStore(ctx, log, endpoint, accesskey, secretkey, params.ObjectStorageConnection.Secure)
+	if verified {
+		log.Info("Object Storage Health Check Successful")
+	} else {
+		log.Info("Object Storage Health Check Failed")
 	}
-
-	_, err = minioClient.ListBuckets(ctx)
-	if err != nil {
-		log.Info(fmt.Sprintf("Could not perform ListBuckets health check on object storage endpoint: %s", endpoint))
-		return false
-	}
-
-	log.Info("Object Storage Health Check Successful")
-	return true
+	return verified
 }
 
 // ReconcileStorage will set up Storage Connection.

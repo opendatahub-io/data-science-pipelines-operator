@@ -264,7 +264,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	conditions, err := r.GenerateStatus(ctx, dspa, params)
+	conditions, err := r.GenerateStatus(ctx, dspa, params, dbAvailable, objStoreAvailable)
 	if err != nil {
 		log.Info(err.Error())
 		return ctrl.Result{}, err
@@ -305,7 +305,7 @@ func (r *DSPAReconciler) handleReadyCondition(ctx context.Context, dspa *dspav1a
 		if apierrs.IsNotFound(err) {
 			readyCondition.Reason = config.ComponentDeploymentNotFound
 			readyCondition.Status = metav1.ConditionFalse
-			readyCondition.Message = fmt.Sprintf("Deployment for component \"%s\" is missing", component)
+			readyCondition.Message = fmt.Sprintf("Deployment for component \"%s\" is missing - pre-requisite component may not yet be available.", component)
 			return readyCondition, nil
 		} else {
 			return metav1.Condition{}, err
@@ -409,25 +409,38 @@ func (r *DSPAReconciler) handleReadyCondition(ctx context.Context, dspa *dspav1a
 
 }
 
-func (r *DSPAReconciler) GenerateStatus(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication, params *DSPAParams) ([]metav1.Condition, error) {
+func (r *DSPAReconciler) GenerateStatus(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication, params *DSPAParams, dbAvailableStatus, objStoreAvailableStatus bool) ([]metav1.Condition, error) {
+	// Create Database Availability Condition
 	databaseAvailable := r.buildCondition(config.DatabaseAvailable, dspa, config.DatabaseAvailable)
-	if r.isDatabaseAccessible(ctx, dspa, params) {
+	if dbAvailableStatus {
 		databaseAvailable.Status = metav1.ConditionTrue
+		databaseAvailable.Message = "Database connectivity successfully verified"
+	} else {
+		databaseAvailable.Message = "Could not connect to database"
 	}
 
+	// Create Object Storage Availability Condition
 	objStoreAvailable := r.buildCondition(config.ObjectStoreAvailable, dspa, config.ObjectStoreAvailable)
-	if r.isObjectStorageAccessible(ctx, dspa, params) {
+	if objStoreAvailableStatus {
 		objStoreAvailable.Status = metav1.ConditionTrue
+		objStoreAvailable.Message = "Object Store connectivity successfully verified"
+	} else {
+		objStoreAvailable.Message = "Could not connect to Object Store"
 	}
 
+	// Create APIServer Readiness Condition
 	apiServerReady, err := r.handleReadyCondition(ctx, dspa, "ds-pipeline", config.APIServerReady)
 	if err != nil {
 		return []metav1.Condition{}, err
 	}
+
+	// Create PersistenceAgent Readiness Condition
 	persistenceAgentReady, err := r.handleReadyCondition(ctx, dspa, "ds-pipeline-persistenceagent", config.PersistenceAgentReady)
 	if err != nil {
 		return []metav1.Condition{}, err
 	}
+
+	// Create ScheduledWorkflow Readiness Condition
 	scheduledWorkflowReady, err := r.handleReadyCondition(ctx, dspa, "ds-pipeline-scheduledworkflow", config.ScheduledWorkflowReady)
 	if err != nil {
 		return []metav1.Condition{}, err
