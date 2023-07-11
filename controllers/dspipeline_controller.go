@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	mf "github.com/manifestival/manifestival"
@@ -161,10 +162,10 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{}
 	err := r.Get(ctx, req.NamespacedName, dspa)
 	if err != nil && apierrs.IsNotFound(err) {
-		log.Info("Stop DSPAParams reconciliation")
+		log.Info("DSPA resource was not found")
 		return ctrl.Result{}, nil
 	} else if err != nil {
-		log.Error(err, "Unable to fetch the DSPAParams")
+		log.Error(err, "Encountered error when fetching DSPA")
 		return ctrl.Result{}, err
 	}
 
@@ -205,7 +206,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	err = params.ExtractParams(ctx, dspa, r.Client, r.Log)
 	if err != nil {
 		log.Info(fmt.Sprintf("Encountered error when parsing CR: [%s]", err))
-		return ctrl.Result{}, nil
+		return ctrl.Result{Requeue: true, RequeueAfter: 2 * time.Minute}, nil
 	}
 
 	err = r.ReconcileDatabase(ctx, dspa, params)
