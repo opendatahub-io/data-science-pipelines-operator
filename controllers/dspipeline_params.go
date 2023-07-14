@@ -27,6 +27,7 @@ import (
 	mf "github.com/manifestival/manifestival"
 	dspa "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/util"
 	v1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -63,10 +64,10 @@ type DBConnection struct {
 type ObjectStorageConnection struct {
 	Bucket            string
 	CredentialsSecret *dspa.S3CredentialSecret
-	Secure            bool
 	Host              string
 	Port              string
 	Scheme            string
+	Secure            *bool
 	Endpoint          string // scheme://host:port
 	AccessKeyID       string
 	SecretAccessKey   string
@@ -235,7 +236,17 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 		p.ObjectStorageConnection.Bucket = dsp.Spec.ObjectStorage.ExternalStorage.Bucket
 		p.ObjectStorageConnection.Host = dsp.Spec.ObjectStorage.ExternalStorage.Host
 		p.ObjectStorageConnection.Scheme = dsp.Spec.ObjectStorage.ExternalStorage.Scheme
-		p.ObjectStorageConnection.Secure = dsp.Spec.ObjectStorage.ExternalStorage.Secure
+
+		if dsp.Spec.ObjectStorage.ExternalStorage.Secure == nil {
+			if p.ObjectStorageConnection.Scheme == "https" {
+				p.ObjectStorageConnection.Secure = util.BoolPointer(true)
+			} else {
+				p.ObjectStorageConnection.Secure = util.BoolPointer(false)
+			}
+		} else {
+			p.ObjectStorageConnection.Secure = dsp.Spec.ObjectStorage.ExternalStorage.Secure
+		}
+
 		// Port can be empty, which is fine.
 		p.ObjectStorageConnection.Port = dsp.Spec.ObjectStorage.ExternalStorage.Port
 		customCreds = dsp.Spec.ObjectStorage.ExternalStorage.S3CredentialSecret
@@ -265,6 +276,8 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 		)
 		p.ObjectStorageConnection.Port = config.MinioPort
 		p.ObjectStorageConnection.Scheme = config.MinioScheme
+		p.ObjectStorageConnection.Secure = util.BoolPointer(false)
+
 		if p.Minio.S3CredentialSecret != nil {
 			customCreds = p.Minio.S3CredentialSecret
 		}
@@ -343,6 +356,7 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 	}
 
 	return nil
+
 }
 
 func (p *DSPAParams) SetupMLMD(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, log logr.Logger) error {
