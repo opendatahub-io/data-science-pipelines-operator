@@ -54,6 +54,11 @@ func (r *DSPAReconciler) isDatabaseAccessible(ctx context.Context, dsp *dspav1al
 	params *DSPAParams) bool {
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
 
+	if params.DatabaseHealthCheckDisabled(dsp) {
+		log.V(1).Info("Database health check disabled, assuming database is available and ready.")
+		return true
+	}
+
 	log.Info("Performing Database Health Check")
 	databaseSpecified := dsp.Spec.Database != nil
 	usingExternalDB := params.UsingExternalDB(dsp)

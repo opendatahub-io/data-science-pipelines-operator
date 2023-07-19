@@ -122,6 +122,9 @@ type MlPipelineUI struct {
 type Database struct {
 	*MariaDB    `json:"mariaDB,omitempty"`
 	*ExternalDB `json:"externalDB,omitempty"`
+	// +kubebuilder:default:=false
+	// +kubebuilder:validation:Optional
+	DisableHealthCheck bool `json:"disableHealthCheck"`
 }
 
 type MariaDB struct {
@@ -151,6 +154,9 @@ type ExternalDB struct {
 type ObjectStorage struct {
 	*Minio           `json:"minio,omitempty"`
 	*ExternalStorage `json:"externalStorage,omitempty"`
+	// +kubebuilder:default:=false
+	// +kubebuilder:validation:Optional
+	DisableHealthCheck bool `json:"disableHealthCheck"`
 }
 
 type Minio struct {

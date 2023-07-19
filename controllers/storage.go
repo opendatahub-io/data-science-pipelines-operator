@@ -85,6 +85,11 @@ var ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoin
 func (r *DSPAReconciler) isObjectStorageAccessible(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,
 	params *DSPAParams) bool {
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
+	if params.ObjectStorageHealthCheckDisabled(dsp) {
+		log.V(1).Info("Object Storage health check disabled, assuming object store is available and ready.")
+		return true
+	}
+
 	log.Info("Performing Object Storage Health Check")
 
 	endpoint := joinHostPort(params.ObjectStorageConnection.Host, params.ObjectStorageConnection.Port)
@@ -100,7 +105,7 @@ func (r *DSPAReconciler) isObjectStorageAccessible(ctx context.Context, dsp *dsp
 		return false
 	}
 
-	verified := ConnectAndQueryObjStore(ctx, log, endpoint, accesskey, secretkey, params.ObjectStorageConnection.Secure)
+	verified := ConnectAndQueryObjStore(ctx, log, endpoint, accesskey, secretkey, *params.ObjectStorageConnection.Secure)
 	if verified {
 		log.Info("Object Storage Health Check Successful")
 	} else {
