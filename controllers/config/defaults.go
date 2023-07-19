@@ -48,6 +48,8 @@ const (
 	ObjectStorageSecretName = "mlpipeline-minio-artifact" // hardcoded in kfp-tekton
 	ObjectStorageAccessKey  = "accesskey"
 	ObjectStorageSecretKey  = "secretkey"
+
+	MlmdGrpcPort = "8080"
 )
 
 // DSPO Config File Paths
@@ -60,14 +62,28 @@ const (
 	APIServerMoveResultsImagePath = "Images.MoveResultsImage"
 	MariaDBImagePath              = "Images.MariaDB"
 	OAuthProxyImagePath           = "Images.OAuthProxy"
+	MlmdEnvoyImagePath            = "Images.MlmdEnvoy"
+	MlmdGRPCImagePath             = "Images.MlmdGRPC"
+	MlmdWriterImagePath           = "Images.MlmdWriter"
 )
 
+// DSPA Status Condition Types
 const (
-	APIServerReady           = "APIServerReady"
-	PersistenceAgentReady    = "PersistenceAgentReady"
-	ScheduledWorkflowReady   = "ScheduledWorkflowReady"
-	CrReady                  = "Ready"
+	APIServerReady         = "APIServerReady"
+	PersistenceAgentReady  = "PersistenceAgentReady"
+	ScheduledWorkflowReady = "ScheduledWorkflowReady"
+	CrReady                = "Ready"
+)
+
+// DSPA Ready Status Condition Reasons
+// As per k8s api convention: Reason is intended
+// to be used in concise output, such as one-line
+// kubectl get output, and in summarizing
+// occurrences of causes
+const (
 	MinimumReplicasAvailable = "MinimumReplicasAvailable"
+	FailingToDeploy          = "FailingToDeploy"
+	Deploying                = "Deploying"
 )
 
 // Any required Configmap paths can be added here,
@@ -96,6 +112,9 @@ var (
 	MariaDBResourceRequirements           = createResourceRequirement(resource.MustParse("300m"), resource.MustParse("800Mi"), resource.MustParse("1"), resource.MustParse("1Gi"))
 	MinioResourceRequirements             = createResourceRequirement(resource.MustParse("200m"), resource.MustParse("100Mi"), resource.MustParse("250m"), resource.MustParse("1Gi"))
 	MlPipelineUIResourceRequirements      = createResourceRequirement(resource.MustParse("100m"), resource.MustParse("256Mi"), resource.MustParse("100m"), resource.MustParse("256Mi"))
+	MlmdEnvoyResourceRequirements         = createResourceRequirement(resource.MustParse("100m"), resource.MustParse("256Mi"), resource.MustParse("100m"), resource.MustParse("256Mi"))
+	MlmdGRPCResourceRequirements          = createResourceRequirement(resource.MustParse("100m"), resource.MustParse("256Mi"), resource.MustParse("100m"), resource.MustParse("256Mi"))
+	MlmdWriterResourceRequirements        = createResourceRequirement(resource.MustParse("100m"), resource.MustParse("256Mi"), resource.MustParse("100m"), resource.MustParse("256Mi"))
 )
 
 func createResourceRequirement(RequestsCPU resource.Quantity, RequestsMemory resource.Quantity, LimitsCPU resource.Quantity, LimitsMemory resource.Quantity) dspav1alpha1.ResourceRequirements {

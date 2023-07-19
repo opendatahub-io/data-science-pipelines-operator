@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ds-pipeline-metadata-writer-testdsp5
+  namespace: default
+  labels:
+    app: ds-pipeline-metadata-writer-testdsp5
+    component: data-science-pipelines
+    dspa: testdsp5
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ds-pipeline-metadata-writer-testdsp5
+      component: data-science-pipelines
+      dspa: testdsp5
+  template:
+    metadata:
+      labels:
+        app: ds-pipeline-metadata-writer-testdsp5
+        component: data-science-pipelines
+        dspa: testdsp5
+    spec:
+      containers:
+        - env:
+            - name: NAMESPACE_TO_WATCH
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: PIPELINE_RUNTIME
+              value: tekton
+            - name: ARCHIVE_LOGS
+              value: "false"
+            - name: METADATA_GRPC_SERVICE_SERVICE_HOST
+              value: "ds-pipeline-metadata-grpc-testdsp5"
+            - name: METADATA_GRPC_SERVICE_SERVICE_PORT
+              value: "1337"
+          image: metadata-writer:test5
+          name: main
+          livenessProbe:
+            exec:
+              command:
+                - pidof
+                - python3
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 2
+          readinessProbe:
+            exec:
+              command:
+                - pidof
+                - python3
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+          resources:
+            limits:
+              cpu: 100m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi

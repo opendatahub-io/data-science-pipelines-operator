@@ -7,3 +7,6 @@ Images:
   Cache: $(IMAGES_CACHE)
   MoveResultsImage: $(IMAGES_MOVERESULTSIMAGE)
   MariaDB: $(IMAGES_MARIADB)
+  MlmdEnvoy: $(IMAGES_MLMDENVOY)
+  MlmdGRPC: $(IMAGES_MLMDGRPC)
+  MlmdWriter: $(IMAGES_MLMDWRITER)

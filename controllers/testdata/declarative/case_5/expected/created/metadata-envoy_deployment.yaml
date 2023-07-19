@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ds-pipeline-metadata-envoy-testdsp5
+  namespace: default
+  labels:
+    app: ds-pipeline-metadata-envoy-testdsp5
+    component: data-science-pipelines
+    dspa: testdsp5
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ds-pipeline-metadata-envoy-testdsp5
+      component: data-science-pipelines
+      dspa: testdsp5
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "false"
+      labels:
+        app: ds-pipeline-metadata-envoy-testdsp5
+        component: data-science-pipelines
+        dspa: testdsp5
+    spec:
+      containers:
+        - image: metadata-envoy:test5
+          name: container
+          ports:
+            - containerPort: 9090
+              name: md-envoy
+              protocol: TCP
+            - containerPort: 9901
+              name: envoy-admin
+              protocol: TCP
+          livenessProbe:
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            tcpSocket:
+              port: md-envoy
+            timeoutSeconds: 2
+          readinessProbe:
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            tcpSocket:
+              port: md-envoy
+            timeoutSeconds: 2
+          resources:
+            limits:
+              cpu: 100m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          volumeMounts:
+            - mountPath: /etc/envoy.yaml
+              name: envoy-config
+              subPath: envoy.yaml
+      volumes:
+        - name: envoy-config
+          configMap:
+            name: ds-pipeline-metadata-envoy-config-testdsp5
+            defaultMode: 420

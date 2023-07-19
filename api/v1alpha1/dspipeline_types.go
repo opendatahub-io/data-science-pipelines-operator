@@ -35,6 +35,9 @@ type DSPASpec struct {
 	*MlPipelineUI `json:"mlpipelineUI"`
 	// +kubebuilder:validation:Required
 	*ObjectStorage `json:"objectStorage"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={deploy: false}
+	*MLMD `json:"mlmd"`
 }
 
 type APIServer struct {
@@ -159,6 +162,35 @@ type Minio struct {
 	*S3CredentialSecret `json:"s3CredentialsSecret,omitempty"`
 	// +kubebuilder:default:="10Gi"
 	PVCSize   resource.Quantity     `json:"pvcSize,omitempty"`
+	Resources *ResourceRequirements `json:"resources,omitempty"`
+	// +kubebuilder:validation:Required
+	Image string `json:"image"`
+}
+
+type MLMD struct {
+	// +kubebuilder:default:=false
+	// +kubebuilder:validation:Optional
+	Deploy  bool `json:"deploy"`
+	*Envoy  `json:"envoy,omitempty"`
+	*GRPC   `json:"grpc,omitempty"`
+	*Writer `json:"writer,omitempty"`
+}
+
+type Envoy struct {
+	Resources *ResourceRequirements `json:"resources,omitempty"`
+	// +kubebuilder:validation:Required
+	Image string `json:"image"`
+}
+
+type GRPC struct {
+	Resources *ResourceRequirements `json:"resources,omitempty"`
+	// +kubebuilder:validation:Required
+	Image string `json:"image"`
+	// +kubebuilder:validation:Optional
+	Port string `json:"port"`
+}
+
+type Writer struct {
 	Resources *ResourceRequirements `json:"resources,omitempty"`
 	// +kubebuilder:validation:Required
 	Image string `json:"image"`

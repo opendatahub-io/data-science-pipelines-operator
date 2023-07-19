@@ -6,11 +6,13 @@ metadata:
   labels:
     app: ds-pipeline-scheduledworkflow-testdsp2
     component: data-science-pipelines
+    dspa: testdsp2
 spec:
   selector:
     matchLabels:
       app: ds-pipeline-scheduledworkflow-testdsp2
       component: data-science-pipelines
+      dspa: testdsp2
   template:
     metadata:
       annotations:
@@ -18,6 +20,7 @@ spec:
       labels:
         app: ds-pipeline-scheduledworkflow-testdsp2
         component: data-science-pipelines
+        dspa: testdsp2
     spec:
       containers:
         - env:

@@ -30,7 +30,9 @@ To get started you will first need to satisfy the following pre-requisites:
 ## Pre-requisites
 1. An OpenShift cluster that is 4.9 or higher.
 2. You will need to be logged into this cluster as [cluster admin] via [oc client].
-3. The OpenShift Cluster must have OpenShift Pipelines 1.7.2 or higher installed. Instructions [here][OCP Pipelines Operator].
+3. The OpenShift Cluster must have OpenShift Pipelines 1.8 or higher installed. We recommend channel pipelines-1.8
+   on OCP 4.10 and pipelines-1.9 or pipelines-1.10 for OCP 4.11, 4.12 and 4.13.
+   Instructions [here][OCP Pipelines Operator].
 4. Based on installation type you will need one of the following:
    1. For Standalone method: You will need to have [Kustomize] version 4.5+ installed
    2. For ODH method: The Open Data Hub operator needs to be installed. You can install it via [OperatorHub][installodh].
@@ -195,14 +197,82 @@ When a `DataSciencePipelinesApplication` is deployed, the following components a
 * APIServer 
 * Persistence Agent
 * Scheduled Workflow controller
-* MLPipelines UI
 
 If specified in the `DataSciencePipelinesApplication` resource, the following components may also be additionally deployed: 
 * MariaDB
 * Minio
+* MLPipelines UI
+* MLMD (ML Metadata)
 
 To understand how these components interact with each other please refer to the upstream 
 [Kubeflow Pipelines Architectural Overview] documentation.
+
+## Deploying Optional Components
+
+### MariaDB
+To deploy a standalone MariaDB metadata database (rather than providing your own database connection details), simply add a `mariaDB` item under the `spec.database` in your DSPA definition with an `deploy` key set to `true`.  All other fields are defaultable/optional, see [All Fields DSPA Example](./config/samples/dspa_all_fields.yaml) for full details.  Note that this component is mutually exclusive with externally-provided databases (defined by `spec.database.externalDB`).
+
+```
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: sample
+spec:
+   ...
+  database:
+    mariaDB:   # mutually exclusive with externalDB
+      deploy: true
+
+```
+
+### Minio
+To deploy a Minio Object Storage component (rather than providing your own object storage connection details), simply add a `minio` item under the `spec.objectStorage` in your DSPA definition with an `image` key set to a valid minio component container image.  All other fields are defaultable/optional, see [All Fields DSPA Example](./config/samples/dspa_all_fields.yaml) for full details.  Note that this component is mutually exclusive with externally-provided object stores (defined by `spec.objectStorage.externalStorage`).
+
+```
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: sample
+spec:
+   ...
+  objectStorage:
+    minio:  # mutually exclusive with externalStorage
+      deploy: true
+      # Image field is required
+      image: 'quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance'
+```
+
+### ML Pipelines UI
+To deploy the standalone DS Pipelines UI component, simply add a `spec.mlpipelineUI` item to your DSPA with an `image` key set to a valid ui component container image.  All other fields are defaultable/optional, see [All Fields DSPA Example](./config/samples/dspa_all_fields.yaml) for full details.
+
+```
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: sample
+spec:
+   ...
+  mlpipelineUI:
+    deploy: true
+    # Image field is required
+    image: 'quay.io/opendatahub/odh-ml-pipelines-frontend-container:beta-ui'
+```
+
+
+### ML Metadata
+To deploy the ML Metadata artifact linage/metadata component, simply add a `spec.mlmd` item to your DSPA with `deploy` set to `true`.  All other fields are defaultable/optional, see [All Fields DSPA Example](./config/samples/dspa_all_fields.yaml) for full details.
+
+```
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: sample
+spec:
+   ...
+   mlmd:
+      deploy: true
+```
+
 
 # Using a DataSciencePipelinesApplication
 
@@ -260,7 +330,7 @@ see these logs after clicking this step and navigating to "Logs."
 
 ## Using the API
 
-> Note: By default we use kfp-tekton v1.4 for this section so you will need [kfp-tekton v1.4.x sdk installed][kfp-tekton] 
+> Note: By default we use kfp-tekton 1.5.x for this section so you will need [kfp-tekton v1.5.x sdk installed][kfp-tekton] 
 > in your environment
 
 In the previous step we submitted a generated `Pipeline` yaml via the GUI. We can also submit the `Pipeline` code 

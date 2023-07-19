@@ -7,6 +7,7 @@ metadata:
   labels:
     app: mariadb-testdsp0
     component: data-science-pipelines
+    dspa: testdsp0
 spec:
   strategy:
     type: Recreate  # Need this since backing PVC is ReadWriteOnce, which creates resource lock condition in default Rolling strategy
@@ -14,11 +15,13 @@ spec:
     matchLabels:
       app: mariadb-testdsp0
       component: data-science-pipelines
+      dspa: testdsp0
   template:
     metadata:
       labels:
         app: mariadb-testdsp0
         component: data-science-pipelines
+        dspa: testdsp0
     spec:
       containers:
         - name: mariadb
