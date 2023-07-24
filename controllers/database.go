@@ -91,8 +91,12 @@ func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha
 	// DB field can be specified as an empty obj, confirm that subfields are also specified
 	// By default if Database is empty, we deploy mariadb
 	externalDBSpecified := params.UsingExternalDB(dsp)
-	mariaDBSpecified := !databaseSpecified || dsp.Spec.Database.MariaDB != nil
-	deployMariaDB := !databaseSpecified || (mariaDBSpecified && dsp.Spec.Database.MariaDB.Deploy)
+	mariaDBSpecified := dsp.Spec.Database.MariaDB != nil
+	defaultDBRequired := (!databaseSpecified || (!externalDBSpecified && !mariaDBSpecified))
+
+	deployMariaDB := (mariaDBSpecified && dsp.Spec.Database.MariaDB.Deploy)
+	// Default DB is currently MariaDB as well, but storing these bools seperately in case that changes
+	deployDefaultDB := (!databaseSpecified || defaultDBRequired)
 
 	// If external db is specified, it takes precedence
 	if externalDBSpecified {
@@ -103,7 +107,7 @@ func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha
 		if err != nil {
 			return err
 		}
-	} else if deployMariaDB {
+	} else if deployMariaDB || deployDefaultDB {
 		log.Info("Applying mariaDB resources.")
 		for _, template := range dbTemplates {
 			err := r.Apply(dsp, params, template)
@@ -116,6 +120,8 @@ func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha
 		// desired state.
 		if !databaseSpecified {
 			dsp.Spec.Database = &dspav1alpha1.Database{}
+		}
+		if !databaseSpecified || defaultDBRequired {
 			dsp.Spec.Database.MariaDB = params.MariaDB.DeepCopy()
 			dsp.Spec.Database.MariaDB.Deploy = true
 			if err := r.Update(ctx, dsp); err != nil {
