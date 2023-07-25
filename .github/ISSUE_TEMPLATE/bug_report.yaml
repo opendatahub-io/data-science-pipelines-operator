@@ -1,0 +1,91 @@
+name: Bug Report
+description: File a bug report.
+title: "[Bug]: "
+labels: ["kind/bug", "priority/normal"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report! Please, fill this form to help us improve the project.
+  - type: checkboxes
+    attributes:
+      label: Is there an existing issue for this?
+      description: Please search to see if an issue already exists for the bug you encountered.
+      options:
+      - label: I have searched the existing issues
+        required: true
+  - type: dropdown
+    id: deploy-type
+    attributes:
+      label: Deploy type
+      description: |
+        How did you deploy DSPO?
+      multiple: false
+      options:
+        - Standalone DSPO (without ODH)
+        - Manually deployed Kfdef
+        - ODH Dashboard UI
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: |
+        If using ODH, please provide the ODH version.
+        If using standalone DSPO, please provide the tag version
+        used for this repo, or state "main" if deploying
+        directly from main branch.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Describe your environment.
+      placeholder: |
+        * Python Version (if relevant):
+        * SDK Version (if relevant):
+        * OCP Pipelines Version:
+        * OCP Version:
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Current Behavior
+      description: A concise description of what you're experiencing.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Expected Behavior
+      description: A concise description of what you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Steps To Reproduce
+      description: Steps to reproduce the behavior.
+      placeholder: |
+        1. In this environment...
+        2. With this config...
+        3. Run '...'
+        4. See error...
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Workaround (if any)
+      description: Any manual steps that allow you to resolve the issue
+      placeholder: Tell us the steps you followed to resolve the issue!
+    validations:
+      required: false
+  - type: textarea
+    id: anything-else
+    attributes:
+      label: Anything else
+      description: |
+        Any additional information you'd like to share
+
+        Tip: You can attach images or log files by clicking this area to highlight it and then dragging files in.
+    validations:
+      required: false
