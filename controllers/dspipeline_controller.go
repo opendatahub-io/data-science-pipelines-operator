@@ -221,9 +221,9 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	// Get Prereq Status (DB and ObjStore Ready)
 	dbAvailable := r.isDatabaseAccessible(ctx, dspa, params)
 	objStoreAvailable := r.isObjectStorageAccessible(ctx, dspa, params)
-	dspa_prereqs_ready := (dbAvailable && objStoreAvailable)
+	dspaPrereqsReady := (dbAvailable && objStoreAvailable)
 
-	if dspa_prereqs_ready {
+	if dspaPrereqsReady {
 		// Manage Common Manifests
 		err = r.ReconcileCommon(dspa, params)
 		if err != nil {
@@ -264,7 +264,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	conditions, err := r.GenerateStatus(ctx, dspa, params, dbAvailable, objStoreAvailable)
+	conditions, err := r.GenerateStatus(ctx, dspa, dbAvailable, objStoreAvailable)
 	if err != nil {
 		log.Info(err.Error())
 		return ctrl.Result{}, err
@@ -409,7 +409,7 @@ func (r *DSPAReconciler) handleReadyCondition(ctx context.Context, dspa *dspav1a
 
 }
 
-func (r *DSPAReconciler) GenerateStatus(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication, params *DSPAParams, dbAvailableStatus, objStoreAvailableStatus bool) ([]metav1.Condition, error) {
+func (r *DSPAReconciler) GenerateStatus(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication, dbAvailableStatus, objStoreAvailableStatus bool) ([]metav1.Condition, error) {
 	// Create Database Availability Condition
 	databaseAvailable := r.buildCondition(config.DatabaseAvailable, dspa, config.DatabaseAvailable)
 	if dbAvailableStatus {

@@ -69,17 +69,17 @@ func (r *DSPAReconciler) isDatabaseAccessible(ctx context.Context, dsp *dspav1al
 	}
 
 	decodePass, _ := b64.StdEncoding.DecodeString(params.DBConnection.Password)
-	db_connect := ConnectAndQueryDatabase(params.DBConnection.Host,
+	dbHealthCheckPassed := ConnectAndQueryDatabase(params.DBConnection.Host,
 		params.DBConnection.Port,
 		params.DBConnection.Username,
 		string(decodePass),
 		params.DBConnection.DBName)
-	if db_connect {
+	if dbHealthCheckPassed {
 		log.Info("Database Health Check Successful")
 	} else {
 		log.Info("Unable to connect to Database")
 	}
-	return db_connect
+	return dbHealthCheckPassed
 }
 
 func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,
@@ -92,11 +92,11 @@ func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha
 	// By default if Database is empty, we deploy mariadb
 	externalDBSpecified := params.UsingExternalDB(dsp)
 	mariaDBSpecified := dsp.Spec.Database.MariaDB != nil
-	defaultDBRequired := (!databaseSpecified || (!externalDBSpecified && !mariaDBSpecified))
+	defaultDBRequired := !databaseSpecified || (!externalDBSpecified && !mariaDBSpecified)
 
-	deployMariaDB := (mariaDBSpecified && dsp.Spec.Database.MariaDB.Deploy)
+	deployMariaDB := mariaDBSpecified && dsp.Spec.Database.MariaDB.Deploy
 	// Default DB is currently MariaDB as well, but storing these bools seperately in case that changes
-	deployDefaultDB := (!databaseSpecified || defaultDBRequired)
+	deployDefaultDB := !databaseSpecified || defaultDBRequired
 
 	// If external db is specified, it takes precedence
 	if externalDBSpecified {
