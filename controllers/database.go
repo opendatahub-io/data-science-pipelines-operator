@@ -17,6 +17,11 @@ package controllers
 
 import (
 	"context"
+	"database/sql"
+	b64 "encoding/base64"
+	"fmt"
+
+	_ "github.com/go-sql-driver/mysql"
 
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 )
@@ -31,6 +36,52 @@ var dbTemplates = []string{
 	dbSecret,
 }
 
+// extract to var for mocking in testing
+var ConnectAndQueryDatabase = func(host, port, username, password, dbname string) bool {
+	connectionString := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", username, password, host, port, dbname)
+	db, err := sql.Open("mysql", connectionString)
+	if err != nil {
+		return false
+	}
+	defer db.Close()
+
+	testStatement := "SELECT 1;"
+	_, err = db.Exec(testStatement)
+	return err == nil
+}
+
+func (r *DSPAReconciler) isDatabaseAccessible(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,
+	params *DSPAParams) bool {
+	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
+
+	if params.DatabaseHealthCheckDisabled(dsp) {
+		log.V(1).Info("Database health check disabled, assuming database is available and ready.")
+		return true
+	}
+
+	log.Info("Performing Database Health Check")
+	databaseSpecified := dsp.Spec.Database != nil
+	usingExternalDB := params.UsingExternalDB(dsp)
+	usingMariaDB := !databaseSpecified || dsp.Spec.Database.MariaDB != nil
+	if !usingMariaDB && !usingExternalDB {
+		log.Info("Could not connect to Database: Unsupported Type")
+		return false
+	}
+
+	decodePass, _ := b64.StdEncoding.DecodeString(params.DBConnection.Password)
+	dbHealthCheckPassed := ConnectAndQueryDatabase(params.DBConnection.Host,
+		params.DBConnection.Port,
+		params.DBConnection.Username,
+		string(decodePass),
+		params.DBConnection.DBName)
+	if dbHealthCheckPassed {
+		log.Info("Database Health Check Successful")
+	} else {
+		log.Info("Unable to connect to Database")
+	}
+	return dbHealthCheckPassed
+}
+
 func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,
 	params *DSPAParams) error {
 
@@ -40,8 +91,12 @@ func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha
 	// DB field can be specified as an empty obj, confirm that subfields are also specified
 	// By default if Database is empty, we deploy mariadb
 	externalDBSpecified := params.UsingExternalDB(dsp)
-	mariaDBSpecified := !databaseSpecified || dsp.Spec.Database.MariaDB != nil
-	deployMariaDB := !databaseSpecified || (mariaDBSpecified && dsp.Spec.Database.MariaDB.Deploy)
+	mariaDBSpecified := dsp.Spec.Database.MariaDB != nil
+	defaultDBRequired := !databaseSpecified || (!externalDBSpecified && !mariaDBSpecified)
+
+	deployMariaDB := mariaDBSpecified && dsp.Spec.Database.MariaDB.Deploy
+	// Default DB is currently MariaDB as well, but storing these bools seperately in case that changes
+	deployDefaultDB := !databaseSpecified || defaultDBRequired
 
 	// If external db is specified, it takes precedence
 	if externalDBSpecified {
@@ -52,7 +107,7 @@ func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha
 		if err != nil {
 			return err
 		}
-	} else if deployMariaDB {
+	} else if deployMariaDB || deployDefaultDB {
 		log.Info("Applying mariaDB resources.")
 		for _, template := range dbTemplates {
 			err := r.Apply(dsp, params, template)
@@ -65,6 +120,8 @@ func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha
 		// desired state.
 		if !databaseSpecified {
 			dsp.Spec.Database = &dspav1alpha1.Database{}
+		}
+		if !databaseSpecified || defaultDBRequired {
 			dsp.Spec.Database.MariaDB = params.MariaDB.DeepCopy()
 			dsp.Spec.Database.MariaDB.Deploy = true
 			if err := r.Update(ctx, dsp); err != nil {
