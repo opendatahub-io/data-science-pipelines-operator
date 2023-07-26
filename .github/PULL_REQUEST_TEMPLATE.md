@@ -1,4 +1,4 @@
-## Ths issue resolved by this Pull Request:
+## The issue resolved by this Pull Request:
 Resolves #<issue_number>
 
 ## Description of your changes:
