@@ -1,0 +1,283 @@
+name: Build images from sources.
+run-name: Build images from sources.
+on:
+  workflow_dispatch:
+    inputs:
+      src_branch:
+        default: 'v1.0.x'
+        description: 'Source branch to build DSPO/DSP from'
+        required: true
+      target_tag:
+        default: 'vx.y.z'
+        description: 'Target Image Tag'
+        required: true
+      quay_org:
+        default: 'opendatahub'
+        description: 'Quay Organization'
+        required: true
+      dsp_org_repo:
+        default: 'opendatahub-io/data-science-pipelines'
+        description: 'DSP org/repo'
+        required: true
+env:
+  IMAGE_DSPO: data-science-pipelines-operator
+  IMAGE_SERVER: ds-pipelines-api-server
+  IMAGE_UI: ds-pipelines-frontend
+  IMAGE_CACHE: ds-pipelines-cacheserver
+  IMAGE_PA: ds-pipelines-persistenceagent
+  IMAGE_SWF: ds-pipelines-scheduledworkflow
+  IMAGE_VC: ds-pipelines-viewercontroller
+  IMAGE_ARTIFACT: ds-pipelines-artifact-manager
+  IMAGE_MLMD_WRITER: ds-pipelines-metadata-writer
+  IMAGE_MLMD_ENVOY: ds-pipelines-metadata-envoy
+  IMAGE_MLMD_GRPC: ds-pipelines-metadata-grpc
+jobs:
+  dspo-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        ref: ${{ inputs.src_branch }}
+
+    - name: Login to Quay.io
+      uses: redhat-actions/podman-login@v1
+      with:
+        username: ${{ secrets.QUAY_ID }}
+        password: ${{ secrets.QUAY_TOKEN }}
+        registry: quay.io
+
+    - name: Image Build and Push
+      run: |
+        make podman-build podman-push -e IMG=quay.io/${{ inputs.quay_org }}/${IMAGE_DSPO}:${{ inputs.target_tag }}
+
+  server-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      IMAGE_ORG_BASE: quay.io/${{ inputs.quay_org }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.dsp_org_repo }}
+          ref: ${{ inputs.src_branch }}
+      - name: Login to Quay.io
+        uses: redhat-actions/podman-login@v1
+        with:
+          username: ${{ secrets.QUAY_ID }}
+          password: ${{ secrets.QUAY_TOKEN }}
+          registry: quay.io
+      - name: Buid APIServer
+        env:
+          API_SERVER: quay.io/${{ inputs.quay_org }}/${IMAGE_SERVER}:${{ inputs.target_tag }}
+        run: |
+          podman build . -f backend/Dockerfile -t ${{ env.API_SERVER }} && podman push ${{ env.API_SERVER }}
+
+  ui-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      IMAGE_ORG_BASE: quay.io/${{ inputs.quay_org }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.dsp_org_repo }}
+          ref: ${{ inputs.src_branch }}
+      - name: Login to Quay.io
+        uses: redhat-actions/podman-login@v1
+        with:
+          username: ${{ secrets.QUAY_ID }}
+          password: ${{ secrets.QUAY_TOKEN }}
+          registry: quay.io
+      - name: Build image
+        env:
+          UI: quay.io/${{ inputs.quay_org }}/${IMAGE_UI}:${{ inputs.target_tag }}
+        run: |
+          podman build . -f frontend/Dockerfile -t ${{ env.UI }} && podman push ${{ env.UI }}
+
+  cache-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      IMAGE_ORG_BASE: quay.io/${{ inputs.quay_org }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.dsp_org_repo }}
+          ref: ${{ inputs.src_branch }}
+      - name: Login to Quay.io
+        uses: redhat-actions/podman-login@v1
+        with:
+          username: ${{ secrets.QUAY_ID }}
+          password: ${{ secrets.QUAY_TOKEN }}
+          registry: quay.io
+      - name: Build image
+        env:
+          CACHE: quay.io/${{ inputs.quay_org }}/${IMAGE_CACHE}:${{ inputs.target_tag }}
+        run: |
+          podman build . -f backend/Dockerfile.cacheserver -t ${{ env.CACHE }} && podman push ${{ env.CACHE }}
+
+  PA-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      IMAGE_ORG_BASE: quay.io/${{ inputs.quay_org }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.dsp_org_repo }}
+          ref: ${{ inputs.src_branch }}
+      - name: Login to Quay.io
+        uses: redhat-actions/podman-login@v1
+        with:
+          username: ${{ secrets.QUAY_ID }}
+          password: ${{ secrets.QUAY_TOKEN }}
+          registry: quay.io
+      - name: Build image
+        env:
+          PA: quay.io/${{ inputs.quay_org }}/${IMAGE_PA}:${{ inputs.target_tag }}
+        run: |
+          podman build . -f backend/Dockerfile.persistenceagent -t ${{ env.PA }} && podman push ${{ env.PA }}
+
+  SWF-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      IMAGE_ORG_BASE: quay.io/${{ inputs.quay_org }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.dsp_org_repo }}
+          ref: ${{ inputs.src_branch }}
+      - name: Login to Quay.io
+        uses: redhat-actions/podman-login@v1
+        with:
+          username: ${{ secrets.QUAY_ID }}
+          password: ${{ secrets.QUAY_TOKEN }}
+          registry: quay.io
+      - name: Build image
+        env:
+          SWF: quay.io/${{ inputs.quay_org }}/${IMAGE_SWF}:${{ inputs.target_tag }}
+        run: |
+          podman build . -f backend/Dockerfile.scheduledworkflow -t ${{ env.SWF }} && podman push ${{ env.SWF }}
+
+  VC-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      IMAGE_ORG_BASE: quay.io/${{ inputs.quay_org }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.dsp_org_repo }}
+          ref: ${{ inputs.src_branch }}
+      - name: Login to Quay.io
+        uses: redhat-actions/podman-login@v1
+        with:
+          username: ${{ secrets.QUAY_ID }}
+          password: ${{ secrets.QUAY_TOKEN }}
+          registry: quay.io
+      - name: Build image
+        env:
+          VC: quay.io/${{ inputs.quay_org }}/${IMAGE_VC}:${{ inputs.target_tag }}
+        run: |
+          podman build . -f backend/Dockerfile.viewercontroller -t ${{ env.VC }} && podman push ${{ env.VC }}
+
+  ARTIFACT-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      IMAGE_ORG_BASE: quay.io/${{ inputs.quay_org }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.dsp_org_repo }}
+          ref: ${{ inputs.src_branch }}
+      - name: Login to Quay.io
+        uses: redhat-actions/podman-login@v1
+        with:
+          username: ${{ secrets.QUAY_ID }}
+          password: ${{ secrets.QUAY_TOKEN }}
+          registry: quay.io
+      - name: Build image
+        env:
+          ARTIFACT: quay.io/${{ inputs.quay_org }}/${IMAGE_ARTIFACT}:${{ inputs.target_tag }}
+        run: |
+          podman build . -f backend/artifact_manager/Dockerfile -t ${{ env.ARTIFACT }} && podman push ${{ env.ARTIFACT }}
+
+  MLMD_WRITER-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      IMAGE_ORG_BASE: quay.io/${{ inputs.quay_org }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.dsp_org_repo }}
+          ref: ${{ inputs.src_branch }}
+      - name: Login to Quay.io
+        uses: redhat-actions/podman-login@v1
+        with:
+          username: ${{ secrets.QUAY_ID }}
+          password: ${{ secrets.QUAY_TOKEN }}
+          registry: quay.io
+      - name: Build image
+        env:
+          MLMD_WRITER: quay.io/${{ inputs.quay_org }}/${IMAGE_MLMD_WRITER}:${{ inputs.target_tag }}
+        run: |
+          podman build . -f backend/metadata_writer/Dockerfile -t ${{ env.MLMD_WRITER }} && podman push ${{ env.MLMD_WRITER }}
+
+  MLMD_ENVOY-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      IMAGE_ORG_BASE: quay.io/${{ inputs.quay_org }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.dsp_org_repo }}
+          ref: ${{ inputs.src_branch }}
+      - name: Login to Quay.io
+        uses: redhat-actions/podman-login@v1
+        with:
+          username: ${{ secrets.QUAY_ID }}
+          password: ${{ secrets.QUAY_TOKEN }}
+          registry: quay.io
+      - name: Build image
+        env:
+          MLMD_ENVOY: quay.io/${{ inputs.quay_org }}/${IMAGE_MLMD_ENVOY}:${{ inputs.target_tag }}
+        run: |
+          podman build . -f third-party/metadata_envoy/Dockerfile -t ${{ env.MLMD_ENVOY }} && podman push ${{ env.MLMD_ENVOY }}
+
+  MLMD_GRPC-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      IMAGE_ORG_BASE: quay.io/${{ inputs.quay_org }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.dsp_org_repo }}
+          ref: ${{ inputs.src_branch }}
+      - name: Login to Quay.io
+        uses: redhat-actions/podman-login@v1
+        with:
+          username: ${{ secrets.QUAY_ID }}
+          password: ${{ secrets.QUAY_TOKEN }}
+          registry: quay.io
+      - name: Build image
+        env:
+          MLMD_GRPC: quay.io/${{ inputs.quay_org }}/${IMAGE_MLMD_GRPC}:${{ inputs.target_tag }}
+        run: |
+          podman build . -f third-party/ml-metadata/Dockerfile -t ${{ env.MLMD_GRPC }} && podman push ${{ env.MLMD_GRPC }}
