@@ -3,9 +3,9 @@ name: odh-manifests sync
 run-name: Sync manifests in odh-manifests
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - '*'
+#  push:
+#    tags:
+#      - '*'
 jobs:
   send-pull-requests:
     runs-on: ubuntu-latest
