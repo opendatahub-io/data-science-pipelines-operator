@@ -3,9 +3,16 @@ data:
   artifact_script: |-
     #!/usr/bin/env sh
     push_artifact() {
-        if [ -f "$2" ]; then
-            tar -cvzf $1.tgz $2
-            aws s3 --endpoint {{.ObjectStorageConnection.Endpoint}} cp $1.tgz s3://{{.ObjectStorageConnection.Bucket}}/artifacts/$PIPELINERUN/$PIPELINETASK/$1.tgz
+        workspace_dir=$(echo $(context.taskRun.name) | sed -e "s/$(context.pipeline.name)-//g")
+        workspace_dest=/workspace/${workspace_dir}/artifacts/$(context.pipelineRun.name)/$(context.taskRun.name)
+        artifact_name=$(basename $2)
+        if [ -f "$workspace_dest/$artifact_name" ]; then
+            echo sending to: ${workspace_dest}/${artifact_name}
+            tar -cvzf $1.tgz -C ${workspace_dest} ${artifact_name}
+            aws s3 --endpoint ${ARTIFACT_ENDPOINT} cp $1.tgz s3://${ARTIFACT_BUCKET}/artifacts/$PIPELINERUN/$PIPELINETASK/$1.tgz
+        elif [ -f "$2" ]; then
+            tar -cvzf $1.tgz -C $(dirname $2) ${artifact_name}
+            aws s3 --endpoint ${ARTIFACT_ENDPOINT} cp $1.tgz s3://${ARTIFACT_BUCKET}/artifacts/$PIPELINERUN/$PIPELINETASK/$1.tgz
         else
             echo "$2 file does not exist. Skip artifact tracking for $1"
         fi
