@@ -56,8 +56,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      IMAGE_ORG_BASE: quay.io/${{ inputs.quay_org }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -69,18 +67,19 @@ jobs:
           username: ${{ secrets.QUAY_ID }}
           password: ${{ secrets.QUAY_TOKEN }}
           registry: quay.io
-      - name: Buid APIServer
+      - name: Buid image
         env:
-          API_SERVER: quay.io/${{ inputs.quay_org }}/${IMAGE_SERVER}:${{ inputs.target_tag }}
+          IMAGE: quay.io/${{ inputs.quay_org }}/${IMAGE_SERVER}:${{ inputs.target_tag }}
+          DOCKERFILE: backend/Dockerfile
         run: |
-          podman build . -f backend/Dockerfile -t ${{ env.API_SERVER }} && podman push ${{ env.API_SERVER }}
+          RESULT=$(podman image exists ${{ env.IMAGE }})
+          if [ $RESULT -eq 1 ]; then echo "Image already exists" && exit 1; fi
+          podman build . -f ${{ env.DOCKERFILE }} -t ${{ env.IMAGE }} && podman push ${{ env.IMAGE }}
 
   ui-build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      IMAGE_ORG_BASE: quay.io/${{ inputs.quay_org }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -94,7 +93,8 @@ jobs:
           registry: quay.io
       - name: Build image
         env:
-          UI: quay.io/${{ inputs.quay_org }}/${IMAGE_UI}:${{ inputs.target_tag }}
+          IMAGE: quay.io/${{ inputs.quay_org }}/${IMAGE_UI}:${{ inputs.target_tag }}
+          DOCKERFILE: frontend/Dockerfile
         run: |
           podman build . -f frontend/Dockerfile -t ${{ env.UI }} && podman push ${{ env.UI }}
 
@@ -102,8 +102,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      IMAGE_ORG_BASE: quay.io/${{ inputs.quay_org }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -117,7 +115,7 @@ jobs:
           registry: quay.io
       - name: Build image
         env:
-          CACHE: quay.io/${{ inputs.quay_org }}/${IMAGE_CACHE}:${{ inputs.target_tag }}
+          IMAGE: quay.io/${{ inputs.quay_org }}/${IMAGE_CACHE}:${{ inputs.target_tag }}
         run: |
           podman build . -f backend/Dockerfile.cacheserver -t ${{ env.CACHE }} && podman push ${{ env.CACHE }}
 
@@ -125,8 +123,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      IMAGE_ORG_BASE: quay.io/${{ inputs.quay_org }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -140,7 +136,7 @@ jobs:
           registry: quay.io
       - name: Build image
         env:
-          PA: quay.io/${{ inputs.quay_org }}/${IMAGE_PA}:${{ inputs.target_tag }}
+          IMAGE: quay.io/${{ inputs.quay_org }}/${IMAGE_PA}:${{ inputs.target_tag }}
         run: |
           podman build . -f backend/Dockerfile.persistenceagent -t ${{ env.PA }} && podman push ${{ env.PA }}
 
@@ -148,8 +144,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      IMAGE_ORG_BASE: quay.io/${{ inputs.quay_org }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -163,7 +157,7 @@ jobs:
           registry: quay.io
       - name: Build image
         env:
-          SWF: quay.io/${{ inputs.quay_org }}/${IMAGE_SWF}:${{ inputs.target_tag }}
+          IMAGE: quay.io/${{ inputs.quay_org }}/${IMAGE_SWF}:${{ inputs.target_tag }}
         run: |
           podman build . -f backend/Dockerfile.scheduledworkflow -t ${{ env.SWF }} && podman push ${{ env.SWF }}
 
@@ -171,8 +165,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      IMAGE_ORG_BASE: quay.io/${{ inputs.quay_org }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -186,7 +178,7 @@ jobs:
           registry: quay.io
       - name: Build image
         env:
-          VC: quay.io/${{ inputs.quay_org }}/${IMAGE_VC}:${{ inputs.target_tag }}
+          IMAGE: quay.io/${{ inputs.quay_org }}/${IMAGE_VC}:${{ inputs.target_tag }}
         run: |
           podman build . -f backend/Dockerfile.viewercontroller -t ${{ env.VC }} && podman push ${{ env.VC }}
 
@@ -194,8 +186,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      IMAGE_ORG_BASE: quay.io/${{ inputs.quay_org }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -209,7 +199,7 @@ jobs:
           registry: quay.io
       - name: Build image
         env:
-          ARTIFACT: quay.io/${{ inputs.quay_org }}/${IMAGE_ARTIFACT}:${{ inputs.target_tag }}
+          IMAGE: quay.io/${{ inputs.quay_org }}/${IMAGE_ARTIFACT}:${{ inputs.target_tag }}
         run: |
           podman build . -f backend/artifact_manager/Dockerfile -t ${{ env.ARTIFACT }} && podman push ${{ env.ARTIFACT }}
 
@@ -217,8 +207,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      IMAGE_ORG_BASE: quay.io/${{ inputs.quay_org }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -232,7 +220,7 @@ jobs:
           registry: quay.io
       - name: Build image
         env:
-          MLMD_WRITER: quay.io/${{ inputs.quay_org }}/${IMAGE_MLMD_WRITER}:${{ inputs.target_tag }}
+          IMAGE: quay.io/${{ inputs.quay_org }}/${IMAGE_MLMD_WRITER}:${{ inputs.target_tag }}
         run: |
           podman build . -f backend/metadata_writer/Dockerfile -t ${{ env.MLMD_WRITER }} && podman push ${{ env.MLMD_WRITER }}
 
@@ -240,8 +228,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      IMAGE_ORG_BASE: quay.io/${{ inputs.quay_org }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -255,7 +241,7 @@ jobs:
           registry: quay.io
       - name: Build image
         env:
-          MLMD_ENVOY: quay.io/${{ inputs.quay_org }}/${IMAGE_MLMD_ENVOY}:${{ inputs.target_tag }}
+          IMAGE: quay.io/${{ inputs.quay_org }}/${IMAGE_MLMD_ENVOY}:${{ inputs.target_tag }}
         run: |
           podman build . -f third-party/metadata_envoy/Dockerfile -t ${{ env.MLMD_ENVOY }} && podman push ${{ env.MLMD_ENVOY }}
 
@@ -263,8 +249,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      IMAGE_ORG_BASE: quay.io/${{ inputs.quay_org }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -278,6 +262,6 @@ jobs:
           registry: quay.io
       - name: Build image
         env:
-          MLMD_GRPC: quay.io/${{ inputs.quay_org }}/${IMAGE_MLMD_GRPC}:${{ inputs.target_tag }}
+          IMAGE: quay.io/${{ inputs.quay_org }}/${IMAGE_MLMD_GRPC}:${{ inputs.target_tag }}
         run: |
           podman build . -f third-party/ml-metadata/Dockerfile -t ${{ env.MLMD_GRPC }} && podman push ${{ env.MLMD_GRPC }}
