@@ -42,7 +42,7 @@ runs:
         IMAGE: quay.io/${{ env.QUAY_ORG }}/${{ inputs.IMAGE_REPO }}:${{ env.TARGET_IMAGE_TAG }}
       run: |
         echo ${{ inputs.OVERWRITE }}
-        
+
         tags=$(curl --request GET 'https://quay.io/api/v1/repository/${{ env.QUAY_ORG }}/${{ inputs.IMAGE_REPO }}/tag/?specificTag=${{ env.TARGET_IMAGE_TAG }}')
         latest_tag_has_end_ts=$(echo $tags | yq .tags - | yq 'sort_by(.start_ts) | reverse' - -P | yq .[0].end_ts -)
         notempty=$(echo ${tags} | yq .tags - | yq any)

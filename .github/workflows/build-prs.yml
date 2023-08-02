@@ -24,13 +24,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: ./.github/actions/build
+      - name: Build Image
+        uses: ./.github/actions/build
         with:
           OVERWRITE: true
           IMAGE_REPO: ${{ env.IMAGE_REPO_DSPO }}
           DOCKERFILE: Dockerfile
           GH_REPO: ${{ github.repository }}
-      - name: Post build
+      - name: Send comment
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.ACCESS_TOKEN }}
@@ -38,27 +39,27 @@ jobs:
         run: |
           git config user.email "140449482+dsp-developers@users.noreply.github.com"
           git config user.name "dsp-developers"
-          
+
           action=${{ github.event.action }}
-          
-          if [[ "$action" == "synchronize" ]]; then 
+
+          if [[ "$action" == "synchronize" ]]; then
             echo "Change to PR detected. A new PR build was completed." >> /tmp/body-file.txt
           fi
-          
-          if [[ "$action" == "reopened" ]]; then 
+
+          if [[ "$action" == "reopened" ]]; then
             echo "PR was re-opened." >> /tmp/body-file.txt
           fi
-          
+
           cat <<"EOF" >> /tmp/body-file.txt
             A new image has been built to help with testing out this PR: `${{ env.IMG }}`
           EOF
-          
-          if [[ "$action" == "opened" || "$action" == "reopened" ]]; then 
+
+          if [[ "$action" == "opened" || "$action" == "reopened" ]]; then
           cat <<"EOF" >> /tmp/body-file.txt
-          An OCP cluster where you are logged in as cluster admin is required. 
-          
+          An OCP cluster where you are logged in as cluster admin is required.
+
           To use this image run the following:
-          
+
           ```bash
           cd $(mktemp -d)
           git clone git@github.com:opendatahub-io/data-science-pipelines-operator.git
@@ -67,9 +68,9 @@ jobs:
           git checkout -b pullrequest ${{ env.SOURCE_BRANCH }}
           make deploy IMG="${{ env.IMG }}"
           ```
-          
+
           More instructions [here](https://github.com/opendatahub-io/data-science-pipelines-operator#deploy-dsp-instance) on how to deploy and test a Data Science Pipelines Application.
-              
+
           EOF
           fi
 

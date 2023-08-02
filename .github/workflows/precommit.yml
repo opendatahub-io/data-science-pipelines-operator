@@ -15,12 +15,10 @@ jobs:
         - /cache
     steps:
       - uses: actions/checkout@v2
-
       - name: Activate cache
         uses: actions/cache@v2
         with:
           path: /cache
           key: ${{ runner.os }}-cache-${{ hashFiles('**/go.sum', '.pre-commit-config.yaml') }}
-
       - name: Run pre-commit checks
         run: pre-commit run --all-files
