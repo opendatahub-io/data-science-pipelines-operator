@@ -1,5 +1,5 @@
-name: "Set up KinD"
-description: "Step to start and configure KinD cluster"
+name: "Create a podman build"
+description: "This workflow can be used to create a podman build and push to quay.io from source branches."
 inputs:
   IMAGE_REPO:
     description: "Quay image repo name."

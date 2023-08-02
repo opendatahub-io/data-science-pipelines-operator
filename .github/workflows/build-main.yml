@@ -8,7 +8,7 @@ concurrency:
   cancel-in-progress: true
 env:
   IMAGE_REPO_DSPO: data-science-pipelines-operator
-  QUAY_ORG: hukhan
+  QUAY_ORG: opendatahub
   QUAY_ID: ${{ secrets.QUAY_ID }}
   QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
   SOURCE_BRANCH: main
