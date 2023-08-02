@@ -18,6 +18,8 @@ env:
   QUAY_ID: ${{ secrets.QUAY_ID }}
   QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
   TARGET_IMAGE_TAG: pr-${{ github.event.pull_request.number }}
+  GH_USER_EMAIL: 140449482+dsp-developers@users.noreply.github.com
+  GH_USER_NAME: dsp-developers
 jobs:
   build-pr-image:
     if: github.event.pull_request.state == 'open'
@@ -35,10 +37,10 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-          IMG: quay.io/${{ env.QUAY_ORG }}/data-science-pipelines-operator:${{ env.TARGET_IMAGE_TAG }}
+          IMG: quay.io/${{ env.QUAY_ORG }}/${{ env.IMAGE_REPO_DSPO }}:${{ env.TARGET_IMAGE_TAG }}
         run: |
-          git config user.email "140449482+dsp-developers@users.noreply.github.com"
-          git config user.name "dsp-developers"
+          git config user.email "${{ env.GH_USER_EMAIL }}"
+          git config user.name "${{ env.GH_USER_NAME }}"
 
           action=${{ github.event.action }}
 

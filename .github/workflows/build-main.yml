@@ -27,7 +27,7 @@ jobs:
       - name: Build Image
         uses: ./.github/actions/build
         env:
-          IMG: quay.io/${{ env.QUAY_ORG }}/data-science-pipelines-operator:${{ steps.tags.outputs.tag }}
+          IMG: quay.io/${{ env.QUAY_ORG }}/${{ env.IMAGE_REPO_DSPO }}:${{ steps.tags.outputs.tag }}
           TARGET_IMAGE_TAG: ${{ steps.tags.outputs.tag }}
         with:
           OVERWRITE: true
@@ -37,7 +37,7 @@ jobs:
       - name: Tag latest
         shell: bash
         env:
-          IMG: quay.io/${{ env.QUAY_ORG }}/data-science-pipelines-operator
+          IMG: quay.io/${{ env.QUAY_ORG }}/${{ env.IMAGE_REPO_DSPO }}
           NEWEST_TAG: ${{ steps.tags.outputs.tag }}
         run: |
           podman tag ${IMG}:${NEWEST_TAG} ${IMG}:latest
