@@ -1,13 +1,6 @@
 name: Image-check
 on:
-#  push:
-#    branches:
-#      - '**'
-#    tags-ignore:
-#      - 'v*'
-#  pull_request:
-  workflow_dispatch:
-
+  pull_request:
 jobs:
   test:
     runs-on: ubuntu-latest
