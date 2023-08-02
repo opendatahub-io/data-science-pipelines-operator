@@ -1,5 +1,5 @@
-name: "Set up KinD"
-description: "Step to start and configure KinD cluster"
+name: "Create a podman build"
+description: "This workflow can be used to create a podman build and push to quay.io from source branches."
 inputs:
   IMAGE_REPO:
     description: "Quay image repo name."
@@ -37,14 +37,14 @@ runs:
     # Case 4: >1 tags were created, but the most recent one was never deleted (same as case 3, but the latest tag does not have "end_ts".
     - name: Check if Image already exists
       shell: bash
-      if: ${{ inputs.OVERWRITE }} == "false"
+      if: inputs.OVERWRITE == 'false'
       env:
         IMAGE: quay.io/${{ env.QUAY_ORG }}/${{ inputs.IMAGE_REPO }}:${{ env.TARGET_IMAGE_TAG }}
       run: |
+        echo ${{ inputs.OVERWRITE }}
+
         tags=$(curl --request GET 'https://quay.io/api/v1/repository/${{ env.QUAY_ORG }}/${{ inputs.IMAGE_REPO }}/tag/?specificTag=${{ env.TARGET_IMAGE_TAG }}')
-        echo $tags | yq .tags - | yq 'sort_by(.start_ts) | reverse' - -P | yq .[0].end_ts -
         latest_tag_has_end_ts=$(echo $tags | yq .tags - | yq 'sort_by(.start_ts) | reverse' - -P | yq .[0].end_ts -)
-        echo $latest_tag_has_end_ts
         notempty=$(echo ${tags} | yq .tags - | yq any)
 
         # Image only exists if there is a tag that does not have "end_ts" (i.e. it is still present).
