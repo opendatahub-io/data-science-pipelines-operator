@@ -31,8 +31,8 @@ const dbSecret = "mariadb/secret.yaml.tmpl"
 var dbTemplates = []string{
 	"mariadb/deployment.yaml.tmpl",
 	"mariadb/pvc.yaml.tmpl",
-	"mariadb/sa.yaml.tmpl",
 	"mariadb/service.yaml.tmpl",
+	"mariadb/mariadb-sa.yaml.tmpl",
 	dbSecret,
 }
 
