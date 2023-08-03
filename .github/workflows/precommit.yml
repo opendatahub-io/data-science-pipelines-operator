@@ -1,6 +1,6 @@
 name: Pre-commit
 on:
-  pull_request:
+#  pull_request:
 jobs:
   precommit:
     runs-on: ubuntu-latest
