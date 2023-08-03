@@ -1,0 +1,23 @@
+name: Trigger build images for PRs
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - closed
+      - synchronize
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Save PR payload
+        run: |
+          echo ${{ toJSON(github.event.pull_request) }}
+      - uses: actions/upload-artifact@v2
+        with:
+          name: variables
+          path: vars.csv
