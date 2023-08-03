@@ -26,6 +26,7 @@ spec:
         component: data-science-pipelines
         dspa: {{.Name}}
     spec:
+      serviceAccountName: ds-pipelines-mariadb-sa-{{.Name}}
       containers:
         - name: mariadb
           image: {{.MariaDB.Image}}

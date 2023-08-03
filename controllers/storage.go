@@ -34,6 +34,7 @@ var storageTemplates = []string{
 	"minio/deployment.yaml.tmpl",
 	"minio/pvc.yaml.tmpl",
 	"minio/service.yaml.tmpl",
+	"minio/minio-sa.yaml.tmpl",
 	storageSecret,
 }
 
