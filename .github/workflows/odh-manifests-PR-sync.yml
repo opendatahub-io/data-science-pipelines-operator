@@ -32,7 +32,7 @@ jobs:
           git clone \
             --depth=1 \
             --branch=master \
-            https://opendatahub-io:${{ secrets.ACCESS_TOKEN }}@github.com/$REPOSITORY \
+            https://dsp-developers:${{ secrets.ACCESS_TOKEN }}@github.com/$REPOSITORY \
             $FOLDER
           cd $FOLDER
 
@@ -40,8 +40,11 @@ jobs:
           git config user.email "140449482+dsp-developers@users.noreply.github.com"
           git config user.name "dsp-developers"
 
+          git remote add upstream https://github.com/opendatahub-io/odh-manifests.git
+          git fetch upstream
+
           # Create a new feature branch for the changes.
-          git checkout -b $BRANCH_NAME
+          git checkout -B $BRANCH_NAME upstream/master
           echo "Created branch: $BRANCH_NAME"
 
           # Copy DSPO manifests. Using rsync to allow filtering of paths/files (e.g. like a .gitignore, hidden files, etc)
@@ -62,5 +65,6 @@ jobs:
             --title "Update DSP Operator manifests to $LATEST_TAG" \
             --head "$BRANCH_NAME" \
             --base "master"
+            --repo https://github.com/opendatahub-io/data-science-pipelines-operator
         env:
           GH_TOKEN: ${{ secrets.ACCESS_TOKEN }}
