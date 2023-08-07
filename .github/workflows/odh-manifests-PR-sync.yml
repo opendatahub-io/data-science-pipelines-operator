@@ -3,9 +3,15 @@ name: odh-manifests sync
 run-name: Sync manifests in odh-manifests
 on:
   workflow_dispatch:
-#  push:
-#    tags:
-#      - '*'
+    inputs:
+      src_branch:
+        default: 'v1.0.x'
+        description: 'Source branch to build DSPO/DSP from'
+        required: true
+      target_tag:
+        default: 'vx.y.z'
+        description: 'Target Image Tag'
+        required: true
 jobs:
   send-pull-requests:
     runs-on: ubuntu-latest
