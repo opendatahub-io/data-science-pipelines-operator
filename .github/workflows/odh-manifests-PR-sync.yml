@@ -6,11 +6,11 @@ on:
     inputs:
       src_branch:
         default: 'v1.0.x'
-        description: 'Source branch to build DSPO/DSP from'
+        description: 'Source branch to build DSPO/DSP from (for example: v1.0.x)'
         required: true
       target_tag:
         default: 'vx.y.z'
-        description: 'Target Image Tag'
+        description: 'DSPO version tag to be selected to sync manifests from (for example: v1.0.0)'
         required: true
 jobs:
   send-pull-requests:
@@ -22,16 +22,16 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-          ref: main
+          ref: ${{ github.event.inputs.src_branch }}
           repository: opendatahub-io/data-science-pipelines-operator
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Send pull-request
         run: |
-          LATEST_TAG=$(git describe --tags --always --abbrev=0)
+          TARGET_TAG=${{ github.event.inputs.target_tag }}
           REPOSITORY="dsp-developers/odh-manifests"
           FOLDER="bin/$REPOSITORY"
-          BRANCH_NAME="chore-update-scripts-to-$LATEST_TAG"
+          BRANCH_NAME="chore-update-scripts-to-$TARGET_TAG"
 
           # Clone the remote repository and change working directory to the
           # folder it was cloned to.
@@ -59,7 +59,7 @@ jobs:
 
           # Commit the changes and push the feature branch to origin
           git add .
-          git commit -m "Update DSPO to $LATEST_TAG"
+          git commit -m "Update DSPO to $TARGET_TAG"
           # Check if the branch exists and perform rebase if it does
           if git ls-remote --exit-code --heads origin $BRANCH_NAME; then
             git pull --rebase origin $BRANCH_NAME
@@ -67,10 +67,10 @@ jobs:
           git push origin $BRANCH_NAME
 
           gh pr create \
-            --body "This is an automated PR to update Data Science Pipelines Operator manifests to $LATEST_TAG" \
-            --title "Update DSP Operator manifests to $LATEST_TAG" \
+            --body "This is an automated PR to update Data Science Pipelines Operator manifests to $TARGET_TAG" \
+            --title "Update DSP Operator manifests to $TARGET_TAG" \
             --head "$BRANCH_NAME" \
             --base "master"
-            --repo https://github.com/opendatahub-io/data-science-pipelines-operator
+            --repo https://github.com/opendatahub-io/odh-manifests
         env:
           GH_TOKEN: ${{ secrets.ACCESS_TOKEN }}
