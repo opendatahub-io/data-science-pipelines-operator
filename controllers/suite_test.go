@@ -18,15 +18,16 @@ package controllers
 
 import (
 	"context"
+	"path/filepath"
+	"testing"
+	"time"
+
 	buildv1 "github.com/openshift/api/build/v1"
 	imagev1 "github.com/openshift/api/image/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	"go.uber.org/zap/zapcore"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"path/filepath"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"testing"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -73,7 +74,7 @@ var _ = BeforeEach(func() {
 	ConnectAndQueryDatabase = func(host string, port string, username string, password string, dbname string) bool {
 		return true
 	}
-	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint string, accesskey, secretkey []byte, secure bool) bool {
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool) bool {
 		return true
 	}
 })
