@@ -1,0 +1,28 @@
+dsp_versions:
+  1.0.x:
+    kfp-tekton: 1.5.1
+    ml-metadata: 1.5.0
+    envoy: 1.8.4
+    ocp-pipelines: 4.10
+    oauth-proxy: 4.12
+    mariaDB: 1-210
+    ubi-minimal: 8.8
+    ubi-micro: 8.8
+  1.1.x:
+    kfp-tekton: 1.5.1
+    ml-metadata: 1.5.0
+    envoy: 1.8.4
+    ocp-pipelines: 4.10
+    oauth-proxy: 4.12
+    mariaDB: 1-210
+    ubi-minimal: 8.8
+    ubi-micro: 8.8
+  1.2.x:
+    kfp-tekton: 1.5.1
+    ml-metadata: 1.5.0
+    envoy: 1.8.4
+    ocp-pipelines: 4.10
+    oauth-proxy: 4.10
+    mariaDB: 1-210.1689584952
+    ubi-minimal: 8.8
+    ubi-micro: 8.8
