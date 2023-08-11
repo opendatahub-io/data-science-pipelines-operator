@@ -5,13 +5,21 @@ on:
   workflow_dispatch:
     inputs:
       src_branch:
-        default: 'v1.0.x'
+        default: 'v1.x.x'
         description: 'Source branch to build DSPO/DSP from (for example: v1.0.x)'
         required: true
       target_tag:
-        default: 'vx.y.z'
+        default: 'v1.x.x'
         description: 'DSPO version tag to be selected to sync manifests from (for example: v1.0.0)'
         required: true
+      # This is included for dev testing this workflow.
+      odh_manifest_org:
+        default: 'opendatahub-io'
+        description: 'The GH org for odh-manifest.'
+        required: true
+env:
+  GH_USER_EMAIL: 140449482+dsp-developers@users.noreply.github.com
+  GH_USER_NAME: dsp-developers
 jobs:
   send-pull-requests:
     runs-on: ubuntu-latest
@@ -22,31 +30,33 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-          ref: ${{ github.event.inputs.src_branch }}
-          repository: opendatahub-io/data-science-pipelines-operator
+          ref: ${{ inputs.src_branch }}
+          repository: ${{ inputs.odh_manifest_org }}/data-science-pipelines-operator
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Send pull-request
+        env:
+          GH_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         run: |
-          TARGET_TAG=${{ github.event.inputs.target_tag }}
-          REPOSITORY="dsp-developers/odh-manifests"
-          FOLDER="bin/$REPOSITORY"
+          TARGET_TAG=${{ inputs.target_tag }}
+
+          DSPO_DIR=${{ github.workspace }}
+          ODH_MANIFESTS_DIR=$(dirname ${{ github.workspace }})/odh-manifests
+          MANIFESTS_REPOSITORY="${{ env.GH_USER_NAME}}/odh-manifests"
           BRANCH_NAME="chore-update-scripts-to-$TARGET_TAG"
 
-          # Clone the remote repository and change working directory to the
-          # folder it was cloned to.
           git clone \
             --depth=1 \
             --branch=master \
-            https://dsp-developers:${{ secrets.ACCESS_TOKEN }}@github.com/$REPOSITORY \
-            $FOLDER
-          cd $FOLDER
+            https://${{ env.GH_USER_NAME}}:${{ secrets.ACCESS_TOKEN }}@github.com/$MANIFESTS_REPOSITORY \
+            $ODH_MANIFESTS_DIR
+          cd $ODH_MANIFESTS_DIR
 
           # Setup the committers identity.
-          git config user.email "140449482+dsp-developers@users.noreply.github.com"
-          git config user.name "dsp-developers"
+          git config user.email "${{ env.GH_USER_EMAIL }}"
+          git config user.name "${{ env.GH_USER_NAME}}"
 
-          git remote add upstream https://github.com/opendatahub-io/odh-manifests.git
+          git remote add upstream https://github.com/${{ inputs.odh_manifest_org }}/odh-manifests.git
           git fetch upstream
 
           # Create a new feature branch for the changes.
@@ -54,23 +64,20 @@ jobs:
           echo "Created branch: $BRANCH_NAME"
 
           # Copy DSPO manifests. Using rsync to allow filtering of paths/files (e.g. like a .gitignore, hidden files, etc)
-
-          rsync -av --exclude={'overlays/','samples/','internal/'} ../../../config/ data-science-pipelines-operator/
+          echo Performing Rsync
+          rsync -chav --exclude={'overlays/','samples/','internal/'} ${DSPO_DIR}/config/ ${ODH_MANIFESTS_DIR}/data-science-pipelines-operator/
+          echo Rsync Complete
 
           # Commit the changes and push the feature branch to origin
+          git status
+
           git add .
           git commit -m "Update DSPO to $TARGET_TAG"
-          # Check if the branch exists and perform rebase if it does
-          if git ls-remote --exit-code --heads origin $BRANCH_NAME; then
-            git pull --rebase origin $BRANCH_NAME
-          fi
-          git push origin $BRANCH_NAME
+          git push origin $BRANCH_NAME -f
 
           gh pr create \
+            --repo https://github.com/${{ inputs.odh_manifest_org }}/odh-manifests \
             --body "This is an automated PR to update Data Science Pipelines Operator manifests to $TARGET_TAG" \
             --title "Update DSP Operator manifests to $TARGET_TAG" \
-            --head "$BRANCH_NAME" \
+            --head "${{ env.GH_USER_NAME}}:$BRANCH_NAME" \
             --base "master"
-            --repo https://github.com/opendatahub-io/odh-manifests
-        env:
-          GH_TOKEN: ${{ secrets.ACCESS_TOKEN }}
