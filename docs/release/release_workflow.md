@@ -52,14 +52,11 @@ Downstream maintainers of DSP should forward any manifest changes to their odh-m
 DSP supports bug/security fixes for versions that are at most 1 `MINOR` versions behind the latest `MINOR` release.
 For example, if `v1.2` is the `latest` DSP release, DSP will backport bugs/security fixes to `v1.1` as `PATCH` (z) releases.
 
-Let `x.y.z` be the `latest` release that is the highest version.
-
+Let `x.y.z` be the `latest` release that is the highest version.\
 Let `x.y-1.a` be the highest version release that is one `MINOR` version behind `x.y.z`
 
 **Example**:
-
-If the latest release that is the highest version is `v1.2.0`
-
+If the latest release that is the highest version is `v1.2.0`\
 Then:
 ```txt
 x.y.z = v1.2.0
@@ -86,10 +83,11 @@ Then the commit `08eb98d` needs to trickle to `vx.y.z` and `vx.y-1.a` as `PATCH`
 4. Cut `vx.y.z+1` and `vx.y-1.a+1` in DSP and DSPO
 
 **Downstream Specifics**
+
 Downstream maintainers of DSP should:
 * forward any manifest changes to their odh-manifests downstream
 * ensure `odh-stable` branches in DSP/DSPO are upto date with bug/security fixes for the appropriate DSPO/DSP versions,
-  by forwarding any changes from `odh-stable` to downstream DSPO/DSP repos
+  and forward any changes from `odh-stable` to their downstream DSPO/DSP repos
 
 [semver]: https://semver.org/
 [build-tags]: https://github.com/opendatahub-io/data-science-pipelines-operator/actions/workflows/build-tags.yml

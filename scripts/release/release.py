@@ -1,7 +1,8 @@
 import argparse
 import os
 
-from scripts.release.params import params
+from params import params
+from version_doc import version_doc
 
 
 def env_opts(env: str):
@@ -9,12 +10,6 @@ def env_opts(env: str):
         return {'default': os.environ[env]}
     else:
         return {'required': True}
-
-
-def version_doc(args):
-    input_file = args.input_file
-    output_file = args.out_file
-    print("generating compatibility md {0}".format(output_file))
 
 
 def main():
