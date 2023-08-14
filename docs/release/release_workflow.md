@@ -10,7 +10,6 @@ Given a version number MAJOR.MINOR.PATCH, increment the:
     MAJOR version when you make incompatible API changes
     MINOR version when you add functionality in a backward compatible manner
     PATCH version when you make backward compatible bug fixes
-
 ```
 
 DSPO and DSP versioning is tied together, and DSP `MAJOR` versions are tied to [kfp-tekton] upstream.
@@ -34,11 +33,12 @@ Let `x.y.z` be the `latest` release that is highest DSPO/DSP version.
 Steps on how to release `x.y+1.z`
 
 1. Ensure `compatibility.yaml` is upto date, and generate a new `compatibility.md`
+   * Use [release-tools] to accomplish this
 2. Cut branch `vx.y+1.x` from `main/master`, the trailing `.x` remains unchanged (e.g. `v1.2.x`, `v1.1.x`, etc.)
    * Do this for DSPO and DSP repos
 3. Build images. Use the [build-tags] workflow
 4. Retrieve the sha images from the resulting workflow (check quay.io for the digests)
-   * Generate a params.env and submit a new pr to vx.y+1.**x** branch
+   * Using [release-tools] generate a `params.env` and submit a new pr to vx.y+1.**x** branch
    * For images pulled from registry, ensure latest images are upto date
 5. Perform any tests on the branch, confirm stability
    * If issues are found, they should be corrected in `main/master` and be cherry-picked into this branch.
@@ -46,6 +46,7 @@ Steps on how to release `x.y+1.z`
 7. Add any manifest changes to ODH manifests repo using the [ODH sync workflow]
 
 **Downstream Specifics**
+
 Downstream maintainers of DSP should forward any manifest changes to their odh-manifests downstream
 
 ### PATCH Releases
@@ -79,7 +80,7 @@ Then the commit `08eb98d` needs to trickle to `vx.y.z` and `vx.y-1.a` as `PATCH`
    * Images should be built off the `vx.y.x` and `vx.y-1.x` branches respectively
    * Use the [build-tags] workflow
 3. Retrieve the sha image digests from the resulting workflow
-   * Generate a params.env and submit a new pr to `vx.y.x` and `vx.y-1.x` branches
+   * Using [release-tools] generate a params.env and submit a new pr to `vx.y.x` and `vx.y-1.x` branches
 4. Cut `vx.y.z+1` and `vx.y-1.a+1` in DSP and DSPO
 
 **Downstream Specifics**
@@ -93,3 +94,4 @@ Downstream maintainers of DSP should:
 [build-tags]: https://github.com/opendatahub-io/data-science-pipelines-operator/actions/workflows/build-tags.yml
 [kfp-tekton]: https://github.com/kubeflow/kfp-tekton
 [ODH sync workflow]: https://github.com/opendatahub-io/data-science-pipelines-operator/actions/workflows/odh-manifests-PR-sync.yml
+[release-tools]: ../../scripts/release/README.md

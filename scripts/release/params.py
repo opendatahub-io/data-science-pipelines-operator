@@ -11,7 +11,6 @@ QUAY_REPOS = {
     "IMAGES_MLMDGRPC":  "ds-pipelines-metadata-grpc",
     "IMAGES_MLMDWRITER":  "ds-pipelines-metadata-writer",
     "IMAGES_DSPO":  "data-science-pipelines-operator",
-
 }
 
 ARCH = "amd64"
