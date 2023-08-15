@@ -1,16 +1,27 @@
 import yaml
 
 
-def table(list_of_dicts):
+def table(rows, cols):
+    """
+    Convert a list of cits into a markdown table.
+
+    Pre-condition: All dicts in list_of_dicts should have identical key_sets
+    :param rows: list of dict where each key set for every dict matches list of cols
+    :return: A markdown where each row corresponds to a dict in list_of_dicts
+    """
+
     markdown_table = ""
-    markdown_header = '| ' + ' | '.join(map(str, list_of_dicts[0].keys())) + ' |'
-    markdown_header_separator = '|-----' * len(list_of_dicts[0].keys()) + '|'
+    if len(rows) == 0:
+        return markdown_table
+
+    markdown_header = '| ' + ' | '.join(cols) + ' |'
+    markdown_header_separator = '|-----' * len(cols) + '|'
     markdown_table += markdown_header + '\n'
     markdown_table += markdown_header_separator + '\n'
-    for row in list_of_dicts:
+    for row in rows:
         markdown_row = ""
-        for key, col in row.items():
-            markdown_row += '| ' + str(col) + ' '
+        for col in cols:
+            markdown_row += '| ' + str(row[col]) + ' '
         markdown_row += '|' + '\n'
         markdown_table += markdown_row
     return markdown_table
@@ -25,9 +36,9 @@ def version_doc(args):
     with open('template/version_doc.md', 'r') as vd:
         final_md = vd.read()
 
-    table_md = table(versions)
+    table_md = table(versions['rows'], versions['cols'])
 
-    final_md = final_md.replace('<<TABLE>>', table_md)
+    final_md = final_md.replace('<<GENERATED_COMPATIBILITY_TABLE>>', table_md)
     final_md = '<!--THIS DOC IS AUTO GENERATED-->\n' + final_md
 
     with open(out_file, 'w') as f:

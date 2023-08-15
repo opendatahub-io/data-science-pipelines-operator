@@ -19,7 +19,7 @@ registries, this is true for the following:
   * Used for default cache image for runs
 
 
-<<TABLE>>
+<<GENERATED_COMPATIBILITY_TABLE>>
 
 
 [ml-metadata]: https://github.com/opendatahub-io/data-science-pipelines/blob/master/third-party/ml-metadata/Dockerfile#L15

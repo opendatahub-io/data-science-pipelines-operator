@@ -10,9 +10,7 @@ registries, this is true for the following:
 * [ml-metadata]
 * [envoy]
 * [oauth-proxy]
-  * for Oauth Proxy DSP follows the same version as the Oauth Proxy leveraged within the rest of ODH. Note that RH Registry
-    will sometimes release new images for the same X.Y.Z release, so while DSP keeps the x.y.z matched with rest of ODH, DSP may at times
-    differ in the exact digests, as DSP will always update to the latest digest for an X.Y.Z release when cutting a new DSP release.
+  * for Oauth Proxy DSP follows the same version digest as the Oauth Proxy leveraged within the rest of ODH.
 * [mariaDB]
   * for MariaDB the entire column represents different tag versions for MariDB Version 10.3, DSP follows the latest digest for the `1` tag
     for each DSP release.
