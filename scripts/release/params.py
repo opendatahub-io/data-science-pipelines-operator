@@ -80,14 +80,27 @@ def generate_params(args):
     mariadb_tag = args.mariadb_tag
     oauth_proxy_tag = args.oauth_proxy_tag
 
-    images = []
+    # Structure: { "ENV_VAR": "IMG_DIGEST",...}
+    overrides = {}
+    for override in args.overrides:
+        entry = override.split('=')
+        if len(entry) != 2:
+            print("--override values must be of the form var=digest,\n"
+                  "e.g: IMAGES_OAUTHPROXY=registry.redhat.io/openshift4/ose-oauth-proxy"
+                  "@sha256:ab112105ac37352a2a4916a39d6736f5db6ab4c29bad4467de8d613e80e9bb33", file=sys.stderr)
+            exit(1)
+        overrides[entry[0]] = entry[1]
 
+    images = []
     # Fetch QUAY Images
     for image_env_var in QUAY_REPOS:
-        image_repo = QUAY_REPOS[image_env_var]
-        digest = fetch_quay_repo_tag_digest(image_repo, quay_org, tag)
-        image_repo_with_digest = f"{image_repo}:{digest}"
-        images.append(f"{image_env_var}=quay.io/opendatahub/{image_repo_with_digest}")
+        if image_env_var in overrides:
+            images.append(f"{image_env_var}={overrides[image_env_var]}")
+        else:
+            image_repo = QUAY_REPOS[image_env_var]
+            digest = fetch_quay_repo_tag_digest(image_repo, quay_org, tag)
+            image_repo_with_digest = f"{image_repo}@{digest}"
+            images.append(f"{image_env_var}=quay.io/opendatahub/{image_repo_with_digest}")
 
     # Fetch RH Registry images
     rh_registry_images = {
@@ -118,9 +131,12 @@ def generate_params(args):
     }
     for registry in rh_registry_images:
         for img in rh_registry_images[registry]:
-            env, tag, repo = img['env'], img['tag'], img['repo']
-            digest = fetch_rh_repo_tag_digest(repo, tag)
-            images.append(f"{env}={registry}/{repo}/{digest}")
+            image_env_var, tag, repo = img['env'], img['tag'], img['repo']
+            if image_env_var in overrides:
+                images.append(f"{image_env_var}={overrides[image_env_var]}")
+            else:
+                digest = fetch_rh_repo_tag_digest(repo, tag)
+                images.append(f"{image_env_var}={registry}/{repo}@{digest}")
 
     with open(file_out, 'w') as f:
         for images in images:
