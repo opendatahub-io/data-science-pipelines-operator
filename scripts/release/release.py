@@ -1,15 +1,7 @@
 import argparse
-import os
 
-from params import params
+from params import generate_params
 from version_doc import version_doc
-
-
-def env_opts(env: str):
-    if env in os.environ:
-        return {'default': os.environ[env]}
-    else:
-        return {'required': True}
 
 
 def main():
@@ -21,7 +13,7 @@ def main():
 
     # Params.env generator inputs
     parser_params = subparsers.add_parser('params', help='Params.env generator inputs')
-    parser_params.set_defaults(func=params)
+    parser_params.set_defaults(func=generate_params)
     parser_params.add_argument('--tag', type=str, required=True, help='Tag for which to fetch image digests for.')
     parser_params.add_argument('--quay_org', default="opendatahub-io", type=str,
                                help='Tag for which to fetch image digests for.')
