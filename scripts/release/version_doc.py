@@ -1,7 +1,7 @@
 import yaml
 
 
-def table(rows, cols):
+def table(rows):
     """
     Convert a list of cits into a markdown table.
 
@@ -13,6 +13,10 @@ def table(rows, cols):
     markdown_table = ""
     if len(rows) == 0:
         return markdown_table
+
+    cols = []
+    for row in rows:
+        cols.extend([key for key in row.keys() if key not in cols])
 
     markdown_header = '| ' + ' | '.join(cols) + ' |'
     markdown_header_separator = '|-----' * len(cols) + '|'
@@ -31,12 +35,12 @@ def version_doc(args):
     input_file = args.input_file
     out_file = args.out_file
     with open(input_file, 'r') as f:
-        versions = yaml.safe_load(f)
+        rows = yaml.safe_load(f)
 
     with open('template/version_doc.md', 'r') as vd:
         final_md = vd.read()
 
-    table_md = table(versions['rows'], versions['cols'])
+    table_md = table(rows)
 
     final_md = final_md.replace('<<GENERATED_COMPATIBILITY_TABLE>>', table_md)
     final_md = '<!--THIS DOC IS AUTO GENERATED-->\n' + final_md
