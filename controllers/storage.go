@@ -79,9 +79,9 @@ var ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoin
 	if err != nil {
 		switch err := err.(type) {
 
-		// In the singular case that the Error is NoSuchKey, we can verify that the endpoint worked and the object just doesn't exist
+		// In the case that the Error is NoSuchKey (or NoSuchBucket), we can verify that the endpoint worked and the object just doesn't exist
 		case minio.ErrorResponse:
-			if err.Code == "NoSuchKey" {
+			if err.Code == "NoSuchKey" || err.Code == "NoSuchBucket" {
 				return true
 			}
 		}
