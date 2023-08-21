@@ -465,5 +465,5 @@ They are as follows:
 [Kubeflow Pipelines Architectural Overview]: https://www.kubeflow.org/docs/components/pipelines/v1/introduction/#architectural-overview
 [flipcoin example]: https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/docs/example_pipelines/condition.yaml
 [flipcoin code example]: https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/docs/example_pipelines/condition.py
-[installodh]: https://opendatahub.io/docs/getting-started/quick-installation.html
+[installodh]: https://opendatahub.io/docs/quick-installation
 [kfp-tekton]: https://github.com/kubeflow/kfp-tekton
