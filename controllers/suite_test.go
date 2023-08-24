@@ -1,3 +1,5 @@
+//go:build test_all || test_functional
+
 /*
 Copyright 2023.
 
