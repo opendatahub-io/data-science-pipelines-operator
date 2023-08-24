@@ -1,0 +1,141 @@
+name: "Release Create"
+run-name: Create Release
+on:
+  workflow_run:
+    workflows: ["Release Trigger Create"]
+    types:
+      - completed
+env:
+  DSPO_REPOSITORY: data-science-pipelines-operator
+  DSP_REPOSITORY: data-science-pipelines
+  GH_USER_NAME: dsp-developers
+jobs:
+  fetch-data:
+    name: Fetch workflow payload
+    runs-on: ubuntu-latest
+    if: >
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success'
+    outputs:
+      target_version_tag: ${{ steps.vars.outputs.target_version_tag }}
+      previous_version_tag: ${{ steps.vars.outputs.previous_version_tag }}
+      release_branch: ${{ steps.vars.outputs.release_branch }}
+      odh_org: ${{ steps.vars.outputs.odh_org }}
+      pr_number: ${{ steps.vars.outputs.pr_number }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: 'Download artifact'
+        uses: actions/github-script@v3.1.0
+        with:
+          script: |
+            var artifacts = await github.actions.listWorkflowRunArtifacts({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               run_id: ${{github.event.workflow_run.id }},
+            });
+            var matchArtifact = artifacts.data.artifacts.filter((artifact) => {
+              return artifact.name == "pr"
+            })[0];
+            var download = await github.actions.downloadArtifact({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               artifact_id: matchArtifact.id,
+               archive_format: 'zip',
+            });
+            var fs = require('fs');
+            fs.writeFileSync('${{github.workspace}}/pr.zip', Buffer.from(download.data));
+      - run: unzip pr.zip
+      - shell: bash
+        id: vars
+        run: ./.github/scripts/release_create/vars.sh
+
+  validate_pr:
+    name: Validate PR
+    runs-on: ubuntu-latest
+    needs: fetch-data
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: validate
+        env:
+          PR_NUMBER: ${{ needs.fetch-data.outputs.pr_number }}
+          TARGET_VERSION_TAG: ${{ needs.fetch-data.outputs.target_version_tag }}
+          DSPO_REPOSITORY: data-science-pipelines-operator
+          ODH_ORG: ${{ needs.fetch-data.outputs.odh_org }}
+          GH_TOKEN: ${{ github.token }}
+        run: ./.github/scripts/release_create/validate_pr.sh
+
+  create_dspo_tag_release:
+    name: Create DSPO Release
+    runs-on: ubuntu-latest
+    needs:
+      - fetch-data
+      - validate_pr
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: Creates a DSPO release in GitHub
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_USER_NAME: ${{ env.GH_USER_NAME }}
+          TARGET_VERSION_TAG: ${{ needs.fetch-data.outputs.target_version_tag }}
+          PREVIOUS_VERSION_TAG: ${{ needs.fetch-data.outputs.previous_version_tag }}
+          RELEASE_BRANCH: ${{ needs.fetch-data.outputs.release_branch }}
+          REPOSITORY: ${{ needs.fetch-data.outputs.odh_org }}/${{ env.DSPO_REPOSITORY }}
+          WORKING_DIR: ${{ github.workspace }}
+        shell: bash
+        run: ./.github/scripts/release_create/create_tag_release.sh
+
+  create_dsp_tag_release:
+    name: Create DSP Release
+    runs-on: ubuntu-latest
+    needs:
+      - fetch-data
+      - validate_pr
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.DSP_DEVS_ACCESS_TOKEN }}
+      - name: Creates a DSPO release in GitHub
+        env:
+          GITHUB_TOKEN: ${{ secrets.DSP_DEVS_ACCESS_TOKEN }}
+          GH_USER_NAME: ${{ env.GH_USER_NAME }}
+          TARGET_VERSION_TAG: ${{ needs.fetch-data.outputs.target_version_tag }}
+          PREVIOUS_VERSION_TAG: ${{ needs.fetch-data.outputs.previous_version_tag }}
+          RELEASE_BRANCH: ${{ needs.fetch-data.outputs.release_branch }}
+          REPOSITORY: ${{ needs.fetch-data.outputs.odh_org }}/${{ env.DSP_REPOSITORY }}
+          GH_ORG: ${{ needs.fetch-data.outputs.odh_org }}
+          WORKING_DIR: ${{ github.workspace }}
+        shell: bash
+        run: ./.github/scripts/release_create/create_tag_release.sh
+
+  sync_manifests:
+    name: Sync ODH Manifests
+    uses: ./.github/workflows/odh-manifests-PR-sync.yml
+    needs: fetch-data
+    with:
+      src_branch: ${{ needs.fetch-data.outputs.release_branch }}
+      target_tag: ${{ needs.fetch-data.outputs.target_version_tag }}
+      odh_manifest_org: ${{ needs.fetch-data.outputs.odh_org }}
+    secrets: inherit
+
+  notify_pr:
+    name: Report Feedback
+    runs-on: ubuntu-latest
+    needs:
+      - validate_pr
+      - fetch-data
+      - sync_manifests
+      - create_dspo_tag_release
+      - create_dsp_tag_release
+    steps:
+      - uses: actions/checkout@v3
+      - name: Notify in Pull Request
+        env:
+          GITHUB_TOKEN: ${{ secrets.DSP_DEVS_ACCESS_TOKEN }}
+          PR_NUMBER: ${{ needs.fetch-data.outputs.pr_number }}
+          TARGET_VERSION_TAG: ${{ needs.fetch-data.outputs.target_version_tag }}
+          GH_ORG: ${{ needs.fetch-data.outputs.odh_org }}
+        run: ./.github/scripts/release_create/notify.sh

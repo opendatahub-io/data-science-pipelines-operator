@@ -1,6 +1,33 @@
 name: Build images from sources.
 run-name: Build images from sources.
 on:
+  workflow_call:
+    inputs:
+      src_branch:
+        type: string
+        default: 'v1.0.x'
+        description: 'Source branch to build DSPO/DSP from'
+        required: true
+      target_tag:
+        type: string
+        default: 'vx.y.z'
+        description: 'Target Image Tag'
+        required: true
+      quay_org:
+        type: string
+        default: 'opendatahub'
+        description: 'Quay Organization'
+        required: true
+      dsp_org_repo:
+        type: string
+        default: 'opendatahub-io/data-science-pipelines'
+        description: 'DSP org/repo'
+        required: true
+      overwrite_imgs:
+        type: string
+        default: 'true'
+        description: 'Overwrite images in quay if they already exist for this release.'
+        required: true
   workflow_dispatch:
     inputs:
       src_branch:
@@ -19,6 +46,11 @@ on:
         default: 'opendatahub-io/data-science-pipelines'
         description: 'DSP org/repo'
         required: true
+      overwrite_imgs:
+        type: string
+        default: 'false'
+        description: 'Overwrite images in quay if they already exist for this release.'
+        required: true
 env:
   IMAGE_REPO_DSPO: data-science-pipelines-operator
   IMAGE_REPO_SERVER: ds-pipelines-api-server
@@ -36,8 +68,9 @@ env:
   QUAY_ID: ${{ secrets.QUAY_ID }}
   QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
   TARGET_IMAGE_TAG: ${{ inputs.target_tag }}
+  OVERWRITE_IMAGES: ${{ inputs.overwrite_imgs }}
 jobs:
-  dspo-build:
+  DSPO-build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -49,8 +82,9 @@ jobs:
           IMAGE_REPO: ${{ env.IMAGE_REPO_DSPO }}
           DOCKERFILE: Dockerfile
           GH_REPO: ${{ github.repository }}
+          OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
 
-  server-build:
+  SERVER-build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -62,8 +96,9 @@ jobs:
           IMAGE_REPO: ${{ env.IMAGE_REPO_SERVER }}
           DOCKERFILE: backend/Dockerfile
           GH_REPO: ${{ inputs.dsp_org_repo }}
+          OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
 
-  ui-build:
+  UI-build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -75,8 +110,9 @@ jobs:
           IMAGE_REPO: ${{ env.IMAGE_REPO_UI }}
           DOCKERFILE: frontend/Dockerfile
           GH_REPO: ${{ inputs.dsp_org_repo }}
+          OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
 
-  cache-build:
+  CACHE-build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -88,6 +124,7 @@ jobs:
           IMAGE_REPO: ${{ env.IMAGE_REPO_CACHE }}
           DOCKERFILE: backend/Dockerfile.cacheserver
           GH_REPO: ${{ inputs.dsp_org_repo }}
+          OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
 
   PA-build:
     runs-on: ubuntu-latest
@@ -101,6 +138,7 @@ jobs:
           IMAGE_REPO: ${{ env.IMAGE_REPO_PA }}
           DOCKERFILE: backend/Dockerfile.persistenceagent
           GH_REPO: ${{ inputs.dsp_org_repo }}
+          OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
 
   SWF-build:
     runs-on: ubuntu-latest
@@ -114,6 +152,7 @@ jobs:
           IMAGE_REPO: ${{ env.IMAGE_REPO_SWF }}
           DOCKERFILE: backend/Dockerfile.scheduledworkflow
           GH_REPO: ${{ inputs.dsp_org_repo }}
+          OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
 
   VC-build:
     runs-on: ubuntu-latest
@@ -127,6 +166,7 @@ jobs:
           IMAGE_REPO: ${{ env.IMAGE_REPO_VC }}
           DOCKERFILE: backend/Dockerfile.viewercontroller
           GH_REPO: ${{ inputs.dsp_org_repo }}
+          OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
 
   ARTIFACT-build:
     runs-on: ubuntu-latest
@@ -140,6 +180,7 @@ jobs:
           IMAGE_REPO: ${{ env.IMAGE_REPO_ARTIFACT }}
           DOCKERFILE: backend/artifact_manager/Dockerfile
           GH_REPO: ${{ inputs.dsp_org_repo }}
+          OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
 
   MLMD_WRITER-build:
     runs-on: ubuntu-latest
@@ -153,19 +194,7 @@ jobs:
           IMAGE_REPO: ${{ env.IMAGE_REPO_MLMD_WRITER }}
           DOCKERFILE: backend/metadata_writer/Dockerfile
           GH_REPO: ${{ inputs.dsp_org_repo }}
-
-  MLMD_ENVOY-build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v3
-      - uses: ./.github/actions/build
-        name: Build Image
-        with:
-          IMAGE_REPO: ${{ env.IMAGE_REPO_MLMD_ENVOY }}
-          DOCKERFILE: third-party/metadata_envoy/Dockerfile
-          GH_REPO: ${{ inputs.dsp_org_repo }}
+          OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
 
   MLMD_GRPC-build:
     runs-on: ubuntu-latest
@@ -179,3 +208,18 @@ jobs:
           IMAGE_REPO: ${{ env.IMAGE_REPO_MLMD_GRPC }}
           DOCKERFILE: third-party/ml-metadata/Dockerfile
           GH_REPO: ${{ inputs.dsp_org_repo }}
+          OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
+
+  MLMD_ENVOY-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/build
+        name: Build Image
+        with:
+          IMAGE_REPO: ${{ env.IMAGE_REPO_MLMD_ENVOY }}
+          DOCKERFILE: third-party/metadata_envoy/Dockerfile
+          GH_REPO: ${{ inputs.dsp_org_repo }}
+          OVERWRITE: ${{ env.OVERWRITE_IMAGES }}

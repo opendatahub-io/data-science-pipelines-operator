@@ -1,3 +1,5 @@
+import os
+
 import yaml
 
 
@@ -37,7 +39,9 @@ def version_doc(args):
     with open(input_file, 'r') as f:
         rows = yaml.safe_load(f)
 
-    with open('template/version_doc.md', 'r') as vd:
+    dirname = os.path.dirname(__file__)
+    template_file = os.path.join(dirname, 'template/version_doc.md')
+    with open(template_file, 'r') as vd:
         final_md = vd.read()
 
     table_md = table(rows)
