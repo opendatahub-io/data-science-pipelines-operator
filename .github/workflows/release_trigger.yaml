@@ -1,0 +1,28 @@
+name: "Release Trigger Create"  # This is used by release_create.yaml on.workflow_run.workflows, change with caution
+on:
+  pull_request:
+    types:
+      - closed
+    paths:
+      - config/base/params.env
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  upload-data:
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, 'release-automation') && github.event.pull_request.merged
+    steps:
+      - uses: actions/checkout@v3
+      - name: Save PR payload
+        shell: bash
+        env:
+          PR_BODY: ${{github.event.pull_request.body}}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_STATE: ${{ github.event.pull_request.state }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: ./.github/scripts/release_trigger/upload-data.sh
+      - uses: actions/upload-artifact@v2
+        with:
+          name: pr
+          path: pr/

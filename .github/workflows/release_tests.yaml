@@ -1,0 +1,15 @@
+name: "Release Tests"
+run-name: Run Release Test Suite
+on:
+  pull_request:
+    branches:
+      - v**
+jobs:
+  tests:
+    name: Release Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        name: checkout
+      - name: sometests
+        run: ./.github/scripts/tests/tests.sh
