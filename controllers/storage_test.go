@@ -18,8 +18,12 @@ limitations under the License.
 package controllers
 
 import (
+	"context"
+	"encoding/base64"
 	"testing"
 
+	"github.com/go-logr/logr"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 
 	"github.com/stretchr/testify/assert"
@@ -180,4 +184,252 @@ func TestDefaultDeployBehaviorStorage(t *testing.T) {
 	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedStorageName, testNamespace)
 	assert.False(t, created)
 	assert.Nil(t, err)
+}
+
+func TestIsDatabaseAccessibleTrue(t *testing.T) {
+	// Override the live connection function with a mock version
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool) bool {
+		return true
+	}
+
+	testNamespace := "testnamespace"
+	testDSPAName := "testdspa"
+
+	// Minimal Inputs
+	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
+		Spec: dspav1alpha1.DSPASpec{
+			ObjectStorage: &dspav1alpha1.ObjectStorage{
+				DisableHealthCheck: false,
+			},
+		},
+	}
+	dspa.Name = testDSPAName
+	dspa.Namespace = testNamespace
+
+	// Create Context, Fake Controller and Params (unused)
+	ctx, _, reconciler := CreateNewTestObjects()
+
+	SecureConnection := false
+	params := &DSPAParams{
+		ObjectStorageConnection: ObjectStorageConnection{
+			Host:            "foo",
+			Port:            "1337",
+			Secure:          &SecureConnection,
+			AccessKeyID:     base64.StdEncoding.EncodeToString([]byte("fooaccesskey")),
+			SecretAccessKey: base64.StdEncoding.EncodeToString([]byte("foosecretkey")),
+		},
+	}
+
+	verified := reconciler.isObjectStorageAccessible(ctx, dspa, params)
+	assert.True(t, verified)
+}
+
+func TestIsDatabaseNotAccessibleFalse(t *testing.T) {
+	// Override the live connection function with a mock version
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool) bool {
+		return false
+	}
+
+	testNamespace := "testnamespace"
+	testDSPAName := "testdspa"
+
+	// Minimal Inputs
+	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
+		Spec: dspav1alpha1.DSPASpec{
+			ObjectStorage: &dspav1alpha1.ObjectStorage{
+				DisableHealthCheck: false,
+			},
+		},
+	}
+	dspa.Name = testDSPAName
+	dspa.Namespace = testNamespace
+
+	// Create Context, Fake Controller and Params (unused)
+	ctx, _, reconciler := CreateNewTestObjects()
+
+	SecureConnection := false
+	params := &DSPAParams{
+		ObjectStorageConnection: ObjectStorageConnection{
+			Host:            "foo",
+			Port:            "1337",
+			Secure:          &SecureConnection,
+			AccessKeyID:     base64.StdEncoding.EncodeToString([]byte("fooaccesskey")),
+			SecretAccessKey: base64.StdEncoding.EncodeToString([]byte("foosecretkey")),
+		},
+	}
+
+	verified := reconciler.isObjectStorageAccessible(ctx, dspa, params)
+	assert.False(t, verified)
+}
+
+func TestDisabledHealthCheckReturnsTrue(t *testing.T) {
+	// Override the live connection function with a mock version that would always return false if called
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool) bool {
+		return false
+	}
+
+	testNamespace := "testnamespace"
+	testDSPAName := "testdspa"
+
+	// Minimal Inputs
+	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
+		Spec: dspav1alpha1.DSPASpec{
+			ObjectStorage: &dspav1alpha1.ObjectStorage{
+				DisableHealthCheck: true,
+			},
+		},
+	}
+	dspa.Name = testDSPAName
+	dspa.Namespace = testNamespace
+
+	// Create Context, Fake Controller and Params (unused)
+	ctx, _, reconciler := CreateNewTestObjects()
+
+	SecureConnection := false
+	params := &DSPAParams{
+		ObjectStorageConnection: ObjectStorageConnection{
+			Host:            "foo",
+			Port:            "1337",
+			Secure:          &SecureConnection,
+			AccessKeyID:     base64.StdEncoding.EncodeToString([]byte("fooaccesskey")),
+			SecretAccessKey: base64.StdEncoding.EncodeToString([]byte("foosecretkey")),
+		},
+	}
+
+	verified := reconciler.isObjectStorageAccessible(ctx, dspa, params)
+	// if health check is disabled this should always return True
+	// even thought the mock connection function would return false if called
+	assert.True(t, verified)
+}
+
+func TestIsDatabaseAccessibleBadAccessKey(t *testing.T) {
+	// Override the live connection function with a mock version
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool) bool {
+		return true
+	}
+
+	testNamespace := "testnamespace"
+	testDSPAName := "testdspa"
+
+	// Minimal Inputs
+	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
+		Spec: dspav1alpha1.DSPASpec{
+			ObjectStorage: &dspav1alpha1.ObjectStorage{
+				DisableHealthCheck: false,
+			},
+		},
+	}
+	dspa.Name = testDSPAName
+	dspa.Namespace = testNamespace
+
+	// Create Context, Fake Controller and Params (unused)
+	ctx, _, reconciler := CreateNewTestObjects()
+
+	SecureConnection := false
+	params := &DSPAParams{
+		ObjectStorageConnection: ObjectStorageConnection{
+			Host:            "foo",
+			Port:            "1337",
+			Secure:          &SecureConnection,
+			AccessKeyID:     "this-is-not-a-base64-encoded-string",
+			SecretAccessKey: base64.StdEncoding.EncodeToString([]byte("foosecretkey")),
+		},
+	}
+
+	verified := reconciler.isObjectStorageAccessible(ctx, dspa, params)
+	assert.False(t, verified)
+}
+
+func TestIsDatabaseAccessibleBadSecretKey(t *testing.T) {
+	// Override the live connection function with a mock version
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool) bool {
+		return true
+	}
+
+	testNamespace := "testnamespace"
+	testDSPAName := "testdspa"
+
+	// Minimal Inputs
+	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
+		Spec: dspav1alpha1.DSPASpec{
+			ObjectStorage: &dspav1alpha1.ObjectStorage{
+				DisableHealthCheck: false,
+			},
+		},
+	}
+	dspa.Name = testDSPAName
+	dspa.Namespace = testNamespace
+
+	// Create Context, Fake Controller and Params (unused)
+	ctx, _, reconciler := CreateNewTestObjects()
+
+	SecureConnection := false
+	params := &DSPAParams{
+		ObjectStorageConnection: ObjectStorageConnection{
+			Host:            "foo",
+			Port:            "1337",
+			Secure:          &SecureConnection,
+			AccessKeyID:     base64.StdEncoding.EncodeToString([]byte("fooaccesskey")),
+			SecretAccessKey: "this-is-not-a-base64-encoded-string",
+		},
+	}
+
+	verified := reconciler.isObjectStorageAccessible(ctx, dspa, params)
+	assert.False(t, verified)
+}
+
+func TestJoinHostPort(t *testing.T) {
+	tests := map[string]struct {
+		host     string
+		port     string
+		expected string
+	}{
+		"host and port defined": {host: "somehost", port: "1234", expected: "somehost:1234"},
+		"empty port":            {host: "somehost", port: "", expected: "somehost"},
+		"empty host":            {host: "", port: "1234", expected: ":1234"}, // TODO: this obviously wouldn't actually work, should we handle this case?
+		"both empty":            {host: "", port: "", expected: ""},          // TODO: this obviously wouldn't actually work, should we handle this case?
+	}
+
+	for _, test := range tests {
+		assert.Equal(t, test.expected, joinHostPort(test.host, test.port))
+	}
+}
+
+func TestCreateCredentialProvidersChain(t *testing.T) {
+	tests := map[string]struct {
+		accesskey       string
+		secretkey       string
+		expectedSigType credentials.SignatureType
+	}{
+		"both keys defined": {
+			accesskey:       "fakeaccesskey",
+			secretkey:       "fakesecretkey",
+			expectedSigType: credentials.SignatureV4,
+		},
+		"no access key": {
+			accesskey:       "",
+			secretkey:       "fakesecretkey",
+			expectedSigType: credentials.SignatureAnonymous,
+		},
+		"no secret key": {
+			accesskey:       "fakeaccesskey",
+			secretkey:       "",
+			expectedSigType: credentials.SignatureAnonymous,
+		},
+		"both keys empty": {
+			accesskey:       "",
+			secretkey:       "",
+			expectedSigType: credentials.SignatureAnonymous,
+		},
+	}
+
+	// Run Tests
+	for _, test := range tests {
+		actual := createCredentialProvidersChain(test.accesskey, test.secretkey)
+		actualCreds, err := actual.Get()
+		assert.Nil(t, err)
+
+		actualSigType := actualCreds.SignerType
+		assert.Equal(t, test.expectedSigType, actualSigType)
+	}
 }
