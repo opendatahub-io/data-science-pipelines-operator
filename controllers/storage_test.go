@@ -380,18 +380,25 @@ func TestIsDatabaseAccessibleBadSecretKey(t *testing.T) {
 
 func TestJoinHostPort(t *testing.T) {
 	tests := map[string]struct {
-		host     string
-		port     string
-		expected string
+		host           string
+		port           string
+		expectedResult string
+		expectedError  bool
 	}{
-		"host and port defined": {host: "somehost", port: "1234", expected: "somehost:1234"},
-		"empty port":            {host: "somehost", port: "", expected: "somehost"},
-		"empty host":            {host: "", port: "1234", expected: ":1234"}, // TODO: this obviously wouldn't actually work, should we handle this case?
-		"both empty":            {host: "", port: "", expected: ""},          // TODO: this obviously wouldn't actually work, should we handle this case?
+		"host and port defined": {host: "somehost", port: "1234", expectedResult: "somehost:1234", expectedError: false},
+		"empty port":            {host: "somehost", port: "", expectedResult: "somehost", expectedError: false},
+		"empty host":            {host: "", port: "1234", expectedResult: "", expectedError: true},
+		"both empty":            {host: "", port: "", expectedResult: "", expectedError: true},
 	}
 
 	for _, test := range tests {
-		assert.Equal(t, test.expected, joinHostPort(test.host, test.port))
+		actualResult, actualError := joinHostPort(test.host, test.port)
+		if test.expectedError {
+			assert.NotNil(t, actualError)
+		} else {
+			assert.Equal(t, test.expectedResult, actualResult)
+			assert.Nil(t, actualError)
+		}
 	}
 }
 

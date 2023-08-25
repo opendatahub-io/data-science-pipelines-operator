@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -38,11 +39,14 @@ var storageTemplates = []string{
 	storageSecret,
 }
 
-func joinHostPort(host, port string) string {
-	if port == "" {
-		return host
+func joinHostPort(host, port string) (string, error) {
+	if host == "" {
+		return "", errors.New("Object Storage Connection missing host")
 	}
-	return fmt.Sprintf("%s:%s", host, port)
+	if port == "" {
+		return host, nil
+	}
+	return fmt.Sprintf("%s:%s", host, port), nil
 }
 
 func createCredentialProvidersChain(accessKey, secretKey string) *credentials.Credentials {
@@ -104,7 +108,12 @@ func (r *DSPAReconciler) isObjectStorageAccessible(ctx context.Context, dsp *dsp
 
 	log.Info("Performing Object Storage Health Check")
 
-	endpoint := joinHostPort(params.ObjectStorageConnection.Host, params.ObjectStorageConnection.Port)
+	endpoint, err := joinHostPort(params.ObjectStorageConnection.Host, params.ObjectStorageConnection.Port)
+	if err != nil {
+		log.Error(err, "Could not determine Object Storage Endpoint")
+		return false
+	}
+
 	accesskey, err := base64.StdEncoding.DecodeString(params.ObjectStorageConnection.AccessKeyID)
 	if err != nil {
 		log.Error(err, "Could not decode Object Storage Access Key ID")
