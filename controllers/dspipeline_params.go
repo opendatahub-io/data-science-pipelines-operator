@@ -143,46 +143,38 @@ func (p *DSPAParams) RetrieveSecret(ctx context.Context, client client.Client, s
 	return base64.StdEncoding.EncodeToString(secret.Data[secretKey]), nil
 }
 
-func (p *DSPAParams) GenerateDBSecret(ctx context.Context, client client.Client, secret *dspa.SecretKeyValue, log logr.Logger) error {
-	val, err := p.RetrieveSecret(ctx, client, secret.Name, secret.Key, log)
+func (p *DSPAParams) RetrieveOrCreateSecret(ctx context.Context, client client.Client, secretName, secretKey string, generatedPasswordLength int, log logr.Logger) (string, error) {
+	val, err := p.RetrieveSecret(ctx, client, secretName, secretKey, log)
 	if err != nil && apierrs.IsNotFound(err) {
-		generatedPass := passwordGen(12)
-		p.DBConnection.Password = base64.StdEncoding.EncodeToString([]byte(generatedPass)) //TODO: it's ugly setting this class value here, just return a generic val instead
+		generatedPass := passwordGen(generatedPasswordLength)
+		return base64.StdEncoding.EncodeToString([]byte(generatedPass)), nil
 	} else if err != nil {
 		log.Error(err, "Unable to create DB secret...")
-		return err
-	} else {
-		log.Info(fmt.Sprintf("Secret [%s] already exists, using stored value.", secret.Name))
-		p.DBConnection.Password = val
+		return "", err
 	}
-	return nil
+	log.Info(fmt.Sprintf("Secret [%s] already exists, using stored value.", secretName))
+	return val, nil
 }
 
-func (p *DSPAParams) GenerateObjectStoreSecret(ctx context.Context, client client.Client, secret *dspa.S3CredentialSecret, log logr.Logger) error {
-	val, err := p.RetrieveSecret(ctx, client, secret.SecretName, secret.AccessKey, log)
-	if err != nil && apierrs.IsNotFound(err) {
-		generatedPass := passwordGen(16)
-		p.ObjectStorageConnection.AccessKeyID = base64.StdEncoding.EncodeToString([]byte(generatedPass)) //TODO: it's ugly setting this class value here, just return a generic val instead
-	} else if err != nil {
-		log.Error(err, "Unable to retrieve or create ObjectStore secret...")
-		return err
-	} else {
-		log.Info(fmt.Sprintf("Secret [%s] already exists, using stored value.", secret.SecretName))
-		p.ObjectStorageConnection.AccessKeyID = val
+func (p *DSPAParams) RetrieveOrCreateDBSecret(ctx context.Context, client client.Client, secret *dspa.SecretKeyValue, log logr.Logger) (string, error) {
+	dbPassword, err := p.RetrieveOrCreateSecret(ctx, client, secret.Name, secret.Key, config.GeneratedDBPasswordLength, log)
+	if err != nil {
+		return "", err
 	}
+	return dbPassword, nil
 
-	val, err = p.RetrieveSecret(ctx, client, secret.SecretName, secret.SecretKey, log)
-	if err != nil && apierrs.IsNotFound(err) {
-		generatedPass := passwordGen(24)
-		p.ObjectStorageConnection.SecretAccessKey = base64.StdEncoding.EncodeToString([]byte(generatedPass)) //TODO: it's ugly setting this class value here, just return a generic val instead
-	} else if err != nil {
-		log.Error(err, "Unable to retrieve or create ObjectStore secret...")
-		return err
-	} else {
-		log.Info(fmt.Sprintf("Secret [%s] already exists, using stored value.", secret.SecretName))
-		p.ObjectStorageConnection.SecretAccessKey = val
+}
+
+func (p *DSPAParams) RetrieveOrCreateObjectStoreSecret(ctx context.Context, client client.Client, secret *dspa.S3CredentialSecret, log logr.Logger) (string, string, error) {
+	accessKey, err := p.RetrieveOrCreateSecret(ctx, client, secret.SecretName, secret.AccessKey, config.GeneratedObjectStorageAccessKeyLength, log)
+	if err != nil {
+		return "", "", err
 	}
-	return nil
+	secretKey, err := p.RetrieveOrCreateSecret(ctx, client, secret.SecretName, secret.SecretKey, config.GeneratedObjectStorageSecretKeyLength, log)
+	if err != nil {
+		return "", "", err
+	}
+	return accessKey, secretKey, nil
 }
 
 // SetupDBParams Populates the DB connection Parameters.
@@ -243,10 +235,11 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 				Key:  config.DefaultDBSecretKey,
 			}
 		}
-		err := p.GenerateDBSecret(ctx, client, p.DBConnection.CredentialsSecret, log)
+		dbPassword, err := p.RetrieveOrCreateDBSecret(ctx, client, p.DBConnection.CredentialsSecret, log)
 		if err != nil {
 			return err
 		}
+		p.DBConnection.Password = dbPassword
 	}
 	if p.DBConnection.Password == "" {
 		return fmt.Errorf(fmt.Sprintf("DB Password from secret [%s] for key [%s] was not successfully retrieved, "+
@@ -323,10 +316,12 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 				SecretKey:  config.DefaultObjectStorageSecretKey,
 			}
 		}
-		err := p.GenerateObjectStoreSecret(ctx, client, p.ObjectStorageConnection.CredentialsSecret, log)
+		accessKey, secretKey, err := p.RetrieveOrCreateObjectStoreSecret(ctx, client, p.ObjectStorageConnection.CredentialsSecret, log)
 		if err != nil {
 			return err
 		}
+		p.ObjectStorageConnection.AccessKeyID = accessKey
+		p.ObjectStorageConnection.SecretAccessKey = secretKey
 	}
 
 	endpoint := fmt.Sprintf(
