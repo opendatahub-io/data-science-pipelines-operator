@@ -318,7 +318,7 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 			p.ObjectStorageConnection.CredentialsSecret = p.Minio.S3CredentialSecret
 		} else {
 			p.ObjectStorageConnection.CredentialsSecret = &dspa.S3CredentialSecret{
-				SecretName: config.DefaultObjectStorageSecretName,
+				SecretName: config.DefaultObjectStorageSecretNamePrefix + p.Name,
 				AccessKey:  config.DefaultObjectStorageAccessKey,
 				SecretKey:  config.DefaultObjectStorageSecretKey,
 			}

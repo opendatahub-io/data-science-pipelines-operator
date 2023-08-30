@@ -47,9 +47,9 @@ const (
 	MinioDefaultBucket = "mlpipeline"
 	MinioPVCSize       = "10Gi"
 
-	DefaultObjectStorageSecretName = "mlpipeline-minio-artifact" // hardcoded in kfp-tekton
-	DefaultObjectStorageAccessKey  = "accesskey"
-	DefaultObjectStorageSecretKey  = "secretkey"
+	DefaultObjectStorageSecretNamePrefix = "ds-pipeline-s3-"
+	DefaultObjectStorageAccessKey        = "accesskey"
+	DefaultObjectStorageSecretKey        = "secretkey"
 
 	MlmdGrpcPort = "8080"
 )
