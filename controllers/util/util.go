@@ -40,3 +40,7 @@ func GetDeploymentCondition(status appsv1.DeploymentStatus, condType appsv1.Depl
 	}
 	return nil
 }
+
+func BoolPointer(b bool) *bool {
+	return &b
+}
