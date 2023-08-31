@@ -21,6 +21,7 @@ import (
 
 var commonTemplates = []string{
 	"common/policy.yaml.tmpl",
+	"common/mlmd-envoy-dashboard-access-policy.yaml.tmpl",
 }
 
 const commonCusterRolebindingTemplate = "common/clusterrolebinding.yaml.tmpl"
