@@ -81,7 +81,7 @@ spec:
                     pass
                 with open(output_file, 'w') as f:
                     f.write(_output_serializers[idx](_outputs[idx]))
-          image: quay.io/hukhan/python:alpine3.6
+          image: registry.access.redhat.com/ubi8/python-39
         results:
         - name: Output
           type: string
@@ -91,7 +91,7 @@ spec:
             pipelines.kubeflow.org/cache_enabled: "true"
           annotations:
             pipelines.kubeflow.org/component_spec_digest: '{"name": "Flip coin", "outputs":
-              [{"name": "Output", "type": "String"}], "version": "Flip coin@sha256=2895da7ed0b52f45e6d6a4d8837e4c1ee4ba99e14e5877320155243c67e4610e"}'
+              [{"name": "Output", "type": "String"}], "version": "Flip coin@sha256=32d5bd05b9fa18850505b73d6fb8489cc61f83033306230c8e4da12bdd8890e0"}'
     - name: random-num
       taskSpec:
         steps:
@@ -151,7 +151,7 @@ spec:
                     pass
                 with open(output_file, 'w') as f:
                     f.write(_output_serializers[idx](_outputs[idx]))
-          image: quay.io/hukhan/python:alpine3.6
+          image: registry.access.redhat.com/ubi8/python-39
         results:
         - name: Output
           type: string
@@ -162,7 +162,7 @@ spec:
           annotations:
             pipelines.kubeflow.org/component_spec_digest: '{"name": "Random num",
               "outputs": [{"name": "Output", "type": "Integer"}], "version": "Random
-              num@sha256=28d899c9492aeb0e45072bedfa35313fbe788233de0fc7a14a81ff8ee071d627"}'
+              num@sha256=053403c9d093bbdb07a6da42e22012e69fa5132e38cc179dae5f3a629543650c"}'
       when:
       - input: $(tasks.condition-1.results.outcome)
         operator: in
@@ -196,7 +196,7 @@ spec:
             _parsed_args = vars(_parser.parse_args())
 
             _outputs = print_msg(**_parsed_args)
-          image: quay.io/hukhan/python:alpine3.6
+          image: registry.access.redhat.com/ubi8/python-39
         params:
         - name: random-num-Output
         metadata:
@@ -204,7 +204,7 @@ spec:
             pipelines.kubeflow.org/cache_enabled: "true"
           annotations:
             pipelines.kubeflow.org/component_spec_digest: '{"name": "Print msg", "outputs":
-              [], "version": "Print msg@sha256=c8484b77b0a3f045a812bd6b570ef17df03d4fde0ef50480243561a339f7b024"}'
+              [], "version": "Print msg@sha256=1d475b025fa0e9910c3c2827a8280bb0fb85abeba446658a944570e1de7f0f98"}'
       when:
       - input: $(tasks.condition-2.results.outcome)
         operator: in
@@ -238,7 +238,7 @@ spec:
             _parsed_args = vars(_parser.parse_args())
 
             _outputs = print_msg(**_parsed_args)
-          image: quay.io/hukhan/python:alpine3.6
+          image: registry.access.redhat.com/ubi8/python-39
         params:
         - name: random-num-Output
         metadata:
@@ -246,7 +246,7 @@ spec:
             pipelines.kubeflow.org/cache_enabled: "true"
           annotations:
             pipelines.kubeflow.org/component_spec_digest: '{"name": "Print msg", "outputs":
-              [], "version": "Print msg@sha256=c8484b77b0a3f045a812bd6b570ef17df03d4fde0ef50480243561a339f7b024"}'
+              [], "version": "Print msg@sha256=1d475b025fa0e9910c3c2827a8280bb0fb85abeba446658a944570e1de7f0f98"}'
       when:
       - input: $(tasks.condition-3.results.outcome)
         operator: in
@@ -311,7 +311,7 @@ spec:
                     pass
                 with open(output_file, 'w') as f:
                     f.write(_output_serializers[idx](_outputs[idx]))
-          image: quay.io/hukhan/python:alpine3.6
+          image: registry.access.redhat.com/ubi8/python-39
         results:
         - name: Output
           type: string
@@ -322,7 +322,7 @@ spec:
           annotations:
             pipelines.kubeflow.org/component_spec_digest: '{"name": "Random num",
               "outputs": [{"name": "Output", "type": "Integer"}], "version": "Random
-              num@sha256=28d899c9492aeb0e45072bedfa35313fbe788233de0fc7a14a81ff8ee071d627"}'
+              num@sha256=053403c9d093bbdb07a6da42e22012e69fa5132e38cc179dae5f3a629543650c"}'
       when:
       - input: $(tasks.condition-4.results.outcome)
         operator: in
@@ -356,7 +356,7 @@ spec:
             _parsed_args = vars(_parser.parse_args())
 
             _outputs = print_msg(**_parsed_args)
-          image: quay.io/hukhan/python:alpine3.6
+          image: registry.access.redhat.com/ubi8/python-39
         params:
         - name: random-num-2-Output
         metadata:
@@ -364,7 +364,7 @@ spec:
             pipelines.kubeflow.org/cache_enabled: "true"
           annotations:
             pipelines.kubeflow.org/component_spec_digest: '{"name": "Print msg", "outputs":
-              [], "version": "Print msg@sha256=c8484b77b0a3f045a812bd6b570ef17df03d4fde0ef50480243561a339f7b024"}'
+              [], "version": "Print msg@sha256=1d475b025fa0e9910c3c2827a8280bb0fb85abeba446658a944570e1de7f0f98"}'
       when:
       - input: $(tasks.condition-5.results.outcome)
         operator: in
@@ -398,7 +398,7 @@ spec:
             _parsed_args = vars(_parser.parse_args())
 
             _outputs = print_msg(**_parsed_args)
-          image: quay.io/hukhan/python:alpine3.6
+          image: registry.access.redhat.com/ubi8/python-39
         params:
         - name: random-num-2-Output
         metadata:
@@ -406,7 +406,7 @@ spec:
             pipelines.kubeflow.org/cache_enabled: "true"
           annotations:
             pipelines.kubeflow.org/component_spec_digest: '{"name": "Print msg", "outputs":
-              [], "version": "Print msg@sha256=c8484b77b0a3f045a812bd6b570ef17df03d4fde0ef50480243561a339f7b024"}'
+              [], "version": "Print msg@sha256=1d475b025fa0e9910c3c2827a8280bb0fb85abeba446658a944570e1de7f0f98"}'
       when:
       - input: $(tasks.condition-6.results.outcome)
         operator: in
@@ -452,7 +452,7 @@ spec:
             f.close()
           - $(inputs.params.operand1)
           - $(inputs.params.operand2)
-          image: python:alpine3.6
+          image: registry.access.redhat.com/ubi8/python-39
     - name: condition-2
       params:
       - name: operand1
@@ -493,7 +493,7 @@ spec:
             f.close()
           - $(inputs.params.operand1)
           - $(inputs.params.operand2)
-          image: python:alpine3.6
+          image: registry.access.redhat.com/ubi8/python-39
       when:
       - input: $(tasks.condition-1.results.outcome)
         operator: in
@@ -539,7 +539,7 @@ spec:
             f.close()
           - $(inputs.params.operand1)
           - $(inputs.params.operand2)
-          image: python:alpine3.6
+          image: registry.access.redhat.com/ubi8/python-39
       when:
       - input: $(tasks.condition-1.results.outcome)
         operator: in
@@ -585,7 +585,7 @@ spec:
             f.close()
           - $(inputs.params.operand1)
           - $(inputs.params.operand2)
-          image: python:alpine3.6
+          image: registry.access.redhat.com/ubi8/python-39
     - name: condition-5
       params:
       - name: operand1
@@ -626,7 +626,7 @@ spec:
             f.close()
           - $(inputs.params.operand1)
           - $(inputs.params.operand2)
-          image: python:alpine3.6
+          image: registry.access.redhat.com/ubi8/python-39
       when:
       - input: $(tasks.condition-4.results.outcome)
         operator: in
@@ -672,7 +672,7 @@ spec:
             f.close()
           - $(inputs.params.operand1)
           - $(inputs.params.operand2)
-          image: python:alpine3.6
+          image: registry.access.redhat.com/ubi8/python-39
       when:
       - input: $(tasks.condition-4.results.outcome)
         operator: in
