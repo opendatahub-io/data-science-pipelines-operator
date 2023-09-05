@@ -43,9 +43,6 @@ type DSPASpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:={deploy: false}
 	*MLMD `json:"mlmd"`
-	// DevTools enables non-production tools and utilities for Data Science Pipelines Operator developers
-	// +kubebuilder:validation:Optional
-	*DevTools `json:"devtools"`
 }
 
 type APIServer struct {
@@ -268,15 +265,6 @@ type Writer struct {
 	Resources *ResourceRequirements `json:"resources,omitempty"`
 	// +kubebuilder:validation:Required
 	Image string `json:"image"`
-}
-
-type DevTools struct {
-	// +kubebuilder:default:=false
-	// +kubebuilder:validation:Optional
-	EnableDatabaseSecret bool `json:"enableDatabaseSecret"`
-	// +kubebuilder:default:=false
-	// +kubebuilder:validation:Optional
-	EnableStorageSecret bool `json:"enableStorageSecret"`
 }
 
 // ResourceRequirements structures compute resource requirements.

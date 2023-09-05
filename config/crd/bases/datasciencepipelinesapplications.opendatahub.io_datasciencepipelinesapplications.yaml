@@ -287,17 +287,6 @@ spec:
                         type: string
                     type: object
                 type: object
-              devtools:
-                description: DevTools enables non-production tools and utilities for
-                  Data Science Pipelines Operator developers
-                properties:
-                  enableDatabaseSecret:
-                    default: false
-                    type: boolean
-                  enableStorageSecret:
-                    default: false
-                    type: boolean
-                type: object
               mlmd:
                 default:
                   deploy: false

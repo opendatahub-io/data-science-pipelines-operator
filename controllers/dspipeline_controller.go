@@ -261,11 +261,6 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 	}
 
-	err = r.ReconcileDevtools(dspa, params)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
 	log.Info("Updating CR status")
 	// Refresh DSPA before updating
 	err = r.Get(ctx, req.NamespacedName, dspa)
