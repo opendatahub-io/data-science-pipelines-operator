@@ -24,11 +24,11 @@ def print_msg(msg: str):
 
 
 flip_coin_op = components.create_component_from_func(
-    flip_coin, base_image='quay.io/hukhan/python:alpine3.6')
+    flip_coin, base_image='registry.access.redhat.com/ubi8/python-39')
 print_op = components.create_component_from_func(
-    print_msg, base_image='quay.io/hukhan/python:alpine3.6')
+    print_msg, base_image='registry.access.redhat.com/ubi8/python-39')
 random_num_op = components.create_component_from_func(
-    random_num, base_image='quay.io/hukhan/python:alpine3.6')
+    random_num, base_image='registry.access.redhat.com/ubi8/python-39')
 
 
 @dsl.pipeline(
@@ -54,4 +54,9 @@ def flipcoin_pipeline():
 
 if __name__ == '__main__':
     from kfp_tekton.compiler import TektonCompiler
-    TektonCompiler().compile(flipcoin_pipeline, __file__.replace('.py', '.yaml'))
+    from kfp_tekton.compiler.pipeline_utils import TektonPipelineConf
+    config = TektonPipelineConf()
+    config.set_condition_image_name("registry.access.redhat.com/ubi8/python-39")
+    compiler = TektonCompiler()
+    compiler._set_pipeline_conf(config)
+    compiler.compile(flipcoin_pipeline, __file__.replace('.py', '.yaml'))
