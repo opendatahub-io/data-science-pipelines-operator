@@ -20,11 +20,9 @@ import (
 	"database/sql"
 	b64 "encoding/base64"
 	"fmt"
-	"time"
-
 	_ "github.com/go-sql-driver/mysql"
-
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 )
 
 const dbSecret = "mariadb/secret.yaml.tmpl"
@@ -40,7 +38,7 @@ var dbTemplates = []string{
 // extract to var for mocking in testing
 var ConnectAndQueryDatabase = func(host, port, username, password, dbname string) bool {
 	// Create a context with a timeout of 1 second
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), config.DefaultDBConnectionTimeout)
 	defer cancel()
 
 	connectionString := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", username, password, host, port, dbname)
@@ -52,7 +50,6 @@ var ConnectAndQueryDatabase = func(host, port, username, password, dbname string
 
 	testStatement := "SELECT 1;"
 	_, err = db.QueryContext(ctx, testStatement)
-
 	return err == nil
 }
 
