@@ -20,6 +20,7 @@ import (
 	"database/sql"
 	b64 "encoding/base64"
 	"fmt"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 
@@ -38,6 +39,10 @@ var dbTemplates = []string{
 
 // extract to var for mocking in testing
 var ConnectAndQueryDatabase = func(host, port, username, password, dbname string) bool {
+	// Create a context with a timeout of 1 second
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
 	connectionString := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", username, password, host, port, dbname)
 	db, err := sql.Open("mysql", connectionString)
 	if err != nil {
@@ -46,7 +51,8 @@ var ConnectAndQueryDatabase = func(host, port, username, password, dbname string
 	defer db.Close()
 
 	testStatement := "SELECT 1;"
-	_, err = db.Exec(testStatement)
+	_, err = db.QueryContext(ctx, testStatement)
+
 	return err == nil
 }
 
@@ -86,7 +92,6 @@ func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha
 	params *DSPAParams) error {
 
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
-
 	databaseSpecified := dsp.Spec.Database != nil
 	// DB field can be specified as an empty obj, confirm that subfields are also specified
 	// By default if Database is empty, we deploy mariadb
