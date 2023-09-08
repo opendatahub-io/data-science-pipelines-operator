@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -573,6 +574,9 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				return reconcileRequests
 			})).
 		// TODO: Add watcher for ui cluster rbac since it has no owner
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: config.DefaultMaxConcurrentReconciles,
+		}).
 		Complete(r)
 }
 
