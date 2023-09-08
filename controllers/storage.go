@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/minio/minio-go/v7"
@@ -73,6 +74,9 @@ var ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoin
 		log.Info(fmt.Sprintf("Could not connect to object storage endpoint: %s", endpoint))
 		return false
 	}
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
 
 	_, err = minioClient.ListBuckets(ctx)
 	if err != nil {
