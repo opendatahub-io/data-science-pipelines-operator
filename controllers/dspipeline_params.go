@@ -190,8 +190,12 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 		p.DBConnection.DBName = dsp.Spec.Database.ExternalDB.DBName
 		p.DBConnection.CredentialsSecret = dsp.Spec.Database.ExternalDB.PasswordSecret
 
-		// Retreive DB Password from specified secret.  Handle errors (empty password) later
-		password, _ := p.RetrieveSecret(ctx, client, p.DBConnection.CredentialsSecret.Name, p.DBConnection.CredentialsSecret.Key, log)
+		// Retreive DB Password from specified secret.  Ignore error if the secret simply doesn't exist (will be created later)
+		password, err := p.RetrieveSecret(ctx, client, p.DBConnection.CredentialsSecret.Name, p.DBConnection.CredentialsSecret.Key, log)
+		if err != nil && !apierrs.IsNotFound(err) {
+			log.Error(err, "Unexpected error encountered while fetching Database Secret")
+			return err
+		}
 		p.DBConnection.Password = password
 	} else {
 		// If no externalDB or mariaDB is specified, DSPO assumes
@@ -273,9 +277,17 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 		p.ObjectStorageConnection.Port = dsp.Spec.ObjectStorage.ExternalStorage.Port
 		p.ObjectStorageConnection.CredentialsSecret = dsp.Spec.ObjectStorage.ExternalStorage.S3CredentialSecret
 
-		// Retrieve ObjStore Creds from specified secret.  Handle issues (empty creds) later.
-		accesskey, _ := p.RetrieveSecret(ctx, client, p.ObjectStorageConnection.CredentialsSecret.SecretName, p.ObjectStorageConnection.CredentialsSecret.AccessKey, log)
-		secretkey, _ := p.RetrieveSecret(ctx, client, p.ObjectStorageConnection.CredentialsSecret.SecretName, p.ObjectStorageConnection.CredentialsSecret.SecretKey, log)
+		// Retrieve ObjStore Creds from specified secret.  Ignore error if the secret simply doesn't exist (will be created later)
+		accesskey, err := p.RetrieveSecret(ctx, client, p.ObjectStorageConnection.CredentialsSecret.SecretName, p.ObjectStorageConnection.CredentialsSecret.AccessKey, log)
+		if err != nil && !apierrs.IsNotFound(err) {
+			log.Error(err, "Unexpected error encountered while fetching Object Storage Secret")
+			return err
+		}
+		secretkey, err := p.RetrieveSecret(ctx, client, p.ObjectStorageConnection.CredentialsSecret.SecretName, p.ObjectStorageConnection.CredentialsSecret.SecretKey, log)
+		if err != nil && !apierrs.IsNotFound(err) {
+			log.Error(err, "Unexpected error encountered while fetching Object Storage Secret")
+			return err
+		}
 		p.ObjectStorageConnection.AccessKeyID = accesskey
 		p.ObjectStorageConnection.SecretAccessKey = secretkey
 	} else {
