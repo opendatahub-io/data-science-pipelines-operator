@@ -132,10 +132,14 @@ type MariaDB struct {
 	// +kubebuilder:validation:Optional
 	Deploy bool   `json:"deploy"`
 	Image  string `json:"image,omitempty"`
+	// The MariadB username that will be created. Should match `^[a-zA-Z0-9_]+`
 	// +kubebuilder:default:=mlpipeline
+	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9_]+$`
 	Username       string          `json:"username,omitempty"`
 	PasswordSecret *SecretKeyValue `json:"passwordSecret,omitempty"`
 	// +kubebuilder:default:=mlpipeline
+	// The database name that will be created. Should match `^[a-zA-Z0-9_]+`
+	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9_]+$`
 	DBName string `json:"pipelineDBName,omitempty"`
 	// +kubebuilder:default:="10Gi"
 	PVCSize   resource.Quantity     `json:"pvcSize,omitempty"`

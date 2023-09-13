@@ -187,6 +187,9 @@ spec:
                         type: object
                       pipelineDBName:
                         default: mlpipeline
+                        description: The database name that will be created. Should
+                          match `^[a-zA-Z0-9_]+`
+                        pattern: ^[a-zA-Z0-9_]+$
                         type: string
                       pvcSize:
                         anyOf:
@@ -235,6 +238,9 @@ spec:
                         type: object
                       username:
                         default: mlpipeline
+                        description: The MariadB username that will be created. Should
+                          match `^[a-zA-Z0-9_]+`
+                        pattern: ^[a-zA-Z0-9_]+$
                         type: string
                     type: object
                 type: object
