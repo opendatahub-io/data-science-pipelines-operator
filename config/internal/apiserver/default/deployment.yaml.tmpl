@@ -50,6 +50,8 @@ spec:
               value: "{{.APIServer.ArtifactImage}}"
             - name: ARCHIVE_LOGS
               value: "{{.APIServer.ArchiveLogs}}"
+            - name: EXECUTIONTYPE
+              value: PipelineRun
             - name: TRACK_ARTIFACTS
               value: "{{.APIServer.TrackArtifacts}}"
             - name: STRIP_EOF
