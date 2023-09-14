@@ -26,15 +26,9 @@ import (
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 )
 
-const dbSecret = "mariadb/secret.yaml.tmpl"
+const dbSecret = "mariadb/generated-secret/secret.yaml.tmpl"
 
-var dbTemplates = []string{
-	"mariadb/deployment.yaml.tmpl",
-	"mariadb/pvc.yaml.tmpl",
-	"mariadb/service.yaml.tmpl",
-	"mariadb/mariadb-sa.yaml.tmpl",
-	dbSecret,
-}
+var dbTemplatesDir = "mariadb/default"
 
 // extract to var for mocking in testing
 var ConnectAndQueryDatabase = func(host, port, username, password, dbname string) bool {
@@ -112,7 +106,7 @@ func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha
 		}
 	} else if deployMariaDB || deployDefaultDB {
 		log.Info("Applying mariaDB resources.")
-		err := r.ApplyAll(dsp, params, dbTemplates)
+		err := r.ApplyDir(dsp, params, dbTemplatesDir)
 		if err != nil {
 			return err
 		}
