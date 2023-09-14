@@ -17,6 +17,8 @@ limitations under the License.
 package util
 
 import (
+	"os"
+
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -43,4 +45,17 @@ func GetDeploymentCondition(status appsv1.DeploymentStatus, condType appsv1.Depl
 
 func BoolPointer(b bool) *bool {
 	return &b
+}
+
+func GetTemplatesInDir(templateDirectory string) ([]string, error) {
+	entries, err := os.ReadDir(templateDirectory)
+	if err != nil {
+		return nil, err
+	}
+
+	var templates []string
+	for _, e := range entries {
+		templates = append(templates, e.Name())
+	}
+	return templates, nil
 }

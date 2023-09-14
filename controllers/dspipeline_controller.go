@@ -19,8 +19,9 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"time"
+
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 
 	"github.com/go-logr/logr"
 	mf "github.com/manifestival/manifestival"
@@ -51,6 +52,16 @@ type DSPAReconciler struct {
 	Scheme        *runtime.Scheme
 	Log           logr.Logger
 	TemplatesPath string
+}
+
+func (r *DSPAReconciler) ApplyAll(owner mf.Owner, params *DSPAParams, templates []string, fns ...mf.Transformer) error {
+	for _, template := range templates {
+		err := r.Apply(owner, params, template)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *DSPAReconciler) Apply(owner mf.Owner, params *DSPAParams, template string, fns ...mf.Transformer) error {
