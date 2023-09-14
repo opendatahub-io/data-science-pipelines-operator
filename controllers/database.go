@@ -20,6 +20,7 @@ import (
 	"database/sql"
 	b64 "encoding/base64"
 	"fmt"
+
 	_ "github.com/go-sql-driver/mysql"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
@@ -111,11 +112,9 @@ func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha
 		}
 	} else if deployMariaDB || deployDefaultDB {
 		log.Info("Applying mariaDB resources.")
-		for _, template := range dbTemplates {
-			err := r.Apply(dsp, params, template)
-			if err != nil {
-				return err
-			}
+		err := r.ApplyAll(dsp, params, dbTemplates)
+		if err != nil {
+			return err
 		}
 		// If no database was not specified, deploy mariaDB by default.
 		// Update the CR with the state of mariaDB to accurately portray

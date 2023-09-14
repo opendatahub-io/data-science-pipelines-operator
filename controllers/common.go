@@ -30,14 +30,12 @@ func (r *DSPAReconciler) ReconcileCommon(dsp *dspav1alpha1.DataSciencePipelinesA
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
 
 	log.Info("Applying Common Resources")
-	for _, template := range commonTemplates {
-		err := r.Apply(dsp, params, template)
-		if err != nil {
-			return err
-		}
+	err := r.ApplyAll(dsp, params, commonTemplates)
+	if err != nil {
+		return err
 	}
 
-	err := r.ApplyWithoutOwner(params, commonCusterRolebindingTemplate)
+	err = r.ApplyWithoutOwner(params, commonCusterRolebindingTemplate)
 	if err != nil {
 		return err
 	}

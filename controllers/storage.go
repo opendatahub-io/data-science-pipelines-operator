@@ -21,12 +21,13 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net/http"
+
 	"github.com/go-logr/logr"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
-	"net/http"
 )
 
 const storageSecret = "minio/secret.yaml.tmpl"
@@ -161,11 +162,9 @@ func (r *DSPAReconciler) ReconcileStorage(ctx context.Context, dsp *dspav1alpha1
 		}
 	} else if deployMinio {
 		log.Info("Applying object storage resources.")
-		for _, template := range storageTemplates {
-			err := r.Apply(dsp, params, template)
-			if err != nil {
-				return err
-			}
+		err := r.ApplyAll(dsp, params, storageTemplates)
+		if err != nil {
+			return err
 		}
 		// If no storage was not specified, deploy minio by default.
 		// Update the CR with the state of minio to accurately portray
