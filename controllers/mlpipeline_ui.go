@@ -20,16 +20,7 @@ import (
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 )
 
-var mlPipelineUITemplates = []string{
-	"mlpipelines-ui/configmap.yaml.tmpl",
-	"mlpipelines-ui/deployment.yaml.tmpl",
-	"mlpipelines-ui/role.yaml.tmpl",
-	"mlpipelines-ui/rolebinding.yaml.tmpl",
-	"mlpipelines-ui/route.yaml.tmpl",
-	"mlpipelines-ui/sa-ds-pipeline-ui.yaml.tmpl",
-	"mlpipelines-ui/sa_ds-pipelines-viewer.yaml.tmpl",
-	"mlpipelines-ui/service.yaml.tmpl",
-}
+var mlPipelineUITemplatesDir = "mlpipelines-ui"
 
 func (r *DSPAReconciler) ReconcileUI(dsp *dspav1alpha1.DataSciencePipelinesApplication,
 	params *DSPAParams) error {
@@ -42,7 +33,7 @@ func (r *DSPAReconciler) ReconcileUI(dsp *dspav1alpha1.DataSciencePipelinesAppli
 	}
 
 	log.Info("Applying MlPipelineUI Resources")
-	err := r.ApplyAll(dsp, params, mlPipelineUITemplates)
+	err := r.ApplyDir(dsp, params, mlPipelineUITemplatesDir)
 	if err != nil {
 		return err
 	}

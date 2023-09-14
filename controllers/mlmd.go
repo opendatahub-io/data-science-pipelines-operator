@@ -19,18 +19,7 @@ import (
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 )
 
-var mlmdTemplates = []string{
-	"ml-metadata/metadata-envoy.configmap.yaml.tmpl",
-	"ml-metadata/metadata-envoy.deployment.yaml.tmpl",
-	"ml-metadata/metadata-envoy.service.yaml.tmpl",
-	"ml-metadata/metadata-grpc.deployment.yaml.tmpl",
-	"ml-metadata/metadata-grpc.service.yaml.tmpl",
-	"ml-metadata/metadata-grpc.serviceaccount.yaml.tmpl",
-	"ml-metadata/metadata-writer.deployment.yaml.tmpl",
-	"ml-metadata/metadata-writer.role.yaml.tmpl",
-	"ml-metadata/metadata-writer.rolebinding.yaml.tmpl",
-	"ml-metadata/metadata-writer.serviceaccount.yaml.tmpl",
-}
+var mlmdTemplatesDir = "ml-metadata"
 
 func (r *DSPAReconciler) ReconcileMLMD(dsp *dspav1alpha1.DataSciencePipelinesApplication,
 	params *DSPAParams) error {
@@ -40,7 +29,7 @@ func (r *DSPAReconciler) ReconcileMLMD(dsp *dspav1alpha1.DataSciencePipelinesApp
 	if params.UsingMLMD(dsp) {
 		log.Info("Applying ML-Metadata (MLMD) Resources")
 
-		err := r.ApplyAll(dsp, params, mlmdTemplates)
+		err := r.ApplyDir(dsp, params, mlmdTemplatesDir)
 		if err != nil {
 			return err
 		}
