@@ -26,19 +26,7 @@ import (
 
 const apiServerDefaultResourceNamePrefix = "ds-pipeline-"
 
-var apiServerTemplates = []string{
-	"apiserver/artifact_script.yaml.tmpl",
-	"apiserver/role_ds-pipeline.yaml.tmpl",
-	"apiserver/role_pipeline-runner.yaml.tmpl",
-	"apiserver/role_ds-pipeline-user-access.yaml.tmpl",
-	"apiserver/rolebinding_ds-pipeline.yaml.tmpl",
-	"apiserver/rolebinding_pipeline-runner.yaml.tmpl",
-	"apiserver/sa_ds-pipeline.yaml.tmpl",
-	"apiserver/sa_pipeline-runner.yaml.tmpl",
-	"apiserver/service.yaml.tmpl",
-	"apiserver/deployment.yaml.tmpl",
-	"apiserver/monitor.yaml.tmpl",
-}
+var apiServerTemplatesDir = "apiserver"
 
 // serverRoute is a resource deployed conditionally
 // as such it is handled separately
@@ -60,8 +48,7 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1alph
 	}
 
 	log.Info("Applying APIServer Resources")
-
-	err := r.ApplyAll(dsp, params, apiServerTemplates)
+	err := r.ApplyDir(dsp, params, apiServerTemplatesDir)
 	if err != nil {
 		return err
 	}

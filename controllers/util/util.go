@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/go-logr/logr"
 	"os"
+	"path/filepath"
 
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -88,15 +89,15 @@ func GetConfigMapValue(ctx context.Context, cfgKey, cfgName, ns string, client c
 	}
 }
 
-func GetTemplatesInDir(templateDirectory string) ([]string, error) {
-	entries, err := os.ReadDir(templateDirectory)
+func GetTemplatesInDir(templatesDirectory, componentSubdirectory string) ([]string, error) {
+	files, err := os.ReadDir(templatesDirectory + componentSubdirectory)
 	if err != nil {
 		return nil, err
 	}
 
 	var templates []string
-	for _, e := range entries {
-		templates = append(templates, e.Name())
+	for _, f := range files {
+		templates = append(templates, filepath.Join(componentSubdirectory, f.Name()))
 	}
 	return templates, nil
 }

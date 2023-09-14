@@ -56,6 +56,14 @@ type DSPAReconciler struct {
 	MaxConcurrentReconciles int
 }
 
+func (r *DSPAReconciler) ApplyDir(owner mf.Owner, params *DSPAParams, directory string, fns ...mf.Transformer) error {
+	templates, err := util.GetTemplatesInDir(r.TemplatesPath, directory)
+	if err != nil {
+		return err
+	}
+	return r.ApplyAll(owner, params, templates)
+}
+
 func (r *DSPAReconciler) ApplyAll(owner mf.Owner, params *DSPAParams, templates []string, fns ...mf.Transformer) error {
 	for _, template := range templates {
 		err := r.Apply(owner, params, template)

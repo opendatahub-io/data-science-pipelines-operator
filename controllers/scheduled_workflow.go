@@ -22,14 +22,7 @@ import (
 
 const scheduledWorkflowDefaultResourceNamePrefix = "ds-pipeline-scheduledworkflow-"
 
-var scheduledWorkflowTemplates = []string{
-	"scheduled-workflow/deployment.yaml.tmpl",
-	"scheduled-workflow/role.yaml.tmpl",
-	"scheduled-workflow/rolebinding.yaml.tmpl",
-	"scheduled-workflow/sa.yaml.tmpl",
-	"scheduled-workflow/role.yaml.tmpl",
-	"scheduled-workflow/rolebinding.yaml.tmpl",
-}
+var scheduledWorkflowTemplatesDir = "scheduled-workflow"
 
 func (r *DSPAReconciler) ReconcileScheduledWorkflow(dsp *dspav1alpha1.DataSciencePipelinesApplication,
 	params *DSPAParams) error {
@@ -43,7 +36,7 @@ func (r *DSPAReconciler) ReconcileScheduledWorkflow(dsp *dspav1alpha1.DataScienc
 
 	log.Info("Applying ScheduledWorkflow Resources")
 
-	err := r.ApplyAll(dsp, params, scheduledWorkflowTemplates)
+	err := r.ApplyDir(dsp, params, scheduledWorkflowTemplatesDir)
 	if err != nil {
 		return err
 	}
