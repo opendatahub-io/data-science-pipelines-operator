@@ -19,18 +19,15 @@ import (
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 )
 
-var commonTemplates = []string{
-	"common/policy.yaml.tmpl",
-	"common/mlmd-envoy-dashboard-access-policy.yaml.tmpl",
-}
+var commonTemplatesDir = "common/default"
 
-const commonCusterRolebindingTemplate = "common/clusterrolebinding.yaml.tmpl"
+const commonCusterRolebindingTemplate = "common/no-owner/clusterrolebinding.yaml.tmpl"
 
 func (r *DSPAReconciler) ReconcileCommon(dsp *dspav1alpha1.DataSciencePipelinesApplication, params *DSPAParams) error {
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
 
 	log.Info("Applying Common Resources")
-	err := r.ApplyAll(dsp, params, commonTemplates)
+	err := r.ApplyDir(dsp, params, commonTemplatesDir)
 	if err != nil {
 		return err
 	}
