@@ -97,7 +97,9 @@ func GetTemplatesInDir(templatesDirectory, componentSubdirectory string) ([]stri
 
 	var templates []string
 	for _, f := range files {
-		templates = append(templates, filepath.Join(componentSubdirectory, f.Name()))
+		if !f.IsDir() {
+			templates = append(templates, filepath.Join(componentSubdirectory, f.Name()))
+		}
 	}
 	return templates, nil
 }
