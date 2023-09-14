@@ -8,11 +8,17 @@ data:
         artifact_name=$(basename $2)
 
         aws_cp() {
+<<<<<<< HEAD
 {{ if .APIServer.CABundle }}
           aws s3 --endpoint {{.ObjectStorageConnection.Endpoint}} --ca-bundle {{ .PiplinesCABundleMountPath }}/{{ .APIServer.CABundle.ConfigMapKey }} cp $1.tgz s3://{{.ObjectStorageConnection.Bucket}}/artifacts/$PIPELINERUN/$PIPELINETASK/$1.tgz
 {{ else }}
           aws s3 --endpoint {{.ObjectStorageConnection.Endpoint}} cp $1.tgz s3://{{.ObjectStorageConnection.Bucket}}/artifacts/$PIPELINERUN/$PIPELINETASK/$1.tgz
 {{ end }}
+=======
+
+          aws s3 --endpoint http://minio-testdsp6.default.svc.cluster.local:9000 --ca-bundle /etc/pki/tls/certs/testcabundleconfigmapkey6.crt cp $1.tgz s3://mlpipeline/artifacts/$PIPELINERUN/$PIPELINETASK/$1.tgz
+
+>>>>>>> 0f17eeb (Restructure components manifest directories with conditions)
         }
 
         if [ -f "$workspace_dest/$artifact_name" ]; then
@@ -37,8 +43,15 @@ data:
     }
 kind: ConfigMap
 metadata:
+<<<<<<< HEAD
   name: ds-pipeline-artifact-script-{{ .Name }}
   namespace: {{.Namespace}}
   labels:
     app: ds-pipeline-{{.Name}}
+=======
+  name: ds-pipeline-artifact-script-testdsp6
+  namespace: default
+  labels:
+    app: ds-pipeline-testdsp6
+>>>>>>> 0f17eeb (Restructure components manifest directories with conditions)
     component: data-science-pipelines
