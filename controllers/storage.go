@@ -30,15 +30,9 @@ import (
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 )
 
-const storageSecret = "minio/secret.yaml.tmpl"
+const storageSecret = "minio/generated-secret/secret.yaml.tmpl"
 
-var storageTemplates = []string{
-	"minio/deployment.yaml.tmpl",
-	"minio/pvc.yaml.tmpl",
-	"minio/service.yaml.tmpl",
-	"minio/minio-sa.yaml.tmpl",
-	storageSecret,
-}
+var storageTemplatesDir = "minio/default"
 
 func joinHostPort(host, port string) (string, error) {
 	if host == "" {
@@ -162,7 +156,7 @@ func (r *DSPAReconciler) ReconcileStorage(ctx context.Context, dsp *dspav1alpha1
 		}
 	} else if deployMinio {
 		log.Info("Applying object storage resources.")
-		err := r.ApplyAll(dsp, params, storageTemplates)
+		err := r.ApplyDir(dsp, params, storageTemplatesDir)
 		if err != nil {
 			return err
 		}
