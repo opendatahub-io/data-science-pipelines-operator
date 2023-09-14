@@ -33,16 +33,10 @@ import (
 	"time"
 )
 
-const storageSecret = "minio/secret.yaml.tmpl"
 const storageRoute = "minio/route.yaml.tmpl"
+const storageSecret = "minio/generated-secret/secret.yaml.tmpl"
 
-var minioTemplates = []string{
-	"minio/deployment.yaml.tmpl",
-	"minio/pvc.yaml.tmpl",
-	"minio/service.yaml.tmpl",
-	"minio/minio-sa.yaml.tmpl",
-	storageRoute,
-}
+var storageTemplatesDir = "minio/default"
 
 func joinHostPort(host, port string) (string, error) {
 	if host == "" {
@@ -212,27 +206,23 @@ func (r *DSPAReconciler) ReconcileStorage(ctx context.Context, dsp *dspav1alpha1
 	if externalStorageSpecified {
 		log.Info("Using externalStorage, bypassing object storage deployment.")
 	} else if deployMinio {
-<<<<<<< HEAD
 		log.Info("No S3 storage credential reference provided, so using managed secret")
 		if !storageCredentialsProvided {
 			err := r.Apply(dsp, params, storageSecret)
 			if err != nil {
 				return err
 			}
-=======
-		log.Info("Applying object storage resources.")
-		err := r.ApplyAll(dsp, params, storageTemplates)
-		if err != nil {
-			return err
->>>>>>> 611b415 (Add ApplyAll function)
 		}
 		log.Info("Applying object storage resources.")
-		for _, template := range minioTemplates {
-			if dsp.Spec.ObjectStorage.EnableExternalRoute || template != storageRoute {
-				err := r.Apply(dsp, params, template)
-				if err != nil {
-					return err
-				}
+		err := r.ApplyDir(dsp, params, storageTemplatesDir)
+		if err != nil {
+			return err
+		}
+
+		if dsp.Spec.ObjectStorage.EnableExternalRoute || template != storageRoute {
+			err := r.Apply(dsp, params, storageRoute)
+			if err != nil {
+				return err
 			}
 		}
 		// If no storage was not specified, deploy minio by default.
