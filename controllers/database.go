@@ -27,14 +27,9 @@ import (
 	"time"
 )
 
-const dbSecret = "mariadb/secret.yaml.tmpl"
+const dbSecret = "mariadb/generated-secret/secret.yaml.tmpl"
 
-var mariadbTemplates = []string{
-	"mariadb/deployment.yaml.tmpl",
-	"mariadb/pvc.yaml.tmpl",
-	"mariadb/service.yaml.tmpl",
-	"mariadb/mariadb-sa.yaml.tmpl",
-}
+var dbTemplatesDir = "mariadb/default"
 
 // extract to var for mocking in testing
 var ConnectAndQueryDatabase = func(host, port, username, password, dbname string, dbConnectionTimeout time.Duration) bool {
@@ -121,7 +116,7 @@ func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha
 			}
 		}
 		log.Info("Applying mariaDB resources.")
-		err := r.ApplyAll(dsp, params, dbTemplates)
+		err := r.ApplyDir(dsp, params, dbTemplatesDir)
 		if err != nil {
 			return err
 		}
