@@ -123,7 +123,7 @@ jobs:
       - name: Prepare for Upgrade Testing
         run: |
           # Update the KfDef manifest with the candidate version
-          sed -i "s/main/${{ inputs.candidate-version }}/" ${{ env.RESOURCES_DIR }}/kfdef/kfdef.yaml
+          sed -i "s/${{ inputs.released-version }}/${{ inputs.candidate-version }}/" ${{ env.RESOURCES_DIR }}/kfdef/kfdef.yaml
         working-directory: ${{ env.RESOURCES_DIR }}/kfdef
 
       - name: Print KfDef Manifest Contents
