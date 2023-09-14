@@ -212,12 +212,19 @@ func (r *DSPAReconciler) ReconcileStorage(ctx context.Context, dsp *dspav1alpha1
 	if externalStorageSpecified {
 		log.Info("Using externalStorage, bypassing object storage deployment.")
 	} else if deployMinio {
+<<<<<<< HEAD
 		log.Info("No S3 storage credential reference provided, so using managed secret")
 		if !storageCredentialsProvided {
 			err := r.Apply(dsp, params, storageSecret)
 			if err != nil {
 				return err
 			}
+=======
+		log.Info("Applying object storage resources.")
+		err := r.ApplyAll(dsp, params, storageTemplates)
+		if err != nil {
+			return err
+>>>>>>> 611b415 (Add ApplyAll function)
 		}
 		log.Info("Applying object storage resources.")
 		for _, template := range minioTemplates {

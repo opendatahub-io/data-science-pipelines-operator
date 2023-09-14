@@ -40,12 +40,11 @@ func (r *DSPAReconciler) ReconcileMLMD(dsp *dspav1alpha1.DataSciencePipelinesApp
 	if params.UsingMLMD(dsp) {
 		log.Info("Applying ML-Metadata (MLMD) Resources")
 
-		for _, template := range mlmdTemplates {
-			err := r.Apply(dsp, params, template)
-			if err != nil {
-				return err
-			}
+		err := r.ApplyAll(dsp, params, mlmdTemplates)
+		if err != nil {
+			return err
 		}
+
 		log.Info("Finished applying MLMD Resources")
 	}
 	return nil

@@ -61,11 +61,9 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1alph
 
 	log.Info("Applying APIServer Resources")
 
-	for _, template := range apiServerTemplates {
-		err := r.Apply(dsp, params, template)
-		if err != nil {
-			return err
-		}
+	err := r.ApplyAll(dsp, params, apiServerTemplates)
+	if err != nil {
+		return err
 	}
 
 	if dsp.Spec.APIServer.EnableRoute {

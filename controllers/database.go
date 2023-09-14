@@ -121,11 +121,9 @@ func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha
 			}
 		}
 		log.Info("Applying mariaDB resources.")
-		for _, template := range mariadbTemplates {
-			err := r.Apply(dsp, params, template)
-			if err != nil {
-				return err
-			}
+		err := r.ApplyAll(dsp, params, dbTemplates)
+		if err != nil {
+			return err
 		}
 		// If no database was not specified, deploy mariaDB by default.
 		// Update the CR with the state of mariaDB to accurately portray

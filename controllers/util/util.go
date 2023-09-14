@@ -21,6 +21,8 @@ import (
 	"crypto/x509"
 	"fmt"
 	"github.com/go-logr/logr"
+	"os"
+
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
@@ -84,4 +86,17 @@ func GetConfigMapValue(ctx context.Context, cfgKey, cfgName, ns string, client c
 	} else {
 		return fmt.Errorf("ConfigMap %s sdoes not contain specified key %s", cfgName, cfgKey), ""
 	}
+}
+
+func GetTemplatesInDir(templateDirectory string) ([]string, error) {
+	entries, err := os.ReadDir(templateDirectory)
+	if err != nil {
+		return nil, err
+	}
+
+	var templates []string
+	for _, e := range entries {
+		templates = append(templates, e.Name())
+	}
+	return templates, nil
 }

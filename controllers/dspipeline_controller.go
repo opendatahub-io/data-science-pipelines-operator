@@ -19,6 +19,8 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
 	"github.com/go-logr/logr"
@@ -52,6 +54,16 @@ type DSPAReconciler struct {
 	Log                     logr.Logger
 	TemplatesPath           string
 	MaxConcurrentReconciles int
+}
+
+func (r *DSPAReconciler) ApplyAll(owner mf.Owner, params *DSPAParams, templates []string, fns ...mf.Transformer) error {
+	for _, template := range templates {
+		err := r.Apply(owner, params, template)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *DSPAReconciler) Apply(owner mf.Owner, params *DSPAParams, template string, fns ...mf.Transformer) error {
