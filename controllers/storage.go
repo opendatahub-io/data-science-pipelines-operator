@@ -33,7 +33,10 @@ import (
 	"time"
 )
 
+<<<<<<< HEAD
 const storageRoute = "minio/route.yaml.tmpl"
+=======
+>>>>>>> b1dba38 (Restructure Object Storage templates directory)
 const storageSecret = "minio/generated-secret/secret.yaml.tmpl"
 
 var storageTemplatesDir = "minio/default"
