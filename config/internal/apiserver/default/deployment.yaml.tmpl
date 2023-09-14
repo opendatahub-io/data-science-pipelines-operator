@@ -58,6 +58,8 @@ spec:
             - name: ARTIFACT_COPY_STEP_CABUNDLE_MOUNTPATH
               value: {{ .PiplinesCABundleMountPath }}
             {{ end }}
+            - name: EXECUTIONTYPE
+              value: PipelineRun
             - name: TRACK_ARTIFACTS
               value: "{{.APIServer.TrackArtifacts}}"
             - name: STRIP_EOF

@@ -26,17 +26,17 @@ import (
 
 const apiServerDefaultResourceNamePrefix = "ds-pipeline-"
 
-var apiServerTemplatesDir = "apiserver"
+var apiServerTemplatesDir = "apiserver/default"
 
 // serverRoute is a resource deployed conditionally
 // as such it is handled separately
-const serverRoute = "apiserver/route.yaml.tmpl"
+const serverRoute = "apiserver/route/route.yaml.tmpl"
 
 // Sample Pipeline and Config are resources deployed conditionally
 // as such it is handled separately
 var samplePipelineTemplates = map[string]string{
-	"sample-pipeline": "apiserver/sample-pipeline.yaml.tmpl",
-	"sample-config":   "apiserver/sample-config.yaml.tmpl",
+	"sample-pipeline": "apiserver/sample-pipeline/sample-pipeline.yaml.tmpl",
+	"sample-config":   "apiserver/sample-pipeline/sample-config.yaml.tmpl",
 }
 
 func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication, params *DSPAParams) error {
