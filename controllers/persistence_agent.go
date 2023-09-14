@@ -39,11 +39,9 @@ func (r *DSPAReconciler) ReconcilePersistenceAgent(dsp *dspav1alpha1.DataScience
 
 	log.Info("Applying PersistenceAgent Resources")
 
-	for _, template := range persistenceAgentTemplates {
-		err := r.Apply(dsp, params, template)
-		if err != nil {
-			return err
-		}
+	err := r.ApplyAll(dsp, params, persistenceAgentTemplates)
+	if err != nil {
+		return err
 	}
 
 	log.Info("Finished applying PersistenceAgent Resources")

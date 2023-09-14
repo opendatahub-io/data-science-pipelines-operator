@@ -41,11 +41,9 @@ func (r *DSPAReconciler) ReconcileScheduledWorkflow(dsp *dspav1alpha1.DataScienc
 
 	log.Info("Applying ScheduledWorkflow Resources")
 
-	for _, template := range scheduledWorkflowTemplates {
-		err := r.Apply(dsp, params, template)
-		if err != nil {
-			return err
-		}
+	err := r.ApplyAll(dsp, params, scheduledWorkflowTemplates)
+	if err != nil {
+		return err
 	}
 
 	log.Info("Finished applying ScheduledWorkflow Resources")

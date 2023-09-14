@@ -42,11 +42,9 @@ func (r *DSPAReconciler) ReconcileUI(dsp *dspav1alpha1.DataSciencePipelinesAppli
 	}
 
 	log.Info("Applying MlPipelineUI Resources")
-	for _, template := range mlPipelineUITemplates {
-		err := r.Apply(dsp, params, template)
-		if err != nil {
-			return err
-		}
+	err := r.ApplyAll(dsp, params, mlPipelineUITemplates)
+	if err != nil {
+		return err
 	}
 
 	log.Info("Finished applying MlPipelineUI Resources")
