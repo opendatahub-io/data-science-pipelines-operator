@@ -20,12 +20,7 @@ import (
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 )
 
-var persistenceAgentTemplates = []string{
-	"persistence-agent/deployment.yaml.tmpl",
-	"persistence-agent/sa.yaml.tmpl",
-	"persistence-agent/role.yaml.tmpl",
-	"persistence-agent/rolebinding.yaml.tmpl",
-}
+var persistenceAgentTemplatesDir = "persistence-agent"
 
 func (r *DSPAReconciler) ReconcilePersistenceAgent(dsp *dspav1alpha1.DataSciencePipelinesApplication,
 	params *DSPAParams) error {
@@ -39,7 +34,7 @@ func (r *DSPAReconciler) ReconcilePersistenceAgent(dsp *dspav1alpha1.DataScience
 
 	log.Info("Applying PersistenceAgent Resources")
 
-	err := r.ApplyAll(dsp, params, persistenceAgentTemplates)
+	err := r.ApplyDir(dsp, params, persistenceAgentTemplatesDir)
 	if err != nil {
 		return err
 	}
