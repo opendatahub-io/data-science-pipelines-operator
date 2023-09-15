@@ -72,6 +72,12 @@ spec:
               value: "ds-pipeline-visualizationserver"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
               value: "8888"
+            - name: OBJECTSTORECONFIG_CREDENTIALSSECRET
+              value: "teststoragesecretname3"
+            - name: OBJECTSTORECONFIG_CREDENTIALSACCESSKEYKEY
+              value: "testaccesskey3"
+            - name: OBJECTSTORECONFIG_CREDENTIALSSECRETKEYKEY
+              value: "testsecretkey3"
             - name: OBJECTSTORECONFIG_BUCKETNAME
               value: "testbucket3"
             - name: OBJECTSTORECONFIG_ACCESSKEY

@@ -80,6 +80,12 @@ spec:
               value: "ds-pipeline-visualizationserver"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
               value: "8888"
+            - name: OBJECTSTORECONFIG_CREDENTIALSSECRET
+              value: "{{.ObjectStorageConnection.CredentialsSecret.SecretName}}"
+            - name: OBJECTSTORECONFIG_CREDENTIALSACCESSKEYKEY
+              value: "{{.ObjectStorageConnection.CredentialsSecret.AccessKey}}"
+            - name: OBJECTSTORECONFIG_CREDENTIALSSECRETKEYKEY
+              value: "{{.ObjectStorageConnection.CredentialsSecret.SecretKey}}"
             - name: OBJECTSTORECONFIG_BUCKETNAME
               value: "{{.ObjectStorageConnection.Bucket}}"
             - name: OBJECTSTORECONFIG_ACCESSKEY
