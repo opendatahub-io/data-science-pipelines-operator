@@ -20,12 +20,12 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"net/http"
-
 	"github.com/go-logr/logr"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
+	"net/http"
 )
 
 const storageSecret = "minio/secret.yaml.tmpl"
@@ -73,6 +73,9 @@ var ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoin
 		log.Info(fmt.Sprintf("Could not connect to object storage endpoint: %s", endpoint))
 		return false
 	}
+
+	ctx, cancel := context.WithTimeout(ctx, config.DefaultObjStoreConnectionTimeout)
+	defer cancel()
 
 	// Attempt to run Stat on the Object.  It doesn't necessarily have to exist, we just want to verify we can successfully run an authenticated s3 command
 	_, err = minioClient.StatObject(ctx, bucket, "some-random-object", minio.GetObjectOptions{})
