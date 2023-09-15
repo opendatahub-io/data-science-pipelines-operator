@@ -169,6 +169,16 @@ spec:
                     description: 'Default: true'
                     type: boolean
                 type: object
+              crdviewer:
+                default:
+                  deploy: false
+                properties:
+                  deploy:
+                    default: true
+                    type: boolean
+                  image:
+                    type: string
+                type: object
               database:
                 default:
                   mariaDB:
@@ -736,6 +746,16 @@ spec:
                             x-kubernetes-int-or-string: true
                         type: object
                     type: object
+                type: object
+              visualizationServer:
+                default:
+                  deploy: false
+                properties:
+                  deploy:
+                    default: true
+                    type: boolean
+                  image:
+                    type: string
                 type: object
             required:
             - objectStorage

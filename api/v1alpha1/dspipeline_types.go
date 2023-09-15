@@ -43,6 +43,12 @@ type DSPASpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:={deploy: false}
 	*MLMD `json:"mlmd"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={deploy: false}
+	*CRDViewer `json:"crdviewer"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={deploy: false}
+	*VisualizationServer `json:"visualizationServer"`
 }
 
 type APIServer struct {
@@ -269,6 +275,20 @@ type Writer struct {
 	Resources *ResourceRequirements `json:"resources,omitempty"`
 	// +kubebuilder:validation:Required
 	Image string `json:"image"`
+}
+
+type CRDViewer struct {
+	// +kubebuilder:default:=true
+	// +kubebuilder:validation:Optional
+	Deploy bool   `json:"deploy"`
+	Image  string `json:"image,omitempty"`
+}
+
+type VisualizationServer struct {
+	// +kubebuilder:default:=true
+	// +kubebuilder:validation:Optional
+	Deploy bool   `json:"deploy"`
+	Image  string `json:"image,omitempty"`
 }
 
 // ResourceRequirements structures compute resource requirements.

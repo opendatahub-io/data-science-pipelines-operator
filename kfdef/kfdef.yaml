@@ -30,6 +30,10 @@ spec:
             value: quay.io/opendatahub/ds-pipelines-metadata-grpc:1.0.0
           - name: IMAGES_MLMDWRITER
             value: quay.io/opendatahub/ds-pipelines-metadata-writer:1.1.0
+          - name: IMAGES_CRDVIEWER
+            value: gcr.io/ml-pipeline/viewer-crd-controller:2.0.0-rc.2
+          - name: IMAGES_VISUALIZATIONSERVER
+            value: gcr.io/ml-pipeline/visualization-server:2.0.0-rc.2
         repoRef:
           name: manifests
           path: config
