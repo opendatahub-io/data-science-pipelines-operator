@@ -92,6 +92,20 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.IMAGES_MLMDWRITER
+  - name: IMAGES_CRDVIEWER
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGES_CRDVIEWER
+  - name: IMAGES_VISUALIZATIONSERVER
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGES_VISUALIZATIONSERVER
   - name: IMAGES_DSPO
     objref:
       kind: ConfigMap
