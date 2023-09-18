@@ -18,8 +18,14 @@ package controllers
 
 import (
 	"context"
-
+	"encoding/base64"
+	"fmt"
+	"github.com/go-logr/logr"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
+	"net/http"
 )
 
 const storageSecret = "minio/secret.yaml.tmpl"
@@ -28,7 +34,88 @@ var storageTemplates = []string{
 	"minio/deployment.yaml.tmpl",
 	"minio/pvc.yaml.tmpl",
 	"minio/service.yaml.tmpl",
+	"minio/minio-sa.yaml.tmpl",
 	storageSecret,
+}
+
+func joinHostPort(host, port string) string {
+	if port == "" {
+		return host
+	}
+	return fmt.Sprintf("%s:%s", host, port)
+}
+
+func createCredentialProvidersChain(accessKey, secretKey string) *credentials.Credentials {
+	// first try with static api key
+	if accessKey != "" && secretKey != "" {
+		return credentials.NewStaticV4(accessKey, secretKey, "")
+	}
+	// otherwise use a chained provider: minioEnv -> awsEnv -> IAM
+	providers := []credentials.Provider{
+		&credentials.EnvMinio{},
+		&credentials.EnvAWS{},
+		&credentials.IAM{
+			Client: &http.Client{
+				Transport: http.DefaultTransport,
+			},
+		},
+	}
+	return credentials.New(&credentials.Chain{Providers: providers})
+}
+
+var ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint string, accesskey, secretkey []byte, secure bool) bool {
+	cred := createCredentialProvidersChain(string(accesskey), string(secretkey))
+	minioClient, err := minio.New(endpoint, &minio.Options{
+		Creds:  cred,
+		Secure: secure,
+	})
+	if err != nil {
+		log.Info(fmt.Sprintf("Could not connect to object storage endpoint: %s", endpoint))
+		return false
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, config.DefaultObjStoreConnectionTimeout)
+	defer cancel()
+
+	_, err = minioClient.ListBuckets(ctx)
+	if err != nil {
+		log.Info(fmt.Sprintf("Could not perform ListBuckets health check on object storage endpoint: %s", endpoint))
+		return false
+	}
+
+	return true
+}
+
+func (r *DSPAReconciler) isObjectStorageAccessible(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,
+	params *DSPAParams) bool {
+	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
+	if params.ObjectStorageHealthCheckDisabled(dsp) {
+		log.V(1).Info("Object Storage health check disabled, assuming object store is available and ready.")
+		return true
+	}
+
+	log.Info("Performing Object Storage Health Check")
+
+	endpoint := joinHostPort(params.ObjectStorageConnection.Host, params.ObjectStorageConnection.Port)
+	accesskey, err := base64.StdEncoding.DecodeString(params.ObjectStorageConnection.AccessKeyID)
+	if err != nil {
+		log.Error(err, "Could not decode Object Storage Access Key ID")
+		return false
+	}
+
+	secretkey, err := base64.StdEncoding.DecodeString(params.ObjectStorageConnection.SecretAccessKey)
+	if err != nil {
+		log.Error(err, "Could not decode Object Storage Secret Access Key")
+		return false
+	}
+
+	verified := ConnectAndQueryObjStore(ctx, log, endpoint, accesskey, secretkey, *params.ObjectStorageConnection.Secure)
+	if verified {
+		log.Info("Object Storage Health Check Successful")
+	} else {
+		log.Info("Object Storage Health Check Failed")
+	}
+	return verified
 }
 
 // ReconcileStorage will set up Storage Connection.

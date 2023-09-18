@@ -1,0 +1,70 @@
+name: odh-manifests sync
+
+run-name: Sync manifests in odh-manifests
+on:
+  workflow_dispatch:
+#  push:
+#    tags:
+#      - '*'
+jobs:
+  send-pull-requests:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout data-science-pipelines-operator repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          ref: main
+          repository: opendatahub-io/data-science-pipelines-operator
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Send pull-request
+        run: |
+          LATEST_TAG=$(git describe --tags --always --abbrev=0)
+          REPOSITORY="dsp-developers/odh-manifests"
+          FOLDER="bin/$REPOSITORY"
+          BRANCH_NAME="chore-update-scripts-to-$LATEST_TAG"
+
+          # Clone the remote repository and change working directory to the
+          # folder it was cloned to.
+          git clone \
+            --depth=1 \
+            --branch=master \
+            https://dsp-developers:${{ secrets.ACCESS_TOKEN }}@github.com/$REPOSITORY \
+            $FOLDER
+          cd $FOLDER
+
+          # Setup the committers identity.
+          git config user.email "140449482+dsp-developers@users.noreply.github.com"
+          git config user.name "dsp-developers"
+
+          git remote add upstream https://github.com/opendatahub-io/odh-manifests.git
+          git fetch upstream
+
+          # Create a new feature branch for the changes.
+          git checkout -B $BRANCH_NAME upstream/master
+          echo "Created branch: $BRANCH_NAME"
+
+          # Copy DSPO manifests. Using rsync to allow filtering of paths/files (e.g. like a .gitignore, hidden files, etc)
+
+          rsync -av --exclude={'overlays/','samples/','internal/'} ../../../config/ data-science-pipelines-operator/
+
+          # Commit the changes and push the feature branch to origin
+          git add .
+          git commit -m "Update DSPO to $LATEST_TAG"
+          # Check if the branch exists and perform rebase if it does
+          if git ls-remote --exit-code --heads origin $BRANCH_NAME; then
+            git pull --rebase origin $BRANCH_NAME
+          fi
+          git push origin $BRANCH_NAME
+
+          gh pr create \
+            --body "This is an automated PR to update Data Science Pipelines Operator manifests to $LATEST_TAG" \
+            --title "Update DSP Operator manifests to $LATEST_TAG" \
+            --head "$BRANCH_NAME" \
+            --base "master"
+            --repo https://github.com/opendatahub-io/data-science-pipelines-operator
+        env:
+          GH_TOKEN: ${{ secrets.ACCESS_TOKEN }}

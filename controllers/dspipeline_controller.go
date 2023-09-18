@@ -19,6 +19,9 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"time"
+
 	"github.com/go-logr/logr"
 	mf "github.com/manifestival/manifestival"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
@@ -160,10 +163,10 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{}
 	err := r.Get(ctx, req.NamespacedName, dspa)
 	if err != nil && apierrs.IsNotFound(err) {
-		log.Info("Stop DSPAParams reconciliation")
+		log.Info("DSPA resource was not found")
 		return ctrl.Result{}, nil
 	} else if err != nil {
-		log.Error(err, "Unable to fetch the DSPAParams")
+		log.Error(err, "Encountered error when fetching DSPA")
 		return ctrl.Result{}, err
 	}
 
@@ -204,7 +207,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	err = params.ExtractParams(ctx, dspa, r.Client, r.Log)
 	if err != nil {
 		log.Info(fmt.Sprintf("Encountered error when parsing CR: [%s]", err))
-		return ctrl.Result{}, nil
+		return ctrl.Result{Requeue: true, RequeueAfter: 2 * time.Minute}, nil
 	}
 
 	err = r.ReconcileDatabase(ctx, dspa, params)
@@ -217,34 +220,42 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	err = r.ReconcileCommon(dspa, params)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+	// Get Prereq Status (DB and ObjStore Ready)
+	dbAvailable := r.isDatabaseAccessible(ctx, dspa, params)
+	objStoreAvailable := r.isObjectStorageAccessible(ctx, dspa, params)
+	dspaPrereqsReady := (dbAvailable && objStoreAvailable)
 
-	err = r.ReconcileAPIServer(ctx, dspa, params)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+	if dspaPrereqsReady {
+		// Manage Common Manifests
+		err = r.ReconcileCommon(dspa, params)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 
-	err = r.ReconcilePersistenceAgent(dspa, params)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+		err = r.ReconcileAPIServer(ctx, dspa, params)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 
-	err = r.ReconcileScheduledWorkflow(dspa, params)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+		err = r.ReconcilePersistenceAgent(dspa, params)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 
-	err = r.ReconcileUI(dspa, params)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+		err = r.ReconcileScheduledWorkflow(dspa, params)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 
-	err = r.ReconcileMLMD(dspa, params)
-	if err != nil {
-		return ctrl.Result{}, err
+		err = r.ReconcileUI(dspa, params)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		err = r.ReconcileMLMD(dspa, params)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	log.Info("Updating CR status")
@@ -255,7 +266,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	conditions, err := r.GenerateStatus(ctx, dspa)
+	conditions, err := r.GenerateStatus(ctx, dspa, dbAvailable, objStoreAvailable)
 	if err != nil {
 		log.Info(err.Error())
 		return ctrl.Result{}, err
@@ -271,24 +282,20 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	r.PublishMetrics(
 		dspa,
+		util.GetConditionByType(config.DatabaseAvailable, conditions),
+		util.GetConditionByType(config.ObjectStoreAvailable, conditions),
 		util.GetConditionByType(config.APIServerReady, conditions),
 		util.GetConditionByType(config.PersistenceAgentReady, conditions),
 		util.GetConditionByType(config.ScheduledWorkflowReady, conditions),
 		util.GetConditionByType(config.CrReady, conditions),
 	)
-
 	return ctrl.Result{}, nil
 }
 
 // handleReadyCondition evaluates if condition with "name" is in condition of type "conditionType".
 // this procedure is valid only for conditions with bool status type, for conditions of non bool type
 // results are undefined.
-func (r *DSPAReconciler) handleReadyCondition(
-	ctx context.Context,
-	dspa *dspav1alpha1.DataSciencePipelinesApplication,
-	name string,
-	condition string,
-) (metav1.Condition, error) {
+func (r *DSPAReconciler) handleReadyCondition(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication, name string, condition string) (metav1.Condition, error) {
 	readyCondition := r.buildCondition(condition, dspa, config.MinimumReplicasAvailable)
 	deployment := &appsv1.Deployment{}
 
@@ -297,7 +304,14 @@ func (r *DSPAReconciler) handleReadyCondition(
 
 	err := r.Get(ctx, types.NamespacedName{Name: component, Namespace: dspa.Namespace}, deployment)
 	if err != nil {
-		return metav1.Condition{}, err
+		if apierrs.IsNotFound(err) {
+			readyCondition.Reason = config.ComponentDeploymentNotFound
+			readyCondition.Status = metav1.ConditionFalse
+			readyCondition.Message = fmt.Sprintf("Deployment for component \"%s\" is missing - pre-requisite component may not yet be available.", component)
+			return readyCondition, nil
+		} else {
+			return metav1.Condition{}, err
+		}
 	}
 
 	// First check if deployment is scaled down, if it is, component is deemed not ready
@@ -397,21 +411,46 @@ func (r *DSPAReconciler) handleReadyCondition(
 
 }
 
-func (r *DSPAReconciler) GenerateStatus(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication) ([]metav1.Condition, error) {
+func (r *DSPAReconciler) GenerateStatus(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication, dbAvailableStatus, objStoreAvailableStatus bool) ([]metav1.Condition, error) {
+	// Create Database Availability Condition
+	databaseAvailable := r.buildCondition(config.DatabaseAvailable, dspa, config.DatabaseAvailable)
+	if dbAvailableStatus {
+		databaseAvailable.Status = metav1.ConditionTrue
+		databaseAvailable.Message = "Database connectivity successfully verified"
+	} else {
+		databaseAvailable.Message = "Could not connect to database"
+	}
 
+	// Create Object Storage Availability Condition
+	objStoreAvailable := r.buildCondition(config.ObjectStoreAvailable, dspa, config.ObjectStoreAvailable)
+	if objStoreAvailableStatus {
+		objStoreAvailable.Status = metav1.ConditionTrue
+		objStoreAvailable.Message = "Object Store connectivity successfully verified"
+	} else {
+		objStoreAvailable.Message = "Could not connect to Object Store"
+	}
+
+	// Create APIServer Readiness Condition
 	apiServerReady, err := r.handleReadyCondition(ctx, dspa, "ds-pipeline", config.APIServerReady)
 	if err != nil {
 		return []metav1.Condition{}, err
 	}
+
+	// Create PersistenceAgent Readiness Condition
 	persistenceAgentReady, err := r.handleReadyCondition(ctx, dspa, "ds-pipeline-persistenceagent", config.PersistenceAgentReady)
 	if err != nil {
 		return []metav1.Condition{}, err
 	}
+
+	// Create ScheduledWorkflow Readiness Condition
 	scheduledWorkflowReady, err := r.handleReadyCondition(ctx, dspa, "ds-pipeline-scheduledworkflow", config.ScheduledWorkflowReady)
 	if err != nil {
 		return []metav1.Condition{}, err
 	}
+
 	var conditions []metav1.Condition
+	conditions = append(conditions, databaseAvailable)
+	conditions = append(conditions, objStoreAvailable)
 	conditions = append(conditions, apiServerReady)
 	conditions = append(conditions, persistenceAgentReady)
 	conditions = append(conditions, scheduledWorkflowReady)
@@ -420,7 +459,7 @@ func (r *DSPAReconciler) GenerateStatus(ctx context.Context, dspa *dspav1alpha1.
 	crReady := r.buildCondition(config.CrReady, dspa, config.MinimumReplicasAvailable)
 	crReady.Type = config.CrReady
 
-	componentConditions := []metav1.Condition{apiServerReady, persistenceAgentReady, scheduledWorkflowReady}
+	componentConditions := []metav1.Condition{databaseAvailable, objStoreAvailable, apiServerReady, persistenceAgentReady, scheduledWorkflowReady}
 	allReady := true
 	failureMessages := ""
 	for _, c := range componentConditions {
@@ -449,16 +488,24 @@ func (r *DSPAReconciler) GenerateStatus(ctx context.Context, dspa *dspav1alpha1.
 }
 
 func (r *DSPAReconciler) PublishMetrics(dspa *dspav1alpha1.DataSciencePipelinesApplication,
-	apiServerReady, persistenceAgentReady, scheduledWorkflowReady,
+	dbAvailable, objStoreAvailable, apiServerReady, persistenceAgentReady, scheduledWorkflowReady,
 	crReady metav1.Condition) {
 	log := r.Log.WithValues("namespace", dspa.Namespace).WithValues("dspa_name", dspa.Name)
 	log.Info("Publishing Ready Metrics")
-	if apiServerReady.Status == metav1.ConditionTrue {
-		log.Info("APIServer Ready")
-		APIServerReadyMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(1)
+	if dbAvailable.Status == metav1.ConditionTrue {
+		log.Info("Database Accessible")
+		DBAvailableMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(1)
 	} else {
-		log.Info("APIServer Not Ready")
-		APIServerReadyMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(0)
+		log.Info("Database Not Yet Accessible")
+		DBAvailableMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(0)
+	}
+
+	if objStoreAvailable.Status == metav1.ConditionTrue {
+		log.Info("Object Store Accessible")
+		ObjectStoreAvailableMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(1)
+	} else {
+		log.Info("Object Store Not Yet Accessible")
+		ObjectStoreAvailableMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(0)
 	}
 
 	if persistenceAgentReady.Status == metav1.ConditionTrue {
@@ -527,6 +574,9 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				return reconcileRequests
 			})).
 		// TODO: Add watcher for ui cluster rbac since it has no owner
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: config.DefaultMaxConcurrentReconciles,
+		}).
 		Complete(r)
 }
 

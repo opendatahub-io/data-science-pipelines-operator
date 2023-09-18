@@ -81,10 +81,26 @@ func (p *DSPAParams) UsingExternalDB(dsp *dspa.DataSciencePipelinesApplication) 
 	return false
 }
 
+// StorageHealthCheckDisabled will return the value if the Database has disableHealthCheck specified in the CR, otherwise false.
+func (p *DSPAParams) DatabaseHealthCheckDisabled(dsp *dspa.DataSciencePipelinesApplication) bool {
+	if dsp.Spec.Database != nil {
+		return dsp.Spec.Database.DisableHealthCheck
+	}
+	return false
+}
+
 // UsingExternalStorage will return true if an external Object Storage is specified in the CR, otherwise false.
 func (p *DSPAParams) UsingExternalStorage(dsp *dspa.DataSciencePipelinesApplication) bool {
 	if dsp.Spec.ObjectStorage != nil && dsp.Spec.ObjectStorage.ExternalStorage != nil {
 		return true
+	}
+	return false
+}
+
+// ObjectStorageHealthCheckDisabled will return the value if the Object Storage has disableHealthCheck specified in the CR, otherwise false.
+func (p *DSPAParams) ObjectStorageHealthCheckDisabled(dsp *dspa.DataSciencePipelinesApplication) bool {
+	if dsp.Spec.ObjectStorage != nil {
+		return dsp.Spec.ObjectStorage.DisableHealthCheck
 	}
 	return false
 }

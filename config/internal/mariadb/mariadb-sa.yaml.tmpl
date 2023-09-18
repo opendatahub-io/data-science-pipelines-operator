@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: mariadb-{{.Name}}
+  name: ds-pipelines-mariadb-sa-{{.Name}}
   namespace: {{.Namespace}}
   labels:
     app: mariadb-{{.Name}}

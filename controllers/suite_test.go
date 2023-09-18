@@ -31,6 +31,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/go-logr/logr"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -66,6 +67,16 @@ func TestAPIs(t *testing.T) {
 
 	RunSpecs(t, "Controller Suite")
 }
+
+var _ = BeforeEach(func() {
+	By("Overriding the Database and Object Store live connection functions with trivial stubs")
+	ConnectAndQueryDatabase = func(host string, port string, username string, password string, dbname string) bool {
+		return true
+	}
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint string, accesskey, secretkey []byte, secure bool) bool {
+		return true
+	}
+})
 
 var _ = BeforeSuite(func() {
 	ctx, cancel = context.WithCancel(context.TODO())

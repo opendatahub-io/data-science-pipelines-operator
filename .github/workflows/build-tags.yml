@@ -1,0 +1,181 @@
+name: Build images from sources.
+run-name: Build images from sources.
+on:
+  workflow_dispatch:
+    inputs:
+      src_branch:
+        default: 'v1.0.x'
+        description: 'Source branch to build DSPO/DSP from'
+        required: true
+      target_tag:
+        default: 'vx.y.z'
+        description: 'Target Image Tag'
+        required: true
+      quay_org:
+        default: 'opendatahub'
+        description: 'Quay Organization'
+        required: true
+      dsp_org_repo:
+        default: 'opendatahub-io/data-science-pipelines'
+        description: 'DSP org/repo'
+        required: true
+env:
+  IMAGE_REPO_DSPO: data-science-pipelines-operator
+  IMAGE_REPO_SERVER: ds-pipelines-api-server
+  IMAGE_REPO_UI: ds-pipelines-frontend
+  IMAGE_REPO_CACHE: ds-pipelines-cacheserver
+  IMAGE_REPO_PA: ds-pipelines-persistenceagent
+  IMAGE_REPO_SWF: ds-pipelines-scheduledworkflow
+  IMAGE_REPO_VC: ds-pipelines-viewercontroller
+  IMAGE_REPO_ARTIFACT: ds-pipelines-artifact-manager
+  IMAGE_REPO_MLMD_WRITER: ds-pipelines-metadata-writer
+  IMAGE_REPO_MLMD_ENVOY: ds-pipelines-metadata-envoy
+  IMAGE_REPO_MLMD_GRPC: ds-pipelines-metadata-grpc
+  SOURCE_BRANCH: ${{ inputs.src_branch }}
+  QUAY_ORG: ${{ inputs.quay_org }}
+  QUAY_ID: ${{ secrets.QUAY_ID }}
+  QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
+  TARGET_IMAGE_TAG: ${{ inputs.target_tag }}
+jobs:
+  dspo-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/build
+        name: Build Image
+        with:
+          IMAGE_REPO: ${{ env.IMAGE_REPO_DSPO }}
+          DOCKERFILE: Dockerfile
+          GH_REPO: ${{ github.repository }}
+
+  server-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/build
+        name: Build Image
+        with:
+          IMAGE_REPO: ${{ env.IMAGE_REPO_SERVER }}
+          DOCKERFILE: backend/Dockerfile
+          GH_REPO: ${{ inputs.dsp_org_repo }}
+
+  ui-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/build
+        name: Build Image
+        with:
+          IMAGE_REPO: ${{ env.IMAGE_REPO_UI }}
+          DOCKERFILE: frontend/Dockerfile
+          GH_REPO: ${{ inputs.dsp_org_repo }}
+
+  cache-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/build
+        name: Build Image
+        with:
+          IMAGE_REPO: ${{ env.IMAGE_REPO_CACHE }}
+          DOCKERFILE: backend/Dockerfile.cacheserver
+          GH_REPO: ${{ inputs.dsp_org_repo }}
+
+  PA-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/build
+        name: Build Image
+        with:
+          IMAGE_REPO: ${{ env.IMAGE_REPO_PA }}
+          DOCKERFILE: backend/Dockerfile.persistenceagent
+          GH_REPO: ${{ inputs.dsp_org_repo }}
+
+  SWF-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/build
+        name: Build Image
+        with:
+          IMAGE_REPO: ${{ env.IMAGE_REPO_SWF }}
+          DOCKERFILE: backend/Dockerfile.scheduledworkflow
+          GH_REPO: ${{ inputs.dsp_org_repo }}
+
+  VC-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/build
+        name: Build Image
+        with:
+          IMAGE_REPO: ${{ env.IMAGE_REPO_VC }}
+          DOCKERFILE: backend/Dockerfile.viewercontroller
+          GH_REPO: ${{ inputs.dsp_org_repo }}
+
+  ARTIFACT-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/build
+        name: Build Image
+        with:
+          IMAGE_REPO: ${{ env.IMAGE_REPO_ARTIFACT }}
+          DOCKERFILE: backend/artifact_manager/Dockerfile
+          GH_REPO: ${{ inputs.dsp_org_repo }}
+
+  MLMD_WRITER-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/build
+        name: Build Image
+        with:
+          IMAGE_REPO: ${{ env.IMAGE_REPO_MLMD_WRITER }}
+          DOCKERFILE: backend/metadata_writer/Dockerfile
+          GH_REPO: ${{ inputs.dsp_org_repo }}
+
+  MLMD_ENVOY-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/build
+        name: Build Image
+        with:
+          IMAGE_REPO: ${{ env.IMAGE_REPO_MLMD_ENVOY }}
+          DOCKERFILE: third-party/metadata_envoy/Dockerfile
+          GH_REPO: ${{ inputs.dsp_org_repo }}
+
+  MLMD_GRPC-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/build
+        name: Build Image
+        with:
+          IMAGE_REPO: ${{ env.IMAGE_REPO_MLMD_GRPC }}
+          DOCKERFILE: third-party/ml-metadata/Dockerfile
+          GH_REPO: ${{ inputs.dsp_org_repo }}
