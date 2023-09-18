@@ -22,6 +22,7 @@ spec:
         component: data-science-pipelines
         dspa: {{.Name}}
     spec:
+      serviceAccountName: ds-pipelines-minio-sa-{{.Name}}
       containers:
         - args:
             - server

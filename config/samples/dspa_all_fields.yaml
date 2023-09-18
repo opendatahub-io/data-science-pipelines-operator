@@ -74,6 +74,7 @@ spec:
     # otherwise operator will not deploy DSPA
     configMap: ds-pipeline-ui-configmap
   database:
+    disableHealthCheck: false
     mariaDB:   # mutually exclusive with externalDB
       deploy: true
       image: registry.redhat.io/rhel8/mariadb-103:1-188
@@ -101,6 +102,7 @@ spec:
 #        name: somesecret
 #        key: somekey
   objectStorage:
+    disableHealthCheck: false
     minio:  # mutually exclusive with externalStorage
       deploy: true
       image: quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance

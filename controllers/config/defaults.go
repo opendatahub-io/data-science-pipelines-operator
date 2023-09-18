@@ -20,6 +20,7 @@ import (
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/spf13/viper"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"time"
 )
 
 const (
@@ -69,6 +70,8 @@ const (
 
 // DSPA Status Condition Types
 const (
+	DatabaseAvailable      = "DatabaseAvailable"
+	ObjectStoreAvailable   = "ObjectStoreAvailable"
 	APIServerReady         = "APIServerReady"
 	PersistenceAgentReady  = "PersistenceAgentReady"
 	ScheduledWorkflowReady = "ScheduledWorkflowReady"
@@ -81,9 +84,10 @@ const (
 // kubectl get output, and in summarizing
 // occurrences of causes
 const (
-	MinimumReplicasAvailable = "MinimumReplicasAvailable"
-	FailingToDeploy          = "FailingToDeploy"
-	Deploying                = "Deploying"
+	MinimumReplicasAvailable    = "MinimumReplicasAvailable"
+	FailingToDeploy             = "FailingToDeploy"
+	Deploying                   = "Deploying"
+	ComponentDeploymentNotFound = "ComponentDeploymentNotFound"
 )
 
 // Any required Configmap paths can be added here,
@@ -99,6 +103,14 @@ var requiredFields = []string{
 	MariaDBImagePath,
 	OAuthProxyImagePath,
 }
+
+// DefaultDBConnectionTimeout is the default DB storage healthcheck timeout
+const DefaultDBConnectionTimeout = time.Second * 15
+
+// DefaultObjStoreConnectionTimeout is the default Object storage healthcheck timeout
+const DefaultObjStoreConnectionTimeout = time.Second * 15
+
+const DefaultMaxConcurrentReconciles = 10
 
 func GetConfigRequiredFields() []string {
 	return requiredFields

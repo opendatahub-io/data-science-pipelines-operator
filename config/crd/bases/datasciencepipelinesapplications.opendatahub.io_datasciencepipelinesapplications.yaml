@@ -138,6 +138,9 @@ spec:
                   mariaDB:
                     deploy: true
                 properties:
+                  disableHealthCheck:
+                    default: false
+                    type: boolean
                   externalDB:
                     properties:
                       host:
@@ -431,6 +434,9 @@ spec:
                 type: object
               objectStorage:
                 properties:
+                  disableHealthCheck:
+                    default: false
+                    type: boolean
                   externalStorage:
                     properties:
                       bucket:
