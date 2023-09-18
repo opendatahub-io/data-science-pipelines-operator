@@ -152,6 +152,7 @@ func (r *DSPAReconciler) buildCondition(conditionType string, dspa *dspav1alpha1
 //+kubebuilder:rbac:groups=image.openshift.io,resources=imagestreamtags,verbs=get
 //+kubebuilder:rbac:groups=core,resources=events,verbs=create;patch;list
 //+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=workload.codeflare.dev,resources=appwrappers;appwrappers/finalizers;appwrappers/status,verbs=create;delete;deletecollection;get;list;patch;update;watch
 
 func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("namespace", req.Namespace).WithValues("dspa_name", req.Name)
