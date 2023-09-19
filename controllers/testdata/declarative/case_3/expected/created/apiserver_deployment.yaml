@@ -50,6 +50,8 @@ spec:
               value: artifact-manager:test3
             - name: ARCHIVE_LOGS
               value: "false"
+            - name: EXECUTIONTYPE
+              value: PipelineRun
             - name: TRACK_ARTIFACTS
               value: "true"
             - name: STRIP_EOF

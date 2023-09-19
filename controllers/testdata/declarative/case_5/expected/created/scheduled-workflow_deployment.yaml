@@ -24,8 +24,12 @@ spec:
     spec:
       containers:
         - env:
+            - name: NAMESPACE
+              value: "default"
             - name: CRON_SCHEDULE_TIMEZONE
               value: "UTC"
+            - name: EXECUTIONTYPE
+              value: PipelineRun
           image: scheduledworkflow:test5
           imagePullPolicy: IfNotPresent
           name: ds-pipeline-scheduledworkflow

@@ -50,6 +50,8 @@ spec:
               value: "this-artifact-manager-image-from-cr-should-be-used:test4"
             - name: ARCHIVE_LOGS
               value: "false"
+            - name: EXECUTIONTYPE
+              value: PipelineRun
             - name: TRACK_ARTIFACTS
               value: "true"
             - name: STRIP_EOF
