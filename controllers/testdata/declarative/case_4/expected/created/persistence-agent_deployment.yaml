@@ -26,6 +26,16 @@ spec:
         - env:
             - name: NAMESPACE
               value: "default"
+            - name: TTL_SECONDS_AFTER_WORKFLOW_FINISH
+              value: "86400"
+            - name: NUM_WORKERS
+              value: "2"
+            - name: KUBEFLOW_USERID_HEADER
+              value: kubeflow-userid
+            - name: KUBEFLOW_USERID_PREFIX
+              value: ""
+            - name: EXECUTIONTYPE
+              value: PipelineRun
           image: this-persistenceagent-image-from-cr-should-be-used:test4
           imagePullPolicy: IfNotPresent
           name: ds-pipeline-persistenceagent
