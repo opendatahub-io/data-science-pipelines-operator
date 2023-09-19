@@ -48,6 +48,8 @@ type DSPAParams struct {
 	MariaDB              *dspa.MariaDB
 	Minio                *dspa.Minio
 	MLMD                 *dspa.MLMD
+	CRDViewer            *dspa.CRDViewer
+	VisualizationServer  *dspa.VisualizationServer
 	DBConnection
 	ObjectStorageConnection
 }
