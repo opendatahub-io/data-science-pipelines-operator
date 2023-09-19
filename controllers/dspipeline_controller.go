@@ -276,6 +276,17 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		if err != nil {
 			return ctrl.Result{}, err
 		}
+
+		err = r.ReconcileCRDViewer(dspa, params)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		err = r.ReconcileVisualizationServer(dspa, params)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
 	}
 
 	log.Info("Updating CR status")
