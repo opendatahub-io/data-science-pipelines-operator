@@ -391,7 +391,7 @@ the runs via `client.list_runs()`.
 
 # Cleanup
 
-To remove a `DataSciencePipelinesApplication` from your custer, run: 
+To remove a `DataSciencePipelinesApplication` from your cluster, run: 
 
 ```bash
 # Replace environment variables accordingly
