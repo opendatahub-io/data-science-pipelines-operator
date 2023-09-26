@@ -1,9 +1,13 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: openshift-pipelines
+namespace: foo-pipelines
 namePrefix: data-science-pipelines-operator-
 
-namePrefix: data-science-pipelines-operator-
+# namePrefix: data-science-pipelines-operator-
+# configMapGenerator:
+# - envs:
+#   - params.env
+#   name: dspo-parameters
 
 resources:
 - ./cache
@@ -12,3 +16,6 @@ resources:
 - ./kfptask
 - ./pipelineloop
 - ./tektoncrds
+
+# configurations:
+# - params.yaml
