@@ -124,6 +124,10 @@ func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha
 		if err != nil {
 			return err
 		}
+		err = r.Apply(dsp, params, dbSecret)
+		if err != nil {
+			return err
+		}
 		// If no database was not specified, deploy mariaDB by default.
 		// Update the CR with the state of mariaDB to accurately portray
 		// desired state.
