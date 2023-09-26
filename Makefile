@@ -52,6 +52,8 @@ IMG ?= quay.io/opendatahub/data-science-pipelines-operator:main
 ENVTEST_K8S_VERSION = 1.25.0
 # Namespace to deploy the operator
 OPERATOR_NS ?= odh-applications
+# Namespace to deploy v2 infrastructure
+V2INFRA_NS ?= openshift-pipelines
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -158,6 +160,12 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	cd config/overlays/make-deploy && $(KUSTOMIZE) edit set namespace ${OPERATOR_NS}
 	$(KUSTOMIZE) build config/overlays/make-deploy | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+
+.PHONY: v2deploy
+v2deploy: manifests kustomize
+	cd config/overlays/make-v2deploy \
+		&& $(KUSTOMIZE) edit set namespace ${V2INFRA_NS}
+	$(KUSTOMIZE) build config/overlays/make-v2deploy | kubectl apply -f -
 
 ##@ Build Dependencies
 
