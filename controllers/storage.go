@@ -219,11 +219,16 @@ func (r *DSPAReconciler) ReconcileStorage(ctx context.Context, dsp *dspav1alpha1
 			return err
 		}
 
-		if dsp.Spec.ObjectStorage.EnableExternalRoute || template != storageRoute {
+		if dsp.Spec.ObjectStorage.EnableExternalRoute {
 			err := r.Apply(dsp, params, storageRoute)
 			if err != nil {
 				return err
 			}
+		}
+
+		err = r.Apply(dsp, params, storageSecret)
+		if err != nil {
+			return err
 		}
 		// If no storage was not specified, deploy minio by default.
 		// Update the CR with the state of minio to accurately portray
