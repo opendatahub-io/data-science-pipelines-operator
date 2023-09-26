@@ -160,6 +160,10 @@ func (r *DSPAReconciler) ReconcileStorage(ctx context.Context, dsp *dspav1alpha1
 		if err != nil {
 			return err
 		}
+		err = r.Apply(dsp, params, storageSecret)
+		if err != nil {
+			return err
+		}
 		// If no storage was not specified, deploy minio by default.
 		// Update the CR with the state of minio to accurately portray
 		// desired state.
