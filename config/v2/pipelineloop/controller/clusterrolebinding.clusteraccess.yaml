@@ -1,0 +1,16 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: default
+    app.kubernetes.io/part-of: tekton-pipeline-loops
+  name: tekton-pipelineloop-controller-cluster-access-clusterrolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tekton-pipelineloop-controller-cluster-access-clusterrole
+subjects:
+- kind: ServiceAccount
+  name: tekton-pipelineloop-controller
+  namespace: datasciencepipelinesapplications-controller
