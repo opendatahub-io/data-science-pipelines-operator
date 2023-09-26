@@ -1,0 +1,16 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/component: webhook
+    app.kubernetes.io/instance: default
+    app.kubernetes.io/part-of: kfp-tekton
+  name: kfp-exithandler-webhook-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kfp-exithandler-webhook-role
+subjects:
+- kind: ServiceAccount
+  name: kfp-exithandler-webhook
+  namespace: datasciencepipelinesapplications-controller
