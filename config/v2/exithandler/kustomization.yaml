@@ -1,0 +1,5 @@
+resources:
+- crd.yaml
+- clusterrole.leaderelection.yaml
+- ./controller
+- ./webhook
