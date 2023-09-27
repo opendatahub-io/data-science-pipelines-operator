@@ -18,7 +18,7 @@ package testutil
 
 import (
 	"fmt"
-	"reflect"
+	"github.com/go-test/deep"
 
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -51,8 +51,9 @@ func configMapsAreEqual(expected, actual *unstructured.Unstructured) (bool, erro
 		return false, notEqualMsg("Configmap Names are not equal.")
 	}
 
-	if !reflect.DeepEqual(expectedConfigMap.Data, actualConfigMap.Data) {
-		return false, notEqualMsg("Configmap's Data values")
+	diff := deep.Equal(expectedConfigMap.Data, actualConfigMap.Data)
+	if diff != nil {
+		return false, notDeeplyEqualMsg("Configmap's Data values", diff)
 	}
 	return true, nil
 }
@@ -73,8 +74,9 @@ func secretsAreEqual(expected, actual *unstructured.Unstructured) (bool, error) 
 		return false, notEqualMsg("Secret Names are not equal.")
 	}
 
-	if !reflect.DeepEqual(expectedSecret.Data, actualSecret.Data) {
-		return false, notEqualMsg("Secret's Data values")
+	diff := deep.Equal(expectedSecret.Data, actualSecret.Data)
+	if diff != nil {
+		return false, notDeeplyEqualMsg("Secret's Data values", diff)
 	}
 	return true, nil
 }
@@ -90,20 +92,24 @@ func deploymentsAreEqual(expected, actual *unstructured.Unstructured) (bool, err
 	if err != nil {
 		return false, err
 	}
-	if !reflect.DeepEqual(expectedDep.ObjectMeta.Labels, actualDep.ObjectMeta.Labels) {
-		return false, notEqualMsg("labels")
+	diff := deep.Equal(expectedDep.ObjectMeta.Labels, actualDep.ObjectMeta.Labels)
+	if diff != nil {
+		return false, notDeeplyEqualMsg("labels", diff)
 	}
 
-	if !reflect.DeepEqual(expectedDep.Spec.Selector, actualDep.Spec.Selector) {
-		return false, notEqualMsg("selector")
+	diff = deep.Equal(expectedDep.Spec.Selector, actualDep.Spec.Selector)
+	if diff != nil {
+		return false, notDeeplyEqualMsg("selector", diff)
 	}
 
-	if !reflect.DeepEqual(expectedDep.Spec.Template.ObjectMeta, actualDep.Spec.Template.ObjectMeta) {
-		return false, notEqualMsg("spec template")
+	diff = deep.Equal(expectedDep.Spec.Template.ObjectMeta, actualDep.Spec.Template.ObjectMeta)
+	if diff != nil {
+		return false, notDeeplyEqualMsg("spec template", diff)
 	}
 
-	if !reflect.DeepEqual(expectedDep.Spec.Template.Spec.Volumes, actualDep.Spec.Template.Spec.Volumes) {
-		return false, notEqualMsg("Volumes")
+	diff = deep.Equal(expectedDep.Spec.Template.Spec.Volumes, actualDep.Spec.Template.Spec.Volumes)
+	if diff != nil {
+		return false, notDeeplyEqualMsg("Volumes", diff)
 	}
 
 	if len(expectedDep.Spec.Template.Spec.Containers) != len(actualDep.Spec.Template.Spec.Containers) {
@@ -119,22 +125,27 @@ func deploymentsAreEqual(expected, actual *unstructured.Unstructured) (bool, err
 		// Check each env individually for a more meaningful response upon failure.
 		for i, expectedEnv := range expectedContainer.Env {
 			actualEnv := actualContainer.Env[i]
-			if !reflect.DeepEqual(expectedEnv, actualEnv) {
-				return false, notEqualMsg(fmt.Sprintf("Container Env [expected: %s=%s, actual: %s=%s]", expectedEnv.Name, expectedEnv.Value, actualEnv.Name, actualEnv.Value))
+			diff = deep.Equal(expectedEnv, actualEnv)
+			if diff != nil {
+				return false, notDeeplyEqualMsg("Container Env", diff)
 			}
 		}
 
-		if !reflect.DeepEqual(expectedContainer.Ports, actualContainer.Ports) {
-			return false, notEqualMsg("Container Ports")
+		diff = deep.Equal(expectedContainer.Ports, actualContainer.Ports)
+		if diff != nil {
+			return false, notDeeplyEqualMsg("Container Ports", diff)
 		}
-		if !reflect.DeepEqual(expectedContainer.Resources, actualContainer.Resources) {
-			return false, notEqualMsg("Container Resources")
+		diff = deep.Equal(expectedContainer.Resources, actualContainer.Resources)
+		if diff != nil {
+			return false, notDeeplyEqualMsg("Container Resources", diff)
 		}
-		if !reflect.DeepEqual(expectedContainer.VolumeMounts, actualContainer.VolumeMounts) {
-			return false, notEqualMsg("Container VolumeMounts")
+		diff = deep.Equal(expectedContainer.VolumeMounts, actualContainer.VolumeMounts)
+		if diff != nil {
+			return false, notDeeplyEqualMsg("Container VolumeMounts", diff)
 		}
-		if !reflect.DeepEqual(expectedContainer.Args, actualContainer.Args) {
-			return false, notEqualMsg("Container Args")
+		diff = deep.Equal(expectedContainer.Args, actualContainer.Args)
+		if diff != nil {
+			return false, notDeeplyEqualMsg("Container Args", diff)
 		}
 		if expectedContainer.Name != actualContainer.Name {
 			return false, notEqualMsg("Container Name")
@@ -149,4 +160,12 @@ func deploymentsAreEqual(expected, actual *unstructured.Unstructured) (bool, err
 
 func notEqualMsg(value string) error {
 	return fmt.Errorf("%s are not equal", value)
+}
+
+func notDeeplyEqualMsg(value string, diff []string) error {
+	errStr := fmt.Sprintf("%s is not equal:\n", value)
+	for _, d := range diff {
+		errStr += fmt.Sprintln("\t" + d)
+	}
+	return fmt.Errorf(errStr)
 }
