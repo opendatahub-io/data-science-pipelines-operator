@@ -280,6 +280,9 @@ spec:
                         type: string
                     type: object
                 type: object
+              dspVersion:
+                default: v1
+                type: string
               mlmd:
                 default:
                   deploy: false

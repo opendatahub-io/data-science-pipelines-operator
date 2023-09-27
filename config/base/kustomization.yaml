@@ -120,5 +120,69 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.ZAP_LOG_LEVEL
+  - name: IMAGESV2_APISERVER
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGESV2_APISERVER
+  - name: IMAGESV2_ARTIFACT
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGESV2_ARTIFACT
+  - name: IMAGESV2_PERSISTENTAGENT
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGESV2_PERSISTENTAGENT
+  - name: IMAGESV2_SCHEDULEDWORKFLOW
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGESV2_SCHEDULEDWORKFLOW
+  - name: IMAGESV2_CACHE
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGESV2_CACHE
+  - name: IMAGESV2_MOVERESULTSIMAGE
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGESV2_MOVERESULTSIMAGE
+  - name: IMAGESV2_MLMDENVOY
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGESV2_MLMDENVOY
+  - name: IMAGESV2_MLMDGRPC
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGESV2_MLMDGRPC
+  - name: IMAGESV2_MLMDWRITER
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGESV2_MLMDWRITER
+>>>>>>> 94adfa6 (Implement DSPVersion item in DSPA CRD)
 configurations:
   - params.yaml
