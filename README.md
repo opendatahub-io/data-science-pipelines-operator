@@ -609,3 +609,95 @@ Refer to this [repo][kubeflow-pipelines-examples] to see examples of different p
 [dspa-yaml]: https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/config/samples/dspa_all_fields.yaml#L77
 [sample-yaml]: https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/config/samples/dspa_simple.yaml
 [kubeflow-pipelines-examples]: https://github.com/rh-datascience-and-edge-practice/kubeflow-pipelines-examples
+
+# Deployment and Testing Guidelines for Developers
+
+To build the DSPO locally :
+
+Execute the following command:
+```bash
+go build main.go
+```
+To run the DSPO locally :
+
+Clone the directory and execute the following command:
+
+```bash
+go run main.go --config=$config.yaml
+```
+Below is the sample config file(the tags for the images can be edited as required):
+```bash
+Images:
+  ApiServer: quay.io/opendatahub/ds-pipelines-api-server:latest
+  Artifact: quay.io/opendatahub/ds-pipelines-artifact-manager:latest
+  OAuthProxy: registry.redhat.io/openshift4/ose-oauth-proxy:v4.12.0
+  PersistentAgent: quay.io/opendatahub/ds-pipelines-persistenceagent:latest
+  ScheduledWorkflow: quay.io/opendatahub/ds-pipelines-scheduledworkflow:latest
+  Cache: registry.access.redhat.com/ubi8/ubi-minimal
+  MoveResultsImage: registry.access.redhat.com/ubi8/ubi-micro
+  MariaDB: registry.redhat.io/rhel8/mariadb-103:1-188
+  MlmdEnvoy: quay.io/opendatahub/ds-pipelines-metadata-envoy:latest
+  MlmdGRPC: quay.io/opendatahub/ds-pipelines-metadata-grpc:latest
+  MlmdWriter: quay.io/opendatahub/ds-pipelines-metadata-writer:latest  
+```
+To build your own images :
+
+All the component images are available [here][component-images] and for thridparty images [here][thirdparty-images]. Build these images from root as shown in the below example:
+
+```bash
+podman build . -f backend/Dockerfile -t quay.io/your_repo/dsp-apiserver:sometag
+```
+To run the tests:
+ 
+Execute `make test` or `make unittest` or `make functest` based on the level of testing that needs to be done.
+
+To deploy DSPO as a developer :
+
+Follow the instructions from [here](#deploy-the-operator-standalone) to deploy the operator standalone.
+
+Follow the instructions from [here](#deploy-the-operator-via-odh) to deploy the operator via ODH.
+
+How to deploy with a custom image:
+
+Run the following command using the custom image:
+
+```bash
+make deploy IMG=my-registry/my-operator:v1
+```
+
+How to regenerate manifests:
+
+After updating the Kubebuilder annotations in your code, run the following command to regenerate code and manifests:
+
+```bash
+make generate manifests
+```
+
+How to regenerate crd on api changes:
+
+After making your API changes, run the following command to regenerate code and CRDs based on your updated API definitions:
+
+```bash
+make generate
+```
+Refer to kubebuilder docs [here][kubebuilder-docs] for more info.
+
+How to run pre-commit tests:
+
+Install pre-commit following the instructions [here][pre-commit-installation]. Before creating a PR, developers should run the following command which will auto fix any simple errors:
+
+```bash
+pre-commit run --all-files
+```
+
+How to do disable health checks when dev testing:
+
+To disable the health checks set the values to true in the DSPA yaml file you apply. Refer to his sample file [here][dspa-yaml].
+
+In certain scenarios, it may be necessary to disable health checks within our environment. When the DSPO is executed either locally or on a different cluster, the health checks can't reach the database and Object Store endpoints. Consequently, they remain unsuccessful, preventing the deployment of essential pipeline infrastructure components by the DSPA. To address this challenge, we have introduced the `disableHealthCheck` mechanism as a viable solution.
+
+How to enable kfp ui and minio:
+
+Refer to this [sample][sample-yaml] yaml file for enabling the upstream kubeflow pipelines ui and minio. 
+
+Refer to this [repo][kubeflow-pipelines-examples] to see examples of different pipelines for dev testing.
