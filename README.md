@@ -24,6 +24,7 @@ Data Science Pipeline stacks onto individual OCP namespaces.
 6. [Run tests](#run-tests)
 7. [Metrics](#metrics)
 8. [Configuring Log Levels for the Operator](#configuring-log-levels-for-the-operator)
+9. [Deployment and Testing Guidelines for Developers](#deployment-and-testing-guidelines-for-developers)
 
 # Overview
 
@@ -487,13 +488,119 @@ If you wish to adjust the log verbosity, you can do so by modifying the `ZAP_LOG
 
 For a comprehensive list of available values, please consult the [Zap documentation](https://pkg.go.dev/go.uber.org/zap#pkg-constants).
 
-[cluster admin]: https://docs.openshift.com/container-platform/4.12/authentication/using-rbac.html#creating-cluster-admin_using-rbac
-[oc client]: https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/latest/openshift-client-linux.tar.gz
+# Deployment and Testing Guidelines for Developers
+
+To build the DSPO locally :
+
+Execute the following command:
+```bash
+go build main.go
+```
+To run the DSPO locally :
+
+Clone the directory and execute the following command:
+
+```bash
+go run main.go --config=$config.yaml
+```
+Below is the sample config file(the tags for the images can be edited as required):
+```bash
+Images:
+  ApiServer: quay.io/opendatahub/ds-pipelines-api-server:latest
+  Artifact: quay.io/opendatahub/ds-pipelines-artifact-manager:latest
+  OAuthProxy: registry.redhat.io/openshift4/ose-oauth-proxy:v4.12.0
+  PersistentAgent: quay.io/opendatahub/ds-pipelines-persistenceagent:latest
+  ScheduledWorkflow: quay.io/opendatahub/ds-pipelines-scheduledworkflow:latest
+  Cache: registry.access.redhat.com/ubi8/ubi-minimal
+  MoveResultsImage: registry.access.redhat.com/ubi8/ubi-micro
+  MariaDB: registry.redhat.io/rhel8/mariadb-103:1-188
+  MlmdEnvoy: quay.io/opendatahub/ds-pipelines-metadata-envoy:latest
+  MlmdGRPC: quay.io/opendatahub/ds-pipelines-metadata-grpc:latest
+  MlmdWriter: quay.io/opendatahub/ds-pipelines-metadata-writer:latest  
+```
+To build your own images :
+
+All the component images are available [here][component-images] and for thirdparty images [here][thirdparty-images]. Build these images from root as shown in the below example:
+
+```bash
+podman build . -f backend/Dockerfile -t quay.io/your_repo/dsp-apiserver:sometag
+```
+To run the tests:
+ 
+Execute `make test` or `make unittest` or `make functest` based on the level of testing that needs to be done.
+
+`make unittest` is a command that is often used to run only unit tests for individual units or components. These tests verify that each unit of code (e.g., functions or methods) behaves as expected. It is suggested to run this command often during the development process.
+
+`make functest` is a command used to run functional tests which assess the overall functionality of the software by testing its features and user interactions.Functional tests help ensure that the software works as a whole and that its features are functioning correctly from a user's perspective. It is suggested to run make functest for every commit.
+ 
+The specific tests that are executed when you run `make test` can include unit tests, functional tests and more. It is a test to check if the software behaves correctly and meets the desired quality standards. It helps identify and fix issues early in the development process. It is suggested to run make test before creating a PR.
+
+To deploy DSPO as a developer :
+
+Follow the instructions from [here](#deploy-the-operator-standalone) to deploy the operator standalone.
+
+Follow the instructions from [here](#deploy-the-operator-via-odh) to deploy the operator via ODH.
+
+How to deploy with a custom image:
+
+Run the following command using the custom image:
+
+```bash
+make deploy IMG=my-registry/my-operator:v1
+```
+
+How to regenerate manifests:
+
+After updating the Kubebuilder annotations in your code, run the following command to regenerate code and manifests:
+
+```bash
+make generate manifests
+```
+
+How to regenerate crd on api changes:
+
+After making your API changes, run the following command to regenerate code and CRDs based on your updated API definitions:
+
+```bash
+make generate
+```
+Refer to kubebuilder docs [here][kubebuilder-docs] for more info.
+
+How to run pre-commit tests:
+
+Install pre-commit following the instructions [here][pre-commit-installation]. Before creating a PR, developers should run the following command which will auto fix any simple errors:
+
+```bash
+pre-commit run --all-files
+```
+
+How to do disable health checks when dev testing:
+
+To disable the health checks set the values to true in the DSPA yaml file you apply. Refer to his sample file [here][dspa-yaml].
+
+In certain scenarios, it may be necessary to disable health checks within our environment. When the DSPO is executed either locally or on a different cluster, the health checks can't reach the database and Object Store endpoints. Consequently, they remain unsuccessful, preventing the deployment of essential pipeline infrastructure components by the DSPA. To address this challenge, we have introduced the `disableHealthCheck` mechanism as a viable solution.
+
+How to enable kfp ui and minio:
+
+Refer to this [sample][sample-yaml] yaml file for enabling the upstream kubeflow pipelines ui and minio. 
+
+Refer to this [repo][kubeflow-pipelines-examples] to see examples of different pipelines for dev testing.
+
+[cluster admin]: https://docs.openshift.com/container-platform/4.12/authentication/using-rbac.html#creating-cluster-admin_using-rbac                                                      
+[oc client]: https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/latest/openshift-client-linux.tar.gz                                                                        
 [OCP Pipelines Operator]: https://docs.openshift.com/container-platform/4.12/cicd/pipelines/installing-pipelines.html#op-installing-pipelines-operator-in-web-console_installing-pipelines
-[Kustomize]: https://kubectl.docs.kubernetes.io/installation/kustomize/
-[Kubeflow Pipelines Architectural Overview]: https://www.kubeflow.org/docs/components/pipelines/v1/introduction/#architectural-overview
-[flipcoin example]: https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/docs/example_pipelines/condition.yaml
+[Kustomize]: https://kubectl.docs.kubernetes.io/installation/kustomize/                                                                 
+[Kubeflow Pipelines Architectural Overview]: https://www.kubeflow.org/docs/components/pipelines/v1/introduction/#architectural-overview 
+[flipcoin example]: https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/docs/example_pipelines/condition.yaml   
 [flipcoin code example]: https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/docs/example_pipelines/condition.py
-[installodh]: https://opendatahub.io/docs/quick-installation
-[kfp-tekton]: https://github.com/kubeflow/kfp-tekton
-[kfp]: https://github.com/kubeflow/pipelines
+[installodh]: https://opendatahub.io/docs/quick-installation                                                                            
+[kfp-tekton]: https://github.com/kubeflow/kfp-tekton                                                                                    
+[kfp]: https://github.com/kubeflow/pipelines                                                                                            
+[component-images]: https://github.com/opendatahub-io/data-science-pipelines/tree/master/backend                                        
+[thirdparty-images]: https://github.com/opendatahub-io/data-science-pipelines/tree/master/third-party                                   
+[pre-commit-installation]: https://pre-commit.com/                                                                                      
+[kubebuilder-docs]: https://book.kubebuilder.io/                                                                                        
+[dspa-yaml]: https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/config/samples/dspa_all_fields.yaml#L77        
+[sample-yaml]: https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/config/samples/dspa_simple.yaml              
+[kubeflow-pipelines-examples]: https://github.com/rh-datascience-and-edge-practice/kubeflow-pipelines-examples                       
+                                                                                                                                        
