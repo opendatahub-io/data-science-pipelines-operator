@@ -44,6 +44,9 @@ type DSPASpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:={deploy: false}
 	*VisualizationServer `json:"visualizationServer"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="v1"
+	DSPVersion string `json:"dspVersion,omitempty"`
 }
 
 type APIServer struct {
