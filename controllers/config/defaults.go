@@ -89,6 +89,19 @@ const (
 	MlmdWriterImagePathV2           = "ImagesV2.MlmdWriter"
 )
 
+// DSPV2 Image Paths
+const (
+	APIServerImagePathV2            = "ImagesV2.ApiServer"
+	APIServerArtifactImagePathV2    = "ImagesV2.Artifact"
+	APIServerCacheImagePathV2       = "ImagesV2.Cache"
+	APIServerMoveResultsImagePathV2 = "ImagesV2.MoveResultsImage"
+	PersistenceAgentImagePathV2     = "ImagesV2.PersistentAgent"
+	ScheduledWorkflowImagePathV2    = "ImagesV2.ScheduledWorkflow"
+	MlmdEnvoyImagePathV2            = "ImagesV2.MlmdEnvoy"
+	MlmdGRPCImagePathV2             = "ImagesV2.MlmdGRPC"
+	MlmdWriterImagePathV2           = "ImagesV2.MlmdWriter"
+)
+
 // DSPA Status Condition Types
 const (
 	DatabaseAvailable      = "DatabaseAvailable"
