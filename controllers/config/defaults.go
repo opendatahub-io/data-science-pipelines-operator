@@ -17,10 +17,11 @@ limitations under the License.
 package config
 
 import (
+	"time"
+
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/spf13/viper"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"time"
 )
 
 const (
@@ -73,6 +74,19 @@ const (
 	ObjStoreConnectionTimeoutConfigName = "DSPO.HealthCheck.ObjectStore.ConnectionTimeout"
 	DBConnectionTimeoutConfigName       = "DSPO.HealthCheck.Database.ConnectionTimeout"
 	RequeueTimeConfigName               = "DSPO.RequeueTime"
+)
+
+// DSPV2 Image Paths
+const (
+	APIServerImagePathV2            = "ImagesV2.ApiServer"
+	APIServerArtifactImagePathV2    = "ImagesV2.Artifact"
+	APIServerCacheImagePathV2       = "ImagesV2.Cache"
+	APIServerMoveResultsImagePathV2 = "ImagesV2.MoveResultsImage"
+	PersistenceAgentImagePathV2     = "ImagesV2.PersistentAgent"
+	ScheduledWorkflowImagePathV2    = "ImagesV2.ScheduledWorkflow"
+	MlmdEnvoyImagePathV2            = "ImagesV2.MlmdEnvoy"
+	MlmdGRPCImagePathV2             = "ImagesV2.MlmdGRPC"
+	MlmdWriterImagePathV2           = "ImagesV2.MlmdWriter"
 )
 
 // DSPA Status Condition Types

@@ -82,6 +82,10 @@ type ObjectStorageConnection struct {
 	SecretAccessKey   string
 }
 
+func (p *DSPAParams) UsingV2Pipelines(dsp *dspa.DataSciencePipelinesApplication) bool {
+	return dsp.Spec.DSPVersion == "v2"
+}
+
 // UsingExternalDB will return true if an external Database is specified in the CR, otherwise false.
 func (p *DSPAParams) UsingExternalDB(dsp *dspa.DataSciencePipelinesApplication) bool {
 	if dsp.Spec.Database != nil && dsp.Spec.Database.ExternalDB != nil {
@@ -366,25 +370,33 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 
 func (p *DSPAParams) SetupMLMD(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, log logr.Logger) error {
 	if p.MLMD != nil {
+		MlmdEnvoyImagePath := config.MlmdEnvoyImagePath
+		MlmdGRPCImagePath := config.MlmdGRPCImagePath
+		MlmdWriterImagePath := config.MlmdWriterImagePath
+		if p.UsingV2Pipelines(dsp) {
+			MlmdEnvoyImagePath = config.MlmdEnvoyImagePathV2
+			MlmdGRPCImagePath = config.MlmdGRPCImagePathV2
+			MlmdWriterImagePath = config.MlmdWriterImagePathV2
+		}
 		if p.MLMD.Envoy == nil {
 			p.MLMD.Envoy = &dspa.Envoy{
-				Image: config.GetStringConfigWithDefault(config.MlmdEnvoyImagePath, config.DefaultImageValue),
+				Image: config.GetStringConfigWithDefault(MlmdEnvoyImagePath, config.DefaultImageValue),
 			}
 		}
 		if p.MLMD.GRPC == nil {
 			p.MLMD.GRPC = &dspa.GRPC{
-				Image: config.GetStringConfigWithDefault(config.MlmdGRPCImagePath, config.DefaultImageValue),
+				Image: config.GetStringConfigWithDefault(MlmdGRPCImagePath, config.DefaultImageValue),
 			}
 		}
 		if p.MLMD.Writer == nil {
 			p.MLMD.Writer = &dspa.Writer{
-				Image: config.GetStringConfigWithDefault(config.MlmdWriterImagePath, config.DefaultImageValue),
+				Image: config.GetStringConfigWithDefault(MlmdWriterImagePath, config.DefaultImageValue),
 			}
 		}
 
-		mlmdEnvoyImageFromConfig := config.GetStringConfigWithDefault(config.MlmdEnvoyImagePath, config.DefaultImageValue)
-		mlmdGRPCImageFromConfig := config.GetStringConfigWithDefault(config.MlmdGRPCImagePath, config.DefaultImageValue)
-		mlmdWriterImageFromConfig := config.GetStringConfigWithDefault(config.MlmdWriterImagePath, config.DefaultImageValue)
+		mlmdEnvoyImageFromConfig := config.GetStringConfigWithDefault(MlmdEnvoyImagePath, config.DefaultImageValue)
+		mlmdGRPCImageFromConfig := config.GetStringConfigWithDefault(MlmdGRPCImagePath, config.DefaultImageValue)
+		mlmdWriterImageFromConfig := config.GetStringConfigWithDefault(MlmdWriterImagePath, config.DefaultImageValue)
 
 		setStringDefault(mlmdEnvoyImageFromConfig, &p.MLMD.Envoy.Image)
 		setStringDefault(mlmdGRPCImageFromConfig, &p.MLMD.GRPC.Image)
@@ -430,12 +442,24 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.APIServerPiplinesCABundleMountPath = config.APIServerPiplinesCABundleMountPath
 	p.PiplinesCABundleMountPath = config.PiplinesCABundleMountPath
 
-	if p.APIServer != nil {
+	pipelinesV2Images := p.UsingV2Pipelines(dsp)
 
-		serverImageFromConfig := config.GetStringConfigWithDefault(config.APIServerImagePath, config.DefaultImageValue)
-		artifactImageFromConfig := config.GetStringConfigWithDefault(config.APIServerArtifactImagePath, config.DefaultImageValue)
-		cacheImageFromConfig := config.GetStringConfigWithDefault(config.APIServerCacheImagePath, config.DefaultImageValue)
-		moveResultsImageFromConfig := config.GetStringConfigWithDefault(config.APIServerMoveResultsImagePath, config.DefaultImageValue)
+	if p.APIServer != nil {
+		APIServerImagePath := config.APIServerImagePath
+		APIServerArtifactImagePath := config.APIServerArtifactImagePath
+		APIServerCacheImagePath := config.APIServerCacheImagePath
+		APIServerMoveResultsImagePath := config.APIServerMoveResultsImagePath
+		if pipelinesV2Images {
+			APIServerImagePath = config.APIServerImagePathV2
+			APIServerArtifactImagePath = config.APIServerArtifactImagePathV2
+			APIServerCacheImagePath = config.APIServerCacheImagePathV2
+			APIServerMoveResultsImagePath = config.APIServerMoveResultsImagePathV2
+		}
+
+		serverImageFromConfig := config.GetStringConfigWithDefault(APIServerImagePath, config.DefaultImageValue)
+		artifactImageFromConfig := config.GetStringConfigWithDefault(APIServerArtifactImagePath, config.DefaultImageValue)
+		cacheImageFromConfig := config.GetStringConfigWithDefault(APIServerCacheImagePath, config.DefaultImageValue)
+		moveResultsImageFromConfig := config.GetStringConfigWithDefault(APIServerMoveResultsImagePath, config.DefaultImageValue)
 
 		setStringDefault(serverImageFromConfig, &p.APIServer.Image)
 		setStringDefault(artifactImageFromConfig, &p.APIServer.ArtifactImage)
@@ -465,12 +489,20 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	}
 
 	if p.PersistenceAgent != nil {
-		persistenceAgentImageFromConfig := config.GetStringConfigWithDefault(config.PersistenceAgentImagePath, config.DefaultImageValue)
+		PersistenceAgentImagePath := config.PersistenceAgentImagePath
+		if pipelinesV2Images {
+			PersistenceAgentImagePath = config.PersistenceAgentImagePathV2
+		}
+		persistenceAgentImageFromConfig := config.GetStringConfigWithDefault(PersistenceAgentImagePath, config.DefaultImageValue)
 		setStringDefault(persistenceAgentImageFromConfig, &p.PersistenceAgent.Image)
 		setResourcesDefault(config.PersistenceAgentResourceRequirements, &p.PersistenceAgent.Resources)
 	}
 	if p.ScheduledWorkflow != nil {
-		scheduledWorkflowImageFromConfig := config.GetStringConfigWithDefault(config.ScheduledWorkflowImagePath, config.DefaultImageValue)
+		ScheduledWorkflowImagePath := config.ScheduledWorkflowImagePath
+		if pipelinesV2Images {
+			ScheduledWorkflowImagePath = config.ScheduledWorkflowImagePathV2
+		}
+		scheduledWorkflowImageFromConfig := config.GetStringConfigWithDefault(ScheduledWorkflowImagePath, config.DefaultImageValue)
 		setStringDefault(scheduledWorkflowImageFromConfig, &p.ScheduledWorkflow.Image)
 		setResourcesDefault(config.ScheduledWorkflowResourceRequirements, &p.ScheduledWorkflow.Resources)
 	}

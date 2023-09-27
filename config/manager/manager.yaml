@@ -62,6 +62,24 @@ spec:
             value: $(IMAGES_CRDVIEWER)
           - name: IMAGES_VISUALIZATIONSERVER
             value: $(IMAGES_VISUALIZATIONSERVER)
+          - name: IMAGESV2_APISERVER
+            value: $(IMAGESV2_APISERVER)
+          - name: IMAGESV2_ARTIFACT
+            value: $(IMAGESV2_ARTIFACT)
+          - name: IMAGESV2_PERSISTENTAGENT
+            value: $(IMAGESV2_PERSISTENTAGENT)
+          - name: IMAGESV2_SCHEDULEDWORKFLOW
+            value: $(IMAGESV2_SCHEDULEDWORKFLOW)
+          - name: IMAGESV2_CACHE
+            value: $(IMAGESV2_CACHE)
+          - name: IMAGESV2_MOVERESULTSIMAGE
+            value: $(IMAGESV2_MOVERESULTSIMAGE)
+          - name: IMAGESV2_MLMDENVOY
+            value: $(IMAGESV2_MLMDENVOY)
+          - name: IMAGESV2_MLMDGRPC
+            value: $(IMAGESV2_MLMDGRPC)
+          - name: IMAGESV2_MLMDWRITER
+            value: $(IMAGESV2_MLMDWRITER)
           - name: ZAP_LOG_LEVEL
             value: $(ZAP_LOG_LEVEL)
           - name: MAX_CONCURRENT_RECONCILES
