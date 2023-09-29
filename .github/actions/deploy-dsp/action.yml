@@ -1,0 +1,52 @@
+# Pre-condition: DSPO git repo checked out in appropriate branch
+# Kind cluster should be set up before hand
+name: "Deploy DSPO/DSPA"
+description: "Deploy a lite DSPO/DSPA in a KinD Cluster"
+
+inputs:
+  REGISTRY_ADDRESS:
+    description: "Image registry address."
+    required: true
+  DSPA_NAMESPACE:
+    description: "Namespace to deploy DSPA"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Apply OCP CRDs
+      shell: bash
+      env:
+        RESOURCES_DIR: ${{ github.workspace }}/.github/resources
+      run: |
+        kubectl apply -f ${{ env.RESOURCES_DIR }}/crds
+
+    - name: Build image
+      shell: bash
+      env:
+        DSPO_IMAGE: ${{inputs.REGISTRY_ADDRESS}}/data-science-pipelines-operator
+      run: |
+        make podman-build -e IMG="${DSPO_IMAGE}" 
+
+    - name: Deploy DSPO
+      shell: bash
+      env:
+        DSPO_IMAGE: ${{inputs.REGISTRY_ADDRESS}}/data-science-pipelines-operator
+      run: |
+        make podman-push -e IMG="${DSPO_IMAGE}" 
+        make deploy-kind -e IMG="${DSPO_IMAGE}"
+
+    - name: Wait for DSPO deployment
+      shell: bash
+      run: |
+        kubectl wait -n odh-applications d --timeout=120s --for=condition=Available=true deployment data-science-pipelines-operator-controller-manager
+
+    - name: Deploy DSPA
+      shell: bash
+      run: |
+        kubectl create namespace ${{ inputs.DSPA_NAMESPACE }}
+        kubectl apply -f .github/resources/dspa-lite/dspa.yaml
+
+    - name: Wait for DSPA deployment
+      shell: bash
+      run: |
+        kubectl wait -n ${{ inputs.DSPA_NAMESPACE }} d --timeout=120s --for=condition=Available=true deployment ds-pipeline-$(yq .metadata.name .github/resources/dspa-lite/dspa.yaml)

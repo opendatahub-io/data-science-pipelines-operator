@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - https://github.com/opendatahub-io/data-science-pipelines//manifests/kustomize/third-party/tekton/installs/cluster/?ref\=master
+  - anyuid-scc.yaml
+patchesStrategicMerge:
+  - patches/deployment_tekton-pipelines-controller.yaml
+  - patches/deployment_tekton-pipelines-remote-resolvers.yaml
+  - patches/deployment_tekton-pipelines-webhook.yaml
+  - patches/horizontalpodautoscaler_tekton-pipelines-webhook.yaml

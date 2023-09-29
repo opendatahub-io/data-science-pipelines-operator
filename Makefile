@@ -126,7 +126,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
 .PHONY: podman-build
-podman-build: test ## Build container image with the manager.
+podman-build: ## Build container image with the manager.
 	podman build -t ${IMG} .
 
 .PHONY: podman-push
@@ -154,10 +154,22 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 		&& $(KUSTOMIZE) edit set namespace ${OPERATOR_NS}
 	$(KUSTOMIZE) build config/overlays/make-deploy | kubectl apply -f -
 
+.PHONY: deploy-kind
+deploy-kind:
+	cd config/overlays/kind-tests \
+		&& kustomize edit set image controller=${IMG} \
+		&& kustomize edit set namespace ${OPERATOR_NS}
+	kustomize build config/overlays/kind-tests | kubectl apply -f -
+
 .PHONY: undeploy
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	cd config/overlays/make-deploy && $(KUSTOMIZE) edit set namespace ${OPERATOR_NS}
 	$(KUSTOMIZE) build config/overlays/make-deploy | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+
+.PHONY: undeploy-kind
+undeploy-kind: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+	cd config/overlays/kind-tests && kustomize edit set namespace ${OPERATOR_NS}
+	kustomize build config/overlays/kind-tests | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 ##@ Build Dependencies
 

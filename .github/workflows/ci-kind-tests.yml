@@ -1,0 +1,120 @@
+# TODO: FIX MAKEFILE DEPLOY
+# TODO: FIX BUILD to be actual builds (not image pulls for speedup)
+# TODO: Consolidate testing CRDS (2 locations)
+name: KinD DSPO/DSP system tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - controllers/**
+      - api/**
+      - config/**
+      - tests/**
+    types:
+      - opened
+      - reopened
+      - closed
+      - synchronize
+
+concurrency:
+  group: ${{ github.head_ref }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+env:
+  IMAGE_REPO_DSPO: data-science-pipelines-operator
+  QUAY_ORG: hukhan
+  QUAY_ID: ${{ secrets.QUAY_ID }}
+  QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
+  DSPA_NAMESPACE: test-dspa
+  DSPA_NAME: test-dspa
+  DSPA_DEPLOY_WAIT_TIMEOUT: 300
+
+jobs:
+  dspo-tests:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup and start KinD cluster
+        uses: ./.github/actions/kind
+
+      - name: Apply OCP CRDs
+        env:
+          RESOURCES_DIR: ${{ github.workspace }}/.github/resources
+          CONFIG_DIR: ${{ github.workspace }}/config
+        run: |
+          kubectl apply -f ${{ env.RESOURCES_DIR }}/crds
+          kubectl apply -f ${{ env.CONFIG_DIR }}/crd/external/route.openshift.io_routes.yaml
+
+      - name: Build image
+        env:
+          DSPO_IMAGE: ${{env.REGISTRY_ADDRESS}}/data-science-pipelines-operator
+        # TODO:
+        run: |
+          # make podman-build -e IMG="${DSPO_IMAGE}"
+          podman pull quay.io/opendatahub/data-science-pipelines-operator:main
+          podman tag quay.io/opendatahub/data-science-pipelines-operator:main ${DSPO_IMAGE}
+
+      - name: Deploy DSPO
+        env:
+          DSPO_IMAGE: ${{env.REGISTRY_ADDRESS}}/data-science-pipelines-operator
+        run: |
+          kubectl create namespace odh-applications
+          make podman-push -e IMG="${DSPO_IMAGE}" 
+          make deploy-kind -e IMG="${DSPO_IMAGE}"
+
+      - name: Wait for DSPO deployment
+        run: |
+          kubectl wait -n odh-applications --timeout=60s --for=condition=Available=true deployment data-science-pipelines-operator-controller-manager
+
+      - name: Deploy DSPA
+        run: |
+          kubectl create namespace ${{ env.DSPA_NAMESPACE }}
+          kubectl -n ${{ env.DSPA_NAMESPACE }} apply -f .github/resources/dspa-lite/dspa.yaml
+
+      - name: kubectl get deployments
+        run: kubectl -n ${{ env.DSPA_NAMESPACE }} get deployments
+
+      - name: Wait for DSPA deployment
+        env:
+          TIMEOUT: ${{ env.DSPA_DEPLOY_WAIT_TIMEOUT }}
+        run: |
+          DSPA_NAME=${{ env.DSPA_NAME }}
+          start=$EPOCHSECONDS
+          timeout_in_seconds=${{ env.TIMEOUT }}
+          status=$(kubectl -n ${{ env.DSPA_NAMESPACE }} get dspa ${DSPA_NAME}  -o yaml | yq '.status.conditions | map(select(.type == "Ready")) | .[0].status')
+          expected='True'
+          while [ $status != $expected ]; do
+            sleep 2
+            if (( EPOCHSECONDS-start > ${timeout_in_seconds} )); then
+            break
+            fi
+            status=$(kubectl -n ${{ env.DSPA_NAMESPACE }} get dspa ${DSPA_NAME}  -o yaml | yq '.status.conditions | map(select(.type == "Ready")) | .[0].status')
+            echo Waiting for DSPA deployment....
+            kubectl -n ${{ env.DSPA_NAMESPACE }} get pods
+          done
+          
+
+######### END ACTION
+#      - name: Deploy DSPO and DSPA
+#        uses: ./.github/actions/deploy-dsp
+#        with:
+#          REGISTRY_ADDRESS: ${{ env.REGISTRY_ADDRESS }}
+#          DSPA_NAMESPACE: test-dspa
+
+      - name: Run tests
+        env:
+          NAMESPACE: ${{ env.DSPA_NAMESPACE }}
+          DSPA_NAME: ${{ env.DSPA_NAME }}
+        run:  |
+          kubectl -n ${NAMESPACE} get pods
+
+      - name: Clean up
+        run: |
+          kubectl -n ${{ env.DSPA_NAMESPACE }} delete dspa ${{ env.DSPA_NAME }}
+          make undeploy-kind
