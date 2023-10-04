@@ -38,13 +38,15 @@ spec:
               apiServer:
                 default:
                   deploy: true
-                description: APIService specifies the Kubeflow Apiserver configurations
+                description: DS Pipelines API Server configuration.
                 properties:
                   applyTektonCustomResource:
                     default: true
+                    description: 'Default: true'
                     type: boolean
                   archiveLogs:
                     default: false
+                    description: 'Default: false'
                     type: boolean
                   artifactImage:
                     type: string
@@ -57,36 +59,49 @@ spec:
                     type: object
                   autoUpdatePipelineDefaultVersion:
                     default: true
+                    description: 'Default: true'
                     type: boolean
                   cacheImage:
                     type: string
                   collectMetrics:
                     default: true
+                    description: 'Default: true'
                     type: boolean
                   dbConfigConMaxLifetimeSec:
                     default: 120
+                    description: 'Default: 120'
                     type: integer
                   deploy:
                     default: true
+                    description: 'Enable DS Pipelines Operator management of DSP API
+                      Server. Setting Deploy to false disables operator reconciliation.
+                      Default: true'
                     type: boolean
                   enableOauth:
                     default: true
+                    description: 'Create an Openshift Route for this DSP API Server.
+                      Default: true'
                     type: boolean
                   enableSamplePipeline:
                     default: true
+                    description: 'Include sample pipelines with the deployment of
+                      this DSP API Server. Default: true'
                     type: boolean
                   image:
+                    description: Specify a custom image for DSP API Server.
                     type: string
                   injectDefaultScript:
                     default: true
+                    description: 'Inject the archive step script. Default: true'
                     type: boolean
                   moveResultsImage:
+                    description: Image used for internal artifact passing handling
+                      within Tekton taskruns. This field specifies the image used
+                      in the 'move-all-results-to-tekton-home' step.
                     type: string
                   resources:
-                    description: ResourceRequirements structures compute resource
-                      requirements. Replaces ResourceRequirements from corev1 which
-                      also includes optional storage field. We handle storage field
-                      separately, and should not include it as a subfield for Resources.
+                    description: Specify custom Pod resource requirements for this
+                      component.
                     properties:
                       limits:
                         properties:
@@ -121,9 +136,12 @@ spec:
                     type: object
                   stripEOF:
                     default: true
+                    description: 'Default: true'
                     type: boolean
                   terminateStatus:
                     default: Cancelled
+                    description: 'Default: "Cancelled" - Allowed Values: "Cancelled",
+                      "StoppedRunFinally", "CancelledRunFinally"'
                     enum:
                     - Cancelled
                     - StoppedRunFinally
@@ -131,15 +149,20 @@ spec:
                     type: string
                   trackArtifacts:
                     default: true
+                    description: 'Default: true'
                     type: boolean
                 type: object
               database:
                 default:
                   mariaDB:
                     deploy: true
+                description: Database specifies database configurations, used for
+                  DS Pipelines metadata tracking. Specify either the default MariaDB
+                  deployment, or configure your own External SQL DB.
                 properties:
                   disableHealthCheck:
                     default: false
+                    description: 'Default: false'
                     type: boolean
                   externalDB:
                     properties:
@@ -172,8 +195,12 @@ spec:
                     properties:
                       deploy:
                         default: true
+                        description: 'Enable DS Pipelines Operator management of MariaDB.
+                          Setting Deploy to false disables operator reconciliation.
+                          Default: true'
                         type: boolean
                       image:
+                        description: Specify a custom image for DSP MariaDB pod.
                         type: string
                       passwordSecret:
                         properties:
@@ -187,8 +214,8 @@ spec:
                         type: object
                       pipelineDBName:
                         default: mlpipeline
-                        description: The database name that will be created. Should
-                          match `^[a-zA-Z0-9_]+`
+                        description: 'The database name that will be created. Should
+                          match `^[a-zA-Z0-9_]+`. // Default: mlpipeline'
                         pattern: ^[a-zA-Z0-9_]+$
                         type: string
                       pvcSize:
@@ -196,14 +223,13 @@ spec:
                         - type: integer
                         - type: string
                         default: 10Gi
+                        description: 'Customize the size of the PVC created for the
+                          default MariaDB instance. Default: 10Gi'
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                       resources:
-                        description: ResourceRequirements structures compute resource
-                          requirements. Replaces ResourceRequirements from corev1
-                          which also includes optional storage field. We handle storage
-                          field separately, and should not include it as a subfield
-                          for Resources.
+                        description: Specify custom Pod resource requirements for
+                          this component.
                         properties:
                           limits:
                             properties:
@@ -238,8 +264,8 @@ spec:
                         type: object
                       username:
                         default: mlpipeline
-                        description: The MariadB username that will be created. Should
-                          match `^[a-zA-Z0-9_]+`
+                        description: 'The MariadB username that will be created. Should
+                          match `^[a-zA-Z0-9_]+`. Default: mlpipeline'
                         pattern: ^[a-zA-Z0-9_]+$
                         type: string
                     type: object
@@ -250,6 +276,9 @@ spec:
                 properties:
                   deploy:
                     default: false
+                    description: 'Enable DS Pipelines Operator management of MLMD.
+                      Setting Deploy to false disables operator reconciliation. Default:
+                      false'
                     type: boolean
                   envoy:
                     properties:
@@ -390,19 +419,24 @@ spec:
                     type: object
                 type: object
               mlpipelineUI:
+                description: Deploy the KFP UI with DS Pipelines UI. This feature
+                  is unsupported, and primarily used for exploration, testing, and
+                  development purposes.
                 properties:
                   configMap:
                     type: string
                   deploy:
                     default: true
+                    description: 'Enable DS Pipelines Operator management of KFP UI.
+                      Setting Deploy to false disables operator reconciliation. Default:
+                      true'
                     type: boolean
                   image:
+                    description: Specify a custom image for KFP UI pod.
                     type: string
                   resources:
-                    description: ResourceRequirements structures compute resource
-                      requirements. Replaces ResourceRequirements from corev1 which
-                      also includes optional storage field. We handle storage field
-                      separately, and should not include it as a subfield for Resources.
+                    description: Specify custom Pod resource requirements for this
+                      component.
                     properties:
                       limits:
                         properties:
@@ -439,9 +473,15 @@ spec:
                 - image
                 type: object
               objectStorage:
+                description: ObjectStorage specifies Object Store configurations,
+                  used for DS Pipelines artifact passing and storage. Specify either
+                  the your own External Storage (e.g. AWS S3), or use the default
+                  Minio deployment (unsupported, primarily for development, and testing)
+                  .
                 properties:
                   disableHealthCheck:
                     default: false
+                    description: 'Default: false'
                     type: boolean
                   externalStorage:
                     properties:
@@ -477,28 +517,38 @@ spec:
                     - scheme
                     type: object
                   minio:
+                    description: Enable DS Pipelines Operator management of Minio.
+                      Setting Deploy to false disables operator reconciliation.
                     properties:
                       bucket:
                         default: mlpipeline
+                        description: 'Provide the Bucket name that will be used to
+                          store artifacts in S3. If provided bucket does not exist,
+                          DSP Apiserver will attempt to create it. As such the credentials
+                          provided should have sufficient permissions to do create
+                          buckets. Default: mlpipeline'
                         type: string
                       deploy:
                         default: true
+                        description: 'Enable DS Pipelines Operator management of Minio.
+                          Setting Deploy to false disables operator reconciliation.
+                          Default: true'
                         type: boolean
                       image:
+                        description: Specify a custom image for Minio pod.
                         type: string
                       pvcSize:
                         anyOf:
                         - type: integer
                         - type: string
                         default: 10Gi
+                        description: 'Customize the size of the PVC created for the
+                          Minio instance. Default: 10Gi'
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                       resources:
-                        description: ResourceRequirements structures compute resource
-                          requirements. Replaces ResourceRequirements from corev1
-                          which also includes optional storage field. We handle storage
-                          field separately, and should not include it as a subfield
-                          for Resources.
+                        description: Specify custom Pod resource requirements for
+                          this component.
                         properties:
                           limits:
                             properties:
@@ -532,6 +582,10 @@ spec:
                             type: object
                         type: object
                       s3CredentialsSecret:
+                        description: Credentials for the S3 user (e.g. IAM user cred
+                          stored in a k8s secret.). Note that the S3 user should have
+                          the permissions to create a bucket if the provided bucket
+                          does not exist.
                         properties:
                           accessKey:
                             description: The "Keys" in the k8sSecret key/value pairs.
@@ -553,20 +607,25 @@ spec:
               persistenceAgent:
                 default:
                   deploy: true
+                description: DS Pipelines PersistenceAgent configuration.
                 properties:
                   deploy:
                     default: true
+                    description: 'Enable DS Pipelines Operator management of Persisence
+                      Agent. Setting Deploy to false disables operator reconciliation.
+                      Default: true'
                     type: boolean
                   image:
+                    description: Specify a custom image for DSP PersistenceAgent.
                     type: string
                   numWorkers:
                     default: 2
+                    description: 'Number of worker for Persistence Agent sync job.
+                      Default: 2'
                     type: integer
                   resources:
-                    description: ResourceRequirements structures compute resource
-                      requirements. Replaces ResourceRequirements from corev1 which
-                      also includes optional storage field. We handle storage field
-                      separately, and should not include it as a subfield for Resources.
+                    description: Specify custom Pod resource requirements for this
+                      component.
                     properties:
                       limits:
                         properties:
@@ -603,20 +662,26 @@ spec:
               scheduledWorkflow:
                 default:
                   deploy: true
+                description: DS Pipelines Scheduled Workflow configuration.
                 properties:
                   cronScheduleTimezone:
                     default: UTC
+                    description: 'Specify the Cron timezone used for ScheduledWorkflow
+                      PipelineRuns. Default: UTC'
                     type: string
                   deploy:
                     default: true
+                    description: 'Enable DS Pipelines Operator management of ScheduledWorkflow.
+                      Setting Deploy to false disables operator reconciliation. Default:
+                      true'
                     type: boolean
                   image:
+                    description: Specify a custom image for DSP ScheduledWorkflow
+                      controller.
                     type: string
                   resources:
-                    description: ResourceRequirements structures compute resource
-                      requirements. Replaces ResourceRequirements from corev1 which
-                      also includes optional storage field. We handle storage field
-                      separately, and should not include it as a subfield for Resources.
+                    description: Specify custom Pod resource requirements for this
+                      component.
                     properties:
                       limits:
                         properties:
