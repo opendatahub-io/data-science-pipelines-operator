@@ -1,31 +1,17 @@
 package systemtests
 
 import (
-	"context"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-)
 
-var (
-	cfg    *rest.Config
-	ctx    context.Context
-	cancel context.CancelFunc
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("Deploying Pipeline", func() {
 
 	It("should be easy", func() {
-		// Initialize Kubernetes client
-		//cfg.BearerToken = "sha256~CvJwe4Iyrz_pr7-B3WYS9UOlv6vXwY71DiMsnAzNXes"
 		var err error
-		cfg, err = clientcmd.BuildConfigFromFlags("https://api.hukhan-3.dev.datahub.redhat.com:6443", "/home/hukhan/.kube/config")
-		k8sClient, err := client.New(cfg, client.Options{Scheme: scheme.Scheme})
-
 		Expect(err).NotTo(HaveOccurred())
 		Expect(k8sClient).NotTo(BeNil())
 
@@ -37,12 +23,9 @@ var _ = Describe("Deploying Pipeline", func() {
 		}
 
 		err = k8sClient.List(ctx, podList, listOpts...)
-		GinkgoWriter.Print("test")
-		GinkgoLogr.Info("fdasfdsa")
-
 		for _, pod := range podList.Items {
 			print("hello1")
-			GinkgoLogr.Info("Pod: " + pod.Name)
+			loggr.Info("Pod: " + pod.Name)
 		}
 
 	})

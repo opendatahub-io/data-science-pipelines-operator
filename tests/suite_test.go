@@ -18,20 +18,31 @@ package systemtests
 
 import (
 	"context"
+	"github.com/go-logr/logr"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	"go.uber.org/zap/zapcore"
-
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"testing"
 	"time"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
 const (
 	timeout  = time.Second * 6
 	interval = time.Millisecond * 2
+)
+
+var (
+	loggr     logr.Logger
+	ctx       context.Context
+	k8sClient client.Client
+	cfg       *rest.Config
+	cancel    context.CancelFunc
 )
 
 // TestAPIs - This is the entry point for Ginkgo -
@@ -58,6 +69,17 @@ var _ = BeforeSuite(func() {
 		TimeEncoder: zapcore.TimeEncoderOfLayout(time.RFC3339),
 	}
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseFlagOptions(&opts)))
+
+	loggr = logf.Log
+	var err error
+
+	// Set up client auth configs
+	cfg, err = clientcmd.BuildConfigFromFlags("https://api.hukhan-3.dev.datahub.redhat.com:6443", "/home/hukhan/.kube/config")
+	Expect(err).ToNot(HaveOccurred())
+
+	// Initialize Kubernetes client
+	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	Expect(err).ToNot(HaveOccurred())
 
 })
 
