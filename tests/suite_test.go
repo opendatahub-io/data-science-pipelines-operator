@@ -53,11 +53,16 @@ var (
 	k8sApiServerHost string
 	DSPAPath         string
 	DSPANamespace    string
-
-	skipDeploy  bool
-	skipCleanup bool
+	skipDeploy       bool
+	skipCleanup      bool
 
 	DSPA *dspav1alpha1.DataSciencePipelinesApplication
+)
+
+var (
+	DefaultDeployTimeout time.Duration
+	DefaultPollInterval  time.Duration
+	DefaultDeleteTimeout time.Duration
 )
 
 type ClientManager struct {
@@ -85,11 +90,19 @@ func TestAPIs(t *testing.T) {
 func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", "~/.kube/config", "The path to the kubeconfig.")
 	flag.StringVar(&k8sApiServerHost, "k8sApiServerHost", "localhost:6443", "The k8s cluster api server host.")
-	flag.StringVar(&DSPAPath, "DSPAPath", "Path to DSPA", "The DSP resource file to deploy for testing.")
-	flag.StringVar(&DSPANamespace, "DSPANamespace", "Namespace to deploy DSPA", "The namespace to deploy DSPA.")
+	flag.StringVar(&DSPAPath, "DSPAPath", "", "The DSP resource file to deploy for testing.")
+	flag.StringVar(&DSPANamespace, "DSPANamespace", "default", "The namespace to deploy DSPA.")
 
-	flag.BoolVar(&skipDeploy, "skipDeploy", false, "skip DSP deployment.")
-	flag.BoolVar(&skipCleanup, "skipCleanup", false, "skip DSP cleanup.")
+	flag.DurationVar(&DefaultDeployTimeout, "DefaultDeployTimeout", 240, "Seconds to wait for deployments. Consider increasing this on resource starved environments.")
+	DefaultDeployTimeout *= time.Second
+	flag.DurationVar(&DefaultPollInterval, "DefaultPollInterval", 2, "Seconds to wait before retrying fetches to the api server.")
+	DefaultPollInterval *= time.Second
+	flag.DurationVar(&DefaultDeleteTimeout, "DefaultDeleteTimeout", 120, "Seconds to wait for deployment deletions. Consider increasing this on resource starved environments.")
+	DefaultDeleteTimeout *= time.Second
+
+	flag.BoolVar(&skipDeploy, "skipDeploy", false, "Skip DSPA deployment. Use this if you have already "+
+		"manually deployed a DSPA, and want to skip this part.")
+	flag.BoolVar(&skipCleanup, "skipCleanup", false, "Skip DSPA cleanup.")
 }
 
 var _ = BeforeSuite(func() {
@@ -125,9 +138,10 @@ var _ = BeforeSuite(func() {
 	DSPA = systemsTesttUtil.GetDSPAFromPath(clientmgr.mfopts, DSPAPath)
 
 	if !skipDeploy {
-		systemsTesttUtil.DeployDSPA(ctx, clientmgr.k8sClient, DSPA, DSPANamespace)
+		systemsTesttUtil.DeployDSPA(ctx, clientmgr.k8sClient, DSPA, DSPANamespace, DefaultDeployTimeout, DefaultPollInterval)
+		systemsTesttUtil.WaitForDSPAReady(ctx, clientmgr.k8sClient, DSPA.Name, DSPANamespace, DefaultDeployTimeout, DefaultPollInterval)
 	}
-	systemsTesttUtil.WaitForDSPAReady(ctx, clientmgr.k8sClient, DSPA.Name, DSPANamespace)
+
 })
 
 var _ = BeforeEach(func() {
@@ -135,6 +149,6 @@ var _ = BeforeEach(func() {
 
 var _ = AfterSuite(func() {
 	if !skipCleanup {
-		systemsTesttUtil.DeleteDSPA(ctx, clientmgr.k8sClient, DSPA.Name, DSPANamespace)
+		systemsTesttUtil.DeleteDSPA(ctx, clientmgr.k8sClient, DSPA.Name, DSPANamespace, DefaultDeployTimeout, DefaultPollInterval)
 	}
 })

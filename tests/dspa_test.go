@@ -4,9 +4,8 @@ import (
 	"fmt"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	appsv1 "k8s.io/api/apps/v1"
+	systemsTesttUtil "github.com/opendatahub-io/data-science-pipelines-operator/tests/util"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -25,22 +24,22 @@ var _ = Describe("Deploying a DSPA", func() {
 			Expect(len(podList.Items)).Should(Equal(podCount))
 		})
 
-		It("should result in a ready DSP API Server deployment", func() {
-			deployment := &appsv1.Deployment{}
-			nsn := types.NamespacedName{
-				Name:      fmt.Sprintf("ds-pipeline-%s", DSPA.Name),
-				Namespace: DSPANamespace,
-			}
-			err := clientmgr.k8sClient.Get(ctx, nsn, deployment)
-			Expect(err).ToNot(HaveOccurred())
-			deploymentAvailable := false
-			for _, condition := range deployment.Status.Conditions {
-				if condition.Reason == "MinimumReplicasAvailable" && condition.Type == appsv1.DeploymentAvailable {
-					deploymentAvailable = true
-				}
-			}
-			Expect(deploymentAvailable).To(BeTrue())
+		It(fmt.Sprintf("should result in a ready %s deployment", "DSP API Server"), func() {
+			systemsTesttUtil.TestForSuccessfulDeployment(ctx, DSPANamespace, fmt.Sprintf("ds-pipeline-%s", DSPA.Name), clientmgr.k8sClient)
 		})
+		It(fmt.Sprintf("should result in a ready %s deployment", "Persistence Agent"), func() {
+			systemsTesttUtil.TestForSuccessfulDeployment(ctx, DSPANamespace, fmt.Sprintf("ds-pipeline-persistenceagent-%s", DSPA.Name), clientmgr.k8sClient)
+		})
+		It(fmt.Sprintf("should result in a ready %s deployment", "Scheduled Workflow"), func() {
+			systemsTesttUtil.TestForSuccessfulDeployment(ctx, DSPANamespace, fmt.Sprintf("ds-pipeline-scheduledworkflow-%s", DSPA.Name), clientmgr.k8sClient)
+		})
+		It(fmt.Sprintf("should result in a ready %s deployment", "MariaDB"), func() {
+			systemsTesttUtil.TestForSuccessfulDeployment(ctx, DSPANamespace, fmt.Sprintf("mariadb-%s", DSPA.Name), clientmgr.k8sClient)
+		})
+		It(fmt.Sprintf("should result in a ready %s deployment", "Minio"), func() {
+			systemsTesttUtil.TestForSuccessfulDeployment(ctx, DSPANamespace, fmt.Sprintf("minio-%s", DSPA.Name), clientmgr.k8sClient)
+		})
+
 	})
 
 })

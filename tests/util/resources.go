@@ -6,6 +6,7 @@ import (
 	mf "github.com/manifestival/manifestival"
 	. "github.com/onsi/gomega"
 	"github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	appsv1 "k8s.io/api/apps/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -18,14 +19,9 @@ import (
 // TODO:
 // TODO:
 // TODO: Flag these
-const (
-	DeployTimeout  = time.Second * 240
-	DeployInterval = time.Millisecond * 2
-	DeleteTimeout  = time.Second * 120
-)
 
 // DeployDSPA will deploy resource found in path by requesting
-func DeployDSPA(ctx context.Context, client client.Client, deployDSPA *v1alpha1.DataSciencePipelinesApplication, dspaNS string) {
+func DeployDSPA(ctx context.Context, client client.Client, deployDSPA *v1alpha1.DataSciencePipelinesApplication, dspaNS string, timeout, interval time.Duration) {
 	deployDSPA.ObjectMeta.Namespace = dspaNS
 	err := client.Create(ctx, deployDSPA)
 	Expect(err).ToNot(HaveOccurred())
@@ -38,11 +34,11 @@ func DeployDSPA(ctx context.Context, client client.Client, deployDSPA *v1alpha1.
 	Eventually(func() error {
 		err := client.Get(ctx, nsn, fetchedDspa)
 		return err
-	}, DeployTimeout, DeployInterval).ShouldNot(HaveOccurred())
+	}, timeout, interval).ShouldNot(HaveOccurred())
 }
 
 // WaitForDSPAReady will assert for DSPA CR Ready Status
-func WaitForDSPAReady(ctx context.Context, client client.Client, dspaName, dspaNS string) {
+func WaitForDSPAReady(ctx context.Context, client client.Client, dspaName, dspaNS string, timeout, interval time.Duration) {
 	nsn := types.NamespacedName{
 		Name:      dspaName,
 		Namespace: dspaNS,
@@ -57,11 +53,11 @@ func WaitForDSPAReady(ctx context.Context, client client.Client, dspaName, dspaN
 			}
 		}
 		return metav1.ConditionFalse
-	}, DeployTimeout, DeployInterval).Should(Equal(metav1.ConditionTrue))
+	}, timeout, interval).Should(Equal(metav1.ConditionTrue))
 }
 
 // DeleteDSPA will delete DSPA found in path by requesting
-func DeleteDSPA(ctx context.Context, client client.Client, dspaName, dspaNS string) {
+func DeleteDSPA(ctx context.Context, client client.Client, dspaName, dspaNS string, timeout, interval time.Duration) {
 	nsn := types.NamespacedName{
 		Name:      dspaName,
 		Namespace: dspaNS,
@@ -84,7 +80,25 @@ func DeleteDSPA(ctx context.Context, client client.Client, dspaName, dspaNS stri
 		}
 		return fmt.Errorf("resource still exists on cluster")
 
-	}, DeleteTimeout, DeployInterval).ShouldNot(HaveOccurred())
+	}, timeout, interval).ShouldNot(HaveOccurred())
+
+}
+
+func TestForSuccessfulDeployment(ctx context.Context, namespace, deploymentName string, client client.Client) {
+	deployment := &appsv1.Deployment{}
+	nsn := types.NamespacedName{
+		Name:      deploymentName,
+		Namespace: namespace,
+	}
+	err := client.Get(ctx, nsn, deployment)
+	Expect(err).ToNot(HaveOccurred())
+	deploymentAvailable := false
+	for _, condition := range deployment.Status.Conditions {
+		if condition.Reason == "MinimumReplicasAvailable" && condition.Type == appsv1.DeploymentAvailable {
+			deploymentAvailable = true
+		}
+	}
+	Expect(deploymentAvailable).To(BeTrue())
 
 }
 
