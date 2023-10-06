@@ -25,7 +25,7 @@ afterwards.
 
 # Adjust the following as needed
 KUBECONFIG_PATH=$HOME/.kube/config # this is usually the default
-TARGET_CLUSTER=...(e.g. https://api.hukhan.dev.datahub.redhat.com:6443)
+TARGET_CLUSTER=...(e.g. https://api.hukhan.dev.datahub.redhat.com:6443, you can retrieve this via `oc whoami --show-server`)
 TARGET_NAMESPACE=dspa
 
 git clone git@github.com:opendatahub-io/data-science-pipelines-operator.git ${DSPO_REPO}
@@ -34,7 +34,7 @@ git clone git@github.com:opendatahub-io/data-science-pipelines-operator.git ${DS
 make deploy
 
 cd tests
-go run github.com/onsi/ginkgo/v2/ginkgo -- \
+go run github.com/onsi/ginkgo/v2/ginkgo --tags=test_systest -- \
   -kubeconfig=${KUBECONFIG_PATH} \
   -k8sApiServerHost=${TARGET_CLUSTER} \
   -DSPANamespace=${TARGET_NAMESPACE} -DSPAPath=resources/dspa-lite.yaml \
@@ -47,7 +47,7 @@ For the impatient developer, you can use the following flag to skip DSPA install
 changes to a live environment and run the tests against it: 
 
 ```bash
-go run github.com/onsi/ginkgo/v2/ginkgo -- \
+go run github.com/onsi/ginkgo/v2/ginkgo --tags=test_systest -- \
   -kubeconfig=${KUBECONFIG_PATH} \
   -k8sApiServerHost=${TARGET_CLUSTER} \
   -DSPANamespace=${TARGET_NAMESPACE} -DSPAPath=resources/dspa-lite.yaml \

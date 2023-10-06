@@ -83,7 +83,7 @@ jobs:
           NAMESPACE: ${{ env.DSPA_NAMESPACE }}
           DSPA_NAME: ${{ env.DSPA_NAME }}
         run: |
-          go run github.com/onsi/ginkgo/v2/ginkgo -- -kubeconfig=$HOME/.kube/config -k8sApiServerHost=$(oc whoami --show-server) -DSPANamespace=${{ env.DSPA_NAMESPACE }} -DSPAPath=resources/dspa-lite.yaml -ginkgo.v
+          go run github.com/onsi/ginkgo/v2/ginkgo --tags=test_systest -- -kubeconfig=$HOME/.kube/config -k8sApiServerHost=$(oc whoami --show-server) -DSPANamespace=${{ env.DSPA_NAMESPACE }} -DSPAPath=resources/dspa-lite.yaml -ginkgo.v
 
       - name: Clean up
         run: |

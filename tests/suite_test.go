@@ -1,3 +1,5 @@
+//go:build test_systest
+
 /*
 Copyright 2023.
 
