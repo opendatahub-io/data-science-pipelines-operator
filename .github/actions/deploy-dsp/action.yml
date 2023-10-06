@@ -25,14 +25,14 @@ runs:
       env:
         DSPO_IMAGE: ${{inputs.REGISTRY_ADDRESS}}/data-science-pipelines-operator
       run: |
-        make podman-build -e IMG="${DSPO_IMAGE}" 
+        make podman-build -e IMG="${DSPO_IMAGE}"
 
     - name: Deploy DSPO
       shell: bash
       env:
         DSPO_IMAGE: ${{inputs.REGISTRY_ADDRESS}}/data-science-pipelines-operator
       run: |
-        make podman-push -e IMG="${DSPO_IMAGE}" 
+        make podman-push -e IMG="${DSPO_IMAGE}"
         make deploy-kind -e IMG="${DSPO_IMAGE}"
 
     - name: Wait for DSPO deployment

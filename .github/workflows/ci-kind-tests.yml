@@ -65,7 +65,7 @@ jobs:
           DSPO_IMAGE: ${{env.REGISTRY_ADDRESS}}/data-science-pipelines-operator
         run: |
           kubectl create namespace odh-applications
-          make podman-push -e IMG="${DSPO_IMAGE}" 
+          make podman-push -e IMG="${DSPO_IMAGE}"
           make deploy-kind -e IMG="${DSPO_IMAGE}"
 
       - name: Wait for DSPO deployment
@@ -98,20 +98,12 @@ jobs:
             echo Waiting for DSPA deployment....
             kubectl -n ${{ env.DSPA_NAMESPACE }} get pods
           done
-          
-
-######### END ACTION
-#      - name: Deploy DSPO and DSPA
-#        uses: ./.github/actions/deploy-dsp
-#        with:
-#          REGISTRY_ADDRESS: ${{ env.REGISTRY_ADDRESS }}
-#          DSPA_NAMESPACE: test-dspa
 
       - name: Run tests
         env:
           NAMESPACE: ${{ env.DSPA_NAMESPACE }}
           DSPA_NAME: ${{ env.DSPA_NAME }}
-        run:  |
+        run: |
           kubectl -n ${NAMESPACE} get pods
 
       - name: Clean up
