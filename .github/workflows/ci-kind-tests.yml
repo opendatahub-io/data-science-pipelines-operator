@@ -29,7 +29,7 @@ env:
   DSPA_NAMESPACE: test-dspa
   DSPA_NAME: test-dspa
   DSPA_DEPLOY_WAIT_TIMEOUT: 300
-
+  SYSTEM_TESTS_DIR: ${{ github.workspace }}/tests
 jobs:
   dspo-tests:
     runs-on: ubuntu-20.04
@@ -39,6 +39,12 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
+
+      - name: Set up Go 1.18.10
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.18.10
+        id: go
 
       - name: Setup and start KinD cluster
         uses: ./.github/actions/kind
@@ -72,41 +78,18 @@ jobs:
         run: |
           kubectl wait -n odh-applications --timeout=60s --for=condition=Available=true deployment data-science-pipelines-operator-controller-manager
 
-      - name: Deploy DSPA
+      - name: Create DSPA Namespace
         run: |
           kubectl create namespace ${{ env.DSPA_NAMESPACE }}
-          kubectl -n ${{ env.DSPA_NAMESPACE }} apply -f .github/resources/dspa-lite/dspa.yaml
-
-      - name: kubectl get deployments
-        run: kubectl -n ${{ env.DSPA_NAMESPACE }} get deployments
-
-      - name: Wait for DSPA deployment
-        env:
-          TIMEOUT: ${{ env.DSPA_DEPLOY_WAIT_TIMEOUT }}
-        run: |
-          DSPA_NAME=${{ env.DSPA_NAME }}
-          start=$EPOCHSECONDS
-          timeout_in_seconds=${{ env.TIMEOUT }}
-          status=$(kubectl -n ${{ env.DSPA_NAMESPACE }} get dspa ${DSPA_NAME}  -o yaml | yq '.status.conditions | map(select(.type == "Ready")) | .[0].status')
-          expected='True'
-          while [ $status != $expected ]; do
-            sleep 2
-            if (( EPOCHSECONDS-start > ${timeout_in_seconds} )); then
-            break
-            fi
-            status=$(kubectl -n ${{ env.DSPA_NAMESPACE }} get dspa ${DSPA_NAME}  -o yaml | yq '.status.conditions | map(select(.type == "Ready")) | .[0].status')
-            echo Waiting for DSPA deployment....
-            kubectl -n ${{ env.DSPA_NAMESPACE }} get pods
-          done
 
       - name: Run tests
+        working-directory: ${{ env.SYSTEM_TESTS_DIR }}
         env:
           NAMESPACE: ${{ env.DSPA_NAMESPACE }}
           DSPA_NAME: ${{ env.DSPA_NAME }}
         run: |
-          kubectl -n ${NAMESPACE} get pods
+          go run github.com/onsi/ginkgo/v2/ginkgo -- -kubeconfig=$HOME/.kube/config -k8sApiServerHost=$(oc whoami --show-server) -DSPANamespace=${{ env.DSPA_NAMESPACE }} -DSPAPath=resources/dspa-lite.yaml -ginkgo.v
 
       - name: Clean up
         run: |
-          kubectl -n ${{ env.DSPA_NAMESPACE }} delete dspa ${{ env.DSPA_NAME }}
           make undeploy-kind
