@@ -54,6 +54,9 @@ var (
 	DSPAPath         string
 	DSPANamespace    string
 
+	skipDeploy  bool
+	skipCleanup bool
+
 	DSPA *dspav1alpha1.DataSciencePipelinesApplication
 )
 
@@ -84,6 +87,9 @@ func init() {
 	flag.StringVar(&k8sApiServerHost, "k8sApiServerHost", "localhost:6443", "The k8s cluster api server host.")
 	flag.StringVar(&DSPAPath, "DSPAPath", "Path to DSPA", "The DSP resource file to deploy for testing.")
 	flag.StringVar(&DSPANamespace, "DSPANamespace", "Namespace to deploy DSPA", "The namespace to deploy DSPA.")
+
+	flag.BoolVar(&skipDeploy, "skipDeploy", false, "skip DSP deployment.")
+	flag.BoolVar(&skipCleanup, "skipCleanup", false, "skip DSP cleanup.")
 }
 
 var _ = BeforeSuite(func() {
@@ -117,7 +123,10 @@ var _ = BeforeSuite(func() {
 
 	// Get DSPA structured
 	DSPA = systemsTesttUtil.GetDSPAFromPath(clientmgr.mfopts, DSPAPath)
-	systemsTesttUtil.DeployDSPA(ctx, clientmgr.k8sClient, DSPA, DSPANamespace)
+
+	if !skipDeploy {
+		systemsTesttUtil.DeployDSPA(ctx, clientmgr.k8sClient, DSPA, DSPANamespace)
+	}
 	systemsTesttUtil.WaitForDSPAReady(ctx, clientmgr.k8sClient, DSPA.Name, DSPANamespace)
 })
 
@@ -125,5 +134,7 @@ var _ = BeforeEach(func() {
 })
 
 var _ = AfterSuite(func() {
-	systemsTesttUtil.DeleteDSPA(ctx, clientmgr.k8sClient, DSPA.Name, DSPANamespace)
+	if !skipCleanup {
+		systemsTesttUtil.DeleteDSPA(ctx, clientmgr.k8sClient, DSPA.Name, DSPANamespace)
+	}
 })
