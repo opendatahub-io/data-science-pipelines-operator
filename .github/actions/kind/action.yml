@@ -26,7 +26,7 @@ runs:
         KIND_CONFIG_FILE=${{ env.TEMP_DIR }}/kind.yaml
         echo "KIND_CONFIG_FILE=${KIND_CONFIG_FILE}" >> $GITHUB_ENV
         envsubst < .github/resources/kind/kind.yaml > ${KIND_CONFIG_FILE}
-        
+
         sudo --preserve-env=REGISTRY_ADDRESS sh -c 'cat > /etc/containers/registries.conf.d/local.conf <<EOF
         [[registry]]
         prefix = "$REGISTRY_ADDRESS"
