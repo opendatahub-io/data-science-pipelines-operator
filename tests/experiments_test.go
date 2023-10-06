@@ -13,8 +13,10 @@ var _ = Describe("A successfully deployed DSPA", func() {
 		response, err := http.Get(fmt.Sprintf("%s/apis/v1beta1/experiments", APIServerURL))
 		Expect(err).ToNot(HaveOccurred())
 		responseData, err := ioutil.ReadAll(response.Body)
+		loggr.Info(string(responseData))
+
 		Expect(err).ToNot(HaveOccurred())
 		Expect(response.StatusCode).To(Equal(200))
-		loggr.Info(string(responseData))
+
 	})
 })
