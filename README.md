@@ -527,7 +527,13 @@ podman build . -f backend/Dockerfile -t quay.io/your_repo/dsp-apiserver:sometag
 ```
 To run the tests:
  
-Execute `make test` or `make unittest` or `make functest` based on the level of testing that needs to be done.
+Execute `make test` or `make unittest` or `make functest` based on the level of testing as mentioned below:
+
+`make unittest` is a command that is often used to run only unit tests for individual units or components. These tests verify that each unit of code (e.g., functions or methods) behaves as expected. It is suggested to run this command often during the development process.
+
+`make functest` is a command used to run functional tests which assess the overall functionality of the software by testing its features and user interactions.Functional tests help ensure that the software works as a whole and that its features are functioning correctly from a user's perspective. It is suggested to run make functest for every commit.
+ 
+The specific tests that are executed when you run `make test` can include unit tests, functional tests and more. It is a test to check if the software behaves correctly and meets the desired quality standards. It helps identify and fix issues early in the development process. 
 
 `make unittest` is a command that is often used to run only unit tests for individual units or components. These tests verify that each unit of code (e.g., functions or methods) behaves as expected. It is suggested to run this command often during the development process.
 
