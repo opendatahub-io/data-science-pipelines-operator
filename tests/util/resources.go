@@ -14,8 +14,12 @@ import (
 	"time"
 )
 
+// TODO:
+// TODO:
+// TODO:
+// TODO: Flag these
 const (
-	DeployTimeout  = time.Second * 6
+	DeployTimeout  = time.Second * 240
 	DeployInterval = time.Millisecond * 2
 	DeleteTimeout  = time.Second * 120
 )
