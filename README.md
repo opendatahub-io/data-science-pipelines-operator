@@ -586,21 +586,20 @@ Refer to this [sample][sample-yaml] yaml file for enabling the upstream kubeflow
 
 Refer to this [repo][kubeflow-pipelines-examples] to see examples of different pipelines for dev testing.
 
-[cluster admin]: https://docs.openshift.com/container-platform/4.12/authentication/using-rbac.html#creating-cluster-admin_using-rbac                                                      
-[oc client]: https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/latest/openshift-client-linux.tar.gz                                                                        
+[cluster admin]: https://docs.openshift.com/container-platform/4.12/authentication/using-rbac.html#creating-cluster-admin_using-rbac
+[oc client]: https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/latest/openshift-client-linux.tar.gz
 [OCP Pipelines Operator]: https://docs.openshift.com/container-platform/4.12/cicd/pipelines/installing-pipelines.html#op-installing-pipelines-operator-in-web-console_installing-pipelines
-[Kustomize]: https://kubectl.docs.kubernetes.io/installation/kustomize/                                                                 
-[Kubeflow Pipelines Architectural Overview]: https://www.kubeflow.org/docs/components/pipelines/v1/introduction/#architectural-overview 
-[flipcoin example]: https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/docs/example_pipelines/condition.yaml   
+[Kustomize]: https://kubectl.docs.kubernetes.io/installation/kustomize/
+[Kubeflow Pipelines Architectural Overview]: https://www.kubeflow.org/docs/components/pipelines/v1/introduction/#architectural-overview
+[flipcoin example]: https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/docs/example_pipelines/condition.yaml
 [flipcoin code example]: https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/docs/example_pipelines/condition.py
-[installodh]: https://opendatahub.io/docs/quick-installation                                                                            
-[kfp-tekton]: https://github.com/kubeflow/kfp-tekton                                                                                    
-[kfp]: https://github.com/kubeflow/pipelines                                                                                            
-[component-images]: https://github.com/opendatahub-io/data-science-pipelines/tree/master/backend                                        
-[thirdparty-images]: https://github.com/opendatahub-io/data-science-pipelines/tree/master/third-party                                   
-[pre-commit-installation]: https://pre-commit.com/                                                                                      
-[kubebuilder-docs]: https://book.kubebuilder.io/                                                                                        
-[dspa-yaml]: https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/config/samples/dspa_all_fields.yaml#L77        
-[sample-yaml]: https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/config/samples/dspa_simple.yaml              
-[kubeflow-pipelines-examples]: https://github.com/rh-datascience-and-edge-practice/kubeflow-pipelines-examples                       
-                                                                                                                                        
+[installodh]: https://opendatahub.io/docs/quick-installation
+[kfp-tekton]: https://github.com/kubeflow/kfp-tekton
+[kfp]: https://github.com/kubeflow/pipelines
+[component-images]: https://github.com/opendatahub-io/data-science-pipelines/tree/master/backend
+[thirdparty-images]: https://github.com/opendatahub-io/data-science-pipelines/tree/master/third-party
+[pre-commit-installation]: https://pre-commit.com/
+[kubebuilder-docs]: https://book.kubebuilder.io/
+[dspa-yaml]: https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/config/samples/dspa_all_fields.yaml#L77
+[sample-yaml]: https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/config/samples/dspa_simple.yaml
+[kubeflow-pipelines-examples]: https://github.com/rh-datascience-and-edge-practice/kubeflow-pipelines-examples
