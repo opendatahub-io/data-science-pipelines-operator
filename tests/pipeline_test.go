@@ -16,7 +16,6 @@ var _ = Describe("Deploying Pipeline", func() {
 		Expect(clientmgr.k8sClient).NotTo(BeNil())
 
 		podList := &v1.PodList{}
-		//ns := types.NamespacedName{Namespace: "openshift-pipelines"}
 
 		listOpts := []client.ListOption{
 			client.InNamespace("openshift-pipelines"),

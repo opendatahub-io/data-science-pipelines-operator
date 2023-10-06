@@ -18,6 +18,7 @@ package systemtests
 
 import (
 	"context"
+	"flag"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -38,11 +39,13 @@ const (
 )
 
 var (
-	loggr     logr.Logger
-	ctx       context.Context
-	cfg       *rest.Config
-	cancel    context.CancelFunc
-	clientmgr ClientManager
+	loggr            logr.Logger
+	ctx              context.Context
+	cfg              *rest.Config
+	cancel           context.CancelFunc
+	clientmgr        ClientManager
+	kubeconfig       string
+	k8sApiServerHost string
 )
 
 type ClientManager struct {
@@ -64,6 +67,12 @@ func TestAPIs(t *testing.T) {
 	RunSpecs(t, "Controller Suite")
 }
 
+// Register flags in an init function. This ensures they are registered _before_ `go test` calls flag.Parse()
+func init() {
+	flag.StringVar(&kubeconfig, "kubeconfig", "~/.kube/config", "The path to the kubeconfig.")
+	flag.StringVar(&k8sApiServerHost, "k8sApiServerHost", "localhost:6443", "The k8s cluster api server host.")
+}
+
 var _ = BeforeSuite(func() {
 	ctx, cancel = context.WithCancel(context.TODO())
 
@@ -80,7 +89,7 @@ var _ = BeforeSuite(func() {
 	clientmgr = ClientManager{}
 
 	// Set up client auth configs
-	cfg, err = clientcmd.BuildConfigFromFlags("https://api.hukhan-3.dev.datahub.redhat.com:6443", "/home/hukhan/.kube/config")
+	cfg, err = clientcmd.BuildConfigFromFlags(k8sApiServerHost, kubeconfig)
 	Expect(err).ToNot(HaveOccurred())
 
 	// Initialize Kubernetes client
