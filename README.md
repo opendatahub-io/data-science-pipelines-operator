@@ -5,7 +5,8 @@ Data Science Pipeline stacks onto individual OCP namespaces.
 
 # Table of Contents
 
-1. [Quickstart](#quickstart)
+1. [Overview](#overview)
+2. [Quickstart](#quickstart)
    1. [Pre-requisites](#pre-requisites)
    2. [Deploy the Operator via ODH](#deploy-the-operator-via-odh)
    3. [Deploy the Operator standalone](#deploy-the-operator-standalone)
@@ -13,15 +14,35 @@ Data Science Pipeline stacks onto individual OCP namespaces.
       1. [Deploy another DSPA instance](#deploy-another-dsp-instance)
       2. [Deploy a DSPA with custom credentials](#deploy-a-dsp-with-custom-credentials)
       3. [Deploy a DSPA with External Object Storage](#deploy-a-dsp-with-external-object-storage)
-2. [DataSciencePipelinesApplication Component Overview](#datasciencepipelinesapplication-component-overview)
-3. [Using a DataSciencePipelinesApplication](#using-a-datasciencepipelinesapplication)
+3. [DataSciencePipelinesApplication Component Overview](#datasciencepipelinesapplication-component-overview)
+4. [Using a DataSciencePipelinesApplication](#using-a-datasciencepipelinesapplication)
    1. [Using the Graphical UI](#using-the-graphical-ui)
    2. [Using the API](#using-the-api)
-4. [Cleanup](#cleanup)
+5. [Cleanup](#cleanup)
    1. [Cleanup ODH Installation](#cleanup-odh-installation)
    2. [Cleanup Standalone Installation](#cleanup-standalone-installation)
-5. [Run tests](#run-tests)
-6. [Metrics](#metrics)
+6. [Run tests](#run-tests)
+7. [Metrics](#metrics)
+
+# Overview
+
+Data Science Pipelines (DSP) allows data scientists to track progress as they
+iterate over development of ML models. With DSP, a data scientist can create
+workflows for data preparation, model training, model validation, and more.
+They can create and track experiements to arrive at the best version of of
+training data, model hyperparameters, model code, etc., and repeatably
+rerun these experiments.
+
+Data Science Pipelines is based on the upstream [Kubeflow Pipelines (KFP)][kfp]
+project. We leverage the [kfp-tekton][kfp] project to run pipelines backed
+by the Tekton (rather than Argo, which is the default choice in KFP). We
+currently distributed version 1.x of KFP, and are working to support v2.
+
+Data Scientists can use tools like the
+[kfp-tekton SDK](https://github.com/kubeflow/kfp-tekton/blob/master/sdk/README.md)
+or [Elyra](https://github.com/elyra-ai/elyra) to author their workflows, and
+interact with them in the
+[ODH dashbard](https://github.com/opendatahub-io/odh-dashboard).
 
 # Quickstart
 
@@ -467,3 +488,4 @@ They are as follows:
 [flipcoin code example]: https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/docs/example_pipelines/condition.py
 [installodh]: https://opendatahub.io/docs/quick-installation
 [kfp-tekton]: https://github.com/kubeflow/kfp-tekton
+[kfp]: https://github.com/kubeflow/pipelines
