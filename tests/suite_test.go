@@ -20,9 +20,14 @@ import (
 	"context"
 	"flag"
 	"github.com/go-logr/logr"
+	mfc "github.com/manifestival/controller-runtime-client"
+	mf "github.com/manifestival/manifestival"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	systemsTesttUtil "github.com/opendatahub-io/data-science-pipelines-operator/tests/util"
 	"go.uber.org/zap/zapcore"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -35,23 +40,27 @@ import (
 
 const (
 	DSPAtimeout = time.Second * 240
-	interval    = time.Millisecond * 2
 )
 
 var (
-	loggr            logr.Logger
-	ctx              context.Context
-	cfg              *rest.Config
-	cancel           context.CancelFunc
-	clientmgr        ClientManager
+	loggr     logr.Logger
+	ctx       context.Context
+	cfg       *rest.Config
+	cancel    context.CancelFunc
+	clientmgr ClientManager
+
 	kubeconfig       string
 	k8sApiServerHost string
 	DSPAPath         string
 	DSPANamespace    string
+
+	DSPA *dspav1alpha1.DataSciencePipelinesApplication
 )
 
 type ClientManager struct {
 	k8sClient client.Client
+	mfsClient mf.Client
+	mfopts    mf.Option
 }
 
 // TestAPIs - This is the entry point for Ginkgo -
@@ -90,6 +99,9 @@ var _ = BeforeSuite(func() {
 	loggr = logf.Log
 	var err error
 
+	// Register API objects
+	utilruntime.Must(dspav1alpha1.AddToScheme(scheme.Scheme))
+
 	clientmgr = ClientManager{}
 
 	// Set up client auth configs
@@ -100,11 +112,18 @@ var _ = BeforeSuite(func() {
 	clientmgr.k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(clientmgr.k8sClient).NotTo(BeNil())
+	clientmgr.mfsClient = mfc.NewClient(clientmgr.k8sClient)
+	clientmgr.mfopts = mf.UseClient(clientmgr.mfsClient)
 
+	// Get DSPA structured
+	DSPA = systemsTesttUtil.GetDSPAFromPath(clientmgr.mfopts, DSPAPath)
+	systemsTesttUtil.DeployDSPA(ctx, clientmgr.k8sClient, DSPA, DSPANamespace)
+	//systemsTesttUtil.WaitForDSPAReady(ctx, clientmgr.k8sClient, DSPA.Name, DSPANamespace)
 })
 
 var _ = BeforeEach(func() {
 })
 
 var _ = AfterSuite(func() {
+	systemsTesttUtil.DeleteDSPA(ctx, clientmgr.k8sClient, DSPA.Name, DSPANamespace)
 })
