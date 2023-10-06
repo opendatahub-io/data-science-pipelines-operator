@@ -165,7 +165,7 @@ var _ = BeforeSuite(func() {
 			Namespace: DSPANamespace,
 		},
 	}
-	// create a forwarder, and you need provide a path of kubeconfig
+	// Create a forwarder, and provide a path to kubeconfig
 	forwarderResult, err = forwarder.WithForwarders(context.Background(), options, kubeconfig)
 	Expect(err).NotTo(HaveOccurred())
 	// wait forwarding ready

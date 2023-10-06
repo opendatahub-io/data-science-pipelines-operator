@@ -1,6 +1,3 @@
-# TODO: FIX MAKEFILE DEPLOY
-# TODO: FIX BUILD to be actual builds (not image pulls for speedup)
-# TODO: Consolidate testing CRDS (2 locations)
 name: KinD DSPO/DSP system tests
 
 on:
@@ -49,6 +46,7 @@ jobs:
       - name: Setup and start KinD cluster
         uses: ./.github/actions/kind
 
+      # TODO: Consolidate testing CRDS (2 locations)
       - name: Apply OCP CRDs
         env:
           RESOURCES_DIR: ${{ github.workspace }}/.github/resources
@@ -60,11 +58,8 @@ jobs:
       - name: Build image
         env:
           DSPO_IMAGE: ${{env.REGISTRY_ADDRESS}}/data-science-pipelines-operator
-        # TODO:
         run: |
-          # make podman-build -e IMG="${DSPO_IMAGE}"
-          podman pull quay.io/opendatahub/data-science-pipelines-operator:main
-          podman tag quay.io/opendatahub/data-science-pipelines-operator:main ${DSPO_IMAGE}
+          make podman-build -e IMG="${DSPO_IMAGE}"
 
       - name: Deploy DSPO
         env:

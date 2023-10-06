@@ -15,11 +15,6 @@ import (
 	"time"
 )
 
-// TODO:
-// TODO:
-// TODO:
-// TODO: Flag these
-
 // DeployDSPA will deploy resource found in path by requesting
 func DeployDSPA(ctx context.Context, client client.Client, deployDSPA *v1alpha1.DataSciencePipelinesApplication, dspaNS string, timeout, interval time.Duration) {
 	deployDSPA.ObjectMeta.Namespace = dspaNS
