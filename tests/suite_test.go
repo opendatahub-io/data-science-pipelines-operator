@@ -144,8 +144,11 @@ var _ = BeforeSuite(func() {
 	DSPA = systemsTesttUtil.GetDSPAFromPath(clientmgr.mfopts, DSPAPath)
 
 	if !skipDeploy {
+		loggr.Info("Deploying DSPA...")
 		systemsTesttUtil.DeployDSPA(ctx, clientmgr.k8sClient, DSPA, DSPANamespace, DefaultDeployTimeout, DefaultPollInterval)
+		loggr.Info("Waiting for DSPA pods to ready...")
 		systemsTesttUtil.WaitForDSPAReady(ctx, clientmgr.k8sClient, DSPA.Name, DSPANamespace, DefaultDeployTimeout, DefaultPollInterval)
+		loggr.Info("DSPA Deployed.")
 	}
 
 	// Forward ApiServer Service
@@ -171,6 +174,8 @@ var _ = BeforeSuite(func() {
 	loggr.Info("Portforwarding service Successfully set up.")
 
 	APIServerURL = fmt.Sprintf("http://127.0.0.1:%d", PortforwardLocalPort)
+
+	loggr.Info("Starting Test Suite.")
 })
 
 var _ = BeforeEach(func() {
