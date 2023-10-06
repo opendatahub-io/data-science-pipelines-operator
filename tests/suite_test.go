@@ -19,6 +19,8 @@ package systemtests
 import (
 	"context"
 	"flag"
+	"fmt"
+	"github.com/anthhub/forwarder"
 	"github.com/go-logr/logr"
 	mfc "github.com/manifestival/controller-runtime-client"
 	mf "github.com/manifestival/manifestival"
@@ -39,7 +41,7 @@ import (
 )
 
 const (
-	DSPAtimeout = time.Second * 240
+	APIServerPort = 8888
 )
 
 var (
@@ -49,14 +51,16 @@ var (
 	cancel    context.CancelFunc
 	clientmgr ClientManager
 
-	kubeconfig       string
-	k8sApiServerHost string
-	DSPAPath         string
-	DSPANamespace    string
-	skipDeploy       bool
-	skipCleanup      bool
-
-	DSPA *dspav1alpha1.DataSciencePipelinesApplication
+	APIServerURL         string
+	kubeconfig           string
+	k8sApiServerHost     string
+	DSPAPath             string
+	DSPANamespace        string
+	skipDeploy           bool
+	skipCleanup          bool
+	PortforwardLocalPort int
+	DSPA                 *dspav1alpha1.DataSciencePipelinesApplication
+	forwarderResult      *forwarder.Result
 )
 
 var (
@@ -100,6 +104,8 @@ func init() {
 	flag.DurationVar(&DefaultDeleteTimeout, "DefaultDeleteTimeout", 120, "Seconds to wait for deployment deletions. Consider increasing this on resource starved environments.")
 	DefaultDeleteTimeout *= time.Second
 
+	flag.IntVar(&PortforwardLocalPort, "PortforwardLocalPort", 8888, "Local port to use for port forwarding dspa server.")
+
 	flag.BoolVar(&skipDeploy, "skipDeploy", false, "Skip DSPA deployment. Use this if you have already "+
 		"manually deployed a DSPA, and want to skip this part.")
 	flag.BoolVar(&skipCleanup, "skipCleanup", false, "Skip DSPA cleanup.")
@@ -142,6 +148,29 @@ var _ = BeforeSuite(func() {
 		systemsTesttUtil.WaitForDSPAReady(ctx, clientmgr.k8sClient, DSPA.Name, DSPANamespace, DefaultDeployTimeout, DefaultPollInterval)
 	}
 
+	// Forward ApiServer Service
+	loggr.Info("Setting up Portforwarding service.")
+	options := []*forwarder.Option{
+		{
+			// the local port for forwarding
+			LocalPort: PortforwardLocalPort,
+			// the k8s pod port
+			RemotePort: APIServerPort,
+			// the forwarding service name
+			ServiceName: fmt.Sprintf("ds-pipeline-%s", DSPA.Name),
+			// namespace default is "default"
+			Namespace: DSPANamespace,
+		},
+	}
+	// create a forwarder, and you need provide a path of kubeconfig
+	forwarderResult, err = forwarder.WithForwarders(context.Background(), options, kubeconfig)
+	Expect(err).NotTo(HaveOccurred())
+	// wait forwarding ready
+	_, err = forwarderResult.Ready()
+	Expect(err).NotTo(HaveOccurred())
+	loggr.Info("Portforwarding service Successfully set up.")
+
+	APIServerURL = fmt.Sprintf("http://127.0.0.1:%d", PortforwardLocalPort)
 })
 
 var _ = BeforeEach(func() {
@@ -151,4 +180,5 @@ var _ = AfterSuite(func() {
 	if !skipCleanup {
 		systemsTesttUtil.DeleteDSPA(ctx, clientmgr.k8sClient, DSPA.Name, DSPANamespace, DefaultDeployTimeout, DefaultPollInterval)
 	}
+	forwarderResult.Close()
 })
