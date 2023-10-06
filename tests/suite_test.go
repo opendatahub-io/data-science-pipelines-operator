@@ -34,8 +34,8 @@ import (
 )
 
 const (
-	timeout  = time.Second * 6
-	interval = time.Millisecond * 2
+	DSPAtimeout = time.Second * 240
+	interval    = time.Millisecond * 2
 )
 
 var (
@@ -46,6 +46,8 @@ var (
 	clientmgr        ClientManager
 	kubeconfig       string
 	k8sApiServerHost string
+	DSPAPath         string
+	DSPANamespace    string
 )
 
 type ClientManager struct {
@@ -71,6 +73,8 @@ func TestAPIs(t *testing.T) {
 func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", "~/.kube/config", "The path to the kubeconfig.")
 	flag.StringVar(&k8sApiServerHost, "k8sApiServerHost", "localhost:6443", "The k8s cluster api server host.")
+	flag.StringVar(&DSPAPath, "DSPAPath", "Path to DSPA", "The DSP resource file to deploy for testing.")
+	flag.StringVar(&DSPANamespace, "DSPANamespace", "Namespace to deploy DSPA", "The namespace to deploy DSPA.")
 }
 
 var _ = BeforeSuite(func() {

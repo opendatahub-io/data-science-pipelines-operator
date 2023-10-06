@@ -18,12 +18,11 @@ var _ = Describe("Deploying Pipeline", func() {
 		podList := &v1.PodList{}
 
 		listOpts := []client.ListOption{
-			client.InNamespace("openshift-pipelines"),
+			client.InNamespace(DSPANamespace),
 		}
 
 		err = clientmgr.k8sClient.List(ctx, podList, listOpts...)
 		for _, pod := range podList.Items {
-			print("hello1")
 			loggr.Info("Pod: " + pod.Name)
 		}
 
