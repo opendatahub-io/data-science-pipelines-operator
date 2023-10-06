@@ -13,7 +13,7 @@ var _ = Describe("Deploying Pipeline", func() {
 	It("should be easy", func() {
 		var err error
 		Expect(err).NotTo(HaveOccurred())
-		Expect(k8sClient).NotTo(BeNil())
+		Expect(clientmgr.k8sClient).NotTo(BeNil())
 
 		podList := &v1.PodList{}
 		//ns := types.NamespacedName{Namespace: "openshift-pipelines"}
@@ -22,7 +22,7 @@ var _ = Describe("Deploying Pipeline", func() {
 			client.InNamespace("openshift-pipelines"),
 		}
 
-		err = k8sClient.List(ctx, podList, listOpts...)
+		err = clientmgr.k8sClient.List(ctx, podList, listOpts...)
 		for _, pod := range podList.Items {
 			print("hello1")
 			loggr.Info("Pod: " + pod.Name)

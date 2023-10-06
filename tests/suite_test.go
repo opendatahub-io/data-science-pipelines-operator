@@ -40,10 +40,14 @@ const (
 var (
 	loggr     logr.Logger
 	ctx       context.Context
-	k8sClient client.Client
 	cfg       *rest.Config
 	cancel    context.CancelFunc
+	clientmgr ClientManager
 )
+
+type ClientManager struct {
+	k8sClient client.Client
+}
 
 // TestAPIs - This is the entry point for Ginkgo -
 // the go test runner will run this function when you run go test or ginkgo.
@@ -73,16 +77,20 @@ var _ = BeforeSuite(func() {
 	loggr = logf.Log
 	var err error
 
+	clientmgr = ClientManager{}
+
 	// Set up client auth configs
 	cfg, err = clientcmd.BuildConfigFromFlags("https://api.hukhan-3.dev.datahub.redhat.com:6443", "/home/hukhan/.kube/config")
 	Expect(err).ToNot(HaveOccurred())
 
 	// Initialize Kubernetes client
-	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	clientmgr.k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).ToNot(HaveOccurred())
 
 })
 
-var _ = AfterSuite(func() {
+var _ = BeforeEach(func() {
+})
 
+var _ = AfterSuite(func() {
 })
