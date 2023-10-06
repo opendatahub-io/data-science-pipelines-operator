@@ -98,7 +98,8 @@ var _ = BeforeSuite(func() {
 
 	// Initialize Kubernetes client
 	clientmgr.k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
+	Expect(clientmgr.k8sClient).NotTo(BeNil())
 
 })
 

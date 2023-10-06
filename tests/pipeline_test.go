@@ -11,17 +11,14 @@ import (
 var _ = Describe("Deploying Pipeline", func() {
 
 	It("should be easy", func() {
-		var err error
-		Expect(err).NotTo(HaveOccurred())
-		Expect(clientmgr.k8sClient).NotTo(BeNil())
-
 		podList := &v1.PodList{}
 
 		listOpts := []client.ListOption{
 			client.InNamespace(DSPANamespace),
 		}
 
-		err = clientmgr.k8sClient.List(ctx, podList, listOpts...)
+		err := clientmgr.k8sClient.List(ctx, podList, listOpts...)
+		Expect(err).ToNot(HaveOccurred())
 		for _, pod := range podList.Items {
 			loggr.Info("Pod: " + pod.Name)
 		}
