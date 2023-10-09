@@ -23,6 +23,7 @@ Data Science Pipeline stacks onto individual OCP namespaces.
    2. [Cleanup Standalone Installation](#cleanup-standalone-installation)
 6. [Run tests](#run-tests)
 7. [Metrics](#metrics)
+8. [Configuring Log Levels for the Operator](#configuring-log-levels-for-the-operator)
 
 # Overview
 
@@ -478,6 +479,13 @@ They are as follows:
 - `data_science_pipelines_application_persistenceagent_ready` - Gauge that indicates if the DSPA's PersistenceAgent is in a Ready state (1 => Ready, 0 => Not Ready)
 - `data_science_pipelines_application_scheduledworkflow_ready` - Gauge that indicates if the DSPA's ScheduledWorkflow manager is in a Ready state (1 => Ready, 0 => Not Ready)
 - `data_science_pipelines_application_ready` - Gauge that indicates if the DSPA is in a fully Ready state (1 => Ready, 0 => Not Ready)
+
+# Configuring Log Levels for the Operator
+
+By default, the operator's log messages are set to `info` severity.
+If you wish to adjust the log verbosity, you can do so by modifying the `ZAP_LOG_LEVEL` parameter in [params.env](config/base/params.env) file to your preferred severity level.
+
+For a comprehensive list of available values, please consult the [Zap documentation](https://pkg.go.dev/go.uber.org/zap#pkg-constants).
 
 [cluster admin]: https://docs.openshift.com/container-platform/4.12/authentication/using-rbac.html#creating-cluster-admin_using-rbac
 [oc client]: https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/latest/openshift-client-linux.tar.gz
