@@ -48,9 +48,10 @@ const finalizerName = "datasciencepipelinesapplications.opendatahub.io/finalizer
 // DSPAReconciler reconciles a DSPAParams object
 type DSPAReconciler struct {
 	client.Client
-	Scheme        *runtime.Scheme
-	Log           logr.Logger
-	TemplatesPath string
+	Scheme                       *runtime.Scheme
+	Log                          logr.Logger
+	TemplatesPath                string
+	MaxConcurrentReconcilesParam int
 }
 
 func (r *DSPAReconciler) Apply(owner mf.Owner, params *DSPAParams, template string, fns ...mf.Transformer) error {
@@ -576,7 +577,7 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			})).
 		// TODO: Add watcher for ui cluster rbac since it has no owner
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: config.DefaultMaxConcurrentReconciles,
+			MaxConcurrentReconciles: r.MaxConcurrentReconcilesParam,
 		}).
 		Complete(r)
 }
