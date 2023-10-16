@@ -139,11 +139,11 @@ func main() {
 	}
 
 	if err = (&controllers.DSPAReconciler{
-		Client:                       mgr.GetClient(),
-		Scheme:                       mgr.GetScheme(),
-		Log:                          ctrl.Log,
-		TemplatesPath:                "config/internal/",
-		MaxConcurrentReconcilesParam: maxConcurrentReconciles,
+		Client:                  mgr.GetClient(),
+		Scheme:                  mgr.GetScheme(),
+		Log:                     ctrl.Log,
+		TemplatesPath:           "config/internal/",
+		MaxConcurrentReconciles: maxConcurrentReconciles,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DSPAParams")
 		os.Exit(1)
