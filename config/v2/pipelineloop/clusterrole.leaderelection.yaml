@@ -3,8 +3,8 @@ kind: ClusterRole
 metadata:
   labels:
     app.kubernetes.io/instance: default
-    app.kubernetes.io/part-of: tekton-pipeline-loops
-  name: tekton-pipelineloop-leader-election
+    app.kubernetes.io/part-of: data-science-pipelines-pipeline-loops
+  name: data-science-pipelines-pipelineloop-leader-election
 rules:
 - apiGroups:
   - coordination.k8s.io

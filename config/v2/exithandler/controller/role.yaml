@@ -4,8 +4,8 @@ metadata:
   labels:
     app.kubernetes.io/component: controller
     app.kubernetes.io/instance: default
-    app.kubernetes.io/part-of: kfp-tekton
-  name: kfp-exithandler-controller-role
+    app.kubernetes.io/part-of: data-science-pipelines-tekton
+  name: data-science-pipelines-exithandler-controller-role
 rules:
 - apiGroups:
   - ""
@@ -29,7 +29,7 @@ rules:
 - apiGroups:
   - policy
   resourceNames:
-  - tekton-pipelines
+  - data-science-pipelines
   - openshift-pipelines
   resources:
   - podsecuritypolicies

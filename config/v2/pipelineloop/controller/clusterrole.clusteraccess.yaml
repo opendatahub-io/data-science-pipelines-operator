@@ -4,8 +4,8 @@ metadata:
   labels:
     app.kubernetes.io/component: controller
     app.kubernetes.io/instance: default
-    app.kubernetes.io/part-of: tekton-pipeline-loops
-  name: tekton-pipelineloop-controller-cluster-access-clusterrole
+    app.kubernetes.io/part-of: data-science-pipelines-pipeline-loops
+  name: data-science-pipelines-pipelineloop-controller-cluster-access-clusterrole
 rules:
 - apiGroups:
   - tekton.dev

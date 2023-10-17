@@ -3,7 +3,7 @@ kind: CustomResourceDefinition
 metadata:
   labels:
     app.kubernetes.io/instance: default
-    app.kubernetes.io/part-of: tekton-pipeline-loops
+    app.kubernetes.io/part-of: data-science-pipelines-pipeline-loops
     pipeline.tekton.dev/release: devel
     version: devel
   name: pipelineloops.custom.tekton.dev
@@ -12,7 +12,7 @@ spec:
   names:
     categories:
     - tekton
-    - tekton-pipelines
+    - data-science-pipelines
     - openshift-pipelines
     kind: PipelineLoop
     plural: pipelineloops

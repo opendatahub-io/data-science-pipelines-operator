@@ -4,13 +4,13 @@ metadata:
   labels:
     app.kubernetes.io/component: controller
     app.kubernetes.io/instance: default
-    app.kubernetes.io/part-of: kfp-tekton
-  name: kfp-exithandler-controller-cluster-access-clusterrolebinding
+    app.kubernetes.io/part-of: data-science-pipelines-tekton
+  name: data-science-pipelines-exithandler-controller-cluster-access-clusterrolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: kfp-exithandler-controller-cluster-access-clusterrole
+  name: data-science-pipelines-exithandler-controller-cluster-access-clusterrole
 subjects:
 - kind: ServiceAccount
-  name: kfp-exithandler-controller
+  name: data-science-pipelines-exithandler-controller
   namespace: datasciencepipelinesapplications-controller

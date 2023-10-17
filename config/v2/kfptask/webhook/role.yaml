@@ -4,7 +4,7 @@ metadata:
   labels:
     app.kubernetes.io/component: webhook
     app.kubernetes.io/instance: default
-    app.kubernetes.io/part-of: kfp-tekton
+    app.kubernetes.io/part-of: data-science-pipelines-tekton
   name: kfptask-webhook-role
 rules:
 - apiGroups:
@@ -45,7 +45,7 @@ rules:
 - apiGroups:
   - policy
   resourceNames:
-  - tekton-pipelines
+  - data-science-pipelines
   - openshift-pipelines
   resources:
   - podsecuritypolicies

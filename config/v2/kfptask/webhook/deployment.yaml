@@ -5,7 +5,7 @@ metadata:
     app.kubernetes.io/component: webhook
     app.kubernetes.io/instance: default
     app.kubernetes.io/name: webhook
-    app.kubernetes.io/part-of: kfp-tekton
+    app.kubernetes.io/part-of: data-science-pipelines-tekton
     app.kubernetes.io/version: devel
     pipeline.tekton.dev/release: devel
     version: devel
@@ -17,17 +17,17 @@ spec:
       app.kubernetes.io/component: webhook
       app.kubernetes.io/instance: default
       app.kubernetes.io/name: webhook
-      app.kubernetes.io/part-of: kfp-tekton
+      app.kubernetes.io/part-of: data-science-pipelines-tekton
   template:
     metadata:
       annotations:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "false"
       labels:
-        app: tekton-pipelines-webhook
+        app: data-science-pipelines-webhook
         app.kubernetes.io/component: webhook
         app.kubernetes.io/instance: default
         app.kubernetes.io/name: webhook
-        app.kubernetes.io/part-of: kfp-tekton
+        app.kubernetes.io/part-of: data-science-pipelines-tekton
         app.kubernetes.io/version: devel
         pipeline.tekton.dev/release: devel
         version: devel
@@ -50,7 +50,7 @@ spec:
           value: kfptask-webhook-certs
         - name: METRICS_DOMAIN
           value: tekton.dev/pipeline
-        image: quay.io/internaldatahub/tekton-kfptask-webhook:2.0.0
+        image: quay.io/internaldatahub/data-science-pipelines-kfptask-webhook:2.0.0
         name: webhook
         ports:
         - containerPort: 9090

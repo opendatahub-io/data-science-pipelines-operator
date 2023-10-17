@@ -2,15 +2,15 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: tekton-pipelines-webhook
+    app: data-science-pipelines-webhook
     app.kubernetes.io/component: webhook
     app.kubernetes.io/instance: default
     app.kubernetes.io/name: webhook
-    app.kubernetes.io/part-of: tekton-pipeline-loops
+    app.kubernetes.io/part-of: data-science-pipelines-pipeline-loops
     app.kubernetes.io/version: devel
     pipeline.tekton.dev/release: devel
     version: devel
-  name: tekton-pipelineloop-webhook
+  name: data-science-pipelines-pipelineloop-webhook
   namespace: datasciencepipelinesapplications-controller
 spec:
   ports:
@@ -27,4 +27,4 @@ spec:
     app.kubernetes.io/component: webhook
     app.kubernetes.io/instance: default
     app.kubernetes.io/name: webhook
-    app.kubernetes.io/part-of: tekton-pipeline-loops
+    app.kubernetes.io/part-of: data-science-pipelines-pipeline-loops

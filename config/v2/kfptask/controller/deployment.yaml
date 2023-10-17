@@ -5,7 +5,7 @@ metadata:
     app.kubernetes.io/name: data-science-pipelines-operator
     app.kubernetes.io/component: controller
     app.kubernetes.io/instance: default
-    app.kubernetes.io/part-of: kfp-tekton
+    app.kubernetes.io/part-of: data-science-pipelines-tekton
     app.kubernetes.io/version: devel
     pipeline.tekton.dev/release: devel
     version: devel
@@ -17,7 +17,7 @@ spec:
       app.kubernetes.io/component: controller
       app.kubernetes.io/instance: default
       app.kubernetes.io/name: controller
-      app.kubernetes.io/part-of: kfp-tekton
+      app.kubernetes.io/part-of: data-science-pipelines-tekton
   template:
     metadata:
       annotations:
@@ -27,7 +27,7 @@ spec:
         app.kubernetes.io/component: controller
         app.kubernetes.io/instance: default
         app.kubernetes.io/name: controller
-        app.kubernetes.io/part-of: kfp-tekton
+        app.kubernetes.io/part-of: data-science-pipelines-tekton
         app.kubernetes.io/version: devel
         pipeline.tekton.dev/release: devel
         version: devel
@@ -46,7 +46,7 @@ spec:
           value: config-observability
         - name: METRICS_DOMAIN
           value: tekton.dev/pipeline
-        image: quay.io/internaldatahub/tekton-kfptask-controller:2.0.0
+        image: quay.io/internaldatahub/data-science-pipelines-kfptask-controller:2.0.0
         name: kfptask-controller
         securityContext:
           allowPrivilegeEscalation: false

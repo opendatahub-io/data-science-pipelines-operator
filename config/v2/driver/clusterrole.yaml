@@ -3,10 +3,10 @@ kind: ClusterRole
 metadata:
   labels:
     app.kubernetes.io/name: data-science-pipelines-operator
-    app.kubernetes.io/component: kfp-driver
+    app.kubernetes.io/component: data-science-pipelines-driver
     app.kubernetes.io/instance: default
-    app.kubernetes.io/part-of: kubeflow-pipeline
-  name: kfp-driver-cluster-access-clusterrole
+    app.kubernetes.io/part-of: data-science-pipeline
+  name: data-science-pipelines-driver-cluster-access-clusterrole
 rules:
 - apiGroups:
   - tekton.dev

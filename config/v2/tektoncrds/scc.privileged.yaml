@@ -15,9 +15,9 @@ groups:
 kind: SecurityContextConstraints
 metadata:
   annotations:
-    kubernetes.io/description: kubeflow-anyuid provides all features of the restricted
+    kubernetes.io/description: data-science-anyuid provides all features of the restricted
       SCC but allows users to run with any UID and any GID.
-  name: kubeflow-privileged-kfp-tekton
+  name: data-science-privileged-data-science-pipelines-tekton
 priority: 10
 readOnlyRootFilesystem: false
 requiredDropCapabilities:
@@ -29,29 +29,29 @@ seLinuxContext:
 supplementalGroups:
   type: RunAsAny
 users:
-- system:serviceaccount:kubeflow:metadatadb
-- system:serviceaccount:kubeflow:minio
-- system:serviceaccount:kubeflow:default
-- system:serviceaccount:kubeflow:pipeline-runner
-- system:serviceaccount:kubeflow:kubeflow-pipelines-cache
-- system:serviceaccount:kubeflow:kubeflow-pipelines-cache-deployer-sa
-- system:serviceaccount:kubeflow:metadata-grpc-server
-- system:serviceaccount:kubeflow:kubeflow-pipelines-metadata-writer
-- system:serviceaccount:kubeflow:ml-pipeline
-- system:serviceaccount:kubeflow:ml-pipeline-persistenceagent
-- system:serviceaccount:kubeflow:ml-pipeline-scheduledworkflow
-- system:serviceaccount:kubeflow:ml-pipeline-ui
-- system:serviceaccount:kubeflow:ml-pipeline-viewer-crd-service-account
-- system:serviceaccount:kubeflow:ml-pipeline-visualizationserver
-- system:serviceaccount:kubeflow:mysql
-- system:serviceaccount:kubeflow:kfp-csi-s3
-- system:serviceaccount:kubeflow:kfp-csi-attacher
-- system:serviceaccount:kubeflow:kfp-csi-provisioner
-- system:serviceaccount:openshift-pipelines:kfp-driver
-- system:serviceaccount:openshift-pipelines:kfp-exithandler-controller
-- system:serviceaccount:openshift-pipelines:kfp-exithandler-webhook
-- system:serviceaccount:openshift-pipelines:tekton-pipelineloop-controller
-- system:serviceaccount:openshift-pipelines:tekton-pipelineloop-webhook
+- system:serviceaccount:data-science:metadatadb
+- system:serviceaccount:data-science:minio
+- system:serviceaccount:data-science:default
+- system:serviceaccount:data-science:pipeline-runner
+- system:serviceaccount:data-science:data-science-pipelines-cache
+- system:serviceaccount:data-science:data-science-pipelines-cache-deployer-sa
+- system:serviceaccount:data-science:metadata-grpc-server
+- system:serviceaccount:data-science:data-science-pipelines-metadata-writer
+- system:serviceaccount:data-science:ml-pipeline
+- system:serviceaccount:data-science:ml-pipeline-persistenceagent
+- system:serviceaccount:data-science:ml-pipeline-scheduledworkflow
+- system:serviceaccount:data-science:ml-pipeline-ui
+- system:serviceaccount:data-science:ml-pipeline-viewer-crd-service-account
+- system:serviceaccount:data-science:ml-pipeline-visualizationserver
+- system:serviceaccount:data-science:mysql
+- system:serviceaccount:data-science:data-science-pipelines-csi-s3
+- system:serviceaccount:data-science:data-science-pipelines-csi-attacher
+- system:serviceaccount:data-science:data-science-pipelines-csi-provisioner
+- system:serviceaccount:openshift-pipelines:data-science-pipelines-driver
+- system:serviceaccount:openshift-pipelines:data-science-pipelines-exithandler-controller
+- system:serviceaccount:openshift-pipelines:data-science-pipelines-exithandler-webhook
+- system:serviceaccount:openshift-pipelines:data-science-pipelines-pipelineloop-controller
+- system:serviceaccount:openshift-pipelines:data-science-pipelines-pipelineloop-webhook
 volumes:
 - configMap
 - downwardAPI

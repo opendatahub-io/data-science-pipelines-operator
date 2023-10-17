@@ -4,13 +4,13 @@ metadata:
   labels:
     app.kubernetes.io/component: controller
     app.kubernetes.io/instance: default
-    app.kubernetes.io/part-of: tekton-pipeline-loops
-  name: tekton-pipelineloop-controller-tenant-access-clusterrolebinding
+    app.kubernetes.io/part-of: data-science-pipelines-pipeline-loops
+  name: data-science-pipelines-pipelineloop-controller-tenant-access-clusterrolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: tekton-pipelineloop-controller-tenant-access-clusterrole
+  name: data-science-pipelines-pipelineloop-controller-tenant-access-clusterrole
 subjects:
 - kind: ServiceAccount
-  name: tekton-pipelineloop-controller
+  name: data-science-pipelines-pipelineloop-controller
   namespace: datasciencepipelinesapplications-controller

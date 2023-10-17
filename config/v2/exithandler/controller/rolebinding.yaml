@@ -4,13 +4,13 @@ metadata:
   labels:
     app.kubernetes.io/component: controller
     app.kubernetes.io/instance: default
-    app.kubernetes.io/part-of: kfp-tekton
-  name: kfp-exithandler-controller-rolebinding
+    app.kubernetes.io/part-of: data-science-pipelines-tekton
+  name: data-science-pipelines-exithandler-controller-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: kfp-exithandler-controller-role
+  name: data-science-pipelines-exithandler-controller-role
 subjects:
 - kind: ServiceAccount
-  name: kfp-exithandler-controller
+  name: data-science-pipelines-exithandler-controller
   namespace: datasciencepipelinesapplications-controller

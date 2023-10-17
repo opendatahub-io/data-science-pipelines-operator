@@ -4,8 +4,8 @@ metadata:
   labels:
     app.kubernetes.io/component: controller
     app.kubernetes.io/instance: default
-    app.kubernetes.io/part-of: kfp-tekton
-  name: kfp-exithandler-controller-cluster-access-clusterrole
+    app.kubernetes.io/part-of: data-science-pipelines-tekton
+  name: data-science-pipelines-exithandler-controller-cluster-access-clusterrole
 rules:
 - apiGroups:
   - tekton.dev

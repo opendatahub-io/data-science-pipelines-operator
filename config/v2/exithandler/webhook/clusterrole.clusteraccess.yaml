@@ -4,8 +4,8 @@ metadata:
   labels:
     app.kubernetes.io/component: webhook
     app.kubernetes.io/instance: default
-    app.kubernetes.io/part-of: kfp-tekton
-  name: kfp-exithandler-webhook-cluster-access-clusterrole
+    app.kubernetes.io/part-of: data-science-pipelines-tekton
+  name: data-science-pipelines-exithandler-webhook-cluster-access-clusterrole
 rules:
 - apiGroups:
   - apiextensions.k8s.io
@@ -70,7 +70,7 @@ rules:
 - apiGroups:
   - policy
   resourceNames:
-  - tekton-pipelines
+  - data-science-pipelines
   - openshift-pipelines
   resources:
   - podsecuritypolicies

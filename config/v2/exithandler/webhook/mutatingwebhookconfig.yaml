@@ -4,7 +4,7 @@ metadata:
   labels:
     app.kubernetes.io/component: webhook
     app.kubernetes.io/instance: default
-    app.kubernetes.io/part-of: kfp-tekton
+    app.kubernetes.io/part-of: data-science-pipelines-tekton
     pipeline.tekton.dev/release: devel
   name: webhook.exithandler.custom.tekton.dev
 webhooks:
@@ -12,7 +12,7 @@ webhooks:
   - v1beta1
   clientConfig:
     service:
-      name: kfp-exithandler-webhook
+      name: data-science-pipelines-exithandler-webhook
       namespace: datasciencepipelinesapplications-controller
   failurePolicy: Fail
   name: webhook.exithandler.custom.tekton.dev

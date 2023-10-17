@@ -2,15 +2,15 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: tekton-pipelines-webhook
+    app: data-science-pipelines-webhook
     app.kubernetes.io/component: webhook
     app.kubernetes.io/instance: default
     app.kubernetes.io/name: webhook
-    app.kubernetes.io/part-of: kfp-tekton
+    app.kubernetes.io/part-of: data-science-pipelines-tekton
     app.kubernetes.io/version: devel
     pipeline.tekton.dev/release: devel
     version: devel
-  name: kfp-exithandler-webhook
+  name: data-science-pipelines-exithandler-webhook
   namespace: datasciencepipelinesapplications-controller
 spec:
   ports:
@@ -27,4 +27,4 @@ spec:
     app.kubernetes.io/component: webhook
     app.kubernetes.io/instance: default
     app.kubernetes.io/name: webhook
-    app.kubernetes.io/part-of: kfp-tekton
+    app.kubernetes.io/part-of: data-science-pipelines-tekton

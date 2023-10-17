@@ -3,7 +3,7 @@ kind: CustomResourceDefinition
 metadata:
   labels:
     app.kubernetes.io/instance: default
-    app.kubernetes.io/part-of: kfp-tekton
+    app.kubernetes.io/part-of: data-science-pipelines-tekton
     pipeline.tekton.dev/release: devel
     version: devel
   name: kfptasks.custom.tekton.dev
@@ -12,7 +12,7 @@ spec:
   names:
     categories:
     - tekton
-    - tekton-pipelines
+    - data-science-pipelines
     - openshift-pipelines
     kind: KfpTask
     plural: kfptasks

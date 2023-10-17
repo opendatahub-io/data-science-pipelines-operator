@@ -2,15 +2,15 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: kfp-driver
-    app.kubernetes.io/component: kfp-driver
+    app: data-science-pipelines-driver
+    app.kubernetes.io/component: data-science-pipelines-driver
     app.kubernetes.io/instance: default
-    app.kubernetes.io/name: kfp-driver
-    app.kubernetes.io/part-of: kubeflow-pipeline
+    app.kubernetes.io/name: data-science-pipelines-driver
+    app.kubernetes.io/part-of: data-science-pipeline
     app.kubernetes.io/version: devel
     pipeline.tekton.dev/release: devel
     version: devel
-  name: kfp-driver
+  name: data-science-pipelines-driver
 spec:
   ports:
   - name: http-metrics
@@ -18,7 +18,7 @@ spec:
     protocol: TCP
     targetPort: 9090
   selector:
-    app.kubernetes.io/component: kfp-driver
+    app.kubernetes.io/component: data-science-pipelines-driver
     app.kubernetes.io/instance: default
-    app.kubernetes.io/name: kfp-driver
-    app.kubernetes.io/part-of: kubeflow-pipeline
+    app.kubernetes.io/name: data-science-pipelines-driver
+    app.kubernetes.io/part-of: data-science-pipeline

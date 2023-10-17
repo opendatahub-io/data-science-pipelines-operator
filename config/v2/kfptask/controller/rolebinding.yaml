@@ -5,7 +5,7 @@ metadata:
     app.kubernetes.io/name: data-science-pipelines-operator
     app.kubernetes.io/component: controller
     app.kubernetes.io/instance: default
-    app.kubernetes.io/part-of: kfp-tekton
+    app.kubernetes.io/part-of: data-science-pipelines-tekton
   name: kfptask-controller-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io

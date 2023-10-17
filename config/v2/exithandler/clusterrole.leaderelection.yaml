@@ -3,8 +3,8 @@ kind: ClusterRole
 metadata:
   labels:
     app.kubernetes.io/instance: default
-    app.kubernetes.io/part-of: kfp-tekton
-  name: kfp-exithandler-leader-election
+    app.kubernetes.io/part-of: data-science-pipelines-tekton
+  name: data-science-pipelines-exithandler-leader-election
 rules:
 - apiGroups:
   - coordination.k8s.io

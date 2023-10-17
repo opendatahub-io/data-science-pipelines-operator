@@ -4,7 +4,7 @@ metadata:
   labels:
     app.kubernetes.io/component: webhook
     app.kubernetes.io/instance: default
-    app.kubernetes.io/part-of: kfp-tekton
+    app.kubernetes.io/part-of: data-science-pipelines-tekton
   name: kfptask-webhook-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io

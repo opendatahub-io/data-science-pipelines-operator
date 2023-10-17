@@ -2,30 +2,30 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app.kubernetes.io/component: ckfp-driver
+    app.kubernetes.io/component: cdata-science-pipelines-driver
     app.kubernetes.io/instance: default
-    app.kubernetes.io/name: kfp-driver
-    app.kubernetes.io/part-of: kubeflow-pipeline
+    app.kubernetes.io/name: data-science-pipelines-driver
+    app.kubernetes.io/part-of: data-science-pipeline
     app.kubernetes.io/version: devel
-  name: kfp-driver
+  name: data-science-pipelines-driver
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/component: kfp-driver
+      app.kubernetes.io/component: data-science-pipelines-driver
       app.kubernetes.io/instance: default
-      app.kubernetes.io/name: kfp-driver
-      app.kubernetes.io/part-of: kubeflow-pipeline
+      app.kubernetes.io/name: data-science-pipelines-driver
+      app.kubernetes.io/part-of: data-science-pipeline
   template:
     metadata:
       annotations:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "false"
       labels:
-        app: kfp-driver
-        app.kubernetes.io/component: kfp-driver
+        app: data-science-pipelines-driver
+        app.kubernetes.io/component: data-science-pipelines-driver
         app.kubernetes.io/instance: default
-        app.kubernetes.io/name: kfp-driver
-        app.kubernetes.io/part-of: kubeflow-pipeline
+        app.kubernetes.io/name: data-science-pipelines-driver
+        app.kubernetes.io/part-of: data-science-pipeline
         app.kubernetes.io/version: devel
     spec:
       containers:
@@ -42,9 +42,9 @@ spec:
           value: config-observability
         - name: METRICS_DOMAIN
           value: tekton.dev/pipeline
-        image: quay.io/internaldatahub/tekton-driver:2.0.0
+        image: quay.io/internaldatahub/data-science-pipelines-driver:2.0.0
         imagePullPolicy: Always
-        name: kfp-driver
+        name: data-science-pipelines-driver
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -54,4 +54,4 @@ spec:
           runAsNonRoot: true
           seccompProfile:
             type: RuntimeDefault
-      serviceAccountName: kfp-driver
+      serviceAccountName: data-science-pipelines-driver

@@ -4,8 +4,8 @@ metadata:
   labels:
     app.kubernetes.io/component: webhook
     app.kubernetes.io/instance: default
-    app.kubernetes.io/part-of: tekton-pipeline-loops
-  name: tekton-pipelineloop-webhook-role
+    app.kubernetes.io/part-of: data-science-pipelines-pipeline-loops
+  name: data-science-pipelines-pipelineloop-webhook-role
 rules:
 - apiGroups:
   - ""
@@ -35,7 +35,7 @@ rules:
 - apiGroups:
   - ""
   resourceNames:
-  - tekton-pipelineloop-webhook-certs
+  - data-science-pipelines-pipelineloop-webhook-certs
   resources:
   - secrets
   verbs:
@@ -44,7 +44,7 @@ rules:
 - apiGroups:
   - policy
   resourceNames:
-  - tekton-pipelines
+  - data-science-pipelines
   - openshift-pipelines
   resources:
   - podsecuritypolicies

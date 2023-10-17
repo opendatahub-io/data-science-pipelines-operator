@@ -3,11 +3,11 @@ kind: Role
 metadata:
   labels:
     app.kubernetes.io/name: data-science-pipelines-operator
-    app.kubernetes.io/component: kfp-driver
+    app.kubernetes.io/component: data-science-pipelines-driver
     app.kubernetes.io/instance: default
-    app.kubernetes.io/part-of: kubeflow-pipeline
+    app.kubernetes.io/part-of: data-science-pipeline
   namespace: datasciencepipelinesapplications-controller
-  name: kfp-driver-role
+  name: data-science-pipelines-driver-role
 rules:
 - apiGroups:
   - ""
@@ -49,7 +49,7 @@ rules:
   verbs:
   - '*'
 - apiGroups:
-  - kubeflow.org
+  - data-science.org
   resources:
   - '*'
   verbs:
@@ -69,7 +69,7 @@ rules:
 - apiGroups:
   - policy
   resourceNames:
-  - tekton-pipelines
+  - data-science-pipelines
   - openshift-pipelines
   resources:
   - podsecuritypolicies

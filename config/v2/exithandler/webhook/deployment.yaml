@@ -5,11 +5,11 @@ metadata:
     app.kubernetes.io/component: webhook
     app.kubernetes.io/instance: default
     app.kubernetes.io/name: webhook
-    app.kubernetes.io/part-of: kfp-tekton
+    app.kubernetes.io/part-of: data-science-pipelines-tekton
     app.kubernetes.io/version: devel
     pipeline.tekton.dev/release: devel
     version: devel
-  name: kfp-exithandler-webhook
+  name: data-science-pipelines-exithandler-webhook
 spec:
   replicas: 1
   selector:
@@ -17,17 +17,17 @@ spec:
       app.kubernetes.io/component: webhook
       app.kubernetes.io/instance: default
       app.kubernetes.io/name: webhook
-      app.kubernetes.io/part-of: kfp-tekton
+      app.kubernetes.io/part-of: data-science-pipelines-tekton
   template:
     metadata:
       annotations:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "false"
       labels:
-        app: tekton-pipelines-webhook
+        app: data-science-pipelines-webhook
         app.kubernetes.io/component: webhook
         app.kubernetes.io/instance: default
         app.kubernetes.io/name: webhook
-        app.kubernetes.io/part-of: kfp-tekton
+        app.kubernetes.io/part-of: data-science-pipelines-tekton
         app.kubernetes.io/version: devel
         pipeline.tekton.dev/release: devel
         version: devel
@@ -45,12 +45,12 @@ spec:
         - name: CONFIG_LEADERELECTION_NAME
           value: config-leader-election
         - name: WEBHOOK_SERVICE_NAME
-          value: kfp-exithandler-webhook
+          value: data-science-pipelines-exithandler-webhook
         - name: WEBHOOK_SECRET_NAME
-          value: kfp-exithandler-webhook-certs
+          value: data-science-pipelines-exithandler-webhook-certs
         - name: METRICS_DOMAIN
           value: tekton.dev/pipeline
-        image: quay.io/internaldatahub/tekton-exithandler-webhook:2.0.0
+        image: quay.io/internaldatahub/data-science-pipelines-exithandler-webhook:2.0.0
         name: webhook
         ports:
         - containerPort: 9090
@@ -68,4 +68,4 @@ spec:
           runAsNonRoot: true
           seccompProfile:
             type: RuntimeDefault
-      serviceAccountName: kfp-exithandler-webhook
+      serviceAccountName: data-science-pipelines-exithandler-webhook

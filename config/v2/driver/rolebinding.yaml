@@ -3,15 +3,15 @@ kind: RoleBinding
 metadata:
   labels:
     app.kubernetes.io/name: data-science-pipelines-operator
-    app.kubernetes.io/component: kfp-driver
+    app.kubernetes.io/component: data-science-pipelines-driver
     app.kubernetes.io/instance: default
-    app.kubernetes.io/part-of: kubeflow-pipeline
-  name: kfp-driver-rolebinding
+    app.kubernetes.io/part-of: data-science-pipeline
+  name: data-science-pipelines-driver-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: kfp-driver-role
+  name: data-science-pipelines-driver-role
 subjects:
 - kind: ServiceAccount
-  name: kfp-driver
+  name: data-science-pipelines-driver
   namespace: datasciencepipelinesapplications-controller
