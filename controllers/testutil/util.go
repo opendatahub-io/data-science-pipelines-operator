@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"io/ioutil"
 	"os"
 	"time"
 
@@ -166,14 +167,14 @@ func DirExists(path string) (bool, error) {
 func GenerateDeclarativeTestCases() []Case {
 	var testcases []Case
 
-	cases, err := os.ReadDir(CasesDir)
+	cases, err := ioutil.ReadDir(CasesDir)
 	Expect(err).ToNot(HaveOccurred(), "Failed to fetch cases in case dir.")
 	for _, testcase := range cases {
 		caseName := testcase.Name()
 		caseDir := fmt.Sprintf("%s/%s", CasesDir, caseName)
 		newCase := Case{}
 		caseDeployDir := fmt.Sprintf("%s/deploy", caseDir)
-		deploys, err := os.ReadDir(caseDeployDir)
+		deploys, err := ioutil.ReadDir(caseDeployDir)
 		Expect(err).ToNot(HaveOccurred(), "Failed to read case.")
 		for _, f := range deploys {
 			newCase.Deploy = append(newCase.Deploy, fmt.Sprintf("%s/%s", caseDeployDir, f.Name()))
@@ -183,7 +184,7 @@ func GenerateDeclarativeTestCases() []Case {
 		caseCreationsFound, err := DirExists(caseCreateDir)
 		Expect(err).ToNot(HaveOccurred(), "Failed to read 'create' dir.")
 		if caseCreationsFound {
-			toCreate, err := os.ReadDir(caseCreateDir)
+			toCreate, err := ioutil.ReadDir(caseCreateDir)
 			Expect(err).ToNot(HaveOccurred(), "Failed to read 'create' dir.")
 			for _, f := range toCreate {
 				newCase.Expected.Created = append(newCase.Expected.Created, fmt.Sprintf("%s/%s", caseCreateDir, f.Name()))
@@ -194,7 +195,7 @@ func GenerateDeclarativeTestCases() []Case {
 		caseNoCreationsFound, err := DirExists(caseNotCreateDir)
 		Expect(err).ToNot(HaveOccurred(), "Failed to read 'not_create' dir.")
 		if caseNoCreationsFound {
-			toNotCreate, err := os.ReadDir(caseNotCreateDir)
+			toNotCreate, err := ioutil.ReadDir(caseNotCreateDir)
 			Expect(err).ToNot(HaveOccurred(), "Failed to read 'not_create' dir.")
 			for _, f := range toNotCreate {
 				newCase.Expected.NotCreated = append(newCase.Expected.NotCreated, fmt.Sprintf("%s/%s", caseNotCreateDir, f.Name()))
