@@ -20,7 +20,5 @@ jobs:
         with:
           path: /cache
           key: ${{ runner.os }}-cache-${{ hashFiles('**/go.sum', '.pre-commit-config.yaml') }}
-      - name: Mark source directory as safe
-        run: git config --global --add safe.directory $GITHUB_WORKSPACE
       - name: Run pre-commit checks
         run: pre-commit run --all-files
