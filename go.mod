@@ -1,11 +1,12 @@
 module github.com/opendatahub-io/data-science-pipelines-operator
 
-go 1.18
+go 1.19
 
 require (
 	github.com/fsnotify/fsnotify v1.5.4
 	github.com/go-logr/logr v1.2.3
 	github.com/go-sql-driver/mysql v1.7.1
+	github.com/go-test/deep v1.1.0
 	github.com/golang/glog v1.0.0
 	github.com/manifestival/controller-runtime-client v0.4.0
 	github.com/manifestival/manifestival v0.7.2

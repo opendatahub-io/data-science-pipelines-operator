@@ -113,6 +113,13 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.IMAGES_DSPO
+  - name: ZAP_LOG_LEVEL
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.ZAP_LOG_LEVEL
   - name: IMAGESV2_APISERVER
     objref:
       kind: ConfigMap

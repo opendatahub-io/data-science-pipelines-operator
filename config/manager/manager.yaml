@@ -28,6 +28,7 @@ spec:
         - /manager
         args:
         - --leader-elect
+        - --zap-log-level=$(ZAP_LOG_LEVEL)
         - --config
         - /home/config
         image: $(IMAGES_DSPO)
@@ -78,6 +79,8 @@ spec:
             value: $(IMAGESV2_MLMDGRPC)
           - name: IMAGESV2_MLMDWRITER
             value: $(IMAGESV2_MLMDWRITER)
+          - name: ZAP_LOG_LEVEL
+            value: $(ZAP_LOG_LEVEL)
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

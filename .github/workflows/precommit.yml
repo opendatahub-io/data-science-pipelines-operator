@@ -5,7 +5,7 @@ jobs:
   precommit:
     runs-on: ubuntu-latest
     container:
-      image: quay.io/opendatahub/pre-commit-go-toolchain:v0.2
+      image: quay.io/opendatahub/pre-commit-go-toolchain:v0.3
       env:
         XDG_CACHE_HOME: /cache
         GOCACHE: /cache/go-build
@@ -20,5 +20,7 @@ jobs:
         with:
           path: /cache
           key: ${{ runner.os }}-cache-${{ hashFiles('**/go.sum', '.pre-commit-config.yaml') }}
+      - name: Mark source directory as safe
+        run: git config --global --add safe.directory $GITHUB_WORKSPACE
       - name: Run pre-commit checks
         run: pre-commit run --all-files

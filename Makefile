@@ -167,6 +167,12 @@ v2deploy: manifests kustomize
 		&& $(KUSTOMIZE) edit set namespace ${V2INFRA_NS}
 	$(KUSTOMIZE) build config/overlays/make-v2deploy | kubectl apply -f -
 
+.PHONY: v2undeploy
+v2undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+	cd config/overlays/make-v2deploy \
+	    && $(KUSTOMIZE) edit set namespace ${V2INFRA_NS}
+	$(KUSTOMIZE) build config/overlays/make-v2deploy | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+
 ##@ Build Dependencies
 
 ## Location to install dependencies to
