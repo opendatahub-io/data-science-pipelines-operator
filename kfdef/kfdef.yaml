@@ -52,7 +52,7 @@ spec:
             value: gcr.io/tfx-oss-public/ml_metadata_store_server:1.5.0
           - name: IMAGESV2_MLMDWRITER
             value: gcr.io/ml-pipeline/metadata-writer:2.0.0-rc.2
-          
+
         repoRef:
           name: manifests
           path: config

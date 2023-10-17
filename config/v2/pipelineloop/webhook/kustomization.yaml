@@ -9,4 +9,3 @@ resources:
 - service.yaml
 - serviceaccount.yaml
 - validatingwebhookconfig.yaml
-

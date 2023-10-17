@@ -3,8 +3,6 @@ kind: Kustomization
 namespace: openshift-pipelines
 namePrefix: data-science-pipelines-operator-
 
-namePrefix: data-science-pipelines-operator-
-
 resources:
 - ./cache
 - ./driver
