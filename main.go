@@ -103,12 +103,14 @@ func main() {
 	var enableLeaderElection bool
 	var probeAddr string
 	var configPath string
+	var maxConcurrentReconciles int
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.StringVar(&configPath, "config", "", "Path to JSON file containing config")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.IntVar(&maxConcurrentReconciles, "MaxConcurrentReconciles", config.DefaultMaxConcurrentReconciles, "Maximum concurrent reconciles")
 	opts := zap.Options{
 		Development: true,
 		TimeEncoder: zapcore.TimeEncoderOfLayout(time.RFC3339),
@@ -137,10 +139,11 @@ func main() {
 	}
 
 	if err = (&controllers.DSPAReconciler{
-		Client:        mgr.GetClient(),
-		Scheme:        mgr.GetScheme(),
-		Log:           ctrl.Log,
-		TemplatesPath: "config/internal/",
+		Client:                  mgr.GetClient(),
+		Scheme:                  mgr.GetScheme(),
+		Log:                     ctrl.Log,
+		TemplatesPath:           "config/internal/",
+		MaxConcurrentReconciles: maxConcurrentReconciles,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DSPAParams")
 		os.Exit(1)

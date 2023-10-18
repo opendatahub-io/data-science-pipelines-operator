@@ -29,6 +29,7 @@ spec:
         args:
         - --leader-elect
         - --zap-log-level=$(ZAP_LOG_LEVEL)
+        - --MaxConcurrentReconciles=$(MAX_CONCURRENT_RECONCILES)
         - --config
         - /home/config
         image: $(IMAGES_DSPO)
@@ -59,6 +60,8 @@ spec:
             value: $(IMAGES_MLMDWRITER)
           - name: ZAP_LOG_LEVEL
             value: $(ZAP_LOG_LEVEL)
+          - name: MAX_CONCURRENT_RECONCILES
+            value: $(MAX_CONCURRENT_RECONCILES)
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
