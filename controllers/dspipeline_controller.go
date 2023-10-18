@@ -223,7 +223,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	// Get Prereq Status (DB and ObjStore Ready)
 	dbAvailable := r.isDatabaseAccessible(ctx, dspa, params)
 	objStoreAvailable := r.isObjectStorageAccessible(ctx, dspa, params)
-	dspaPrereqsReady := (dbAvailable && objStoreAvailable)
+	dspaPrereqsReady := dbAvailable && objStoreAvailable
 
 	if dspaPrereqsReady {
 		// Manage Common Manifests

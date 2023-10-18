@@ -9,7 +9,7 @@ data:
 
         aws_cp() {
 
-          aws s3 --endpoint http://minio-testdsp5.default.svc.cluster.local:9000 cp $1.tgz s3://mlpipeline/artifacts/$PIPELINERUN/$PIPELINETASK/$1.tgz
+          aws s3 --endpoint http://minio-testdsp6.default.svc.cluster.local:9000 --ca-bundle /etc/pki/tls/certs/testcabundleconfigmapkey6.crt cp $1.tgz s3://mlpipeline/artifacts/$PIPELINERUN/$PIPELINETASK/$1.tgz
 
         }
 
@@ -35,7 +35,7 @@ data:
     }
 kind: ConfigMap
 metadata:
-  name: ds-pipeline-artifact-script-testdsp5
+  name: ds-pipeline-artifact-script-testdsp6
   namespace: default
   labels:
     app: ds-pipeline-testdsp5

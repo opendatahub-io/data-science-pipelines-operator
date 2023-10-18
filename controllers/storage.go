@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"crypto/x509"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -26,6 +27,7 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/util"
 	"net/http"
 )
 
@@ -67,12 +69,46 @@ func createCredentialProvidersChain(accessKey, secretKey string) *credentials.Cr
 	return credentials.New(&credentials.Chain{Providers: providers})
 }
 
-var ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool) bool {
+func getHttpsTransportWithCACert(log logr.Logger, pemCerts []byte) (*http.Transport, error) {
+	transport, err := minio.DefaultTransport(true)
+	if err != nil {
+		return nil, fmt.Errorf("Error creating default transport : %s", err)
+	}
+
+	if transport.TLSClientConfig.RootCAs == nil {
+		pool, err := x509.SystemCertPool()
+		if err != nil {
+			log.Error(err, "error initializing TLS Pool: %s")
+			transport.TLSClientConfig.RootCAs = x509.NewCertPool()
+		} else {
+			transport.TLSClientConfig.RootCAs = pool
+		}
+	}
+
+	if ok := transport.TLSClientConfig.RootCAs.AppendCertsFromPEM(pemCerts); !ok {
+		return nil, fmt.Errorf("error parsing CA Certificate, ensure provided certs are in valid PEM format")
+	}
+	return transport, nil
+}
+
+var ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte) bool {
 	cred := createCredentialProvidersChain(string(accesskey), string(secretkey))
-	minioClient, err := minio.New(endpoint, &minio.Options{
+
+	opts := &minio.Options{
 		Creds:  cred,
 		Secure: secure,
-	})
+	}
+
+	if len(pemCerts) != 0 {
+		tr, err := getHttpsTransportWithCACert(log, pemCerts)
+		if err != nil {
+			log.Error(err, "Encountered error when processing custom ca bundle.")
+			return false
+		}
+		opts.Transport = tr
+	}
+
+	minioClient, err := minio.New(endpoint, opts)
 	if err != nil {
 		log.Info(fmt.Sprintf("Could not connect to object storage endpoint: %s", endpoint))
 		return false
@@ -92,6 +128,15 @@ var ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoin
 				return true
 			}
 		}
+
+		if util.IsX509UnknownAuthorityError(err) {
+			log.Error(err, "Encountered x509 UnknownAuthorityError when connecting to ObjectStore. "+
+				"If using an tls S3 connection with  self-signed certs, you may specify a custom CABundle "+
+				"to mount on the DSP API Server via the DSPA cr under the spec.cABundle field. If you have already "+
+				"provided a CABundle, verify the validity of the provided CABundle.")
+			return false
+		}
+
 		// Every other error means the endpoint in inaccessible, or the credentials provided do not have, at a minimum GetObject, permissions
 		log.Info(fmt.Sprintf("Could not connect to (%s), Error: %s", endpoint, err.Error()))
 		return false
@@ -129,7 +174,7 @@ func (r *DSPAReconciler) isObjectStorageAccessible(ctx context.Context, dsp *dsp
 		return false
 	}
 
-	verified := ConnectAndQueryObjStore(ctx, log, endpoint, params.ObjectStorageConnection.Bucket, accesskey, secretkey, *params.ObjectStorageConnection.Secure)
+	verified := ConnectAndQueryObjStore(ctx, log, endpoint, params.ObjectStorageConnection.Bucket, accesskey, secretkey, *params.ObjectStorageConnection.Secure, params.APICustomPemCerts)
 	if verified {
 		log.Info("Object Storage Health Check Successful")
 	} else {
