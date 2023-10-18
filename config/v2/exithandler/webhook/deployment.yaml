@@ -9,7 +9,7 @@ metadata:
     app.kubernetes.io/version: devel
     pipeline.tekton.dev/release: devel
     version: devel
-  name: kfp-exithandler-webhook
+  name: exithandler-webhook
 spec:
   replicas: 1
   selector:
@@ -68,4 +68,4 @@ spec:
           runAsNonRoot: true
           seccompProfile:
             type: RuntimeDefault
-      serviceAccountName: kfp-exithandler-webhook
+      serviceAccountName: exithandler-webhook

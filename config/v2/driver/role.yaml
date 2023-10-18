@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/instance: default
     app.kubernetes.io/part-of: kubeflow-pipeline
   namespace: datasciencepipelinesapplications-controller
-  name: kfp-driver-role
+  name: driver-role
 rules:
 - apiGroups:
   - ""

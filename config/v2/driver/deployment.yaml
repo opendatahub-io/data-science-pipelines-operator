@@ -4,17 +4,17 @@ metadata:
   labels:
     app.kubernetes.io/component: ckfp-driver
     app.kubernetes.io/instance: default
-    app.kubernetes.io/name: kfp-driver
+    app.kubernetes.io/name: driver
     app.kubernetes.io/part-of: kubeflow-pipeline
     app.kubernetes.io/version: devel
-  name: kfp-driver
+  name: driver
 spec:
   replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/component: kfp-driver
       app.kubernetes.io/instance: default
-      app.kubernetes.io/name: kfp-driver
+      app.kubernetes.io/name: driver
       app.kubernetes.io/part-of: kubeflow-pipeline
   template:
     metadata:
@@ -24,7 +24,7 @@ spec:
         app: kfp-driver
         app.kubernetes.io/component: kfp-driver
         app.kubernetes.io/instance: default
-        app.kubernetes.io/name: kfp-driver
+        app.kubernetes.io/name: driver
         app.kubernetes.io/part-of: kubeflow-pipeline
         app.kubernetes.io/version: devel
     spec:
@@ -44,7 +44,7 @@ spec:
           value: tekton.dev/pipeline
         image: quay.io/internaldatahub/tekton-driver:2.0.0
         imagePullPolicy: Always
-        name: kfp-driver
+        name: driver
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -54,4 +54,4 @@ spec:
           runAsNonRoot: true
           seccompProfile:
             type: RuntimeDefault
-      serviceAccountName: kfp-driver
+      serviceAccountName: driver

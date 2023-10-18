@@ -5,12 +5,12 @@ metadata:
     app.kubernetes.io/component: controller
     app.kubernetes.io/instance: default
     app.kubernetes.io/part-of: kfp-tekton
-  name: kfp-exithandler-controller-rolebinding
+  name: exithandler-controller-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: kfp-exithandler-controller-role
+  name: exithandler-controller-role
 subjects:
 - kind: ServiceAccount
-  name: kfp-exithandler-controller
+  name: exithandler-controller
   namespace: datasciencepipelinesapplications-controller

@@ -17,7 +17,7 @@ metadata:
   annotations:
     kubernetes.io/description: kubeflow-anyuid provides all features of the restricted
       SCC but allows users to run with any UID and any GID.
-  name: kubeflow-anyuid-kfp-tekton
+  name: anyuid-operator-tekton
 priority: 10
 readOnlyRootFilesystem: false
 requiredDropCapabilities:
@@ -33,10 +33,10 @@ users:
 - system:serviceaccount:kubeflow:minio
 - system:serviceaccount:kubeflow:default
 - system:serviceaccount:kubeflow:pipeline-runner
-- system:serviceaccount:kubeflow:kubeflow-pipelines-cache
-- system:serviceaccount:kubeflow:kubeflow-pipelines-cache-deployer-sa
+- system:serviceaccount:kubeflow:cache
+- system:serviceaccount:kubeflow:cache-deployer-sa
 - system:serviceaccount:kubeflow:metadata-grpc-server
-- system:serviceaccount:kubeflow:kubeflow-pipelines-metadata-writer
+- system:serviceaccount:kubeflow:metadata-writer
 - system:serviceaccount:kubeflow:ml-pipeline
 - system:serviceaccount:kubeflow:ml-pipeline-persistenceagent
 - system:serviceaccount:kubeflow:ml-pipeline-scheduledworkflow
@@ -44,14 +44,14 @@ users:
 - system:serviceaccount:kubeflow:ml-pipeline-viewer-crd-service-account
 - system:serviceaccount:kubeflow:ml-pipeline-visualizationserver
 - system:serviceaccount:kubeflow:mysql
-- system:serviceaccount:kubeflow:kfp-csi-s3
-- system:serviceaccount:kubeflow:kfp-csi-attacher
-- system:serviceaccount:kubeflow:kfp-csi-provisioner
-- system:serviceaccount:openshift-pipelines:kfp-driver
-- system:serviceaccount:openshift-pipelines:kfp-exithandler-controller
-- system:serviceaccount:openshift-pipelines:kfp-exithandler-webhook
-- system:serviceaccount:openshift-pipelines:tekton-pipelineloop-controller
-- system:serviceaccount:openshift-pipelines:tekton-pipelineloop-webhook
+- system:serviceaccount:kubeflow:data-science-pipelines-operator-csi-s3
+- system:serviceaccount:kubeflow:data-science-pipelines-operator-csi-attacher
+- system:serviceaccount:kubeflow:data-science-pipelines-operator-csi-provisioner
+- system:serviceaccount:openshift-pipelines:data-science-pipelines-operator-driver
+- system:serviceaccount:openshift-pipelines:data-science-pipelines-operator-exithandler-controller
+- system:serviceaccount:openshift-pipelines:data-science-pipelines-operator-exithandler-webhook
+- system:serviceaccount:openshift-pipelines:tektonpipelineloop-controller
+- system:serviceaccount:openshift-pipelines:tektonpipelineloop-webhook
 volumes:
 - configMap
 - downwardAPI

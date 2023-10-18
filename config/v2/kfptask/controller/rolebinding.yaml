@@ -6,12 +6,12 @@ metadata:
     app.kubernetes.io/component: controller
     app.kubernetes.io/instance: default
     app.kubernetes.io/part-of: kfp-tekton
-  name: kfptask-controller-rolebinding
+  name: controller-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: kfptask-controller-role
+  name: controller-role
 subjects:
 - kind: ServiceAccount
-  name: kfptask-controller
+  name: controller
   namespace: datasciencepipelinesapplications-controller
