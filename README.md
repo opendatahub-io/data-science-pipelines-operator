@@ -512,9 +512,9 @@ To run the DSPO locally :
 Execute the following command:
 
 ```bash
-go run main.go --config=$config.yaml
+go run main.go --config=$config
 ```
-Below is the sample config file(the tags for the images can be edited as required):
+Below is the sample config file (the tags for the images can be edited as required):
 ```bash
 Images:
   ApiServer: quay.io/opendatahub/ds-pipelines-api-server:latest
@@ -529,7 +529,7 @@ Images:
   MlmdGRPC: quay.io/opendatahub/ds-pipelines-metadata-grpc:latest
   MlmdWriter: quay.io/opendatahub/ds-pipelines-metadata-writer:latest  
 ```
-To build your own images :
+**To build your own images :**
 
 All the component images are available [here][component-images] and for thirdparty images [here][thirdparty-images]. Build these images from root as shown in the below example:
 
@@ -542,7 +542,7 @@ Execute `make test` or `make unittest` or `make functest` based on the level of 
 
 `make unittest` is a command that is often used to run only unit tests for individual units or components. These tests verify that each unit of code (e.g., functions or methods) behaves as expected. It is suggested to run this command often during the development process.
 
-`make functest` is a command used to run functional tests which assess the overall functionality of the software by testing its features and user interactions.Functional tests help ensure that the software works as a whole and that its features are functioning correctly from a user's perspective. It is suggested to run make functest for every commit.
+`make functest` is a command used to run functional tests which assess the overall functionality of the software by testing its features and user interactions. Functional tests help ensure that the software works as a whole and that its features are functioning correctly from a user's perspective. It is suggested to run make functest for every commit.
 
 The specific tests that are executed when you run `make test` can include unit tests, functional tests and more. It is a test to check if the software behaves correctly and meets the desired quality standards. It helps identify and fix issues early in the development process. It is suggested to run make test before creating a PR.
 
