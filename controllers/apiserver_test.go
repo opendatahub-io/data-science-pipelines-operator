@@ -18,6 +18,7 @@ limitations under the License.
 package controllers
 
 import (
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"testing"
 
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
@@ -75,6 +76,11 @@ func TestDeployAPIServer(t *testing.T) {
 	deployment = &appsv1.Deployment{}
 	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedAPIServerName, testNamespace)
 	assert.True(t, created)
+	assert.Nil(t, err)
+
+	// Ensure readiness is handled
+	apiServerReady, err := reconciler.handleReadyCondition(ctx, dspa, params.APIServerDeploymentName, config.APIServerReady)
+	assert.Equal(t, "Deploying", apiServerReady.Reason)
 	assert.Nil(t, err)
 }
 

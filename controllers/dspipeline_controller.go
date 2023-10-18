@@ -268,7 +268,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	conditions, err := r.GenerateStatus(ctx, dspa, dbAvailable, objStoreAvailable)
+	conditions, err := r.GenerateStatus(ctx, dspa, params, dbAvailable, objStoreAvailable)
 	if err != nil {
 		log.Info(err.Error())
 		return ctrl.Result{}, err
@@ -297,12 +297,9 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 // handleReadyCondition evaluates if condition with "name" is in condition of type "conditionType".
 // this procedure is valid only for conditions with bool status type, for conditions of non bool type
 // results are undefined.
-func (r *DSPAReconciler) handleReadyCondition(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication, name string, condition string) (metav1.Condition, error) {
+func (r *DSPAReconciler) handleReadyCondition(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication, component string, condition string) (metav1.Condition, error) {
 	readyCondition := r.buildCondition(condition, dspa, config.MinimumReplicasAvailable)
 	deployment := &appsv1.Deployment{}
-
-	// Every Deployment in DSPA is the name followed by the DSPA CR name
-	component := name + "-" + dspa.Name
 
 	err := r.Get(ctx, types.NamespacedName{Name: component, Namespace: dspa.Namespace}, deployment)
 	if err != nil {
@@ -413,7 +410,8 @@ func (r *DSPAReconciler) handleReadyCondition(ctx context.Context, dspa *dspav1a
 
 }
 
-func (r *DSPAReconciler) GenerateStatus(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication, dbAvailableStatus, objStoreAvailableStatus bool) ([]metav1.Condition, error) {
+func (r *DSPAReconciler) GenerateStatus(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication,
+	params *DSPAParams, dbAvailableStatus, objStoreAvailableStatus bool) ([]metav1.Condition, error) {
 	// Create Database Availability Condition
 	databaseAvailable := r.buildCondition(config.DatabaseAvailable, dspa, config.DatabaseAvailable)
 	if dbAvailableStatus {
@@ -433,19 +431,19 @@ func (r *DSPAReconciler) GenerateStatus(ctx context.Context, dspa *dspav1alpha1.
 	}
 
 	// Create APIServer Readiness Condition
-	apiServerReady, err := r.handleReadyCondition(ctx, dspa, "ds-pipeline", config.APIServerReady)
+	apiServerReady, err := r.handleReadyCondition(ctx, dspa, params.APIServerDeploymentName, config.APIServerReady)
 	if err != nil {
 		return []metav1.Condition{}, err
 	}
 
 	// Create PersistenceAgent Readiness Condition
-	persistenceAgentReady, err := r.handleReadyCondition(ctx, dspa, "ds-pipeline-persistenceagent", config.PersistenceAgentReady)
+	persistenceAgentReady, err := r.handleReadyCondition(ctx, dspa, params.PersistentAgentDeploymentName, config.PersistenceAgentReady)
 	if err != nil {
 		return []metav1.Condition{}, err
 	}
 
 	// Create ScheduledWorkflow Readiness Condition
-	scheduledWorkflowReady, err := r.handleReadyCondition(ctx, dspa, "ds-pipeline-scheduledworkflow", config.ScheduledWorkflowReady)
+	scheduledWorkflowReady, err := r.handleReadyCondition(ctx, dspa, params.ScheduledWorkflowDeploymentName, config.ScheduledWorkflowReady)
 	if err != nil {
 		return []metav1.Condition{}, err
 	}
