@@ -490,7 +490,7 @@ For a comprehensive list of available values, please consult the [Zap documentat
 
 # Deployment and Testing Guidelines for Developers
 
-To build the DSPO locally :
+**To build the DSPO locally :**
 
 Login oc using following command:
 
@@ -507,7 +507,7 @@ Execute the following command:
 ```bash                                                    
 go build main.go                                           
 ```    
-To run the DSPO locally :
+**To run the DSPO locally :**
 
 Execute the following command:
 
@@ -536,7 +536,7 @@ All the component images are available [here][component-images] and for thirdpar
 ```bash
 podman build . -f backend/Dockerfile -t quay.io/your_repo/dsp-apiserver:sometag
 ```
-To run the tests:
+**To run the tests:**
 
 Execute `make test` or `make unittest` or `make functest` based on the level of testing as mentioned below:
 
@@ -546,13 +546,13 @@ Execute `make test` or `make unittest` or `make functest` based on the level of 
 
 The specific tests that are executed when you run `make test` can include unit tests, functional tests and more. It is a test to check if the software behaves correctly and meets the desired quality standards. It helps identify and fix issues early in the development process. It is suggested to run make test before creating a PR.
 
-To deploy DSPO as a developer :
+**To deploy DSPO as a developer :**
 
 Follow the instructions from [here](#deploy-the-operator-standalone) to deploy the operator standalone.
 
 Follow the instructions from [here](#deploy-the-operator-via-odh) to deploy the operator via ODH.
 
-How to deploy with a custom image:
+**How to deploy with a custom image:**
 
 Run the following command using the custom image:
 
@@ -560,7 +560,7 @@ Run the following command using the custom image:
 make deploy IMG=my-registry/my-operator:v1
 ```
 
-How to regenerate manifests:
+**How to regenerate manifests:**
 
 After updating the Kubebuilder annotations in your code, run the following command to regenerate code and manifests:
 
@@ -568,7 +568,7 @@ After updating the Kubebuilder annotations in your code, run the following comma
 make generate manifests
 ```
 
-How to regenerate crd on api changes:
+**How to regenerate crd on api changes:**
 
 After making your API changes, run the following command to regenerate code and CRDs based on your updated API definitions:
 
@@ -577,7 +577,7 @@ make generate
 ```
 Refer to kubebuilder docs [here][kubebuilder-docs] for more info.
 
-How to run pre-commit tests:
+**How to run pre-commit tests:**
 
 Install pre-commit following the instructions [here][pre-commit-installation]. Before creating a PR, developers should run the following command which will auto fix any simple errors:
 
@@ -585,13 +585,13 @@ Install pre-commit following the instructions [here][pre-commit-installation]. B
 pre-commit run --all-files
 ```
 
-How to do disable health checks when dev testing:
+**How to do disable health checks when dev testing:**
 
 To disable the health checks set the values to true in the DSPA yaml file you apply. Refer to his sample file [here][dspa-yaml].
 
 In certain scenarios, it may be necessary to disable health checks within our environment. When the DSPO is executed either locally or on a different cluster, the health checks can't reach the database and Object Store endpoints. Consequently, they remain unsuccessful, preventing the deployment of essential pipeline infrastructure components by the DSPA. To address this challenge, we have introduced the `disableHealthCheck` mechanism as a viable solution.
 
-How to enable kfp ui and minio:
+**How to enable kfp ui and minio:**
 
 Refer to this [sample][sample-yaml] yaml file for enabling the upstream kubeflow pipelines ui and minio.
 
