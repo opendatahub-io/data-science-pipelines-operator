@@ -5,12 +5,12 @@ metadata:
     app: kfp-driver
     app.kubernetes.io/component: kfp-driver
     app.kubernetes.io/instance: default
-    app.kubernetes.io/name: kfp-driver
+    app.kubernetes.io/name: driver
     app.kubernetes.io/part-of: kubeflow-pipeline
     app.kubernetes.io/version: devel
     pipeline.tekton.dev/release: devel
     version: devel
-  name: kfp-driver
+  name: driver
 spec:
   ports:
   - name: http-metrics
@@ -20,5 +20,5 @@ spec:
   selector:
     app.kubernetes.io/component: kfp-driver
     app.kubernetes.io/instance: default
-    app.kubernetes.io/name: kfp-driver
+    app.kubernetes.io/name: driver
     app.kubernetes.io/part-of: kubeflow-pipeline

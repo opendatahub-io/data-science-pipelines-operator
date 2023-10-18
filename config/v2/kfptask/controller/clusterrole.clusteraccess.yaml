@@ -5,7 +5,7 @@ metadata:
     app.kubernetes.io/component: controller
     app.kubernetes.io/instance: default
     app.kubernetes.io/part-of: kfp-tekton
-  name: kfptask-controller-cluster-access-clusterrole
+  name: controller-cluster-access-clusterrole
 rules:
 - apiGroups:
   - tekton.dev

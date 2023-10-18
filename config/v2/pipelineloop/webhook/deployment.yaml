@@ -9,7 +9,7 @@ metadata:
     app.kubernetes.io/version: devel
     pipeline.tekton.dev/release: devel
     version: devel
-  name: tekton-pipelineloop-webhook
+  name: pipelineloop-webhook
 spec:
   replicas: 1
   selector:
@@ -45,12 +45,12 @@ spec:
         - name: CONFIG_LEADERELECTION_NAME
           value: config-leader-election
         - name: WEBHOOK_SERVICE_NAME
-          value: tekton-pipelineloop-webhook
+          value: tektonpipelineloop-webhook
         - name: WEBHOOK_SECRET_NAME
-          value: tekton-pipelineloop-webhook-certs
+          value: tektonpipelineloop-webhook-certs
         - name: METRICS_DOMAIN
           value: tekton.dev/pipeline
-        image: quay.io/internaldatahub/tekton-pipelineloop-webhook:2.0.0
+        image: quay.io/internaldatahub/tektonpipelineloop-webhook:2.0.0
         name: webhook
         ports:
         - containerPort: 9090
@@ -68,4 +68,4 @@ spec:
           runAsNonRoot: true
           seccompProfile:
             type: RuntimeDefault
-      serviceAccountName: tekton-pipelineloop-webhook
+      serviceAccountName: pipelineloop-webhook

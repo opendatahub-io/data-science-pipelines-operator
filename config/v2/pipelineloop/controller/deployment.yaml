@@ -9,7 +9,7 @@ metadata:
     app.kubernetes.io/version: devel
     pipeline.tekton.dev/release: devel
     version: devel
-  name: tekton-pipelineloop-controller
+  name: pipelineloop-controller
 spec:
   replicas: 1
   selector:
@@ -23,7 +23,7 @@ spec:
       annotations:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "false"
       labels:
-        app: tekton-pipelineloop-controller
+        app: tektonpipelineloop-controller
         app.kubernetes.io/component: controller
         app.kubernetes.io/instance: default
         app.kubernetes.io/name: controller
@@ -46,8 +46,8 @@ spec:
           value: config-observability
         - name: METRICS_DOMAIN
           value: tekton.dev/pipeline
-        image: quay.io/internaldatahub/tekton-pipelineloop-controller:2.0.0
-        name: tekton-pipelineloop-controller
+        image: quay.io/internaldatahub/tektonpipelineloop-controller:2.0.0
+        name: pipelineloop-controller
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -57,4 +57,4 @@ spec:
           runAsNonRoot: true
           seccompProfile:
             type: RuntimeDefault
-      serviceAccountName: tekton-pipelineloop-controller
+      serviceAccountName: pipelineloop-controller
