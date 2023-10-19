@@ -1,0 +1,145 @@
+# Workflow Secrets required to be setup in repo:
+# QUAY_ID
+# QUAY_TOKEN
+# DSP_DEVS_ACCESS_TOKEN
+name: "Release Prep"
+run-name: Prep Release
+on:
+  workflow_dispatch:
+    inputs:
+      previous_release_tag:
+        default: 'v1.x.y'
+        description: 'Previous Release tag'
+        required: true
+      target_release:
+        default: '1.x'
+        description: 'Target Minor Release (e.g. 1.2, 1.3, etc.)'
+        required: true
+      gh_org:
+        default: 'opendatahub-io'
+        description: 'DSPO GitHub Org'
+        required: true
+      quay_org:
+        type: string
+        default: 'opendatahub'
+        description: 'Quay Organization to push builds.'
+        required: true
+      overwrite_imgs:
+        default: 'true'
+        description: 'Overwrite images in quay if they already exist for this release.'
+        required: true
+env:
+  GH_USER_EMAIL: 140449482+dsp-developers@users.noreply.github.com
+  GH_USER_NAME: dsp-developers
+  TARGET_RELEASE: ${{ inputs.target_release }}
+  MINOR_RELEASE_WILDCARD: ${{ inputs.target_release }}.x
+  MINOR_RELEASE_BRANCH: v${{ inputs.target_release }}.x
+  MINOR_RELEASE_TAG: v${{ inputs.target_release }}.0
+  QUAY_ORG: ${{ inputs.quay_org }}
+  GH_ORG: ${{ inputs.gh_org }}
+  DSPO_REPOSITORY: data-science-pipelines-operator
+  DSPO_REPOSITORY_FULL: ${{ inputs.gh_org }}/data-science-pipelines-operator
+  DSP_REPOSITORY: data-science-pipelines
+  DSP_REPOSITORY_FULL: ${{ inputs.gh_org }}/data-science-pipelines
+  PREVIOUS_RELEASE_TAG: ${{ inputs.previous_release_tag }}
+  OVERWRITE_IMAGES: ${{ inputs.overwrite_imgs }}
+  CONFIG_TEMPLATE: "./.github/scripts/release_prep/templates/config.yaml"
+jobs:
+  prereqs:
+    name: Prerequisites
+    runs-on: ubuntu-latest
+    outputs:
+      prereqs_successful: ${{ steps.vars.outputs.prereqs_successful }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.DSP_DEVS_ACCESS_TOKEN }}
+      - name: compatibility doc
+        id: vars
+        env:
+          GH_TOKEN: ${{ secrets.DSP_DEVS_ACCESS_TOKEN }}
+          GH_USER_NAME: ${{ env.GH_USER_NAME }}
+          GH_USER_EMAIL: ${{ env.GH_USER_EMAIL }}
+          TARGET_RELEASE: ${{ env.TARGET_RELEASE }}
+          MINOR_RELEASE_WILDCARD: ${{ env.MINOR_RELEASE_WILDCARD }}
+          MINOR_RELEASE_BRANCH: ${{ env.MINOR_RELEASE_BRANCH }}
+          DSPO_REPOSITORY_FULL: ${{ env.DSPO_REPOSITORY_FULL }}
+          DSPO_REPOSITORY: ${{ env.DSPO_REPOSITORY }}
+        run: ./.github/scripts/release_prep/prereqs.sh
+
+  create_branches:
+    name: Create Release Branches
+    runs-on: ubuntu-latest
+    needs: prereqs
+    if: needs.prereqs.outputs.prereqs_successful == 'true'
+    steps:
+      - uses: actions/checkout@v3
+        name: checkout
+        with:
+          token: ${{ secrets.DSP_DEVS_ACCESS_TOKEN }}
+          fetch-depth: 0
+      - name: create branches
+        env:
+          GH_TOKEN: ${{ secrets.DSP_DEVS_ACCESS_TOKEN }}
+          GH_USER_NAME: ${{ env.GH_USER_NAME }}
+          MINOR_RELEASE_BRANCH: ${{ env.MINOR_RELEASE_BRANCH }}
+          DSPO_REPOSITORY_FULL: ${{ env.DSPO_REPOSITORY_FULL }}
+          DSP_REPOSITORY_FULL: ${{ env.DSP_REPOSITORY_FULL }}
+          WORKING_DIR: ${{ github.workspace }}
+        run: ./.github/scripts/release_prep/create_branches.sh
+
+  # NOTE: env from current workflow does not extend to re-usable workflows
+  # so "with:" commands do not get "env.*" context, but "needs.*.outputs.*" works
+  # this is a workaround.
+  # More Context: https://github.com/orgs/community/discussions/26671
+  get-env-vars:
+    name: Get Re-Usable Env Vars
+    runs-on: ubuntu-latest
+    outputs:
+      MINOR_RELEASE_BRANCH: ${{ env.MINOR_RELEASE_BRANCH }}
+      MINOR_RELEASE_TAG: ${{ env.MINOR_RELEASE_TAG }}
+      QUAY_ORG: ${{ env.QUAY_ORG }}
+      DSPO_GH_ORG: ${{ env.DSP_REPOSITORY_FULL }}
+      OVERWRITE_IMAGES: ${{ env.OVERWRITE_IMAGES }}
+    steps:
+      - run: echo "Storing env vars for re-usable workflow."
+
+  build_images:
+    name: Build/Push Images
+    needs: [create_branches, get-env-vars]
+    if: needs.prereqs.outputs.prereqs_successful == 'true'
+    uses: ./.github/workflows/build-tags.yml
+    with:
+      src_branch: ${{  needs.get-env-vars.outputs.MINOR_RELEASE_BRANCH }}
+      target_tag: ${{  needs.get-env-vars.outputs.MINOR_RELEASE_TAG }}
+      quay_org: ${{  needs.get-env-vars.outputs.QUAY_ORG }}
+      dsp_org_repo: ${{  needs.get-env-vars.outputs.DSPO_GH_ORG }}
+      overwrite_imgs: ${{  needs.get-env-vars.outputs.OVERWRITE_IMAGES }}
+    secrets: inherit
+
+  generate_pr:
+    name: Generate Release PR
+    runs-on: ubuntu-latest
+    needs: build_images
+    steps:
+      - uses: actions/checkout@v3
+        name: checkout
+        with:
+          token: ${{ secrets.DSP_DEVS_ACCESS_TOKEN }}
+          ref: ${{ env.MINOR_RELEASE_BRANCH }}
+      - name: generate pr
+        env:
+          GH_TOKEN: ${{ secrets.DSP_DEVS_ACCESS_TOKEN }}
+          GH_USER_NAME: ${{ env.GH_USER_NAME }}
+          GH_USER_EMAIL: ${{ env.GH_USER_EMAIL }}
+          TARGET_RELEASE: ${{ env.TARGET_RELEASE }}
+          MINOR_RELEASE_BRANCH: ${{ env.MINOR_RELEASE_BRANCH }}
+          DSPO_REPOSITORY: ${{ env.DSPO_REPOSITORY }}
+          DSPO_REPOSITORY_FULL: ${{ env.DSPO_REPOSITORY_FULL }}
+          GH_ORG: ${{ env.GH_ORG }}
+          QUAY_ORG: ${{ env.QUAY_ORG }}
+          MINOR_RELEASE_TAG: ${{ env.MINOR_RELEASE_TAG }}
+          PREVIOUS_RELEASE_TAG: ${{ env.PREVIOUS_RELEASE_TAG }}
+          CONFIG_TEMPLATE: ${{ env.CONFIG_TEMPLATE }}
+        run: ./.github/scripts/release_prep/generate_pr.sh

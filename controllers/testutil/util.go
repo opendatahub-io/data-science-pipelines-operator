@@ -19,14 +19,16 @@ package testutil
 import (
 	"context"
 	"fmt"
+
+	"io/ioutil"
+	"os"
+	"time"
+
 	mf "github.com/manifestival/manifestival"
 	. "github.com/onsi/gomega"
-	"io/ioutil"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 )
 
 const (

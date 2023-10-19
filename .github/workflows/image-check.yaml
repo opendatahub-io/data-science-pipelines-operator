@@ -1,6 +1,8 @@
 name: Image-check
 on:
   pull_request:
+    branches:
+      - v*
 jobs:
   test:
     runs-on: ubuntu-latest
