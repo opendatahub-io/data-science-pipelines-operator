@@ -33,12 +33,10 @@ git clone git@github.com:opendatahub-io/data-science-pipelines-operator.git ${DS
 # Make sure DSPO is already deployed, if not then run: 
 make deploy
 
-cd tests
-go run github.com/onsi/ginkgo/v2/ginkgo --tags=test_integration -- \
-  -kubeconfig=${KUBECONFIG_PATH} \
-  -k8sApiServerHost=${TARGET_CLUSTER} \
-  -DSPANamespace=${TARGET_NAMESPACE} -DSPAPath=resources/dspa-lite.yaml \
-  -ginkgo.v
+make integrationtest \
+ K8SAPISERVERHOST=${TARGET_CLUSTER} \
+ DSPANAMESPACE=${NAMESPACE} \
+ KUBECONFIGPATH=${KUBECONFIG_PATH}
 ```
 
 #### Use existing DSPA install
