@@ -2,10 +2,42 @@ name: odh-manifests sync
 
 run-name: Sync manifests in odh-manifests
 on:
+  workflow_call:
+    inputs:
+      src_branch:
+        type: string
+        default: 'v1.x.x'
+        description: 'Source branch to build DSPO/DSP from (for example: v1.0.x)'
+        required: true
+      target_tag:
+        type: string
+        default: 'v1.x.x'
+        description: 'DSPO version tag to be selected to sync manifests from (for example: v1.0.0)'
+        required: true
+      # This is included for dev testing this workflow.
+      odh_manifest_org:
+        type: string
+        default: 'opendatahub-io'
+        description: 'The GH org for odh-manifest.'
+        required: true
   workflow_dispatch:
-#  push:
-#    tags:
-#      - '*'
+    inputs:
+      src_branch:
+        default: 'v1.x.x'
+        description: 'Source branch to build DSPO/DSP from (for example: v1.0.x)'
+        required: true
+      target_tag:
+        default: 'v1.x.x'
+        description: 'DSPO version tag to be selected to sync manifests from (for example: v1.0.0)'
+        required: true
+      # This is included for dev testing this workflow.
+      odh_manifest_org:
+        default: 'opendatahub-io'
+        description: 'The GH org for odh-manifest.'
+        required: true
+env:
+  GH_USER_EMAIL: 140449482+dsp-developers@users.noreply.github.com
+  GH_USER_NAME: dsp-developers
 jobs:
   send-pull-requests:
     runs-on: ubuntu-latest
@@ -13,34 +45,36 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout data-science-pipelines-operator repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          ref: main
-          repository: opendatahub-io/data-science-pipelines-operator
+          ref: ${{ inputs.src_branch }}
+          repository: ${{ inputs.odh_manifest_org }}/data-science-pipelines-operator
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Send pull-request
+        env:
+          GH_TOKEN: ${{ secrets.DSP_DEVS_ACCESS_TOKEN }}
         run: |
-          LATEST_TAG=$(git describe --tags --always --abbrev=0)
-          REPOSITORY="dsp-developers/odh-manifests"
-          FOLDER="bin/$REPOSITORY"
-          BRANCH_NAME="chore-update-scripts-to-$LATEST_TAG"
+          TARGET_TAG=${{ inputs.target_tag }}
 
-          # Clone the remote repository and change working directory to the
-          # folder it was cloned to.
+          DSPO_DIR=${{ github.workspace }}
+          ODH_MANIFESTS_DIR=$(dirname ${{ github.workspace }})/odh-manifests
+          MANIFESTS_REPOSITORY="${{ env.GH_USER_NAME}}/odh-manifests"
+          BRANCH_NAME="chore-update-scripts-to-$TARGET_TAG"
+
           git clone \
             --depth=1 \
             --branch=master \
-            https://dsp-developers:${{ secrets.ACCESS_TOKEN }}@github.com/$REPOSITORY \
-            $FOLDER
-          cd $FOLDER
+            https://${{ env.GH_USER_NAME}}:${{ secrets.DSP_DEVS_ACCESS_TOKEN }}@github.com/$MANIFESTS_REPOSITORY \
+            $ODH_MANIFESTS_DIR
+          cd $ODH_MANIFESTS_DIR
 
           # Setup the committers identity.
-          git config user.email "140449482+dsp-developers@users.noreply.github.com"
-          git config user.name "dsp-developers"
+          git config user.email "${{ env.GH_USER_EMAIL }}"
+          git config user.name "${{ env.GH_USER_NAME}}"
 
-          git remote add upstream https://github.com/opendatahub-io/odh-manifests.git
+          git remote add upstream https://github.com/${{ inputs.odh_manifest_org }}/odh-manifests.git
           git fetch upstream
 
           # Create a new feature branch for the changes.
@@ -48,23 +82,29 @@ jobs:
           echo "Created branch: $BRANCH_NAME"
 
           # Copy DSPO manifests. Using rsync to allow filtering of paths/files (e.g. like a .gitignore, hidden files, etc)
-
-          rsync -av --exclude={'overlays/','samples/','internal/'} ../../../config/ data-science-pipelines-operator/
+          echo Performing Rsync
+          rsync -chav --exclude={'overlays/','samples/','internal/'} ${DSPO_DIR}/config/ ${ODH_MANIFESTS_DIR}/data-science-pipelines-operator/
+          echo Rsync Complete
 
           # Commit the changes and push the feature branch to origin
-          git add .
-          git commit -m "Update DSPO to $LATEST_TAG"
-          # Check if the branch exists and perform rebase if it does
-          if git ls-remote --exit-code --heads origin $BRANCH_NAME; then
-            git pull --rebase origin $BRANCH_NAME
-          fi
-          git push origin $BRANCH_NAME
+          echo "Changes Summary:"
+          git status
 
-          gh pr create \
-            --body "This is an automated PR to update Data Science Pipelines Operator manifests to $LATEST_TAG" \
-            --title "Update DSP Operator manifests to $LATEST_TAG" \
-            --head "$BRANCH_NAME" \
-            --base "master"
-            --repo https://github.com/opendatahub-io/data-science-pipelines-operator
-        env:
-          GH_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+          if [[ `git status --porcelain` ]]; then
+
+          git add .
+          git commit -m "Update DSPO to $TARGET_TAG"
+          git push origin $BRANCH_NAME -f
+
+          pr_url=$(gh pr create \
+            --repo https://github.com/${{ inputs.odh_manifest_org }}/odh-manifests \
+            --body "This is an automated PR to update Data Science Pipelines Operator manifests to $TARGET_TAG" \
+            --title "Update DSP Operator manifests to $TARGET_TAG" \
+            --head "${{ env.GH_USER_NAME}}:$BRANCH_NAME" \
+            --base "master")
+
+          echo "::notice:: Changes detected in manifests, PR To ODH-Manifest Repo created: ${pr_url}"
+
+          else
+            echo "::notice:: Changes No changes to manifests requested, no pr required to odh-manifests."
+          fi

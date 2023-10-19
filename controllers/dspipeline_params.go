@@ -431,8 +431,8 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.ScheduledWorkflow = dsp.Spec.ScheduledWorkflow.DeepCopy()
 	p.PersistenceAgent = dsp.Spec.PersistenceAgent.DeepCopy()
 	p.MlPipelineUI = dsp.Spec.MlPipelineUI.DeepCopy()
-	p.MariaDB = dsp.Spec.MariaDB.DeepCopy()
-	p.Minio = dsp.Spec.Minio.DeepCopy()
+	p.MariaDB = dsp.Spec.Database.MariaDB.DeepCopy()
+	p.Minio = dsp.Spec.ObjectStorage.Minio.DeepCopy()
 	p.OAuthProxy = config.GetStringConfigWithDefault(config.OAuthProxyImagePath, config.DefaultImageValue)
 	p.MLMD = dsp.Spec.MLMD.DeepCopy()
 

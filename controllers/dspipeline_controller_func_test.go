@@ -1,3 +1,6 @@
+//go:build test_all || test_functional
+// +build test_all test_functional
+
 /*
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +20,7 @@ package controllers
 
 import (
 	"fmt"
+
 	mfc "github.com/manifestival/controller-runtime-client"
 	mf "github.com/manifestival/manifestival"
 	. "github.com/onsi/ginkgo/v2"

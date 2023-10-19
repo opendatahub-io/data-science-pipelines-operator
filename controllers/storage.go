@@ -63,7 +63,7 @@ func createCredentialProvidersChain(accessKey, secretKey string) *credentials.Cr
 	return credentials.New(&credentials.Chain{Providers: providers})
 }
 
-var ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint string, accesskey, secretkey []byte, secure bool) bool {
+var ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool) bool {
 	cred := createCredentialProvidersChain(string(accesskey), string(secretkey))
 	minioClient, err := minio.New(endpoint, &minio.Options{
 		Creds:  cred,
@@ -77,12 +77,23 @@ var ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoin
 	ctx, cancel := context.WithTimeout(ctx, config.DefaultObjStoreConnectionTimeout)
 	defer cancel()
 
-	_, err = minioClient.ListBuckets(ctx)
+	// Attempt to run Stat on the Object.  It doesn't necessarily have to exist, we just want to verify we can successfully run an authenticated s3 command
+	_, err = minioClient.StatObject(ctx, bucket, "some-random-object", minio.GetObjectOptions{})
 	if err != nil {
-		log.Info(fmt.Sprintf("Could not perform ListBuckets health check on object storage endpoint: %s", endpoint))
+		switch err := err.(type) {
+
+		// In the case that the Error is NoSuchKey (or NoSuchBucket), we can verify that the endpoint worked and the object just doesn't exist
+		case minio.ErrorResponse:
+			if err.Code == "NoSuchKey" || err.Code == "NoSuchBucket" {
+				return true
+			}
+		}
+		// Every other error means the endpoint in inaccessible, or the credentials provided do not have, at a minimum GetObject, permissions
+		log.Info(fmt.Sprintf("Could not connect to (%s), Error: %s", endpoint, err.Error()))
 		return false
 	}
 
+	// Getting here means the health check passed
 	return true
 }
 
@@ -109,7 +120,7 @@ func (r *DSPAReconciler) isObjectStorageAccessible(ctx context.Context, dsp *dsp
 		return false
 	}
 
-	verified := ConnectAndQueryObjStore(ctx, log, endpoint, accesskey, secretkey, *params.ObjectStorageConnection.Secure)
+	verified := ConnectAndQueryObjStore(ctx, log, endpoint, params.ObjectStorageConnection.Bucket, accesskey, secretkey, *params.ObjectStorageConnection.Secure)
 	if verified {
 		log.Info("Object Storage Health Check Successful")
 	} else {
