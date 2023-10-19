@@ -6,12 +6,12 @@ metadata:
     app.kubernetes.io/component: kfp-driver
     app.kubernetes.io/instance: default
     app.kubernetes.io/part-of: kubeflow-pipeline
-  name: kfp-driver-rolebinding
+  name: driver-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: kfp-driver-role
+  name: driver-role
 subjects:
 - kind: ServiceAccount
-  name: kfp-driver
+  name: driver
   namespace: datasciencepipelinesapplications-controller

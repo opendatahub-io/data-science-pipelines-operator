@@ -5,12 +5,12 @@ metadata:
     app.kubernetes.io/component: controller
     app.kubernetes.io/instance: default
     app.kubernetes.io/part-of: kfp-tekton
-  name: kfptask-controller-leaderelection-clusterrolebinding
+  name: controller-leaderelection-clusterrolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: kfptask-leader-election-clusterrole
+  name: leader-election-clusterrole
 subjects:
 - kind: ServiceAccount
-  name: kfptask-controller
+  name: controller
   namespace: datasciencepipelinesapplications-controller

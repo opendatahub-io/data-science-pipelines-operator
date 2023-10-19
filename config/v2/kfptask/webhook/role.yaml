@@ -5,7 +5,7 @@ metadata:
     app.kubernetes.io/component: webhook
     app.kubernetes.io/instance: default
     app.kubernetes.io/part-of: kfp-tekton
-  name: kfptask-webhook-role
+  name: webhook-role
 rules:
 - apiGroups:
   - ""

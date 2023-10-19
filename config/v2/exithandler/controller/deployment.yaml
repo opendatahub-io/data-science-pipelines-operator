@@ -9,7 +9,7 @@ metadata:
     app.kubernetes.io/version: devel
     pipeline.tekton.dev/release: devel
     version: devel
-  name: kfp-exithandler-controller
+  name: exithandler-controller
 spec:
   replicas: 1
   selector:
@@ -47,7 +47,7 @@ spec:
         - name: METRICS_DOMAIN
           value: tekton.dev/pipeline
         image: quay.io/internaldatahub/tekton-exithandler-controller:2.0.0
-        name: kfp-exithandler-controller
+        name: exithandler-controller
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -57,4 +57,4 @@ spec:
           runAsNonRoot: true
           seccompProfile:
             type: RuntimeDefault
-      serviceAccountName: kfp-exithandler-controller
+      serviceAccountName: exithandler-controller

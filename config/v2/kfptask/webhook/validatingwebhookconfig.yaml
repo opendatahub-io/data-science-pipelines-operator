@@ -12,7 +12,7 @@ webhooks:
   - v1beta1
   clientConfig:
     service:
-      name: kfptask-webhook
+      name: webhook
       namespace: datasciencepipelinesapplications-controller
   failurePolicy: Fail
   name: validation.webhook.kfptask.custom.tekton.dev

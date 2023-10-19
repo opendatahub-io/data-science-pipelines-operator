@@ -5,7 +5,7 @@ metadata:
     app.kubernetes.io/component: webhook
     app.kubernetes.io/instance: default
     app.kubernetes.io/part-of: kfp-tekton
-  name: kfp-exithandler-webhook-role
+  name: exithandler-webhook-role
 rules:
 - apiGroups:
   - ""

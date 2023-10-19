@@ -5,7 +5,7 @@ metadata:
     app.kubernetes.io/component: controller
     app.kubernetes.io/instance: default
     app.kubernetes.io/part-of: tekton-pipeline-loops
-  name: tekton-pipelineloop-controller-role
+  name: pipelineloop-controller-role
 rules:
 - apiGroups:
   - ""

@@ -10,7 +10,7 @@ metadata:
     app.kubernetes.io/version: devel
     pipeline.tekton.dev/release: devel
     version: devel
-  name: kfp-exithandler-webhook
+  name: exithandler-webhook
   namespace: datasciencepipelinesapplications-controller
 spec:
   ports:

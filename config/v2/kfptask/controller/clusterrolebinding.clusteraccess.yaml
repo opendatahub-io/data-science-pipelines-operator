@@ -5,12 +5,12 @@ metadata:
     app.kubernetes.io/component: controller
     app.kubernetes.io/instance: default
     app.kubernetes.io/part-of: kfp-tekton
-  name: kfptask-controller-cluster-access-clusterrolebinding
+  name: controller-cluster-access-clusterrolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: kfptask-controller-cluster-access-clusterrole
+  name: controller-cluster-access-clusterrole
 subjects:
 - kind: ServiceAccount
-  name: kfptask-controller
+  name: controller
   namespace: datasciencepipelinesapplications-controller

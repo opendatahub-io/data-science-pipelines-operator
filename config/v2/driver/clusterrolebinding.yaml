@@ -6,12 +6,12 @@ metadata:
     app.kubernetes.io/component: kfp-driver
     app.kubernetes.io/instance: default
     app.kubernetes.io/part-of: kubeflow-pipeline
-  name: kfp-driver-cluster-access-clusterrolebinding
+  name: driver-cluster-access-clusterrolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: kfp-driver-cluster-access-clusterrole
+  name: driver-cluster-access-clusterrole
 subjects:
 - kind: ServiceAccount
-  name: kfp-driver
+  name: driver
   namespace: datasciencepipelinesapplications-controller

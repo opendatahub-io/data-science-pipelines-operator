@@ -4,7 +4,7 @@ metadata:
   labels:
     app.kubernetes.io/instance: default
     app.kubernetes.io/part-of: tekton-pipeline-loops
-  name: tekton-pipelineloop-leader-election-clusterrole
+  name: pipelineloop-leader-election-clusterrole
 rules:
 - apiGroups:
   - coordination.k8s.io

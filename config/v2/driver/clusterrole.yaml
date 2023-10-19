@@ -6,7 +6,7 @@ metadata:
     app.kubernetes.io/component: kfp-driver
     app.kubernetes.io/instance: default
     app.kubernetes.io/part-of: kubeflow-pipeline
-  name: kfp-driver-cluster-access-clusterrole
+  name: driver-cluster-access-clusterrole
 rules:
 - apiGroups:
   - tekton.dev

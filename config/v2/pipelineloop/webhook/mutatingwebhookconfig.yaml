@@ -12,7 +12,7 @@ webhooks:
   - v1beta1
   clientConfig:
     service:
-      name: tekton-pipelineloop-webhook
+      name: pipelineloop-webhook
       namespace: datasciencepipelinesapplications-controller
   failurePolicy: Fail
   name: webhook.pipelineloop.custom.tekton.dev
