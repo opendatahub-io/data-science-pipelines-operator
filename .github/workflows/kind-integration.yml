@@ -1,4 +1,4 @@
-name: KinD DSPO/DSP system tests
+name: KinD DSPO/DSP Integration Tests
 
 on:
   workflow_dispatch:
@@ -26,7 +26,7 @@ env:
   DSPA_NAMESPACE: test-dspa
   DSPA_NAME: test-dspa
   DSPA_DEPLOY_WAIT_TIMEOUT: 300
-  SYSTEM_TESTS_DIR: ${{ github.workspace }}/tests
+  INTEGRATION_TESTS_DIR: ${{ github.workspace }}/tests
 jobs:
   dspo-tests:
     runs-on: ubuntu-20.04
@@ -78,12 +78,12 @@ jobs:
           kubectl create namespace ${{ env.DSPA_NAMESPACE }}
 
       - name: Run tests
-        working-directory: ${{ env.SYSTEM_TESTS_DIR }}
+        working-directory: ${{ env.INTEGRATION_TESTS_DIR }}
         env:
           NAMESPACE: ${{ env.DSPA_NAMESPACE }}
           DSPA_NAME: ${{ env.DSPA_NAME }}
         run: |
-          go run github.com/onsi/ginkgo/v2/ginkgo --tags=test_systest -- -kubeconfig=$HOME/.kube/config -k8sApiServerHost=$(oc whoami --show-server) -DSPANamespace=${{ env.DSPA_NAMESPACE }} -DSPAPath=resources/dspa-lite.yaml -ginkgo.v
+          go run github.com/onsi/ginkgo/v2/ginkgo --tags=test_integration -- -kubeconfig=$HOME/.kube/config -k8sApiServerHost=$(oc whoami --show-server) -DSPANamespace=${{ env.DSPA_NAMESPACE }} -DSPAPath=resources/dspa-lite.yaml -ginkgo.v
 
       - name: Clean up
         run: |

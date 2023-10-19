@@ -1,6 +1,6 @@
-# DSP System tests
+# DSP Integration tests
 
-In this folder you will find the DSP System tests. These tests are intended to be run against a live Kubernetes or OCP 
+In this folder you will find the DSP Integration tests. These tests are intended to be run against a live Kubernetes or OCP 
 cluster. They are also utilized in our KinD GitHub workflow (e.g. [kind-workflow])
 
 The tests are scoped to an individual namespace and require the testing namespace to be created beforehand.
@@ -34,7 +34,7 @@ git clone git@github.com:opendatahub-io/data-science-pipelines-operator.git ${DS
 make deploy
 
 cd tests
-go run github.com/onsi/ginkgo/v2/ginkgo --tags=test_systest -- \
+go run github.com/onsi/ginkgo/v2/ginkgo --tags=test_integration -- \
   -kubeconfig=${KUBECONFIG_PATH} \
   -k8sApiServerHost=${TARGET_CLUSTER} \
   -DSPANamespace=${TARGET_NAMESPACE} -DSPAPath=resources/dspa-lite.yaml \
@@ -47,7 +47,7 @@ For the impatient developer, you can use the following flag to skip DSPA install
 changes to a live environment and run the tests against it: 
 
 ```bash
-go run github.com/onsi/ginkgo/v2/ginkgo --tags=test_systest -- \
+go run github.com/onsi/ginkgo/v2/ginkgo --tags=test_integration -- \
   -kubeconfig=${KUBECONFIG_PATH} \
   -k8sApiServerHost=${TARGET_CLUSTER} \
   -DSPANamespace=${TARGET_NAMESPACE} -DSPAPath=resources/dspa-lite.yaml \

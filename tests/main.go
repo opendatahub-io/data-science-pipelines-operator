@@ -1,4 +1,4 @@
-//go:build test_systest
+//go:build test_integration
 
 /*
 Copyright 2023.
@@ -16,6 +16,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package systemtests
+package integration
 
 // This file only exists as a workaround for: https://github.com/dnephin/pre-commit-golang/issues/78
