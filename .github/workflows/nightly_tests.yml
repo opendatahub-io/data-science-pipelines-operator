@@ -1,0 +1,21 @@
+name: Nightly Testing
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: 0 0 * * *
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.19.x'
+      - name: Run Build
+        run: make build
+      - name: Run Unit Tests
+        run: make unittest
+      - name: Run Functional Tests
+        run: make functest
+      # TODO: implement some sort of notification mechanism
