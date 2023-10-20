@@ -36,6 +36,7 @@ func TestDeployAPIServer(t *testing.T) {
 			APIServer: &dspav1alpha1.APIServer{
 				Deploy: true,
 			},
+			MLMD: &dspav1alpha1.MLMD{},
 			Database: &dspav1alpha1.Database{
 				DisableHealthCheck: false,
 				MariaDB: &dspav1alpha1.MariaDB{

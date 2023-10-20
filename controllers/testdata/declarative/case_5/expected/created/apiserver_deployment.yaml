@@ -96,6 +96,10 @@ spec:
               value: "ubi-minimal:test5"
             - name: MOVERESULTS_IMAGE
               value: "busybox:test5"
+            - name: METADATA_GRPC_SERVICE_SERVICE_HOST
+              value: ds-pipeline-metadata-grpc-testdsp5
+            - name: METADATA_GRPC_SERVICE_SERVICE_PORT
+              value: "1337"
           image: api-server:test5
           imagePullPolicy: Always
           name: ds-pipeline-api-server
