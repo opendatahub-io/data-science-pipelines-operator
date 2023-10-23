@@ -1,7 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
 resources:
-- service_account.yaml
-- role.yaml
-- role_binding.yaml
-- leader_election_role.yaml
+- aggregate_dspa_role_edit.yaml
+- aggregate_dspa_role_view.yaml
 - leader_election_role_binding.yaml
-- aggregate_dspa_role.yaml
+- leader_election_role.yaml
+- role_binding.yaml
+- role.yaml
+- service_account.yaml
