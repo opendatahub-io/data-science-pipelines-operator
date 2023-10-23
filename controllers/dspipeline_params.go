@@ -50,6 +50,7 @@ type DSPAParams struct {
 	MLMD                 *dspa.MLMD
 	CRDViewer            *dspa.CRDViewer
 	VisualizationServer  *dspa.VisualizationServer
+	WorkflowController   *dspa.WorkflowController
 	DBConnection
 	ObjectStorageConnection
 }

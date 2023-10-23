@@ -79,6 +79,8 @@ spec:
             value: $(IMAGESV2_MLMDGRPC)
           - name: IMAGESV2_MLMDWRITER
             value: $(IMAGESV2_MLMDWRITER)
+          - name: IMAGESV2_WORKFLOWCONTROLLER
+            value: $(IMAGESV2_WORKFLOWCONTROLLER)
           - name: ZAP_LOG_LEVEL
             value: $(ZAP_LOG_LEVEL)
         securityContext:

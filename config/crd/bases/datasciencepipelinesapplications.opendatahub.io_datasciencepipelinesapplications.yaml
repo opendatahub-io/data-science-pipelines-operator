@@ -738,6 +738,17 @@ spec:
                   image:
                     type: string
                 type: object
+              workflowController:
+                default:
+                  deploy: false
+                description: DS Pipelines Argo Workflow Controller Configuration.
+                properties:
+                  deploy:
+                    default: true
+                    type: boolean
+                  image:
+                    type: string
+                type: object
             required:
             - objectStorage
             type: object

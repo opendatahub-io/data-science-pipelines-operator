@@ -52,6 +52,9 @@ type DSPASpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="v1"
 	DSPVersion string `json:"dspVersion,omitempty"`
+	// DS Pipelines Argo Workflow Controller Configuration.
+	// +kubebuilder:default:={deploy: false}
+	*WorkflowController `json:"workflowController,omitempty"`
 }
 
 type APIServer struct {
@@ -268,6 +271,13 @@ type CRDViewer struct {
 }
 
 type VisualizationServer struct {
+	// +kubebuilder:default:=true
+	// +kubebuilder:validation:Optional
+	Deploy bool   `json:"deploy"`
+	Image  string `json:"image,omitempty"`
+}
+
+type WorkflowController struct {
 	// +kubebuilder:default:=true
 	// +kubebuilder:validation:Optional
 	Deploy bool   `json:"deploy"`

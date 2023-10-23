@@ -183,5 +183,12 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.IMAGESV2_MLMDWRITER
+  - name: IMAGESV2_WORKFLOWCONTROLLER
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGESV2_WORKFLOWCONTROLLER
 configurations:
   - params.yaml
