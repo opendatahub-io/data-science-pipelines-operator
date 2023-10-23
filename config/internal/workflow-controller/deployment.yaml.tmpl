@@ -1,0 +1,71 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    internal.kpt.dev/upstream-identifier: apps|Deployment|default|workflow-controller
+  labels:
+    app: ds-pipeline-workflow-controller-{{.Name}}
+    component: data-science-pipelines
+    dspa: {{.Name}}
+  name: ds-pipeline-workflow-controller-{{.Name}}
+  namespace: {{.Namespace}}
+spec:
+  selector:
+    matchLabels:
+      app: ds-pipeline-workflow-controller-{{.Name}}
+      component: data-science-pipelines
+      dspa: {{.Name}}
+  template:
+    metadata:
+      labels:
+        app: ds-pipeline-workflow-controller-{{.Name}}
+        component: data-science-pipelines
+        dspa: {{.Name}}
+    spec:
+      containers:
+      - args:
+        - --configmap
+        - ds-pipeline-workflow-controller-{{.Name}}
+        - --executor-image
+        - gcr.io/ml-pipeline/argoexec:v3.3.10-license-compliance
+        - --namespaced
+        command:
+        - workflow-controller
+        env:
+        - name: LEADER_ELECTION_IDENTITY
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        image: gcr.io/ml-pipeline/workflow-controller:v3.3.10-license-compliance
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 6060
+          initialDelaySeconds: 90
+          periodSeconds: 60
+          timeoutSeconds: 30
+        name: ds-pipeline-workflow-controller
+        ports:
+        - containerPort: 9090
+          name: metrics
+        - containerPort: 6060
+        resources:
+          requests:
+            cpu: 100m
+            memory: 500Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+      nodeSelector:
+        kubernetes.io/os: linux
+      priorityClassName: ds-pipelines-workflow-controller-priorityclass
+      securityContext:
+        runAsNonRoot: true
+      serviceAccountName: ds-pipeline-workflow-controller-{{.Name}}

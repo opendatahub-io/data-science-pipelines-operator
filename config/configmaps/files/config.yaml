@@ -22,6 +22,7 @@ ImagesV2:
   MlmdEnvoy: $(IMAGESV2_MLMDENVOY)
   MlmdGRPC: $(IMAGESV2_MLMDGRPC)
   MlmdWriter: $(IMAGESV2_MLMDWRITER)
+  WorkflowController: $(IMAGESV2_WORKFLOWCONTROLLER)
 DSPO:
   HealthCheck:
     Database:
