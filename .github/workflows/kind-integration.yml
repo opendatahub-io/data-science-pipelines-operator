@@ -20,9 +20,6 @@ concurrency:
 
 env:
   IMAGE_REPO_DSPO: data-science-pipelines-operator
-  QUAY_ORG: hukhan
-  QUAY_ID: ${{ secrets.QUAY_ID }}
-  QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
   DSPA_NAMESPACE: test-dspa
   DSPA_NAME: test-dspa
   DSPA_DEPLOY_WAIT_TIMEOUT: 300

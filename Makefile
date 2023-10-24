@@ -179,7 +179,8 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 
 .PHONY: undeploy-kind
 undeploy-kind: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	cd config/overlays/kind-tests && kustomize edit set namespace ${OPERATOR_NS}
+	cd config/overlays/kind-tests \
+		&& kustomize edit set namespace ${OPERATOR_NS}
 	kustomize build config/overlays/kind-tests | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 ##@ Build Dependencies

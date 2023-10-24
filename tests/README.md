@@ -26,16 +26,17 @@ afterwards.
 # Adjust the following as needed
 KUBECONFIG_PATH=$HOME/.kube/config # this is usually the default
 TARGET_CLUSTER=...(e.g. https://api.hukhan.dev.datahub.redhat.com:6443, you can retrieve this via `oc whoami --show-server`)
-TARGET_NAMESPACE=dspa
+TARGET_NAMESPACE=dspa # Do not use the same namespace as where DSPO is deployed (otherwise you will encounter some failed tests that verify DSPA deployment).
 
 git clone git@github.com:opendatahub-io/data-science-pipelines-operator.git ${DSPO_REPO}
 
 # Make sure DSPO is already deployed, if not then run: 
+oc new-project odh-applications
 make deploy
 
 make integrationtest \
  K8SAPISERVERHOST=${TARGET_CLUSTER} \
- DSPANAMESPACE=${NAMESPACE} \
+ DSPANAMESPACE=${TARGET_NAMESPACE} \
  KUBECONFIGPATH=${KUBECONFIG_PATH}
 ```
 

@@ -66,9 +66,22 @@ var (
 )
 
 var (
-	DefaultDeployTimeout time.Duration
-	DefaultPollInterval  time.Duration
-	DefaultDeleteTimeout time.Duration
+	DeployTimeout time.Duration
+	PollInterval  time.Duration
+	DeleteTimeout time.Duration
+)
+
+const (
+	DefaultKubeConfigPath       = "~/.kube/config"
+	Defaultk8sApiServerHost     = "localhost:6443"
+	DefaultDSPANamespace        = "default"
+	DefaultDeployTimeout        = 240
+	DefaultPollInterval         = 2
+	DefaultDeleteTimeout        = 120
+	DefaultPortforwardLocalPort = 8888
+	DefaultSkipDeploy           = false
+	DefaultSkipCleanup          = false
+	DefaultDSPAPath             = ""
 )
 
 type ClientManager struct {
@@ -94,23 +107,23 @@ func TestAPIs(t *testing.T) {
 
 // Register flags in an init function. This ensures they are registered _before_ `go test` calls flag.Parse()
 func init() {
-	flag.StringVar(&kubeconfig, "kubeconfig", "~/.kube/config", "The path to the kubeconfig.")
-	flag.StringVar(&k8sApiServerHost, "k8sApiServerHost", "localhost:6443", "The k8s cluster api server host.")
-	flag.StringVar(&DSPAPath, "DSPAPath", "", "The DSP resource file to deploy for testing.")
-	flag.StringVar(&DSPANamespace, "DSPANamespace", "default", "The namespace to deploy DSPA.")
+	flag.StringVar(&kubeconfig, "kubeconfig", DefaultKubeConfigPath, "The path to the kubeconfig.")
+	flag.StringVar(&k8sApiServerHost, "k8sApiServerHost", Defaultk8sApiServerHost, "The k8s cluster api server host.")
+	flag.StringVar(&DSPAPath, "DSPAPath", DefaultDSPAPath, "The DSP resource file to deploy for testing.")
+	flag.StringVar(&DSPANamespace, "DSPANamespace", DefaultDSPANamespace, "The namespace to deploy DSPA.")
 
-	flag.DurationVar(&DefaultDeployTimeout, "DefaultDeployTimeout", 240, "Seconds to wait for deployments. Consider increasing this on resource starved environments.")
-	DefaultDeployTimeout *= time.Second
-	flag.DurationVar(&DefaultPollInterval, "DefaultPollInterval", 2, "Seconds to wait before retrying fetches to the api server.")
-	DefaultPollInterval *= time.Second
-	flag.DurationVar(&DefaultDeleteTimeout, "DefaultDeleteTimeout", 120, "Seconds to wait for deployment deletions. Consider increasing this on resource starved environments.")
-	DefaultDeleteTimeout *= time.Second
+	flag.DurationVar(&DeployTimeout, "DeployTimeout", DefaultDeployTimeout, "Seconds to wait for deployments. Consider increasing this on resource starved environments.")
+	DeployTimeout *= time.Second
+	flag.DurationVar(&PollInterval, "PollInterval", DefaultPollInterval, "Seconds to wait before retrying fetches to the api server.")
+	PollInterval *= time.Second
+	flag.DurationVar(&DeleteTimeout, "DeleteTimeout", DefaultDeleteTimeout, "Seconds to wait for deployment deletions. Consider increasing this on resource starved environments.")
+	DeleteTimeout *= time.Second
 
-	flag.IntVar(&PortforwardLocalPort, "PortforwardLocalPort", 8888, "Local port to use for port forwarding dspa server.")
+	flag.IntVar(&PortforwardLocalPort, "PortforwardLocalPort", DefaultPortforwardLocalPort, "Local port to use for port forwarding dspa server.")
 
-	flag.BoolVar(&skipDeploy, "skipDeploy", false, "Skip DSPA deployment. Use this if you have already "+
+	flag.BoolVar(&skipDeploy, "skipDeploy", DefaultSkipDeploy, "Skip DSPA deployment. Use this if you have already "+
 		"manually deployed a DSPA, and want to skip this part.")
-	flag.BoolVar(&skipCleanup, "skipCleanup", false, "Skip DSPA cleanup.")
+	flag.BoolVar(&skipCleanup, "skipCleanup", DefaultSkipCleanup, "Skip DSPA cleanup.")
 }
 
 var _ = BeforeSuite(func() {
@@ -147,9 +160,9 @@ var _ = BeforeSuite(func() {
 
 	if !skipDeploy {
 		loggr.Info("Deploying DSPA...")
-		systemsTesttUtil.DeployDSPA(ctx, clientmgr.k8sClient, DSPA, DSPANamespace, DefaultDeployTimeout, DefaultPollInterval)
+		systemsTesttUtil.DeployDSPA(ctx, clientmgr.k8sClient, DSPA, DSPANamespace, DeployTimeout, PollInterval)
 		loggr.Info("Waiting for DSPA pods to ready...")
-		systemsTesttUtil.WaitForDSPAReady(ctx, clientmgr.k8sClient, DSPA.Name, DSPANamespace, DefaultDeployTimeout, DefaultPollInterval)
+		systemsTesttUtil.WaitForDSPAReady(ctx, clientmgr.k8sClient, DSPA.Name, DSPANamespace, DeployTimeout, PollInterval)
 		loggr.Info("DSPA Deployed.")
 	}
 
@@ -185,7 +198,7 @@ var _ = BeforeEach(func() {
 
 var _ = AfterSuite(func() {
 	if !skipCleanup {
-		systemsTesttUtil.DeleteDSPA(ctx, clientmgr.k8sClient, DSPA.Name, DSPANamespace, DefaultDeployTimeout, DefaultPollInterval)
+		systemsTesttUtil.DeleteDSPA(ctx, clientmgr.k8sClient, DSPA.Name, DSPANamespace, DeployTimeout, PollInterval)
 	}
 	forwarderResult.Close()
 })
