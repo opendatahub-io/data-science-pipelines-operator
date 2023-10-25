@@ -211,6 +211,9 @@ func TestDefaultDeployBehaviorMLMD(t *testing.T) {
 				// possibly due to test setup - Investigate.
 				ArchiveLogs: true,
 			},
+			MLMD: &dspav1alpha1.MLMD{
+				Deploy: true,
+			},
 			Database: &dspav1alpha1.Database{
 				DisableHealthCheck: false,
 				MariaDB: &dspav1alpha1.MariaDB{
@@ -261,18 +264,18 @@ func TestDefaultDeployBehaviorMLMD(t *testing.T) {
 	// Ensure MLMD-Envoy resources still doesn't exist
 	deployment = &appsv1.Deployment{}
 	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedMLMDEnvoyName, testNamespace)
-	assert.False(t, created)
+	assert.True(t, created)
 	assert.Nil(t, err)
 
 	// Ensure MLMD-GRPC resources still doesn't exist
 	deployment = &appsv1.Deployment{}
 	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedMLMDGRPCName, testNamespace)
-	assert.False(t, created)
+	assert.True(t, created)
 	assert.Nil(t, err)
 
 	// Ensure MLMD-Writer resources still doesn't exist
 	deployment = &appsv1.Deployment{}
 	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedMLMDWriterName, testNamespace)
-	assert.False(t, created)
+	assert.True(t, created)
 	assert.Nil(t, err)
 }

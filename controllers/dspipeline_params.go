@@ -118,13 +118,6 @@ func (p *DSPAParams) ObjectStorageHealthCheckDisabled(dsp *dspa.DataSciencePipel
 	return false
 }
 
-func (p *DSPAParams) UsingMLMD(dsp *dspa.DataSciencePipelinesApplication) bool {
-	if dsp.Spec.MLMD != nil {
-		return dsp.Spec.MLMD.Deploy
-	}
-	return false
-}
-
 func passwordGen(n int) string {
 	rand.Seed(time.Now().UnixNano())
 	var chars = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890")

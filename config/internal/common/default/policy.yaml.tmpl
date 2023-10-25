@@ -25,10 +25,7 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: redhat-ods-monitoring
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: kfp-driver
-          namespaceSelector:
+        - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: openshift-pipelines
         - podSelector:
@@ -72,3 +69,13 @@ spec:
           port: 8888
         - protocol: TCP
           port: 8887
+    - ports:
+        - protocol: TCP
+          port: 8080
+      from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: data-science-pipelines-operator-driver
+          namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-pipelines
