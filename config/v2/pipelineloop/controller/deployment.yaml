@@ -46,7 +46,7 @@ spec:
           value: config-observability
         - name: METRICS_DOMAIN
           value: tekton.dev/pipeline
-        image: quay.io/internaldatahub/tektonpipelineloop-controller:2.0.0
+        image: quay.io/internaldatahub/tekton-pipelineloop-controller:2.0.0
         name: pipelineloop-controller
         securityContext:
           allowPrivilegeEscalation: false

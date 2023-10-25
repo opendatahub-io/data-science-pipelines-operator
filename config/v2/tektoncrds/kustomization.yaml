@@ -1,4 +1,2 @@
 resources:
 - crd.yaml
-- scc.anyuid.yaml
-- scc.privileged.yaml
