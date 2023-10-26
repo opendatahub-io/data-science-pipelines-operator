@@ -34,8 +34,8 @@ spec:
               value: kubeflow-userid
             - name: KUBEFLOW_USERID_PREFIX
               value: ""
-            - name: EXECUTIONTYPE
-              value: PipelineRun
+            #- name: EXECUTIONTYPE
+            #  value: PipelineRun
           image: "{{.PersistenceAgent.Image}}"
           imagePullPolicy: IfNotPresent
           name: ds-pipeline-persistenceagent
@@ -85,4 +85,17 @@ spec:
               memory: {{.PersistenceAgent.Resources.Limits.Memory}}
               {{ end }}
             {{ end }}
+          volumeMounts:
+            - mountPath: /var/run/secrets/kubeflow/tokens/persistenceagent-sa-token
+              name: persistenceagent-sa-token
+              subPath: ds-pipeline-persistenceagent-{{.Name}}-token
+
       serviceAccountName: ds-pipeline-persistenceagent-{{.Name}}
+      volumes:
+        - name: persistenceagent-sa-token
+          projected:
+            sources:
+            - serviceAccountToken:
+                audience: pipelines.kubeflow.org
+                expirationSeconds: 3600
+                path: ds-pipeline-persistenceagent-{{.Name}}-token

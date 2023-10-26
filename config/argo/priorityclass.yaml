@@ -6,5 +6,5 @@ metadata:
     internal.kpt.dev/upstream-identifier: scheduling.k8s.io|PriorityClass|default|workflow-controller
   labels:
     application-crd-id: kubeflow-pipelines
-  name: workflow-controller
+  name: ds-pipelines-workflow-controller-priorityclass
 value: 1000000
