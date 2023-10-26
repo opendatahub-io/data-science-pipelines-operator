@@ -22,8 +22,14 @@ spec:
     spec:
       containers:
         - env:
+            - name: AUTO_UPDATE_PIPELINE_DEFAULT_VERSION
+              value: "{{.APIServer.AutoUpdatePipelineDefaultVersion}}"
             - name: POD_NAMESPACE
               value: "{{.Namespace}}"
+            - name: OBJECTSTORECONFIG_SECURE
+              value: "false"
+            - name: OBJECTSTORECONFIG_BUCKETNAME
+              value: "{{.ObjectStorageConnection.Bucket}}"
             - name: DBCONFIG_USER
               value: "{{.DBConnection.Username}}"
             - name: DBCONFIG_PASSWORD
@@ -78,6 +84,31 @@ spec:
               value: "{{.APIServer.AutoUpdatePipelineDefaultVersion}}"
             - name: DBCONFIG_CONMAXLIFETIMESEC
               value: "{{.APIServer.DBConfigConMaxLifetimeSec}}"
+            - name: DB_DRIVER_NAME
+              value: mysql
+            - name: DBCONFIG_MYSQLCONFIG_USER
+              value: "{{.DBConnection.Username}}"
+            - name: DBCONFIG_MYSQLCONFIG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: "{{.DBConnection.CredentialsSecret.Key}}"
+                  name: "{{.DBConnection.CredentialsSecret.Name}}"
+            - name: DBCONFIG_MYSQLCONFIG_DBNAME
+              value: "{{.DBConnection.DBName}}"
+            - name: DBCONFIG_MYSQLCONFIG_HOST
+              value: "{{.DBConnection.Host}}"
+            - name: DBCONFIG_MYSQLCONFIG_PORT
+              value: "{{.DBConnection.Port}}"
+            - name: OBJECTSTORECONFIG_ACCESSKEY
+              valueFrom:
+                secretKeyRef:
+                  key: "{{.ObjectStorageConnection.CredentialsSecret.AccessKey}}"
+                  name: "{{.ObjectStorageConnection.CredentialsSecret.SecretName}}"
+            - name: OBJECTSTORECONFIG_SECRETACCESSKEY
+              valueFrom:
+                secretKeyRef:
+                  key: "{{.ObjectStorageConnection.CredentialsSecret.SecretKey}}"
+                  name: "{{.ObjectStorageConnection.CredentialsSecret.SecretName}}"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_HOST
               value: "ds-pipeline-visualizationserver"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
@@ -122,6 +153,8 @@ spec:
               value: ds-pipeline-{{.Name}}.{{.Namespace}}.svc.cluster.local
             - name: ML_PIPELINE_SERVICE_PORT_GRPC
               value: "8887"
+            - name: EXECUTIONTYPE
+              value: Workflow
           image: {{.APIServer.Image}}
           imagePullPolicy: Always
           name: ds-pipeline-api-server

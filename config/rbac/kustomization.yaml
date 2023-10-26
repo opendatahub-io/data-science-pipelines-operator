@@ -9,3 +9,6 @@ resources:
 - role_binding.yaml
 - role.yaml
 - service_account.yaml
+- aggregate_dspa_role.yaml
+- argo_role.yaml
+- argo_role_binding.yaml
