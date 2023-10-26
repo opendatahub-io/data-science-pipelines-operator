@@ -59,17 +59,19 @@ const (
 
 // DSPO Config File Paths
 const (
-	APIServerImagePath            = "Images.ApiServer"
-	APIServerArtifactImagePath    = "Images.Artifact"
-	PersistenceAgentImagePath     = "Images.PersistentAgent"
-	ScheduledWorkflowImagePath    = "Images.ScheduledWorkflow"
-	APIServerCacheImagePath       = "Images.Cache"
-	APIServerMoveResultsImagePath = "Images.MoveResultsImage"
-	MariaDBImagePath              = "Images.MariaDB"
-	OAuthProxyImagePath           = "Images.OAuthProxy"
-	MlmdEnvoyImagePath            = "Images.MlmdEnvoy"
-	MlmdGRPCImagePath             = "Images.MlmdGRPC"
-	MlmdWriterImagePath           = "Images.MlmdWriter"
+	APIServerImagePath                  = "Images.ApiServer"
+	APIServerArtifactImagePath          = "Images.Artifact"
+	PersistenceAgentImagePath           = "Images.PersistentAgent"
+	ScheduledWorkflowImagePath          = "Images.ScheduledWorkflow"
+	APIServerCacheImagePath             = "Images.Cache"
+	APIServerMoveResultsImagePath       = "Images.MoveResultsImage"
+	MariaDBImagePath                    = "Images.MariaDB"
+	OAuthProxyImagePath                 = "Images.OAuthProxy"
+	MlmdEnvoyImagePath                  = "Images.MlmdEnvoy"
+	MlmdGRPCImagePath                   = "Images.MlmdGRPC"
+	MlmdWriterImagePath                 = "Images.MlmdWriter"
+	ObjStoreConnectionTimeoutConfigName = "DSPO.HealthCheck.ObjectStore.ConnectionTimeout"
+	DBConnectionTimeoutConfigName       = "DSPO.HealthCheck.Database.ConnectionTimeout"
 )
 
 // DSPA Status Condition Types
@@ -151,4 +153,11 @@ func GetStringConfigWithDefault(configName, value string) string {
 		return value
 	}
 	return viper.GetString(configName)
+}
+
+func GetDurationConfigWithDefault(configName string, value time.Duration) time.Duration {
+	if !viper.IsSet(configName) {
+		return value
+	}
+	return viper.GetDuration(configName)
 }

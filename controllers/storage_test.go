@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/base64"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -269,7 +270,7 @@ func TestDefaultDeployBehaviorStorage(t *testing.T) {
 
 func TestIsDatabaseAccessibleTrue(t *testing.T) {
 	// Override the live connection function with a mock version
-	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte) bool {
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte, objStoreConnectionTimeout time.Duration) bool {
 		return true
 	}
 
@@ -307,7 +308,7 @@ func TestIsDatabaseAccessibleTrue(t *testing.T) {
 
 func TestIsDatabaseNotAccessibleFalse(t *testing.T) {
 	// Override the live connection function with a mock version
-	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte) bool {
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte, objStoreConnectionTimeout time.Duration) bool {
 		return false
 	}
 
@@ -345,7 +346,7 @@ func TestIsDatabaseNotAccessibleFalse(t *testing.T) {
 
 func TestDisabledHealthCheckReturnsTrue(t *testing.T) {
 	// Override the live connection function with a mock version that would always return false if called
-	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte) bool {
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte, objStoreConnectionTimeout time.Duration) bool {
 		return false
 	}
 
@@ -385,7 +386,7 @@ func TestDisabledHealthCheckReturnsTrue(t *testing.T) {
 
 func TestIsDatabaseAccessibleBadAccessKey(t *testing.T) {
 	// Override the live connection function with a mock version
-	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte) bool {
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte, objStoreConnectionTimeout time.Duration) bool {
 		return true
 	}
 
@@ -423,7 +424,7 @@ func TestIsDatabaseAccessibleBadAccessKey(t *testing.T) {
 
 func TestIsDatabaseAccessibleBadSecretKey(t *testing.T) {
 	// Override the live connection function with a mock version
-	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte) bool {
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte, objStoreConnectionTimeout time.Duration) bool {
 		return true
 	}
 

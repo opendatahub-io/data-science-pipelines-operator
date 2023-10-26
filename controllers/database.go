@@ -24,6 +24,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
+	"time"
 )
 
 const dbSecret = "mariadb/secret.yaml.tmpl"
@@ -36,9 +37,9 @@ var mariadbTemplates = []string{
 }
 
 // extract to var for mocking in testing
-var ConnectAndQueryDatabase = func(host, port, username, password, dbname string) bool {
+var ConnectAndQueryDatabase = func(host, port, username, password, dbname string, dbConnectionTimeout time.Duration) bool {
 	// Create a context with a timeout of 1 second
-	ctx, cancel := context.WithTimeout(context.Background(), config.DefaultDBConnectionTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), dbConnectionTimeout)
 	defer cancel()
 
 	connectionString := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", username, password, host, port, dbname)
@@ -72,11 +73,16 @@ func (r *DSPAReconciler) isDatabaseAccessible(ctx context.Context, dsp *dspav1al
 	}
 
 	decodePass, _ := b64.StdEncoding.DecodeString(params.DBConnection.Password)
+	dbConnectionTimeout := config.GetDurationConfigWithDefault(config.DBConnectionTimeoutConfigName, config.DefaultDBConnectionTimeout)
+
+	log.V(1).Info(fmt.Sprintf("Database Heath Check connection timeout: %s", dbConnectionTimeout))
+
 	dbHealthCheckPassed := ConnectAndQueryDatabase(params.DBConnection.Host,
 		params.DBConnection.Port,
 		params.DBConnection.Username,
 		string(decodePass),
-		params.DBConnection.DBName)
+		params.DBConnection.DBName,
+		dbConnectionTimeout)
 	if dbHealthCheckPassed {
 		log.Info("Database Health Check Successful")
 	} else {
