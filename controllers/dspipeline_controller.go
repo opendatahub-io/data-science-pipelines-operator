@@ -28,6 +28,7 @@ import (
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/util"
 	routev1 "github.com/openshift/api/route/v1"
+	"github.com/prometheus/client_golang/prometheus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -281,16 +282,15 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		log.Info(err.Error())
 		return ctrl.Result{}, err
 	}
-
-	r.PublishMetrics(
-		dspa,
-		util.GetConditionByType(config.DatabaseAvailable, conditions),
-		util.GetConditionByType(config.ObjectStoreAvailable, conditions),
-		util.GetConditionByType(config.APIServerReady, conditions),
-		util.GetConditionByType(config.PersistenceAgentReady, conditions),
-		util.GetConditionByType(config.ScheduledWorkflowReady, conditions),
-		util.GetConditionByType(config.CrReady, conditions),
-	)
+	metricsMap := map[metav1.Condition]*prometheus.GaugeVec{
+		util.GetConditionByType(config.DatabaseAvailable, conditions):      DBAvailableMetric,
+		util.GetConditionByType(config.ObjectStoreAvailable, conditions):   ObjectStoreAvailableMetric,
+		util.GetConditionByType(config.APIServerReady, conditions):         APIServerReadyMetric,
+		util.GetConditionByType(config.PersistenceAgentReady, conditions):  PersistenceAgentReadyMetric,
+		util.GetConditionByType(config.ScheduledWorkflowReady, conditions): ScheduledWorkflowReadyMetric,
+		util.GetConditionByType(config.CrReady, conditions):                CrReadyMetric,
+	}
+	r.PublishMetrics(dspa, metricsMap)
 	return ctrl.Result{}, nil
 }
 
@@ -489,49 +489,19 @@ func (r *DSPAReconciler) GenerateStatus(ctx context.Context, dspa *dspav1alpha1.
 	return conditions, nil
 }
 
-func (r *DSPAReconciler) PublishMetrics(dspa *dspav1alpha1.DataSciencePipelinesApplication,
-	dbAvailable, objStoreAvailable, apiServerReady, persistenceAgentReady, scheduledWorkflowReady,
-	crReady metav1.Condition) {
+func (r *DSPAReconciler) PublishMetrics(dspa *dspav1alpha1.DataSciencePipelinesApplication, metricsMap map[metav1.Condition]*prometheus.GaugeVec) {
 	log := r.Log.WithValues("namespace", dspa.Namespace).WithValues("dspa_name", dspa.Name)
 	log.Info("Publishing Ready Metrics")
-	if dbAvailable.Status == metav1.ConditionTrue {
-		log.Info("Database Accessible")
-		DBAvailableMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(1)
-	} else {
-		log.Info("Database Not Yet Accessible")
-		DBAvailableMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(0)
-	}
 
-	if objStoreAvailable.Status == metav1.ConditionTrue {
-		log.Info("Object Store Accessible")
-		ObjectStoreAvailableMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(1)
-	} else {
-		log.Info("Object Store Not Yet Accessible")
-		ObjectStoreAvailableMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(0)
-	}
-
-	if persistenceAgentReady.Status == metav1.ConditionTrue {
-		log.Info("PersistanceAgent Ready")
-		PersistenceAgentReadyMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(1)
-	} else {
-		log.Info("PersistanceAgent Not Ready")
-		PersistenceAgentReadyMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(0)
-	}
-
-	if scheduledWorkflowReady.Status == metav1.ConditionTrue {
-		log.Info("ScheduledWorkflow Ready")
-		ScheduledWorkflowReadyMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(1)
-	} else {
-		log.Info("ScheduledWorkflow Not Ready")
-		ScheduledWorkflowReadyMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(0)
-	}
-
-	if crReady.Status == metav1.ConditionTrue {
-		log.Info("CR Fully Ready")
-		CrReadyMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(1)
-	} else {
-		log.Info("CR Not Ready")
-		CrReadyMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(0)
+	for conditionType, metric := range metricsMap {
+		condition := conditionType
+		status := condition.Status
+		value := 0
+		if status == metav1.ConditionTrue {
+			value = 1
+		}
+		log.Info(condition.Type, " Status:", status)
+		metric.WithLabelValues(dspa.Name, dspa.Namespace).Set(float64(value))
 	}
 }
 
