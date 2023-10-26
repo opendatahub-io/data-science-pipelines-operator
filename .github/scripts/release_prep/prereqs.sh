@@ -14,6 +14,7 @@ check_branch_exists(){
 
 check_branch_exists ${DSPO_REPOSITORY_FULL} ${MINOR_RELEASE_BRANCH}
 check_branch_exists ${DSP_REPOSITORY_FULL} ${MINOR_RELEASE_BRANCH}
+check_branch_exists ${DSP_PIPELINES_REPOSITORY_FULL} ${MINOR_RELEASE_BRANCH}
 
 echo "Ensure compatibility.yaml is upto date, and generate a new compatibility.md. Use [release-tools] to accomplish this"
 
@@ -27,7 +28,8 @@ git checkout -B ${BRANCH_NAME}
 echo "Created branch: ${BRANCH_NAME}"
 echo "Checking if compatibility.yaml contains ${TARGET_RELEASE} release...."
 
-contains_rel=$(cat docs/release/compatibility.yaml | rel=${MINOR_RELEASE_WILDCARD} yq '[.[].dsp] | contains([env(rel)])')
+# convert rel to string in env(rel) explicitly to avoid comparing str to yq float
+contains_rel=$(cat docs/release/compatibility.yaml | rel=${MINOR_RELEASE_WILDCARD} yq '[.[].dsp] | contains([""+env(rel)])')
 
 if [[ "$contains_rel" == "false" ]]; then
 

@@ -15,11 +15,51 @@ spec:
       dspa: {{.Name}}
   template:
     metadata:
+      annotations:
+        configHash: {{.APIServerConfigHash}}
       labels:
         app: {{.APIServerDefaultResourceName}}
         component: data-science-pipelines
         dspa: {{.Name}}
     spec:
+      initContainers:
+        - name: init-pipelines
+          image: {{.APIServer.RuntimeGenericImage}}
+          workingDir: /opt/app-root/src/pipelines/distributed-ilab
+          command: [ '/bin/sh', '-c']
+          args:
+            - "make pipeline && cp pipeline.yaml ${BUILD_FOLDER}"
+          env:
+            - name: BUILD_FOLDER
+              value: /opt/app-root/src/build
+            - name: PYTHON_IMAGE
+              value: {{.APIServer.RuntimeGenericImage}}
+            - name: TOOLBOX_IMAGE
+              value: {{.APIServer.ToolboxImage}}
+            - name: RHELAI_IMAGE
+              value: {{.APIServer.RHELAIImage}}
+          {{ if .APIServer.InitResources }}
+          resources:
+            requests:
+              {{ if .APIServer.InitResources.Requests.CPU }}
+              cpu: {{.APIServer.InitResources.Requests.CPU}}
+              {{ end }}
+              {{ if .APIServer.InitResources.Requests.Memory }}
+              memory: {{.APIServer.InitResources.Requests.Memory}}
+              {{ end }}
+            {{ end }}
+            {{ if .APIServer.InitResources.Limits }}
+            limits:
+              {{ if .APIServer.InitResources.Limits.CPU }}
+              cpu: {{.APIServer.InitResources.Limits.CPU}}
+              {{ end }}
+              {{ if .APIServer.InitResources.Limits.Memory }}
+              memory: {{.APIServer.InitResources.Limits.Memory}}
+              {{ end }}
+          {{ end }}
+          volumeMounts:
+            - mountPath: /opt/app-root/src/build
+              name: managed-pipelines
       containers:
         - env:
             {{ if .IncludeOwnerReference }}
@@ -147,9 +187,7 @@ spec:
           args:
             - --config=/config
             - -logtostderr=true
-            {{ if .APIServer.EnableSamplePipeline }}
             - --sampleconfig=/config/sample_config.json
-            {{ end }}
             {{ if .PodToPodTLS }}
             - --tlsCertPath=/etc/tls/private/tls.crt
             - --tlsCertKeyPath=/etc/tls/private/tls.key
@@ -202,23 +240,21 @@ spec:
             - name: server-config
               mountPath: /config/config.json
               subPath: {{ .APIServer.CustomServerConfig.Key }}
+            - mountPath: /config/managed-pipelines
+              name: managed-pipelines
           {{ if .PodToPodTLS }}
             - mountPath: /etc/tls/private
               name: proxy-tls
           {{ end }}
-          {{ if or .APIServer.EnableSamplePipeline .CustomCABundle }}
-            {{ if .APIServer.EnableSamplePipeline }}
             - name: sample-config
               mountPath: /config/sample_config.json
               subPath: sample_config.json
             - name: sample-pipeline
               mountPath: /samples/
-            {{ end }}
             {{ if .CustomCABundle }}
             - mountPath: {{ .CustomCABundleRootMountPath  }}
               name: ca-bundle
             {{ end }}
-          {{ end }}
         {{ if .APIServer.EnableRoute }}
         - name: oauth-proxy
           args:
@@ -282,16 +318,17 @@ spec:
         - name: server-config
           configMap:
             name: {{ .APIServer.CustomServerConfig.Name }}
+        - name: managed-pipelines
+          emptyDir:
+            sizeLimit: 10Mi
         {{ if .CustomCABundle }}
         - name: ca-bundle
           configMap:
             name: {{ .CustomCABundle.ConfigMapName }}
         {{ end }}
-        {{ if .APIServer.EnableSamplePipeline }}
         - name: sample-config
           configMap:
             name: sample-config-{{.Name}}
         - name: sample-pipeline
           configMap:
             name: sample-pipeline-{{.Name}}
-        {{ end }}

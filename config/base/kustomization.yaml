@@ -102,6 +102,27 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.IMAGES_ARGO_WORKFLOWCONTROLLER
+  - name: IMAGES_PIPELINESRUNTIMEGENERIC
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGES_PIPELINESRUNTIMEGENERIC
+  - name: IMAGES_TOOLBOX
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGES_TOOLBOX
+  - name: IMAGES_RHELAI
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGES_RHELAI
 
   # DSPO level configs
   - name: ZAP_LOG_LEVEL
@@ -146,5 +167,19 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.DSPO_APISERVER_INCLUDE_OWNERREFERENCE
+  - name: MANAGEDPIPELINES
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.MANAGEDPIPELINES
+  - name: PLATFORMVERSION
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.PLATFORMVERSION
 configurations:
   - params.yaml

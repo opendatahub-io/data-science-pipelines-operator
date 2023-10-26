@@ -168,18 +168,37 @@ func deploymentsAreEqual(expected, actual *unstructured.Unstructured) (bool, err
 		return false, notDeeplyEqualMsg("Volumes", diff)
 	}
 
-	if len(expectedDep.Spec.Template.Spec.Containers) != len(actualDep.Spec.Template.Spec.Containers) {
+	_, err = compareContainers(expectedDep.Spec.Template.Spec.InitContainers, actualDep.Spec.Template.Spec.InitContainers)
+	if err != nil {
+		return false, err
+	}
+
+	_, err = compareContainers(expectedDep.Spec.Template.Spec.Containers, actualDep.Spec.Template.Spec.Containers)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func compareContainers(expectedContainers []v1.Container, actualContainers []v1.Container) (bool, error) {
+
+	if len(expectedContainers) != len(actualContainers) {
 		return false, notEqualMsg("Container lengths")
 	}
-	for i := range expectedDep.Spec.Template.Spec.Containers {
-		expectedContainer := expectedDep.Spec.Template.Spec.Containers[i]
-		actualContainer := actualDep.Spec.Template.Spec.Containers[i]
+
+	for i := range expectedContainers {
+
+		expectedContainer := expectedContainers[i]
+		actualContainer := actualContainers[i]
 
 		diffEnvsMsg := compareEnvs(expectedContainer.Env, actualContainer.Env)
-
 		if len(expectedContainer.Env) != len(actualContainer.Env) {
 			return false, notEqualMsg(fmt.Sprintf("Container Env Lengths [expected: %d, actual: %d]\nDivergence(s): %s", len(expectedContainer.Env), len(actualContainer.Env), diffEnvsMsg))
 		}
+
+		var diff []string
+
 		// Check each env individually for a more meaningful response upon failure.
 		for i, expectedEnv := range expectedContainer.Env {
 			actualEnv := actualContainer.Env[i]

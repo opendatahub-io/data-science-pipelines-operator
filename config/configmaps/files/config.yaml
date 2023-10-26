@@ -10,6 +10,20 @@ Images:
   DriverImage: $(IMAGES_DRIVER)
   OAuthProxy: $(IMAGES_OAUTHPROXY)
   MariaDB: $(IMAGES_MARIADB)
+  RuntimeGeneric: $(IMAGES_PIPELINESRUNTIMEGENERIC)
+  Toolbox: $(IMAGES_TOOLBOX)
+  RHELAI: $(IMAGES_RHELAI)
+ManagedPipelinesMetadata:
+  Instructlab:
+    Name: Instructlab
+    Description: InstructLab fine-tunes models using synthetic data generation (SDG) techniques and a structured taxonomy to create diverse, high-quality training datasets.
+    Filepath: /pipelines/instructlab.yaml
+    VersionName: Instructlab
+  Iris:
+    Name: "[Demo] iris-training"
+    Description: "[source code](https://github.com/opendatahub-io/data-science-pipelines/tree/master/samples/iris-sklearn) A simple pipeline to demonstrate a basic ML Training workflow"
+    Filepath: /samples/iris-pipeline-compiled.yaml
+    VersionName: "[Demo] iris-training"
 DSPO:
   HealthCheck:
     Database:
@@ -17,3 +31,4 @@ DSPO:
     ObjectStore:
       ConnectionTimeout: $(DSPO_HEALTHCHECK_OBJECTSTORE_CONNECTIONTIMEOUT)
   RequeueTime: $(DSPO_REQUEUE_TIME)
+  PlatformVersion: $(PLATFORMVERSION)
