@@ -4,7 +4,7 @@ metadata:
     name: sample-pipeline-{{.Name}}
     namespace: {{.Namespace}}
     labels:
-        app: ds-pipeline-{{.Name}}
+        app: {{.APIServerDefaultResourceName}}
         component: data-science-pipelines
 data:
     iris-pipeline-compiled.yaml: |-

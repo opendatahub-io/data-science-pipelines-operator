@@ -20,6 +20,8 @@ import (
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 )
 
+const scheduledWorkflowDefaultResourceNamePrefix = "ds-pipeline-scheduledworkflow-"
+
 var scheduledWorkflowTemplates = []string{
 	"scheduled-workflow/deployment.yaml.tmpl",
 	"scheduled-workflow/role.yaml.tmpl",
