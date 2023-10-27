@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{.ScheduledWorkflowDeploymentName}}
+  name: {{.ScheduledWorkflowDefaultResourceName}}
   namespace: {{.Namespace}}
   labels:
-    app: {{.ScheduledWorkflowDeploymentName}}
+    app: {{.ScheduledWorkflowDefaultResourceName}}
     component: data-science-pipelines
     dspa: {{.Name}}
 spec:
   selector:
     matchLabels:
-      app: {{.ScheduledWorkflowDeploymentName}}
+      app: {{.ScheduledWorkflowDefaultResourceName}}
       component: data-science-pipelines
       dspa: {{.Name}}
   template:
@@ -18,7 +18,7 @@ spec:
       annotations:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
       labels:
-        app: {{.ScheduledWorkflowDeploymentName}}
+        app: {{.ScheduledWorkflowDefaultResourceName}}
         component: data-science-pipelines
         dspa: {{.Name}}
     spec:
@@ -70,4 +70,4 @@ spec:
               memory: {{.ScheduledWorkflow.Resources.Limits.Memory}}
               {{ end }}
             {{ end }}
-      serviceAccountName: {{.ScheduledWorkflowDeploymentName}}
+      serviceAccountName: {{.ScheduledWorkflowDefaultResourceName}}

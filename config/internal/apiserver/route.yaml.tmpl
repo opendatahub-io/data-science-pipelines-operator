@@ -1,17 +1,17 @@
 kind: Route
 apiVersion: route.openshift.io/v1
 metadata:
-  name: ds-pipeline-{{.Name}}
+  name: {{.APIServerDefaultResourceName}}
   namespace: {{.Namespace}}
   labels:
-    app: ds-pipeline-{{.Name}}
+    app: {{.APIServerDefaultResourceName}}
     component: data-science-pipelines
   annotations:
     kubernetes.io/tls-acme: "true"
 spec:
   to:
     kind: Service
-    name: ds-pipeline-{{.Name}}
+    name: {{.APIServerDefaultResourceName}}
     weight: 100
   port:
     targetPort: oauth

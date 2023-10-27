@@ -4,7 +4,7 @@ metadata:
     name: sample-config-{{.Name}}
     namespace: {{.Namespace}}
     labels:
-        app: ds-pipeline-{{.Name}}
+        app: {{.APIServerDefaultResourceName}}
         component: data-science-pipelines
 data:
     sample_config.json: |-

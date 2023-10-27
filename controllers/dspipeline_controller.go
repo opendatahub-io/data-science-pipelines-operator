@@ -431,19 +431,19 @@ func (r *DSPAReconciler) GenerateStatus(ctx context.Context, dspa *dspav1alpha1.
 	}
 
 	// Create APIServer Readiness Condition
-	apiServerReady, err := r.handleReadyCondition(ctx, dspa, params.APIServerDeploymentName, config.APIServerReady)
+	apiServerReady, err := r.handleReadyCondition(ctx, dspa, params.APIServerDefaultResourceName, config.APIServerReady)
 	if err != nil {
 		return []metav1.Condition{}, err
 	}
 
 	// Create PersistenceAgent Readiness Condition
-	persistenceAgentReady, err := r.handleReadyCondition(ctx, dspa, params.PersistentAgentDeploymentName, config.PersistenceAgentReady)
+	persistenceAgentReady, err := r.handleReadyCondition(ctx, dspa, params.PersistentAgentDefaultResourceName, config.PersistenceAgentReady)
 	if err != nil {
 		return []metav1.Condition{}, err
 	}
 
 	// Create ScheduledWorkflow Readiness Condition
-	scheduledWorkflowReady, err := r.handleReadyCondition(ctx, dspa, params.ScheduledWorkflowDeploymentName, config.ScheduledWorkflowReady)
+	scheduledWorkflowReady, err := r.handleReadyCondition(ctx, dspa, params.ScheduledWorkflowDefaultResourceName, config.ScheduledWorkflowReady)
 	if err != nil {
 		return []metav1.Condition{}, err
 	}

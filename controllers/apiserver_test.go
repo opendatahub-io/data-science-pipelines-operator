@@ -29,7 +29,7 @@ import (
 func TestDeployAPIServer(t *testing.T) {
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
-	expectedAPIServerName := "ds-pipeline-testdspa"
+	expectedAPIServerName := apiServerDefaultResourceNamePrefix + testDSPAName
 
 	// Construct DSPASpec with deployed APIServer
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
@@ -79,7 +79,7 @@ func TestDeployAPIServer(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Ensure readiness is handled
-	apiServerReady, err := reconciler.handleReadyCondition(ctx, dspa, params.APIServerDeploymentName, config.APIServerReady)
+	apiServerReady, err := reconciler.handleReadyCondition(ctx, dspa, params.APIServerDefaultResourceName, config.APIServerReady)
 	assert.Equal(t, "Deploying", apiServerReady.Reason)
 	assert.Nil(t, err)
 }
@@ -87,7 +87,7 @@ func TestDeployAPIServer(t *testing.T) {
 func TestDontDeployAPIServer(t *testing.T) {
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
-	expectedAPIServerName := "ds-pipeline-testdspa"
+	expectedAPIServerName := apiServerDefaultResourceNamePrefix + testDSPAName
 
 	// Construct DSPASpec with non-deployed APIServer
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{

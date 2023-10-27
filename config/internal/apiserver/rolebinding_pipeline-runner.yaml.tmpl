@@ -4,7 +4,7 @@ metadata:
   name: pipeline-runner-{{.Name}}
   namespace: {{.Namespace}}
   labels:
-    app: ds-pipeline-{{.Name}}
+    app: {{.APIServerDefaultResourceName}}
     component: data-science-pipelines
 roleRef:
   apiGroup: rbac.authorization.k8s.io

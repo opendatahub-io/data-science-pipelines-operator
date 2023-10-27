@@ -24,6 +24,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+const apiServerDefaultResourceNamePrefix = "ds-pipeline-"
+
 var apiServerTemplates = []string{
 	"apiserver/artifact_script.yaml.tmpl",
 	"apiserver/role_ds-pipeline.yaml.tmpl",

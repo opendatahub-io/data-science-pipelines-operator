@@ -36,21 +36,21 @@ import (
 )
 
 type DSPAParams struct {
-	Name                            string
-	Namespace                       string
-	Owner                           mf.Owner
-	APIServer                       *dspa.APIServer
-	APIServerDeploymentName         string
-	APIServerServiceName            string
-	OAuthProxy                      string
-	ScheduledWorkflow               *dspa.ScheduledWorkflow
-	ScheduledWorkflowDeploymentName string
-	PersistenceAgent                *dspa.PersistenceAgent
-	PersistentAgentDeploymentName   string
-	MlPipelineUI                    *dspa.MlPipelineUI
-	MariaDB                         *dspa.MariaDB
-	Minio                           *dspa.Minio
-	MLMD                            *dspa.MLMD
+	Name                                 string
+	Namespace                            string
+	Owner                                mf.Owner
+	APIServer                            *dspa.APIServer
+	APIServerDefaultResourceName         string
+	APIServerServiceName                 string
+	OAuthProxy                           string
+	ScheduledWorkflow                    *dspa.ScheduledWorkflow
+	ScheduledWorkflowDefaultResourceName string
+	PersistenceAgent                     *dspa.PersistenceAgent
+	PersistentAgentDefaultResourceName   string
+	MlPipelineUI                         *dspa.MlPipelineUI
+	MariaDB                              *dspa.MariaDB
+	Minio                                *dspa.Minio
+	MLMD                                 *dspa.MLMD
 	DBConnection
 	ObjectStorageConnection
 }
@@ -430,12 +430,12 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.Namespace = dsp.Namespace
 	p.Owner = dsp
 	p.APIServer = dsp.Spec.APIServer.DeepCopy()
-	p.APIServerDeploymentName = "ds-pipeline-" + dsp.Name
+	p.APIServerDefaultResourceName = apiServerDefaultResourceNamePrefix + dsp.Name
 	p.APIServerServiceName = fmt.Sprintf("%s-%s", config.DSPServicePrefix, p.Name)
 	p.ScheduledWorkflow = dsp.Spec.ScheduledWorkflow.DeepCopy()
-	p.ScheduledWorkflowDeploymentName = "ds-pipeline-scheduledworkflow-" + dsp.Name
+	p.ScheduledWorkflowDefaultResourceName = scheduledWorkflowDefaultResourceNamePrefix + dsp.Name
 	p.PersistenceAgent = dsp.Spec.PersistenceAgent.DeepCopy()
-	p.PersistentAgentDeploymentName = "ds-pipeline-persistenceagent-" + dsp.Name
+	p.PersistentAgentDefaultResourceName = persistenceAgentDefaultResourceNamePrefix + dsp.Name
 	p.MlPipelineUI = dsp.Spec.MlPipelineUI.DeepCopy()
 	p.MariaDB = dsp.Spec.Database.MariaDB.DeepCopy()
 	p.Minio = dsp.Spec.ObjectStorage.Minio.DeepCopy()

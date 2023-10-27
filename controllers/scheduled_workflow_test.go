@@ -29,7 +29,7 @@ import (
 func TestDeployScheduledWorkflow(t *testing.T) {
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
-	expectedScheduledWorkflowName := "ds-pipeline-scheduledworkflow-testdspa"
+	expectedScheduledWorkflowName := scheduledWorkflowDefaultResourceNamePrefix + testDSPAName
 
 	// Construct DSPASpec with deployed ScheduledWorkflow
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
@@ -79,7 +79,7 @@ func TestDeployScheduledWorkflow(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Ensure readiness is handled
-	scheduledWorkflowReady, err := reconciler.handleReadyCondition(ctx, dspa, params.ScheduledWorkflowDeploymentName, config.ScheduledWorkflowReady)
+	scheduledWorkflowReady, err := reconciler.handleReadyCondition(ctx, dspa, params.ScheduledWorkflowDefaultResourceName, config.ScheduledWorkflowReady)
 	assert.Equal(t, "Deploying", scheduledWorkflowReady.Reason)
 	assert.Nil(t, err)
 }
@@ -87,7 +87,7 @@ func TestDeployScheduledWorkflow(t *testing.T) {
 func TestDontDeployScheduledWorkflow(t *testing.T) {
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
-	expectedScheduledWorkflowName := "ds-pipeline-scheduledworkflow-testdspa"
+	expectedScheduledWorkflowName := scheduledWorkflowDefaultResourceNamePrefix + testDSPAName
 
 	// Construct DSPASpec with non-deployed ScheduledWorkflow
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{

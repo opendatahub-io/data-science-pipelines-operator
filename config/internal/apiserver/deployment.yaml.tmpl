@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{.APIServerDeploymentName}}
+  name: {{.APIServerDefaultResourceName}}
   namespace: {{.Namespace}}
   labels:
-    app: {{.APIServerDeploymentName}}
+    app: {{.APIServerDefaultResourceName}}
     component: data-science-pipelines
     dspa: {{.Name}}
 spec:
   selector:
     matchLabels:
-      app: {{.APIServerDeploymentName}}
+      app: {{.APIServerDefaultResourceName}}
       component: data-science-pipelines
       dspa: {{.Name}}
   template:
     metadata:
       labels:
-        app: {{.APIServerDeploymentName}}
+        app: {{.APIServerDefaultResourceName}}
         component: data-science-pipelines
         dspa: {{.Name}}
     spec:
@@ -158,13 +158,13 @@ spec:
           args:
             - --https-address=:8443
             - --provider=openshift
-            - --openshift-service-account={{.APIServerDeploymentName}}
+            - --openshift-service-account={{.APIServerDefaultResourceName}}
             - --upstream=http://localhost:8888
             - --tls-cert=/etc/tls/private/tls.crt
             - --tls-key=/etc/tls/private/tls.key
             - --cookie-secret=SECRET
-            - '--openshift-delegate-urls={"/": {"group":"route.openshift.io","resource":"routes","verb":"get","name":"{{.APIServerDeploymentName}}","namespace":"{{.Namespace}}"}}'
-            - '--openshift-sar={"namespace":"{{.Namespace}}","resource":"routes","resourceName":"{{.APIServerDeploymentName}}","verb":"get","resourceAPIGroup":"route.openshift.io"}'
+            - '--openshift-delegate-urls={"/": {"group":"route.openshift.io","resource":"routes","verb":"get","name":"{{.APIServerDefaultResourceName}}","namespace":"{{.Namespace}}"}}'
+            - '--openshift-sar={"namespace":"{{.Namespace}}","resource":"routes","resourceName":"{{.APIServerDefaultResourceName}}","verb":"get","resourceAPIGroup":"route.openshift.io"}'
             - --skip-auth-regex='(^/metrics|^/apis/v1beta1/healthz)'
           image: {{.OAuthProxy}}
           ports:
@@ -201,7 +201,7 @@ spec:
             - mountPath: /etc/tls/private
               name: proxy-tls
         {{ end }}
-      serviceAccountName: {{.APIServerDeploymentName}}
+      serviceAccountName: {{.APIServerDefaultResourceName}}
       volumes:
         - name: proxy-tls
           secret:

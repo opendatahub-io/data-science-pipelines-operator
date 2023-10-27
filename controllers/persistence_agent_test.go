@@ -29,7 +29,7 @@ import (
 func TestDeployPersistenceAgent(t *testing.T) {
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
-	expectedPersistenceAgentName := "ds-pipeline-persistenceagent-testdspa"
+	expectedPersistenceAgentName := persistenceAgentDefaultResourceNamePrefix + testDSPAName
 
 	// Construct DSPASpec with deployed PersistenceAgent
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
@@ -79,7 +79,7 @@ func TestDeployPersistenceAgent(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Ensure readiness is handled
-	persistenceAgentReady, err := reconciler.handleReadyCondition(ctx, dspa, params.PersistentAgentDeploymentName, config.PersistenceAgentReady)
+	persistenceAgentReady, err := reconciler.handleReadyCondition(ctx, dspa, params.PersistentAgentDefaultResourceName, config.PersistenceAgentReady)
 	assert.Equal(t, "Deploying", persistenceAgentReady.Reason)
 	assert.Nil(t, err)
 }
@@ -87,7 +87,7 @@ func TestDeployPersistenceAgent(t *testing.T) {
 func TestDontDeployPersistenceAgent(t *testing.T) {
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
-	expectedPersistenceAgentName := "ds-pipeline-persistenceagent-testdspa"
+	expectedPersistenceAgentName := persistenceAgentDefaultResourceNamePrefix + testDSPAName
 
 	// Construct DSPASpec with non-deployed PersistenceAgent
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{

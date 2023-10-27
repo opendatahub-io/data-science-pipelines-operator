@@ -20,6 +20,8 @@ import (
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 )
 
+const persistenceAgentDefaultResourceNamePrefix = "ds-pipeline-persistenceagent-"
+
 var persistenceAgentTemplates = []string{
 	"persistence-agent/deployment.yaml.tmpl",
 	"persistence-agent/sa.yaml.tmpl",
