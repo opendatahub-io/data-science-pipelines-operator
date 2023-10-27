@@ -26,15 +26,18 @@ func (r *DSPAReconciler) ReconcileMLMD(dsp *dspav1alpha1.DataSciencePipelinesApp
 
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
 
-	if params.UsingMLMD(dsp) {
-		log.Info("Applying ML-Metadata (MLMD) Resources")
-
-		err := r.ApplyDir(dsp, params, mlmdTemplatesDir)
-		if err != nil {
-			return err
-		}
-
-		log.Info("Finished applying MLMD Resources")
+	if !dsp.Spec.MLMD.Deploy {
+		r.Log.Info("Skipping Application of ML-Metadata (MLMD) Resources")
+		return nil
 	}
+
+	log.Info("Applying ML-Metadata (MLMD) Resources")
+
+	err := r.ApplyDir(dsp, params, mlmdTemplatesDir)
+	if err != nil {
+		return err
+	}
+
+	log.Info("Finished applying MLMD Resources")
 	return nil
 }

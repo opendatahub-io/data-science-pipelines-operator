@@ -96,6 +96,14 @@ spec:
               value: "ubi-minimal:test2"
             - name: MOVERESULTS_IMAGE
               value: "busybox:test2"
+            - name: METADATA_GRPC_SERVICE_SERVICE_HOST
+              value: "ds-pipeline-metadata-grpc-testdsp2.default.svc.cluster.local"
+            - name: METADATA_GRPC_SERVICE_SERVICE_PORT
+              value: "8080"
+            - name: ML_PIPELINE_SERVICE_HOST
+              value: ds-pipeline-testdsp2.default.svc.cluster.local
+            - name: ML_PIPELINE_SERVICE_PORT_GRPC
+              value: "8887"
           image: api-server:test2
           imagePullPolicy: Always
           name: ds-pipeline-api-server

@@ -50,7 +50,7 @@ spec:
           value: tektonpipelineloop-webhook-certs
         - name: METRICS_DOMAIN
           value: tekton.dev/pipeline
-        image: quay.io/internaldatahub/tektonpipelineloop-webhook:2.0.0
+        image: quay.io/internaldatahub/tekton-pipelineloop-webhook:2.0.0
         name: webhook
         ports:
         - containerPort: 9090

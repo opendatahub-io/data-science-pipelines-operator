@@ -42,6 +42,18 @@ spec:
           value: config-observability
         - name: METRICS_DOMAIN
           value: tekton.dev/pipeline
+        - name: ML_PIPELINE_SERVICE_HOST
+          value: ds-pipeline-sample.data-science-pipelines-application-v2.svc.cluster.local
+        - name: ML_PIPELINE_SERVICE_PORT_GRPC
+          value: '8887'
+        - name: MINIO_SERVICE_SERVICE_HOST
+          value: minio-sample.data-science-pipelines-application-v2.svc.cluster.local
+        - name: MINIO_SERVICE_SERVICE_PORT
+          value: '9000'
+        - name: METADATA_GRPC_SERVICE_SERVICE_HOST
+          value: ds-pipeline-metadata-grpc-sample.data-science-pipelines-application-v2.svc.cluster.local
+        - name: METADATA_GRPC_SERVICE_SERVICE_PORT
+          value: '8080'
         image: quay.io/internaldatahub/tekton-driver:2.0.0
         imagePullPolicy: Always
         name: driver
