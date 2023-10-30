@@ -39,8 +39,9 @@ type DSPAParams struct {
 	Name                                 string
 	Namespace                            string
 	Owner                                mf.Owner
+	DSPVersion                           string
 	APIServer                            *dspa.APIServer
-	APIServerServiceName string
+	APIServerServiceName                 string
 	APIServerPiplinesCABundleMountPath   string
 	PiplinesCABundleMountPath            string
 	APIServerDefaultResourceName         string
@@ -55,8 +56,8 @@ type DSPAParams struct {
 	MariaDB                              *dspa.MariaDB
 	Minio                                *dspa.Minio
 	MLMD                                 *dspa.MLMD
-	CRDViewer            *dspa.CRDViewer
-	VisualizationServer  *dspa.VisualizationServer
+	CRDViewer                            *dspa.CRDViewer
+	VisualizationServer                  *dspa.VisualizationServer
 	DBConnection
 	ObjectStorageConnection
 }
@@ -419,6 +420,7 @@ func setResourcesDefault(defaultValue dspa.ResourceRequirements, value **dspa.Re
 func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, log logr.Logger) error {
 	p.Name = dsp.Name
 	p.Namespace = dsp.Namespace
+	p.DSPVersion = dsp.Spec.DSPVersion
 	p.Owner = dsp
 	p.APIServer = dsp.Spec.APIServer.DeepCopy()
 	p.APIServerDefaultResourceName = apiServerDefaultResourceNamePrefix + dsp.Name

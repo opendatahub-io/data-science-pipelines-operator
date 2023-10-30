@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # When a minimal DSPA is deployed
+=======
+# When a complete DSPA is deployed with (defaults specified)
+>>>>>>> 01cd52d (Replace sample iris-dataset pipeline with a v2 one)
 Images:
   ApiServer: api-server:test6
   Artifact: artifact-manager:test6
@@ -6,7 +10,11 @@ Images:
   ScheduledWorkflow: scheduledworkflow:test6
   Cache: ubi-minimal:test6
   MoveResultsImage: busybox:test6
+<<<<<<< HEAD
   MlPipelineUI: frontend:test6
   MariaDB: mariadb:test6
   Minio: minio:test6
+=======
+  MariaDB: mariadb:test6
+>>>>>>> 01cd52d (Replace sample iris-dataset pipeline with a v2 one)
   OAuthProxy: oauth-proxy:test6
