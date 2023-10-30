@@ -58,3 +58,13 @@
   ubi-minimal: 8.8
   ubi-micro: 8.8
   openshift: 4.11,4.12,4.13
+- dsp: 1.6.x
+  kfp-tekton: 1.5.1
+  ml-metadata: 1.5.0
+  envoy: 1.8.4
+  ocp-pipelines: 1.8
+  oauth-proxy: v4.10
+  mariadb-103: 1
+  ubi-minimal: 8.8
+  ubi-micro: 8.8
+  openshift: 4.11,4.12,4.13
