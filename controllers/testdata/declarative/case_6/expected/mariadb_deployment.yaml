@@ -1,0 +1,79 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mariadb-testdsp6
+  namespace: default
+  labels:
+    app: mariadb-testdsp6
+    component: data-science-pipelines
+    dspa: testdsp6
+spec:
+  strategy:
+    type: Recreate  # Need this since backing PVC is ReadWriteOnce, which creates resource lock condition in default Rolling strategy
+  selector:
+    matchLabels:
+      app: mariadb-testdsp6
+      component: data-science-pipelines
+      dspa: testdsp6
+  template:
+    metadata:
+      labels:
+        app: mariadb-testdsp6
+        component: data-science-pipelines
+        dspa: testdsp6
+    spec:
+      containers:
+        - name: mariadb
+          image: mariadb:test2
+          ports:
+            - containerPort: 3306
+              protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - "-i"
+                - "-c"
+                - >-
+                  MYSQL_PWD=$MYSQL_PASSWORD mysql -h 127.0.0.1 -u $MYSQL_USER -D
+                  $MYSQL_DATABASE -e 'SELECT 1'
+            failureThreshold: 3
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 3306
+            timeoutSeconds: 1
+          env:
+            - name: MYSQL_USER
+              value: "testuser"
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: "password"
+                  name: "ds-pipeline-db-testdsp6"
+            - name: MYSQL_DATABASE
+              value: "randomDBName"
+            - name: MYSQL_ALLOW_EMPTY_PASSWORD
+              value: "true"
+          resources:
+            requests:
+              cpu: 1212m
+              memory: 1Gi
+            limits:
+              cpu: 2554m
+              memory: 5Gi
+          volumeMounts:
+            - name: mariadb-persistent-storage
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: mariadb-persistent-storage
+          persistentVolumeClaim:
+            claimName: mariadb-testdsp6
