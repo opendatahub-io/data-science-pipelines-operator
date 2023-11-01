@@ -87,6 +87,14 @@ func (p *DSPAParams) UsingV2Pipelines(dsp *dspa.DataSciencePipelinesApplication)
 	return dsp.Spec.DSPVersion == "v2"
 }
 
+func (p *DSPAParams) UsingArgoEngineDriver(dsp *dspa.DataSciencePipelinesApplication) bool {
+	return dsp.Spec.EngineDriver == "argo"
+}
+
+func (p *DSPAParams) UsingTektonEngineDriver(dsp *dspa.DataSciencePipelinesApplication) bool {
+	return dsp.Spec.DSPVersion == "tekton"
+}
+
 // UsingExternalDB will return true if an external Database is specified in the CR, otherwise false.
 func (p *DSPAParams) UsingExternalDB(dsp *dspa.DataSciencePipelinesApplication) bool {
 	if dsp.Spec.Database != nil && dsp.Spec.Database.ExternalDB != nil {
@@ -368,9 +376,17 @@ func (p *DSPAParams) SetupMLMD(ctx context.Context, dsp *dspa.DataSciencePipelin
 		MlmdGRPCImagePath := config.MlmdGRPCImagePath
 		MlmdWriterImagePath := config.MlmdWriterImagePath
 		if p.UsingV2Pipelines(dsp) {
-			MlmdEnvoyImagePath = config.MlmdEnvoyImagePathV2Tekton
-			MlmdGRPCImagePath = config.MlmdGRPCImagePathV2Tekton
-			MlmdWriterImagePath = config.MlmdWriterImagePathV2Tekton
+			if p.UsingArgoEngineDriver(dsp) {
+				MlmdEnvoyImagePath = config.MlmdEnvoyImagePathV2Argo
+				MlmdGRPCImagePath = config.MlmdGRPCImagePathV2Argo
+				MlmdWriterImagePath = config.MlmdWriterImagePathV2Argo
+			} else if p.UsingTektonEngineDriver(dsp) {
+				MlmdEnvoyImagePath = config.MlmdEnvoyImagePathV2Tekton
+				MlmdGRPCImagePath = config.MlmdGRPCImagePathV2Tekton
+				MlmdWriterImagePath = config.MlmdWriterImagePathV2Tekton
+			} else {
+				return fmt.Errorf(fmt.Sprintf("Illegal Engine Driver (%s) specified, cannot continue.", dsp.Spec.EngineDriver))
+			}
 		}
 		if p.MLMD.Envoy == nil {
 			p.MLMD.Envoy = &dspa.Envoy{
@@ -438,6 +454,11 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.PiplinesCABundleMountPath = config.PiplinesCABundleMountPath
 
 	pipelinesV2Images := p.UsingV2Pipelines(dsp)
+	usingArgoEngine := p.UsingArgoEngineDriver(dsp)
+	usingTektonEngine := p.UsingTektonEngineDriver(dsp)
+	// if !usingArgoEngine && !usingTektonEngine {
+	// 	return fmt.Errorf(fmt.Sprintf("Illegal Engine Driver (%s) specified, cannot continue.", dsp.Spec.EngineDriver))
+	// }
 
 	if p.APIServer != nil {
 		APIServerImagePath := config.APIServerImagePath
@@ -445,10 +466,17 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		APIServerCacheImagePath := config.APIServerCacheImagePath
 		APIServerMoveResultsImagePath := config.APIServerMoveResultsImagePath
 		if pipelinesV2Images {
-			APIServerImagePath = config.APIServerImagePathV2Tekton
-			APIServerArtifactImagePath = config.APIServerArtifactImagePathV2Tekton
-			APIServerCacheImagePath = config.APIServerCacheImagePathV2Tekton
-			APIServerMoveResultsImagePath = config.APIServerMoveResultsImagePathV2Tekton
+			if usingArgoEngine {
+				APIServerImagePath = config.APIServerImagePathV2Argo
+				APIServerArtifactImagePath = config.APIServerArtifactImagePathV2Argo
+				APIServerCacheImagePath = config.APIServerCacheImagePathV2Argo
+				APIServerMoveResultsImagePath = config.APIServerMoveResultsImagePathV2Argo
+			} else if usingTektonEngine {
+				APIServerImagePath = config.APIServerImagePathV2Tekton
+				APIServerArtifactImagePath = config.APIServerArtifactImagePathV2Tekton
+				APIServerCacheImagePath = config.APIServerCacheImagePathV2Tekton
+				APIServerMoveResultsImagePath = config.APIServerMoveResultsImagePathV2Tekton
+			}
 		}
 
 		serverImageFromConfig := config.GetStringConfigWithDefault(APIServerImagePath, config.DefaultImageValue)
@@ -486,7 +514,11 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	if p.PersistenceAgent != nil {
 		PersistenceAgentImagePath := config.PersistenceAgentImagePath
 		if pipelinesV2Images {
-			PersistenceAgentImagePath = config.PersistenceAgentImagePathV2Tekton
+			if usingArgoEngine {
+				PersistenceAgentImagePath = config.PersistenceAgentImagePathV2Argo
+			} else if usingTektonEngine {
+				PersistenceAgentImagePath = config.PersistenceAgentImagePathV2Tekton
+			}
 		}
 		persistenceAgentImageFromConfig := config.GetStringConfigWithDefault(PersistenceAgentImagePath, config.DefaultImageValue)
 		setStringDefault(persistenceAgentImageFromConfig, &p.PersistenceAgent.Image)
@@ -495,7 +527,12 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	if p.ScheduledWorkflow != nil {
 		ScheduledWorkflowImagePath := config.ScheduledWorkflowImagePath
 		if pipelinesV2Images {
-			ScheduledWorkflowImagePath = config.ScheduledWorkflowImagePathV2Tekton
+			if usingArgoEngine {
+				ScheduledWorkflowImagePath = config.ScheduledWorkflowImagePathV2Argo
+
+			} else if usingTektonEngine {
+				ScheduledWorkflowImagePath = config.ScheduledWorkflowImagePathV2Tekton
+			}
 		}
 		scheduledWorkflowImageFromConfig := config.GetStringConfigWithDefault(ScheduledWorkflowImagePath, config.DefaultImageValue)
 		setStringDefault(scheduledWorkflowImageFromConfig, &p.ScheduledWorkflow.Image)
