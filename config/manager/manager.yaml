@@ -62,26 +62,50 @@ spec:
             value: $(IMAGES_CRDVIEWER)
           - name: IMAGES_VISUALIZATIONSERVER
             value: $(IMAGES_VISUALIZATIONSERVER)
-          - name: IMAGESV2_APISERVER
-            value: $(IMAGESV2_APISERVER)
-          - name: IMAGESV2_ARTIFACT
-            value: $(IMAGESV2_ARTIFACT)
-          - name: IMAGESV2_PERSISTENTAGENT
-            value: $(IMAGESV2_PERSISTENTAGENT)
-          - name: IMAGESV2_SCHEDULEDWORKFLOW
-            value: $(IMAGESV2_SCHEDULEDWORKFLOW)
-          - name: IMAGESV2_CACHE
-            value: $(IMAGESV2_CACHE)
-          - name: IMAGESV2_MOVERESULTSIMAGE
-            value: $(IMAGESV2_MOVERESULTSIMAGE)
-          - name: IMAGESV2_MLMDENVOY
-            value: $(IMAGESV2_MLMDENVOY)
-          - name: IMAGESV2_MLMDGRPC
-            value: $(IMAGESV2_MLMDGRPC)
-          - name: IMAGESV2_MLMDWRITER
-            value: $(IMAGESV2_MLMDWRITER)
-          - name: IMAGESV2_WORKFLOWCONTROLLER
-            value: $(IMAGESV2_WORKFLOWCONTROLLER)
+          - name: IMAGESV2_ARGO_APISERVER
+            value: $(IMAGESV2_ARGO_APISERVER)
+          - name: IMAGESV2_ARGO_ARTIFACT
+            value: $(IMAGESV2_ARGO_ARTIFACT)
+          - name: IMAGESV2_ARGO_PERSISTENTAGENT
+            value: $(IMAGESV2_ARGO_PERSISTENTAGENT)
+          - name: IMAGESV2_ARGO_SCHEDULEDWORKFLOW
+            value: $(IMAGESV2_ARGO_SCHEDULEDWORKFLOW)
+          - name: IMAGESV2_ARGO_CACHE
+            value: $(IMAGESV2_ARGO_CACHE)
+          - name: IMAGESV2_ARGO_MOVERESULTSIMAGE
+            value: $(IMAGESV2_ARGO_MOVERESULTSIMAGE)
+          - name: IMAGESV2_ARGO_MLMDENVOY
+            value: $(IMAGESV2_ARGO_MLMDENVOY)
+          - name: IMAGESV2_ARGO_MLMDGRPC
+            value: $(IMAGESV2_ARGO_MLMDGRPC)
+          - name: IMAGESV2_ARGO_MLMDWRITER
+            value: $(IMAGESV2_ARGO_MLMDWRITER)
+          - name: IMAGESV2_ARGO_VISUALIZATIONSERVER
+            value: $(IMAGESV2_ARGO_VISUALIZATIONSERVER)
+          - name: IMAGESV2_ARGO_WORKFLOWCONTROLLER
+            value: $(IMAGESV2_ARGO_WORKFLOWCONTROLLER)
+          - name: IMAGESV2_TEKTON_APISERVER
+            value: $(IMAGESV2_TEKTON_APISERVER)
+          - name: IMAGESV2_TEKTON_ARTIFACT
+            value: $(IMAGESV2_TEKTON_ARTIFACT)
+          - name: IMAGESV2_TEKTON_PERSISTENTAGENT
+            value: $(IMAGESV2_TEKTON_PERSISTENTAGENT)
+          - name: IMAGESV2_TEKTON_SCHEDULEDWORKFLOW
+            value: $(IMAGESV2_TEKTON_SCHEDULEDWORKFLOW)
+          - name: IMAGESV2_TEKTON_CACHE
+            value: $(IMAGESV2_TEKTON_CACHE)
+          - name: IMAGESV2_TEKTON_MOVERESULTSIMAGE
+            value: $(IMAGESV2_TEKTON_MOVERESULTSIMAGE)
+          - name: IMAGESV2_TEKTON_MLMDENVOY
+            value: $(IMAGESV2_TEKTON_MLMDENVOY)
+          - name: IMAGESV2_TEKTON_MLMDGRPC
+            value: $(IMAGESV2_TEKTON_MLMDGRPC)
+          - name: IMAGESV2_TEKTON_MLMDWRITER
+            value: $(IMAGESV2_TEKTON_MLMDWRITER)
+          - name: IMAGESV2_TEKTON_VISUALIZATIONSERVER
+            value: $(IMAGESV2_TEKTON_VISUALIZATIONSERVER)
+          - name: IMAGESV2_TEKTON_WORKFLOWCONTROLLER
+            value: $(IMAGESV2_TEKTON_WORKFLOWCONTROLLER)
           - name: ZAP_LOG_LEVEL
             value: $(ZAP_LOG_LEVEL)
           - name: MAX_CONCURRENT_RECONCILES

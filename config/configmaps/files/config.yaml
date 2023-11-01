@@ -13,16 +13,32 @@ Images:
   CRDViewer: $(IMAGES_CRDVIEWER)
   VisualizationServer: $(IMAGES_VISUALIZATIONSERVER)
 ImagesV2:
-  ApiServer: $(IMAGESV2_APISERVER)
-  Artifact: $(IMAGESV2_ARTIFACT)
-  Cache: $(IMAGESV2_CACHE)
-  MoveResultsImage: $(IMAGESV2_MOVERESULTSIMAGE)
-  PersistentAgent: $(IMAGESV2_PERSISTENTAGENT)
-  ScheduledWorkflow: $(IMAGESV2_SCHEDULEDWORKFLOW)
-  MlmdEnvoy: $(IMAGESV2_MLMDENVOY)
-  MlmdGRPC: $(IMAGESV2_MLMDGRPC)
-  MlmdWriter: $(IMAGESV2_MLMDWRITER)
-  WorkflowController: $(IMAGESV2_WORKFLOWCONTROLLER)
+  Argo:
+    ApiServer: $(IMAGESV2_ARGO_APISERVER)
+    Artifact: $(IMAGESV2_ARGO_ARTIFACT)
+    Cache: $(IMAGESV2_ARGO_CACHE)
+    MoveResultsImage: $(IMAGESV2_ARGO_MOVERESULTSIMAGE)
+    PersistentAgent: $(IMAGESV2_ARGO_PERSISTENTAGENT)
+    ScheduledWorkflow: $(IMAGESV2_ARGO_SCHEDULEDWORKFLOW)
+    MlmdEnvoy: $(IMAGESV2_ARGO_MLMDENVOY)
+    MlmdGRPC: $(IMAGESV2_ARGO_MLMDGRPC)
+    MlmdWriter: $(IMAGESV2_ARGO_MLMDWRITER)
+    VisualizationServer: $(IMAGES_ARGO_VISUALIZATIONSERVER)
+    WorkflowController: $(IMAGESV2_ARGO_WORKFLOWCONTROLLER)
+  Tekton:
+    ApiServer: $(IMAGESV2_TEKTON_APISERVER)
+    Artifact: $(IMAGESV2_TEKTON_ARTIFACT)
+    Cache: $(IMAGESV2_TEKTON_CACHE)
+    MoveResultsImage: $(IMAGESV2_TEKTON_MOVERESULTSIMAGE)
+    PersistentAgent: $(IMAGESV2_TEKTON_PERSISTENTAGENT)
+    ScheduledWorkflow: $(IMAGESV2_TEKTON_SCHEDULEDWORKFLOW)
+    MlmdEnvoy: $(IMAGESV2_TEKTON_MLMDENVOY)
+    MlmdGRPC: $(IMAGESV2_TEKTON_MLMDGRPC)
+    MlmdWriter: $(IMAGESV2_TEKTON_MLMDWRITER)
+    VisualizationServer: $(IMAGES_TEKTON_VISUALIZATIONSERVER)
+    # WorkflowController is an argo-only component
+    # Using argo image here only for fault tolerance, but should handle this in code.
+    WorkflowController: $(IMAGESV2_ARGO_WORKFLOWCONTROLLER)
 DSPO:
   HealthCheck:
     Database:

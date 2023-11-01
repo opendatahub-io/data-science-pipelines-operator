@@ -368,9 +368,9 @@ func (p *DSPAParams) SetupMLMD(ctx context.Context, dsp *dspa.DataSciencePipelin
 		MlmdGRPCImagePath := config.MlmdGRPCImagePath
 		MlmdWriterImagePath := config.MlmdWriterImagePath
 		if p.UsingV2Pipelines(dsp) {
-			MlmdEnvoyImagePath = config.MlmdEnvoyImagePathV2
-			MlmdGRPCImagePath = config.MlmdGRPCImagePathV2
-			MlmdWriterImagePath = config.MlmdWriterImagePathV2
+			MlmdEnvoyImagePath = config.MlmdEnvoyImagePathV2Tekton
+			MlmdGRPCImagePath = config.MlmdGRPCImagePathV2Tekton
+			MlmdWriterImagePath = config.MlmdWriterImagePathV2Tekton
 		}
 		if p.MLMD.Envoy == nil {
 			p.MLMD.Envoy = &dspa.Envoy{
@@ -445,10 +445,10 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		APIServerCacheImagePath := config.APIServerCacheImagePath
 		APIServerMoveResultsImagePath := config.APIServerMoveResultsImagePath
 		if pipelinesV2Images {
-			APIServerImagePath = config.APIServerImagePathV2
-			APIServerArtifactImagePath = config.APIServerArtifactImagePathV2
-			APIServerCacheImagePath = config.APIServerCacheImagePathV2
-			APIServerMoveResultsImagePath = config.APIServerMoveResultsImagePathV2
+			APIServerImagePath = config.APIServerImagePathV2Tekton
+			APIServerArtifactImagePath = config.APIServerArtifactImagePathV2Tekton
+			APIServerCacheImagePath = config.APIServerCacheImagePathV2Tekton
+			APIServerMoveResultsImagePath = config.APIServerMoveResultsImagePathV2Tekton
 		}
 
 		serverImageFromConfig := config.GetStringConfigWithDefault(APIServerImagePath, config.DefaultImageValue)
@@ -486,7 +486,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	if p.PersistenceAgent != nil {
 		PersistenceAgentImagePath := config.PersistenceAgentImagePath
 		if pipelinesV2Images {
-			PersistenceAgentImagePath = config.PersistenceAgentImagePathV2
+			PersistenceAgentImagePath = config.PersistenceAgentImagePathV2Tekton
 		}
 		persistenceAgentImageFromConfig := config.GetStringConfigWithDefault(PersistenceAgentImagePath, config.DefaultImageValue)
 		setStringDefault(persistenceAgentImageFromConfig, &p.PersistenceAgent.Image)
@@ -495,7 +495,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	if p.ScheduledWorkflow != nil {
 		ScheduledWorkflowImagePath := config.ScheduledWorkflowImagePath
 		if pipelinesV2Images {
-			ScheduledWorkflowImagePath = config.ScheduledWorkflowImagePathV2
+			ScheduledWorkflowImagePath = config.ScheduledWorkflowImagePathV2Tekton
 		}
 		scheduledWorkflowImageFromConfig := config.GetStringConfigWithDefault(ScheduledWorkflowImagePath, config.DefaultImageValue)
 		setStringDefault(scheduledWorkflowImageFromConfig, &p.ScheduledWorkflow.Image)
@@ -509,6 +509,8 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		setStringDefault(config.MLPipelineUIConfigMapPrefix+dsp.Name, &p.MlPipelineUI.ConfigMapName)
 		setResourcesDefault(config.MlPipelineUIResourceRequirements, &p.MlPipelineUI.Resources)
 	}
+
+	// TODO (gfrasca): believe we need to set default VisualizationServer and WorkflowController Images here
 
 	err := p.SetupMLMD(ctx, dsp, client, log)
 	if err != nil {

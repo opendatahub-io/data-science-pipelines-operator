@@ -34,24 +34,52 @@ spec:
             value: gcr.io/ml-pipeline/viewer-crd-controller:2.0.0-rc.2
           - name: IMAGES_VISUALIZATIONSERVER
             value: gcr.io/ml-pipeline/visualization-server:2.0.0-rc.2
-          - name: IMAGESV2_APISERVER
-            value: quay.io/rmartine/apiserver:v2
-          - name: IMAGESV2_ARTIFACT
+          - name: IMAGESV2_ARGO_APISERVER
+            value: gcr.io/ml-pipeline/api-server:2.0.2
+          - name: IMAGESV2_ARGO_ARTIFACT
             value: quay.io/opendatahub/ds-pipelines-artifact-manager:main
-          - name: IMAGESV2_PERSISTENTAGENT
-            value: quay.io/rmartine/persistenceagent-dev:6b8723529
-          - name: IMAGESV2_SCHEDULEDWORKFLOW
-            value: quay.io/rmartine/swf-dev:6b8723529
-          - name: IMAGESV2_CACHE
+          - name: IMAGESV2_ARGO_PERSISTENTAGENT
+            value: gcr.io/ml-pipeline/persistenceagent:2.0.2
+          - name: IMAGESV2_ARGO_SCHEDULEDWORKFLOW
+            value: gcr.io/ml-pipeline/scheduledworkflow:2.0.2
+          - name: IMAGESV2_ARGO_CACHE
             value: registry.access.redhat.com/ubi8/ubi-minimal:8.7
-          - name: IMAGESV2_MOVERESULTSIMAGE
+          - name: IMAGESV2_ARGO_CRDVIEWER
+            value: gcr.io/ml-pipeline/viewer-crd-controller:2.0.2
+          - name: IMAGESV2_ARGO_MOVERESULTSIMAGE
             value: registry.access.redhat.com/ubi8/ubi-micro:8.7
-          - name: IMAGESV2_MLMDENVOY
+          - name: IMAGESV2_ARGO_MLMDENVOY
+            value: gcr.io/ml-pipeline/metadata-envoy:2.0.2
+          - name: IMAGESV2_ARGO_MLMDGRPC
+            value: gcr.io/tfx-oss-public/ml_metadata_store_server:1.14.0
+          - name: IMAGESV2_ARGO_MLMDWRITER
+            value: gcr.io/ml-pipeline/metadata-writer:2.0.2
+          - name: IMAGESV2_ARGO_VISUALIZATIONSERVER
+            value: gcr.io/ml-pipeline/visualization-server:2.0.2
+          - name: IMAGESV2_ARGO_WORKFLOWCONTROLLER
+            value: gcr.io/ml-pipeline/workflow-controller:v3.3.10-license-compliance
+          - name: IMAGESV2_TEKTON_APISERVER
+            value: quay.io/rmartine/apiserver:v2
+          - name: IMAGESV2_TEKTON_ARTIFACT
+            value: quay.io/opendatahub/ds-pipelines-artifact-manager:main
+          - name: IMAGESV2_TEKTON_PERSISTENTAGENT
+            value: quay.io/rmartine/persistenceagent-dev:6b8723529
+          - name: IMAGESV2_TEKTON_SCHEDULEDWORKFLOW
+            value: quay.io/rmartine/swf-dev:6b8723529
+          - name: IMAGESV2_TEKTON_CACHE
+            value: registry.access.redhat.com/ubi8/ubi-minimal:8.7
+          - name: IMAGESV2_TEKTON_MOVERESULTSIMAGE
+            value: registry.access.redhat.com/ubi8/ubi-micro:8.7
+          - name: IMAGESV2_TEKTON_MLMDENVOY
             value: gcr.io/ml-pipeline/metadata-envoy:2.0.0-rc.2
-          - name: IMAGESV2_MLMDGRPC
+          - name: IMAGESV2_TEKTON_MLMDGRPC
             value: gcr.io/tfx-oss-public/ml_metadata_store_server:1.5.0
-          - name: IMAGESV2_MLMDWRITER
+          - name: IMAGESV2_TEKTON_MLMDWRITER
             value: gcr.io/ml-pipeline/metadata-writer:2.0.0-rc.2
+          - name: IMAGESV2_TEKTON_VISUALIZATIONSERVER
+            value: gcr.io/ml-pipeline/visualization-server:2.0.2
+          - name: IMAGESV2_TEKTON_WORKFLOWCONTROLLER
+            value: gcr.io/ml-pipeline/workflow-controller:v3.3.10-license-compliance            
 
         repoRef:
           name: manifests
