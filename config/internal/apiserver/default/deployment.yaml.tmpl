@@ -22,14 +22,8 @@ spec:
     spec:
       containers:
         - env:
-            - name: AUTO_UPDATE_PIPELINE_DEFAULT_VERSION
-              value: "{{.APIServer.AutoUpdatePipelineDefaultVersion}}"
             - name: POD_NAMESPACE
               value: "{{.Namespace}}"
-            - name: OBJECTSTORECONFIG_SECURE
-              value: "false"
-            - name: OBJECTSTORECONFIG_BUCKETNAME
-              value: "{{.ObjectStorageConnection.Bucket}}"
             - name: DBCONFIG_USER
               value: "{{.DBConnection.Username}}"
             - name: DBCONFIG_PASSWORD
@@ -43,6 +37,7 @@ spec:
               value: "{{.DBConnection.Host}}"
             - name: DBCONFIG_PORT
               value: "{{.DBConnection.Port}}"
+<<<<<<< HEAD
             - name: ARTIFACT_BUCKET
               value: "{{.ObjectStorageConnection.Bucket}}"
             - name: ARTIFACT_ENDPOINT
@@ -82,43 +77,25 @@ spec:
               value: "{{.APIServer.TerminateStatus}}"
             - name: AUTO_UPDATE_PIPELINE_DEFAULT_VERSION
               value: "{{.APIServer.AutoUpdatePipelineDefaultVersion}}"
+=======
+>>>>>>> 22b6380 (Engine-Agnostic Manifests: APIServer)
             - name: DBCONFIG_CONMAXLIFETIMESEC
               value: "{{.APIServer.DBConfigConMaxLifetimeSec}}"
-            - name: DB_DRIVER_NAME
-              value: mysql
-            - name: DBCONFIG_MYSQLCONFIG_USER
-              value: "{{.DBConnection.Username}}"
-            - name: DBCONFIG_MYSQLCONFIG_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  key: "{{.DBConnection.CredentialsSecret.Key}}"
-                  name: "{{.DBConnection.CredentialsSecret.Name}}"
-            - name: DBCONFIG_MYSQLCONFIG_DBNAME
-              value: "{{.DBConnection.DBName}}"
-            - name: DBCONFIG_MYSQLCONFIG_HOST
-              value: "{{.DBConnection.Host}}"
-            - name: DBCONFIG_MYSQLCONFIG_PORT
-              value: "{{.DBConnection.Port}}"
-            - name: OBJECTSTORECONFIG_ACCESSKEY
-              valueFrom:
-                secretKeyRef:
-                  key: "{{.ObjectStorageConnection.CredentialsSecret.AccessKey}}"
-                  name: "{{.ObjectStorageConnection.CredentialsSecret.SecretName}}"
-            - name: OBJECTSTORECONFIG_SECRETACCESSKEY
-              valueFrom:
-                secretKeyRef:
-                  key: "{{.ObjectStorageConnection.CredentialsSecret.SecretKey}}"
-                  name: "{{.ObjectStorageConnection.CredentialsSecret.SecretName}}"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_HOST
               value: "ds-pipeline-visualizationserver"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
               value: "8888"
+<<<<<<< HEAD
             - name: OBJECTSTORECONFIG_CREDENTIALSSECRET
               value: "{{.ObjectStorageConnection.CredentialsSecret.SecretName}}"
             - name: OBJECTSTORECONFIG_CREDENTIALSACCESSKEYKEY
               value: "{{.ObjectStorageConnection.CredentialsSecret.AccessKey}}"
             - name: OBJECTSTORECONFIG_CREDENTIALSSECRETKEYKEY
               value: "{{.ObjectStorageConnection.CredentialsSecret.SecretKey}}"
+=======
+            - name: DEFAULTPIPELINERUNNERSERVICEACCOUNT
+              value: "pipeline-runner-{{.Name}}"
+>>>>>>> 22b6380 (Engine-Agnostic Manifests: APIServer)
             - name: OBJECTSTORECONFIG_BUCKETNAME
               value: "{{.ObjectStorageConnection.Bucket}}"
             - name: OBJECTSTORECONFIG_ACCESSKEY
@@ -141,6 +118,7 @@ spec:
               value: "{{.APIServer.CacheImage}}"
             - name: MOVERESULTS_IMAGE
               value: "{{.APIServer.MoveResultsImage}}"
+            ## Env Vars to only include if MLMD Deployed ##
             {{ if .MLMD.Deploy }}
             - name: METADATA_GRPC_SERVICE_SERVICE_HOST
               value: "ds-pipeline-metadata-grpc-{{.Name}}.{{.Namespace}}.svc.cluster.local"
@@ -150,11 +128,66 @@ spec:
             {{ end }}
             {{ end }}
             - name: ML_PIPELINE_SERVICE_HOST
-              value: ds-pipeline-{{.Name}}.{{.Namespace}}.svc.cluster.local
+              value: "ds-pipeline-{{.Name}}.{{.Namespace}}.svc.cluster.local"
             - name: ML_PIPELINE_SERVICE_PORT_GRPC
               value: "8887"
+            ## Values change based on Engine Driver ##
             - name: EXECUTIONTYPE
+            {{ if (eq .EngineDriver "tekton") }}
+              value: PipelineRun
+            {{ else }}
               value: Workflow
+            {{ end }}
+            ## Argo-Specific Env Vars ##
+            - name: AUTO_UPDATE_PIPELINE_DEFAULT_VERSION
+              value: "{{.APIServer.AutoUpdatePipelineDefaultVersion}}"
+            - name: OBJECTSTORECONFIG_SECURE
+              value: "false"
+            - name: OBJECTSTORECONFIG_BUCKETNAME
+              value: "{{.ObjectStorageConnection.Bucket}}"              
+            - name: DB_DRIVER_NAME
+              value: mysql
+            - name: DBCONFIG_MYSQLCONFIG_USER
+              value: "{{.DBConnection.Username}}"
+            - name: DBCONFIG_MYSQLCONFIG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: "{{.DBConnection.CredentialsSecret.Key}}"
+                  name: "{{.DBConnection.CredentialsSecret.Name}}"
+            - name: DBCONFIG_MYSQLCONFIG_DBNAME
+              value: "{{.DBConnection.DBName}}"
+            - name: DBCONFIG_MYSQLCONFIG_HOST
+              value: "{{.DBConnection.Host}}"
+            - name: DBCONFIG_MYSQLCONFIG_PORT
+              value: "{{.DBConnection.Port}}"
+            ## Tekton-Specific Env Vars ##
+            {{ if (eq .EngineDriver "tekton") }}
+            - name: ARTIFACT_BUCKET
+              value: "{{.ObjectStorageConnection.Bucket}}"
+            - name: ARTIFACT_ENDPOINT
+              value: "{{.ObjectStorageConnection.Endpoint}}"
+            - name: ARTIFACT_SCRIPT
+              valueFrom:
+                configMapKeyRef:
+                  key: "{{ .APIServer.ArtifactScriptConfigMap.Key }}"
+                  name: "{{ .APIServer.ArtifactScriptConfigMap.Name }}"
+            - name: ARTIFACT_IMAGE
+              value: "{{.APIServer.ArtifactImage}}"
+            - name: ARCHIVE_LOGS
+              value: "{{.APIServer.ArchiveLogs}}"
+            - name: TRACK_ARTIFACTS
+              value: "{{.APIServer.TrackArtifacts}}"
+            - name: STRIP_EOF
+              value: "{{.APIServer.StripEOF}}"
+            - name: PIPELINE_RUNTIME
+              value: "tekton"
+            - name: INJECT_DEFAULT_SCRIPT
+              value: "{{.APIServer.InjectDefaultScript}}"
+            - name: APPLY_TEKTON_CUSTOM_RESOURCE
+              value: "{{.APIServer.ApplyTektonCustomResource}}"
+            - name: TERMINATE_STATUS
+              value: "{{.APIServer.TerminateStatus}}"
+            {{ end }}
           image: {{.APIServer.Image}}
           imagePullPolicy: Always
           name: ds-pipeline-api-server

@@ -21,7 +21,7 @@ import (
 
 var commonTemplatesDir = "common/default"
 var argoOnlyCommonTemplatesDir = "common/argo"
-var tektonOnlyCommonTemplatesDir = "common/argo"
+var tektonOnlyCommonTemplatesDir = "common/tekton"
 
 const commonCusterRolebindingTemplate = "common/no-owner/clusterrolebinding.yaml.tmpl"
 

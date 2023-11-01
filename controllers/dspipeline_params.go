@@ -36,10 +36,12 @@ import (
 )
 
 type DSPAParams struct {
+<<<<<<< HEAD
 	Name                                 string
 	Namespace                            string
 	Owner                                mf.Owner
 	DSPVersion                           string
+	EngineDriver         string
 	APIServer                            *dspa.APIServer
 	APIServerPiplinesCABundleMountPath   string
 	PiplinesCABundleMountPath            string
@@ -435,6 +437,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.Name = dsp.Name
 	p.Namespace = dsp.Namespace
 	p.DSPVersion = dsp.Spec.DSPVersion
+	p.EngineDriver = dsp.Spec.EngineDriver
 	p.Owner = dsp
 	p.APIServer = dsp.Spec.APIServer.DeepCopy()
 	p.APIServerDefaultResourceName = apiServerDefaultResourceNamePrefix + dsp.Name
