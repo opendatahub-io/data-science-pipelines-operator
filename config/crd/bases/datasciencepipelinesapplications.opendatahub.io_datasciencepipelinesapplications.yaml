@@ -300,6 +300,9 @@ spec:
               dspVersion:
                 default: v1
                 type: string
+              engineDriver:
+                default: tekton
+                type: string
               mlmd:
                 default:
                   deploy: true

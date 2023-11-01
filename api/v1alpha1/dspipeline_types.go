@@ -51,6 +51,9 @@ type DSPASpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="v1"
 	DSPVersion string `json:"dspVersion,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="tekton"
+	EngineDriver string `json:"engineDriver,omitempty"`
 	// DS Pipelines Argo Workflow Controller Configuration.
 	// +kubebuilder:default:={deploy: false}
 	*WorkflowController `json:"workflowController,omitempty"`
