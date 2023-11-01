@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ds-pipeline-scheduledworkflow-testdsp6
+  namespace: default
+  labels:
+    app: ds-pipeline-scheduledworkflow-testdsp6
+    component: data-science-pipelines
+    dspa: testdsp6
+spec:
+  selector:
+    matchLabels:
+      app: ds-pipeline-scheduledworkflow-testdsp6
+      component: data-science-pipelines
+      dspa: testdsp6
+  template:
+    metadata:
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+      labels:
+        app: ds-pipeline-scheduledworkflow-testdsp6
+        component: data-science-pipelines
+        dspa: testdsp6
+    spec:
+      containers:
+        - env:
+            - name: NAMESPACE
+              value: "default"
+            - name: CRON_SCHEDULE_TIMEZONE
+              value: "EST"
+            - name: EXECUTIONTYPE
+              value: PipelineRun
+          image: scheduledworkflow:test2
+          imagePullPolicy: IfNotPresent
+          name: ds-pipeline-scheduledworkflow
+          command:
+            - controller
+            - "--logtostderr=true"
+            - "--namespace=default"
+          livenessProbe:
+            exec:
+              command:
+                - test
+                - -x
+                - controller
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 2
+          readinessProbe:
+            exec:
+              command:
+                - test
+                - -x
+                - controller
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+          resources:
+            requests:
+              cpu: 1235m
+              memory: 1Gi
+            limits:
+              cpu: 2526m
+              memory: 5Gi
+      serviceAccountName: ds-pipeline-scheduledworkflow-testdsp6
