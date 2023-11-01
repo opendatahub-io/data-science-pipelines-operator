@@ -18,6 +18,7 @@ limitations under the License.
 package controllers
 
 import (
+	routev1 "github.com/openshift/api/route/v1"
 	"testing"
 
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
@@ -71,6 +72,75 @@ func TestDeployDatabase(t *testing.T) {
 	// Assert Database Deployment now exists
 	deployment = &appsv1.Deployment{}
 	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedDatabaseName, testNamespace)
+	assert.True(t, created)
+	assert.Nil(t, err)
+
+	// Assert Database Route doesn't exist
+	route := &routev1.Route{}
+	created, err = reconciler.IsResourceCreated(ctx, route, expectedDatabaseName, testNamespace)
+	assert.False(t, created)
+	assert.Nil(t, err)
+}
+
+func TestDeployDatabaseWithExternalRouteEnabled(t *testing.T) {
+	testNamespace := "testnamespace"
+	testDSPAName := "testdspa"
+	expectedDatabaseName := "mariadb-testdspa"
+
+	// Construct DSPA Spec with deployed MariaDB Database
+	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
+		Spec: dspav1alpha1.DSPASpec{
+			Database: &dspav1alpha1.Database{
+				DisableHealthCheck: false,
+				MariaDB: &dspav1alpha1.MariaDB{
+					Deploy: true,
+				},
+				EnableExternalRoute: true,
+			},
+			ObjectStorage: &dspav1alpha1.ObjectStorage{
+				DisableHealthCheck: false,
+				Minio: &dspav1alpha1.Minio{
+					Deploy: false,
+					Image:  "someimage",
+				},
+			},
+		},
+	}
+
+	// Enrich DSPA with name+namespace
+	dspa.Name = testDSPAName
+	dspa.Namespace = testNamespace
+
+	// Create Context, Fake Controller and Params
+	ctx, params, reconciler := CreateNewTestObjects()
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	assert.Nil(t, err)
+
+	// Assert Database Deployment doesn't yet exist
+	deployment := &appsv1.Deployment{}
+	created, err := reconciler.IsResourceCreated(ctx, deployment, expectedDatabaseName, testNamespace)
+	assert.False(t, created)
+	assert.Nil(t, err)
+
+	// Assert Database Route doesn't exist
+	route := &routev1.Route{}
+	created, err = reconciler.IsResourceCreated(ctx, route, expectedDatabaseName, testNamespace)
+	assert.False(t, created)
+	assert.Nil(t, err)
+
+	// Run test reconciliation
+	err = reconciler.ReconcileDatabase(ctx, dspa, params)
+	assert.Nil(t, err)
+
+	// Assert Database Deployment now exists
+	deployment = &appsv1.Deployment{}
+	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedDatabaseName, testNamespace)
+	assert.True(t, created)
+	assert.Nil(t, err)
+
+	// Assert Database Route doesn't exist
+	route = &routev1.Route{}
+	created, err = reconciler.IsResourceCreated(ctx, route, expectedDatabaseName, testNamespace)
 	assert.True(t, created)
 	assert.Nil(t, err)
 }

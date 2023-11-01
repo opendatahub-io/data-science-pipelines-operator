@@ -26,6 +26,7 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 
+	routev1 "github.com/openshift/api/route/v1"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -87,6 +88,85 @@ func TestDeployStorage(t *testing.T) {
 	// Assert ObjectStorage Deployment now exists
 	deployment = &appsv1.Deployment{}
 	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedStorageName, testNamespace)
+	assert.True(t, created)
+	assert.Nil(t, err)
+
+	// Assert ObjectStorage Route doesn't exist
+	route := &routev1.Route{}
+	created, err = reconciler.IsResourceCreated(ctx, route, expectedStorageName, testNamespace)
+	assert.False(t, created)
+	assert.Nil(t, err)
+}
+
+func TestDeployStorageWithExternalRouteEnabled(t *testing.T) {
+	testNamespace := "testnamespace"
+	testDSPAName := "testdspa"
+	expectedStorageName := "minio-testdspa"
+
+	// Construct DSPA Spec with deployed Minio Object Storage
+	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
+		Spec: dspav1alpha1.DSPASpec{
+			Database: &dspav1alpha1.Database{
+				DisableHealthCheck: false,
+				MariaDB: &dspav1alpha1.MariaDB{
+					Deploy: true,
+				},
+			},
+			ObjectStorage: &dspav1alpha1.ObjectStorage{
+				DisableHealthCheck:  false,
+				EnableExternalRoute: true,
+				Minio: &dspav1alpha1.Minio{
+					Deploy: true,
+					Image:  "someimage",
+					Resources: &dspav1alpha1.ResourceRequirements{ //TODO: fails without this block.  Why?
+						Requests: &dspav1alpha1.Resources{
+							CPU:    resource.MustParse("250m"),
+							Memory: resource.MustParse("500Mi"),
+						},
+						Limits: &dspav1alpha1.Resources{
+							CPU:    resource.MustParse("500m"),
+							Memory: resource.MustParse("1Gi"),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// Enrich DSPA with name+namespace
+	dspa.Name = testDSPAName
+	dspa.Namespace = testNamespace
+
+	// Create Context, Fake Controller and Params
+	ctx, params, reconciler := CreateNewTestObjects()
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	assert.Nil(t, err)
+
+	// Assert ObjectStorage Deployment doesn't yet exist
+	deployment := &appsv1.Deployment{}
+	created, err := reconciler.IsResourceCreated(ctx, deployment, expectedStorageName, testNamespace)
+	assert.False(t, created)
+	assert.Nil(t, err)
+
+	// Assert ObjectStorage Route doesn't yet exist
+	route := &routev1.Route{}
+	created, err = reconciler.IsResourceCreated(ctx, route, expectedStorageName, testNamespace)
+	assert.False(t, created)
+	assert.Nil(t, err)
+
+	// Run test reconciliation
+	err = reconciler.ReconcileStorage(ctx, dspa, params)
+	assert.Nil(t, err)
+
+	// Assert ObjectStorage Deployment now exists
+	deployment = &appsv1.Deployment{}
+	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedStorageName, testNamespace)
+	assert.True(t, created)
+	assert.Nil(t, err)
+
+	// Assert ObjectStorage Route now exists
+	route = &routev1.Route{}
+	created, err = reconciler.IsResourceCreated(ctx, route, expectedStorageName, testNamespace)
 	assert.True(t, created)
 	assert.Nil(t, err)
 }

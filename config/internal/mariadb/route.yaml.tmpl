@@ -1,0 +1,14 @@
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: mariadb-{{.Name}}
+  namespace: {{.Namespace}}
+  labels:
+    app: mariadb-{{.Name}}
+    component: data-science-pipelines
+spec:
+  to:
+    kind: Service
+    name: mariadb-{{.Name}}
+  port:
+    targetPort: 3306
