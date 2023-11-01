@@ -20,6 +20,8 @@ import (
 )
 
 var commonTemplatesDir = "common/default"
+var argoOnlyCommonTemplatesDir = "common/argo"
+var tektonOnlyCommonTemplatesDir = "common/argo"
 
 const commonCusterRolebindingTemplate = "common/no-owner/clusterrolebinding.yaml.tmpl"
 
@@ -28,6 +30,16 @@ func (r *DSPAReconciler) ReconcileCommon(dsp *dspav1alpha1.DataSciencePipelinesA
 
 	log.Info("Applying Common Resources")
 	err := r.ApplyDir(dsp, params, commonTemplatesDir)
+	if err != nil {
+		return err
+	}
+
+	log.Info("Applying Engine-Specific Common Resources")
+	if params.UsingArgoEngineDriver(dsp) {
+		err = r.ApplyDir(dsp, params, argoOnlyCommonTemplatesDir)
+	} else if params.UsingTektonEngineDriver(dsp) {
+		err = r.ApplyDir(dsp, params, tektonOnlyCommonTemplatesDir)
+	}
 	if err != nil {
 		return err
 	}

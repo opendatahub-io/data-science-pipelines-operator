@@ -92,7 +92,7 @@ func (p *DSPAParams) UsingArgoEngineDriver(dsp *dspa.DataSciencePipelinesApplica
 }
 
 func (p *DSPAParams) UsingTektonEngineDriver(dsp *dspa.DataSciencePipelinesApplication) bool {
-	return dsp.Spec.DSPVersion == "tekton"
+	return dsp.Spec.EngineDriver == "tekton"
 }
 
 // UsingExternalDB will return true if an external Database is specified in the CR, otherwise false.
@@ -384,8 +384,6 @@ func (p *DSPAParams) SetupMLMD(ctx context.Context, dsp *dspa.DataSciencePipelin
 				MlmdEnvoyImagePath = config.MlmdEnvoyImagePathV2Tekton
 				MlmdGRPCImagePath = config.MlmdGRPCImagePathV2Tekton
 				MlmdWriterImagePath = config.MlmdWriterImagePathV2Tekton
-			} else {
-				return fmt.Errorf(fmt.Sprintf("Illegal Engine Driver (%s) specified, cannot continue.", dsp.Spec.EngineDriver))
 			}
 		}
 		if p.MLMD.Envoy == nil {
