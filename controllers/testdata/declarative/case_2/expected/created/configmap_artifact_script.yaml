@@ -6,13 +6,20 @@ data:
         workspace_dir=$(echo $(context.taskRun.name) | sed -e "s/$(context.pipeline.name)-//g")
         workspace_dest=/workspace/${workspace_dir}/artifacts/$(context.pipelineRun.name)/$(context.taskRun.name)
         artifact_name=$(basename $2)
+
+        aws_cp() {
+
+          aws s3 --endpoint http://minio-testdsp2.default.svc.cluster.local:9000 cp $1.tgz s3://mlpipeline/artifacts/$PIPELINERUN/$PIPELINETASK/$1.tgz
+
+        }
+
         if [ -f "$workspace_dest/$artifact_name" ]; then
             echo sending to: ${workspace_dest}/${artifact_name}
             tar -cvzf $1.tgz -C ${workspace_dest} ${artifact_name}
-            aws s3 --endpoint http://minio-testdsp2.default.svc.cluster.local:9000 cp $1.tgz s3://mlpipeline/artifacts/$PIPELINERUN/$PIPELINETASK/$1.tgz
+            aws_cp $1
         elif [ -f "$2" ]; then
             tar -cvzf $1.tgz -C $(dirname $2) ${artifact_name}
-            aws s3 --endpoint http://minio-testdsp2.default.svc.cluster.local:9000 cp $1.tgz s3://mlpipeline/artifacts/$PIPELINERUN/$PIPELINETASK/$1.tgz
+            aws_cp $1
         else
             echo "$2 file does not exist. Skip artifact tracking for $1"
         fi
