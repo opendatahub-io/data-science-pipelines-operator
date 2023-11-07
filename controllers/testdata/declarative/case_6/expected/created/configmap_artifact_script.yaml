@@ -38,5 +38,5 @@ metadata:
   name: ds-pipeline-artifact-script-testdsp6
   namespace: default
   labels:
-    app: ds-pipeline-testdsp5
+    app: ds-pipeline-testdsp6
     component: data-science-pipelines

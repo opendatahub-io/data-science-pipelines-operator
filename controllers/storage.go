@@ -30,7 +30,6 @@ import (
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/util"
-	"net/http"
 )
 
 const storageSecret = "minio/secret.yaml.tmpl"
