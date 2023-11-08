@@ -22,23 +22,23 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net/http"
+
 	"github.com/go-logr/logr"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/util"
-	"net/http"
 )
 
 const storageSecret = "minio/secret.yaml.tmpl"
 
-var storageTemplates = []string{
+var minioTemplates = []string{
 	"minio/deployment.yaml.tmpl",
 	"minio/pvc.yaml.tmpl",
 	"minio/service.yaml.tmpl",
 	"minio/minio-sa.yaml.tmpl",
-	storageSecret,
 }
 
 func joinHostPort(host, port string) (string, error) {
@@ -195,18 +195,23 @@ func (r *DSPAReconciler) ReconcileStorage(ctx context.Context, dsp *dspav1alpha1
 	minioSpecified := !storageSpecified || dsp.Spec.ObjectStorage.Minio != nil
 	deployMinio := !storageSpecified || (minioSpecified && dsp.Spec.ObjectStorage.Minio.Deploy)
 
+	externalStorageCredentialsProvided := externalStorageSpecified && (dsp.Spec.ObjectStorage.ExternalStorage.S3CredentialSecret != nil)
+	minioCredentialsProvided := minioSpecified && (dsp.Spec.ObjectStorage.Minio.S3CredentialSecret != nil)
+	storageCredentialsProvided := externalStorageCredentialsProvided || minioCredentialsProvided
+
 	// If external storage is specified, it takes precedence
 	if externalStorageSpecified {
-		log.Info("Deploying external storage secret.")
-		// If using external storage, we just need to create the secret
-		// for apiserver
-		err := r.Apply(dsp, params, storageSecret)
-		if err != nil {
-			return err
-		}
+		log.Info("Using externalStorage, bypassing object storage deployment.")
 	} else if deployMinio {
+		log.Info("No S3 storage credential reference provided, so using managed secret")
+		if !storageCredentialsProvided {
+			err := r.Apply(dsp, params, storageSecret)
+			if err != nil {
+				return err
+			}
+		}
 		log.Info("Applying object storage resources.")
-		for _, template := range storageTemplates {
+		for _, template := range minioTemplates {
 			err := r.Apply(dsp, params, template)
 			if err != nil {
 				return err
@@ -224,7 +229,7 @@ func (r *DSPAReconciler) ReconcileStorage(ctx context.Context, dsp *dspav1alpha1
 			}
 		}
 	} else {
-		log.Info("No externalstorage detected, and minio disabled. " +
+		log.Info("No externalStorage detected, and minio disabled. " +
 			"skipping application of storage Resources")
 		return nil
 	}

@@ -20,6 +20,7 @@ import (
 	"database/sql"
 	b64 "encoding/base64"
 	"fmt"
+
 	_ "github.com/go-sql-driver/mysql"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
@@ -27,12 +28,11 @@ import (
 
 const dbSecret = "mariadb/secret.yaml.tmpl"
 
-var dbTemplates = []string{
+var mariadbTemplates = []string{
 	"mariadb/deployment.yaml.tmpl",
 	"mariadb/pvc.yaml.tmpl",
 	"mariadb/service.yaml.tmpl",
 	"mariadb/mariadb-sa.yaml.tmpl",
-	dbSecret,
 }
 
 // extract to var for mocking in testing
@@ -100,18 +100,22 @@ func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha
 	// Default DB is currently MariaDB as well, but storing these bools seperately in case that changes
 	deployDefaultDB := !databaseSpecified || defaultDBRequired
 
+	externalDBCredentialsProvided := externalDBSpecified && (dsp.Spec.Database.ExternalDB.PasswordSecret != nil)
+	mariaDBCredentialsProvided := mariaDBSpecified && (dsp.Spec.Database.MariaDB.PasswordSecret != nil)
+	databaseCredentialsProvided := externalDBCredentialsProvided || mariaDBCredentialsProvided
+
 	// If external db is specified, it takes precedence
 	if externalDBSpecified {
-		log.Info("Deploying external db secret.")
-		// If using external DB, we just need to create the secret
-		// for apiserver
-		err := r.Apply(dsp, params, dbSecret)
-		if err != nil {
-			return err
-		}
+		log.Info("Using externalDB, bypassing database deployment.")
 	} else if deployMariaDB || deployDefaultDB {
+		if !databaseCredentialsProvided {
+			err := r.Apply(dsp, params, dbSecret)
+			if err != nil {
+				return err
+			}
+		}
 		log.Info("Applying mariaDB resources.")
-		for _, template := range dbTemplates {
+		for _, template := range mariadbTemplates {
 			err := r.Apply(dsp, params, template)
 			if err != nil {
 				return err

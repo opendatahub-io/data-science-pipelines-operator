@@ -32,8 +32,9 @@ const (
 	ArtifactScriptConfigMapKey         = "artifact_script"
 	DSPServicePrefix                   = "ds-pipeline"
 
-	DBSecretNamePrefix = "ds-pipeline-db-"
-	DBSecretKey        = "password"
+	DefaultDBSecretNamePrefix = "ds-pipeline-db-"
+	DefaultDBSecretKey        = "password"
+	GeneratedDBPasswordLength = 12
 
 	MariaDBName        = "mlpipeline"
 	MariaDBHostPrefix  = "mariadb"
@@ -47,9 +48,11 @@ const (
 	MinioDefaultBucket = "mlpipeline"
 	MinioPVCSize       = "10Gi"
 
-	ObjectStorageSecretName = "mlpipeline-minio-artifact" // hardcoded in kfp-tekton
-	ObjectStorageAccessKey  = "accesskey"
-	ObjectStorageSecretKey  = "secretkey"
+	DefaultObjectStorageSecretNamePrefix  = "ds-pipeline-s3-"
+	DefaultObjectStorageAccessKey         = "accesskey"
+	DefaultObjectStorageSecretKey         = "secretkey"
+	GeneratedObjectStorageAccessKeyLength = 16
+	GeneratedObjectStorageSecretKeyLength = 24
 
 	MlmdGrpcPort = "8080"
 )
