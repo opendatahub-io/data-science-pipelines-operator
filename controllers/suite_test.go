@@ -76,7 +76,7 @@ var _ = BeforeEach(func() {
 	ConnectAndQueryDatabase = func(host string, port string, username string, password string, dbname string) bool {
 		return true
 	}
-	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool) bool {
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte) bool {
 		return true
 	}
 })

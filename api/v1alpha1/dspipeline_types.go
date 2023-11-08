@@ -80,8 +80,24 @@ type APIServer struct {
 	EnableSamplePipeline bool `json:"enableSamplePipeline"`
 	// +kubebuilder:default:=true
 	// +kubebuilder:validation:Optional
-	AutoUpdatePipelineDefaultVersion bool                  `json:"autoUpdatePipelineDefaultVersion"`
-	Resources                        *ResourceRequirements `json:"resources,omitempty"`
+	AutoUpdatePipelineDefaultVersion bool `json:"autoUpdatePipelineDefaultVersion"`
+	Resources *ResourceRequirements `json:"resources,omitempty"`
+
+	// If the Object store/DB is behind a TLS secured connection that is
+	// unrecognized by the host OpenShift/K8s cluster, then you can
+	// provide a PEM formatted CA bundle to be injected into the DSP
+	// server pod to trust this connection. CA Bundle should be provided
+	// as values within configmaps, mapped to keys.
+	CABundle *CABundle `json:"cABundle,omitempty"`
+}
+
+type CABundle struct {
+	// +kubebuilder:validation:Required
+	ConfigMapName string `json:"configMapName"`
+	// Key should map to a CA bundle. The key is also used to name
+	// the CA bundle file (e.g. ca-bundle.crt)
+	// +kubebuilder:validation:Required
+	ConfigMapKey string `json:"configMapKey"`
 }
 
 type ArtifactScriptConfigMap struct {
