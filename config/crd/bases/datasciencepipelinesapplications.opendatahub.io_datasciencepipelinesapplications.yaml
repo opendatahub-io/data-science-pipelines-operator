@@ -500,6 +500,11 @@ spec:
                     default: false
                     description: 'Default: false'
                     type: boolean
+                  enableExternalRoute:
+                    default: false
+                    description: 'Enable an external route so the object storage is
+                      reachable from outside the cluster. Default: false'
+                    type: boolean
                   externalStorage:
                     properties:
                       bucket:

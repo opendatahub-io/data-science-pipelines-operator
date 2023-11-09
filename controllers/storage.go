@@ -33,12 +33,14 @@ import (
 )
 
 const storageSecret = "minio/secret.yaml.tmpl"
+const storageRoute = "minio/route.yaml.tmpl"
 
 var minioTemplates = []string{
 	"minio/deployment.yaml.tmpl",
 	"minio/pvc.yaml.tmpl",
 	"minio/service.yaml.tmpl",
 	"minio/minio-sa.yaml.tmpl",
+	storageRoute,
 }
 
 func joinHostPort(host, port string) (string, error) {
@@ -212,9 +214,11 @@ func (r *DSPAReconciler) ReconcileStorage(ctx context.Context, dsp *dspav1alpha1
 		}
 		log.Info("Applying object storage resources.")
 		for _, template := range minioTemplates {
-			err := r.Apply(dsp, params, template)
-			if err != nil {
-				return err
+			if dsp.Spec.ObjectStorage.EnableExternalRoute || template != storageRoute {
+				err := r.Apply(dsp, params, template)
+				if err != nil {
+					return err
+				}
 			}
 		}
 		// If no storage was not specified, deploy minio by default.
