@@ -138,7 +138,7 @@ func TestDeployDatabaseWithExternalRouteEnabled(t *testing.T) {
 	assert.True(t, created)
 	assert.Nil(t, err)
 
-	// Assert Database Route doesn't exist
+	// Assert Database Route now exists
 	route = &routev1.Route{}
 	created, err = reconciler.IsResourceCreated(ctx, route, expectedDatabaseName, testNamespace)
 	assert.True(t, created)
