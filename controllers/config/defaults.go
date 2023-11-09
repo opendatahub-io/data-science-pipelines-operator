@@ -24,12 +24,13 @@ import (
 )
 
 const (
-	DefaultImageValue = "MustSetInConfig"
-
-	MLPipelineUIConfigMapPrefix       = "ds-pipeline-ui-configmap-"
-	ArtifactScriptConfigMapNamePrefix = "ds-pipeline-artifact-script-"
-	ArtifactScriptConfigMapKey        = "artifact_script"
-	DSPServicePrefix                  = "ds-pipeline"
+	DefaultImageValue                  = "MustSetInConfig"
+	APIServerPiplinesCABundleMountPath = "/etc/pki/tls/certs"
+	PiplinesCABundleMountPath          = "/etc/pki/tls/certs"
+	MLPipelineUIConfigMapPrefix        = "ds-pipeline-ui-configmap-"
+	ArtifactScriptConfigMapNamePrefix  = "ds-pipeline-artifact-script-"
+	ArtifactScriptConfigMapKey         = "artifact_script"
+	DSPServicePrefix                   = "ds-pipeline"
 
 	DBSecretNamePrefix = "ds-pipeline-db-"
 	DBSecretKey        = "password"

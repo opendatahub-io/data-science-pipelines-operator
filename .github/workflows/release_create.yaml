@@ -83,6 +83,7 @@ jobs:
           PREVIOUS_VERSION_TAG: ${{ needs.fetch-data.outputs.previous_version_tag }}
           RELEASE_BRANCH: ${{ needs.fetch-data.outputs.release_branch }}
           REPOSITORY: ${{ needs.fetch-data.outputs.odh_org }}/${{ env.DSPO_REPOSITORY }}
+          GH_ORG: ${{ needs.fetch-data.outputs.odh_org }}
           WORKING_DIR: ${{ github.workspace }}
         shell: bash
         run: ./.github/scripts/release_create/create_tag_release.sh

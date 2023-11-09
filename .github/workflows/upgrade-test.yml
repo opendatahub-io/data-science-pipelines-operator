@@ -1,0 +1,142 @@
+name: DSP Upgrade Testing Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      released-version:
+        default: 'v1.y.y'
+        description: 'Most recently released DSP version'
+        required: true
+      candidate-version:
+        default: 'v1.x.x'
+        description: 'Candidate version for upgrade'
+        required: true
+
+concurrency:
+  group: ${{ github.head_ref }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  dspo-upgrade:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 60
+    env:
+      OLM_VERSION: v0.24.0
+      VERSION: "v0.0.0-ghaction"  # Need to supply some semver version for bundle to be properly generated
+      CATALOG_BASE_IMG: "registry.access.redhat.com/redhat/community-operator-index:v4.13"
+      RESOURCES_DIR: ${{ github.workspace }}/.github/resources
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # fetching also previous commits to get tags
+
+      - name: Setup and start KinD cluster
+        uses: ./.github/actions/kind
+
+      - name: Install OLM
+        run: |
+          kubectl create -f https://github.com/operator-framework/operator-lifecycle-manager/releases/download/${OLM_VERSION}/crds.yaml
+          # wait for a while to be sure CRDs are installed
+          sleep 1
+          kubectl create -f https://github.com/operator-framework/operator-lifecycle-manager/releases/download/${OLM_VERSION}/olm.yaml
+          echo Wait for default CatalogSource to start
+          kubectl wait -n ${{ env.CATALOG_SOURCE_NAMESPACE }} catalogsource/${{ env.CATALOG_SOURCE_NAME }} --for=jsonpath='{.status.connectionState.lastObservedState}'=READY --timeout=180s
+        env:
+          CATALOG_SOURCE_NAME: "operatorhubio-catalog"
+          CATALOG_SOURCE_NAMESPACE: "olm"
+
+      - name: Create openshift-operator namespace and OperatorGroup
+        run: |
+          kubectl create namespace openshift-operators
+          kubectl create -f ${{ env.RESOURCES_DIR }}/olm/operatorgroup.yaml
+
+      - name: Apply CRDs
+        run: |
+          kubectl apply -f ${{ env.RESOURCES_DIR }}/crds
+
+      - name: Deploy latest released OpenDataHub operator from OLM
+        id: deploy
+        run: |
+          echo Deploying operator using Subscription
+          envsubst < ${{ env.RESOURCES_DIR }}/olm/catalogsource.yaml > ${{ env.TEMP_DIR }}/catalogsource.yaml
+          envsubst < ${{ env.RESOURCES_DIR }}/olm/subscription.yaml > ${{ env.TEMP_DIR }}/subscription.yaml
+
+          kubectl create -f ${{ env.TEMP_DIR }}/catalogsource.yaml
+
+          echo Wait for CatalogSource ${{ env.CATALOG_SOURCE_NAME }} to start
+          kubectl wait -n ${{ env.CATALOG_SOURCE_NAMESPACE }} catalogsource/${{ env.CATALOG_SOURCE_NAME }} --for=jsonpath='{.status.connectionState.lastObservedState}'=READY --timeout=300s
+
+          kubectl create -f ${{ env.TEMP_DIR }}/subscription.yaml
+
+          echo Waiting for Subscription to be ready
+          kubectl wait -n ${{ env.SUBSCRIPTION_NAMESPACE }} subscription/${{ env.SUBSCRIPTION_NAME }} --for=jsonpath='{.status.state}'=AtLatestKnown --timeout=180s
+
+          echo Waiting for Deployment to be ready
+          timeout 60 bash -c 'until [[ $(kubectl get deployment/opendatahub-operator-controller-manager -n '${{ env.SUBSCRIPTION_NAMESPACE }}') ]]; do sleep 5 && echo "$(kubectl get deployment/opendatahub-operator-controller-manager -n '${{ env.SUBSCRIPTION_NAMESPACE }}')"; done'
+          kubectl wait -n ${{ env.SUBSCRIPTION_NAMESPACE }} deployment/opendatahub-operator-controller-manager --for=condition=Available=true --timeout=60s
+        env:
+          CATALOG_SOURCE_NAME: "odh-olm-test"
+          CATALOG_SOURCE_NAMESPACE: "olm"
+          SUBSCRIPTION_NAME: "opendatahub-operator"
+          SUBSCRIPTION_NAMESPACE: "openshift-operators"
+
+      - name: Create Namespace for DSPO
+        run: |
+          kubectl create namespace ${{ env.DSPO_NS }}
+          kubectl config set-context --current --namespace=${{ env.DSPO_NS }}
+        env:
+          DSPO_NS: data-science-pipelines-operator
+
+      - name: Prepare for Upgrade Testing
+        run: |
+          # Update the KfDef manifest with the latest released version
+          sed -i "s/main/${{ inputs.released-version }}/" ${{ env.RESOURCES_DIR }}/kfdef/kfdef.yaml
+        working-directory: ${{ env.RESOURCES_DIR }}/kfdef
+
+      - name: Print KfDef Manifest Contents
+        run: cat ${{ env.RESOURCES_DIR }}/kfdef/kfdef.yaml
+
+      - name: Deploy DSPO KfDef
+        run: |
+          kubectl apply -f ${{ env.RESOURCES_DIR }}/kfdef/kfdef.yaml -n ${{ env.DSPO_NS }}
+        env:
+          DSPO_NS: "data-science-pipelines-operator"
+
+      - name: Print ODH Operator Pod Logs
+        run: kubectl get pods -n openshift-operators -o jsonpath='{.items[*].metadata.name}' | xargs -I {} kubectl logs -n openshift-operators {}
+
+      - name: Wait for DSPO deployment to be ready
+        run: |
+          kubectl get deployments -n ${{ env.DSPO_NS }}
+          timeout 300 bash -c 'until [[ $(kubectl get deployment/data-science-pipelines-operator-controller-manager -n '${{ env.DSPO_NS }}') ]]; do sleep 5 && echo "$(kubectl get deployment/data-science-pipelines-operator-controller-manager -n '${{ env.DSPO_NS }}')"; done'
+        env:
+          DSPO_NS: data-science-pipelines-operator
+
+      - name: Run pre-upgrade tests
+        run: |
+          ./tests/upgrades/main.sh
+        env:
+          DSPA_NS: test-ds-project-1
+          WORKING_DIR: ${{ github.workspace }}
+
+      - name: Prepare for Upgrade Testing
+        run: |
+          # Update the KfDef manifest with the candidate version
+          sed -i "s/${{ inputs.released-version }}/${{ inputs.candidate-version }}/" ${{ env.RESOURCES_DIR }}/kfdef/kfdef.yaml
+        working-directory: ${{ env.RESOURCES_DIR }}/kfdef
+
+      - name: Print KfDef Manifest Contents
+        run: cat ${{ env.RESOURCES_DIR }}/kfdef/kfdef.yaml
+
+      - name: Deploy KfDef Core for the candidate DSP Version
+        run: |
+          kubectl apply -f ${{ env.RESOURCES_DIR }}/kfdef/kfdef.yaml -n ${{ env.DSPO_NS }}
+        env:
+          DSPO_NS: data-science-pipelines-operator
+
+      - name: Run upgrade tests
+        run: |
+          ./tests/upgrades/main.sh
+        env:
+          DSPA_NS: test-ds-project-2

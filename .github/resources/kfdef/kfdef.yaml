@@ -1,0 +1,16 @@
+apiVersion: kfdef.apps.kubeflow.org/v1
+kind: KfDef
+metadata:
+   name: data-science-pipelines-operator
+   finalizers:
+      - kfdef-finalizer.kfdef.apps.kubeflow.org
+spec:
+   applications:
+      - kustomizeConfig:
+           repoRef:
+              name: manifests
+              path: config
+        name: data-science-pipelines-operator
+   repos:
+      - name: manifests
+        uri: "https://github.com/opendatahub-io/data-science-pipelines-operator/tarball/main"
