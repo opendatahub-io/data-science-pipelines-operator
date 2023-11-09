@@ -181,11 +181,6 @@ spec:
                     default: false
                     description: 'Default: false'
                     type: boolean
-                  enableExternalRoute:
-                    default: false
-                    description: 'Enable an external route so the database is reachable
-                      from outside the cluster. Default: false'
-                    type: boolean
                   externalDB:
                     properties:
                       host:

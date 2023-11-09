@@ -173,10 +173,6 @@ type Database struct {
 	// +kubebuilder:default:=false
 	// +kubebuilder:validation:Optional
 	DisableHealthCheck bool `json:"disableHealthCheck"`
-	// Enable an external route so the database is reachable from outside the cluster. Default: false
-	// +kubebuilder:default:=false
-	// +kubebuilder:validation:Optional
-	EnableExternalRoute bool `json:"enableExternalRoute"`
 }
 
 type MariaDB struct {

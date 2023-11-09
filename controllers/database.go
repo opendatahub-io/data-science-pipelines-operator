@@ -27,14 +27,12 @@ import (
 )
 
 const dbSecret = "mariadb/secret.yaml.tmpl"
-const dbRoute = "mariadb/route.yaml.tmpl"
 
 var mariadbTemplates = []string{
 	"mariadb/deployment.yaml.tmpl",
 	"mariadb/pvc.yaml.tmpl",
 	"mariadb/service.yaml.tmpl",
 	"mariadb/mariadb-sa.yaml.tmpl",
-	dbRoute,
 }
 
 // extract to var for mocking in testing
@@ -118,11 +116,9 @@ func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha
 		}
 		log.Info("Applying mariaDB resources.")
 		for _, template := range mariadbTemplates {
-			if dsp.Spec.Database.EnableExternalRoute || template != dbRoute {
-				err := r.Apply(dsp, params, template)
-				if err != nil {
-					return err
-				}
+			err := r.Apply(dsp, params, template)
+			if err != nil {
+				return err
 			}
 		}
 		// If no database was not specified, deploy mariaDB by default.
