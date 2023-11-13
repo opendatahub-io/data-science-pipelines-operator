@@ -9,7 +9,6 @@ rules:
   - certificates.k8s.io
   resources:
   - certificatesigningrequests
-  - certificatesigningrequests/approval
   verbs:
   - create
   - delete

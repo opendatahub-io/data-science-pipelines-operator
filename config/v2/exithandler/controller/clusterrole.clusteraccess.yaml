@@ -23,23 +23,6 @@ rules:
   - patch
   - watch
 - apiGroups:
-  - tekton.dev
-  resources:
-  - runs/status
-  - customruns/status
-  - taskruns/status
-  - pipelineruns/status
-  - runs/finalizers
-  - customruns/finalizers
-  verbs:
-  - get
-  - list
-  - create
-  - update
-  - delete
-  - patch
-  - watch
-- apiGroups:
   - custom.tekton.dev
   resources:
   - exithandlers
@@ -55,7 +38,6 @@ rules:
   - apps
   resources:
   - deployments
-  - deployments/finalizers
   verbs:
   - get
   - list

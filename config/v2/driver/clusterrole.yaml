@@ -13,14 +13,7 @@ rules:
   resources:
   - runs
   - customruns
-  - runs/finalizers
-  - customruns/finalizers
-  - runs/status
-  - customruns/status
   - pipelineruns
-  - task
-  - taskruns
-  - conditions
   verbs:
   - get
   - list

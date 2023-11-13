@@ -16,8 +16,6 @@ rules:
   - get
   - list
   - update
-  - patch
-  - watch
 - apiGroups:
   - ""
   resources:
@@ -26,8 +24,6 @@ rules:
   - get
   - list
   - update
-  - patch
-  - watch
 - apiGroups:
   - admissionregistration.k8s.io
   resources:
@@ -57,8 +53,6 @@ rules:
   - create
   - update
   - delete
-  - patch
-  - watch
 - apiGroups:
   - ""
   resources:
