@@ -14,6 +14,12 @@ rules:
   - customruns
   - taskruns
   - pipelineruns
+  - runs/status
+  - customruns/status
+  - taskruns/status
+  - pipelineruns/status
+  - runs/finalizers
+  - customruns/finalizers
   verbs:
   - get
   - list
