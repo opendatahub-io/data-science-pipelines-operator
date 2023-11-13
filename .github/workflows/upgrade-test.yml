@@ -88,20 +88,14 @@ jobs:
         env:
           DSPO_NS: data-science-pipelines-operator
 
-      - name: Prepare for Upgrade Testing
-        run: |
-          # Update the KfDef manifest with the latest released version
-          sed -i "s/main/${{ inputs.released-version }}/" ${{ env.RESOURCES_DIR }}/kfdef/kfdef.yaml
-        working-directory: ${{ env.RESOURCES_DIR }}/kfdef
+      - name: Print DataScienceCluster Manifest Contents
+        run: cat ${{ env.RESOURCES_DIR }}/datasciencecluster/datasciencecluster.yaml
 
-      - name: Print KfDef Manifest Contents
-        run: cat ${{ env.RESOURCES_DIR }}/kfdef/kfdef.yaml
-
-      - name: Deploy DSPO KfDef
+      - name: Deploy DataScienceCluster
         run: |
-          kubectl apply -f ${{ env.RESOURCES_DIR }}/kfdef/kfdef.yaml -n ${{ env.DSPO_NS }}
+          kubectl apply -f ${{ env.RESOURCES_DIR }}/datasciencecluster/datasciencecluster.yaml -n ${{ env.DSC_NS }}
         env:
-          DSPO_NS: "data-science-pipelines-operator"
+          DSC_NS: "opendatahub"
 
       - name: Print ODH Operator Pod Logs
         run: kubectl get pods -n openshift-operators -o jsonpath='{.items[*].metadata.name}' | xargs -I {} kubectl logs -n openshift-operators {}
@@ -120,20 +114,14 @@ jobs:
           DSPA_NS: test-ds-project-1
           WORKING_DIR: ${{ github.workspace }}
 
-      - name: Prepare for Upgrade Testing
-        run: |
-          # Update the KfDef manifest with the candidate version
-          sed -i "s/${{ inputs.released-version }}/${{ inputs.candidate-version }}/" ${{ env.RESOURCES_DIR }}/kfdef/kfdef.yaml
-        working-directory: ${{ env.RESOURCES_DIR }}/kfdef
+      - name: Print DataScienceCluster Manifest Contents
+        run: cat ${{ env.RESOURCES_DIR }}/datasciencecluster/datasciencecluster.yaml
 
-      - name: Print KfDef Manifest Contents
-        run: cat ${{ env.RESOURCES_DIR }}/kfdef/kfdef.yaml
-
-      - name: Deploy KfDef Core for the candidate DSP Version
+      - name: Deploy DataScienceCluster for the candidate DSP Version
         run: |
-          kubectl apply -f ${{ env.RESOURCES_DIR }}/kfdef/kfdef.yaml -n ${{ env.DSPO_NS }}
+          kubectl apply -f ${{ env.RESOURCES_DIR }}/datasciencecluster/datasciencecluster.yaml -n ${{ env.DSC_NS }}
         env:
-          DSPO_NS: data-science-pipelines-operator
+          DSC_NS: opendatahub
 
       - name: Run upgrade tests
         run: |

@@ -24,18 +24,18 @@ Running `make clean` **will wipe your Open Data Hub installation** and delete th
 ## Customizing test behavior
 
 Without changes, the test image will run `$HOME/peak/installandtest.sh` which
-handles setting up the opendatahub-operator and then creating the KfDef found in
-`tests/setup/kfctl_openshift.yaml`.  If you want to modify your test run, you
-might want to change those files to get the behavior that you're looking for.
+handles setting up the opendatahub-operator and then creating the `DataScienceCluster` found in
+`tests/setup/datasciencecluster_openshift.yaml`.  If you want to modify your test run, you
+might want to [change those files](../README.md#using-a-development-image) to get the behavior that you're looking for.
 After you make changes, you will need to rebuild the test image with `make build`.
 
 If you'd like to run the tests against an instance that already has Open Data Hub installed,
 you set `SKIP_INSTALL=true` and that will cause the test run
 to skip the installation process and will only run the tests.  example: `make run SKIP_INSTALL=true`
 
-If you'd like to run the tests against an instance that already has a KfDef created,
-you set `SKIP_KFDEF_INSTALL=true` and that will cause the test run
-to skip the step of creating the default KfDef.  example: `make run SKIP_KFDEF_INSTALL=true`
+If you'd like to run the tests against an instance that already has a `DataScienceCluster` created,
+you set `SKIP_DATASCIENCECLUSTER_INSTALL=true` and that will cause the test run
+to skip the step of creating the default `DataScienceCluster`.  example: `make run SKIP_DATASCIENCECLUSTER_INSTALL=true`
 
 If you'd like to run a single test instead of all tests, you can
 set the TESTS_REGEX variable `TESTS_REGEX=<name of the test to run>`.  That will

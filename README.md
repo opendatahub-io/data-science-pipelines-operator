@@ -62,34 +62,26 @@ To get started you will first need to satisfy the following pre-requisites:
 
 ## Deploy the Operator via ODH
 
-On a cluster with ODH installed, create a namespace where you would like to install DSPO: 
-
-```bash
-DSPO_NS=data-science-pipelines-operator
-oc new-project ${DSPO_NS}
-```
-
-Then deploy the following `KfDef` into the namespace created above:
+Deploy the following `DataScienceCluster`:
 
 ```bash
 cat <<EOF | oc apply -f -
-apiVersion: kfdef.apps.kubeflow.org/v1
-kind: KfDef
+kind: DataScienceCluster
+apiVersion: datasciencecluster.opendatahub.io/v1
 metadata:
-   name: data-science-pipelines-operator
-   namespace: ${DSPO_NS}
+  name: data-science-pipelines-operator
 spec:
-   applications:
-      - kustomizeConfig:
-           repoRef:
-              name: manifests
-              path: data-science-pipelines-operator/
-        name: data-science-pipelines-operator
-   repos:
-      - name: manifests
-        uri: "https://github.com/opendatahub-io/odh-manifests/tarball/master"
+  components:
+    dashboard:
+      managementState: Managed
+    datasciencepipelines:
+      managementState: Managed
 EOF
 ```
+
+> ℹ️ **Note:**
+>
+> You can also deploy other ODH components using DataScienceCluster`. See https://github.com/opendatahub-io/opendatahub-operator#example-datasciencecluster for more information.
 
 Confirm the pods are successfully deployed and reach running state:
 
@@ -99,6 +91,35 @@ oc get pods -n ${DSPO_NS}
 
 Once all pods are ready, we can proceed to deploying the first Data Science Pipelines (DSP) instance. Instructions
 [here](#deploy-dsp-instance).
+
+### Using a development image
+
+You can use custom manifests from a branch or tag to use a different Data Science Pipelines Operator image. To do so, modify the `IMAGES_DSPO` config in [config/base/params.env](config/base/params.env) and push the changes to a branch or tag.
+
+Create a (or edit the existent) `DataSciencePipelines` adding `devFlags.manifests` with the URL of your branch or tag. For example, given the following repository and branch:
+
+* Repository: `https://github.com/a_user/data-science-pipelines-operator`
+* Branch: `my_branch`
+
+The `DataSciencePipelines` YAML should look like:
+
+```yaml
+kind: DataScienceCluster
+apiVersion: datasciencecluster.opendatahub.io/v1
+metadata:
+  name: data-science-pipelines-operator
+spec:
+  components:
+    dashboard:
+      managementState: Managed
+    datasciencepipelines:
+      managementState: Managed
+      devFlags:
+        manifests:
+          - uri: https://github.com/a_user/data-science-pipelines-operator/tarball/my_branch
+            contextDir: config
+            sourcePath: base
+```
 
 ## Deploy the Operator standalone
 
@@ -436,8 +457,9 @@ Depending on how you installed DSPO, follow the instructions below accordingly t
 To uninstall DSPO via ODH run the following:
 
 ```bash
-KFDEF_NAME=data-science-pipelines-operator
-oc delete kfdef ${KFDEF_NAME} -n ${DSPO_NS}
+DSC_NAME=$(oc get DataScienceCluster -o jsonpath='{.items[0].metadata.name}')
+DSPO_NS=$(oc get DataScienceCluster -o jsonpath='{.items[0].metadata.namespace}')
+oc delete datasciencecluster ${DSC_NAME} -n "${DSPO_NS}"
 ```
 
 ## Cleanup Standalone Installation

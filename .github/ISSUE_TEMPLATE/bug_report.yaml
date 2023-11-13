@@ -23,7 +23,7 @@ body:
       multiple: false
       options:
         - Standalone DSPO (without ODH)
-        - Manually deployed Kfdef
+        - Manually deployed DataScienceCluster
         - ODH Dashboard UI
     validations:
       required: true
