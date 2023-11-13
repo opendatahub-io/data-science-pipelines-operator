@@ -30,6 +30,7 @@ import (
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/util"
+	"time"
 )
 
 const storageSecret = "minio/secret.yaml.tmpl"
@@ -93,7 +94,7 @@ func getHttpsTransportWithCACert(log logr.Logger, pemCerts []byte) (*http.Transp
 	return transport, nil
 }
 
-var ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte) bool {
+var ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte, objStoreConnectionTimeout time.Duration) bool {
 	cred := createCredentialProvidersChain(string(accesskey), string(secretkey))
 
 	opts := &minio.Options{
@@ -116,7 +117,7 @@ var ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoin
 		return false
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, config.DefaultObjStoreConnectionTimeout)
+	ctx, cancel := context.WithTimeout(ctx, objStoreConnectionTimeout)
 	defer cancel()
 
 	// Attempt to run Stat on the Object.  It doesn't necessarily have to exist, we just want to verify we can successfully run an authenticated s3 command
@@ -176,7 +177,13 @@ func (r *DSPAReconciler) isObjectStorageAccessible(ctx context.Context, dsp *dsp
 		return false
 	}
 
-	verified := ConnectAndQueryObjStore(ctx, log, endpoint, params.ObjectStorageConnection.Bucket, accesskey, secretkey, *params.ObjectStorageConnection.Secure, params.APICustomPemCerts)
+	objStoreConnectionTimeout := config.GetDurationConfigWithDefault(config.ObjStoreConnectionTimeoutConfigName, config.DefaultObjStoreConnectionTimeout)
+
+	log.V(1).Info(fmt.Sprintf("Object Store connection timeout: %s", objStoreConnectionTimeout))
+
+	verified := ConnectAndQueryObjStore(ctx, log, endpoint, params.ObjectStorageConnection.Bucket, accesskey, secretkey,
+		*params.ObjectStorageConnection.Secure, params.APICustomPemCerts, objStoreConnectionTimeout)
+
 	if verified {
 		log.Info("Object Storage Health Check Successful")
 	} else {

@@ -10,3 +10,9 @@ Images:
   MlmdEnvoy: $(IMAGES_MLMDENVOY)
   MlmdGRPC: $(IMAGES_MLMDGRPC)
   MlmdWriter: $(IMAGES_MLMDWRITER)
+DSPO:
+  HealthCheck:
+    Database:
+      ConnectionTimeout: $(DSPO_HEALTHCHECK_DATABASE_CONNECTIONTIMEOUT)
+    ObjectStore:
+      ConnectionTimeout: $(DSPO_HEALTHCHECK_OBJECTSTORE_CONNECTIONTIMEOUT)
