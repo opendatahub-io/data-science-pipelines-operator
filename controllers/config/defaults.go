@@ -72,6 +72,7 @@ const (
 	MlmdWriterImagePath                 = "Images.MlmdWriter"
 	ObjStoreConnectionTimeoutConfigName = "DSPO.HealthCheck.ObjectStore.ConnectionTimeout"
 	DBConnectionTimeoutConfigName       = "DSPO.HealthCheck.Database.ConnectionTimeout"
+	RequeueTimeConfigName               = "DSPO.RequeueTime"
 )
 
 // DSPA Status Condition Types
@@ -117,6 +118,8 @@ const DefaultDBConnectionTimeout = time.Second * 15
 const DefaultObjStoreConnectionTimeout = time.Second * 15
 
 const DefaultMaxConcurrentReconciles = 10
+
+const DefaultRequeueTime = 2 * time.Minute
 
 func GetConfigRequiredFields() []string {
 	return requiredFields

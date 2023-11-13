@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"time"
 
 	"github.com/go-logr/logr"
 	mf "github.com/manifestival/manifestival"
@@ -207,10 +206,11 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, nil
 	}
 
+	requeueTime := config.GetDurationConfigWithDefault(config.RequeueTimeConfigName, config.DefaultRequeueTime)
 	err = params.ExtractParams(ctx, dspa, r.Client, r.Log)
 	if err != nil {
 		log.Info(fmt.Sprintf("Encountered error when parsing CR: [%s]", err))
-		return ctrl.Result{Requeue: true, RequeueAfter: 2 * time.Minute}, nil
+		return ctrl.Result{Requeue: true, RequeueAfter: requeueTime}, nil
 	}
 
 	err = r.ReconcileDatabase(ctx, dspa, params)
