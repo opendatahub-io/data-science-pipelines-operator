@@ -104,6 +104,8 @@ spec:
               value: "{{.ObjectStorageConnection.Host}}"
             - name: MINIO_SERVICE_SERVICE_PORT
               value: "{{.ObjectStorageConnection.Port}}"
+            - name: MINIO_SERVICE_SERVICE_ENDPOINT
+              value: "{{.ObjectStorageConnection.Endpoint}}"
             - name: CACHE_IMAGE
               value: "{{.APIServer.CacheImage}}"
             - name: MOVERESULTS_IMAGE
