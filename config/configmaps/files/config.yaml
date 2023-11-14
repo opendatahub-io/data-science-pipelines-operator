@@ -22,3 +22,10 @@ ImagesV2:
   MlmdEnvoy: $(IMAGESV2_MLMDENVOY)
   MlmdGRPC: $(IMAGESV2_MLMDGRPC)
   MlmdWriter: $(IMAGESV2_MLMDWRITER)
+DSPO:
+  HealthCheck:
+    Database:
+      ConnectionTimeout: $(DSPO_HEALTHCHECK_DATABASE_CONNECTIONTIMEOUT)
+    ObjectStore:
+      ConnectionTimeout: $(DSPO_HEALTHCHECK_OBJECTSTORE_CONNECTIONTIMEOUT)
+  RequeueTime: $(DSPO_REQUEUE_TIME)

@@ -6,7 +6,7 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      app: ds-pipeline-{{.Name}}
+      app: {{.APIServerDefaultResourceName}}
       component: data-science-pipelines
   policyTypes:
     - Ingress
@@ -46,11 +46,11 @@ spec:
               component: data-science-pipelines
         - podSelector:
             matchLabels:
-              app: ds-pipeline-persistenceagent-{{.Name}}
+              app: {{.PersistentAgentDefaultResourceName}}
               component: data-science-pipelines
         - podSelector:
             matchLabels:
-              app: ds-pipeline-scheduledworkflow-{{.Name}}
+              app: {{.ScheduledWorkflowDefaultResourceName}}
               component: data-science-pipelines
         - podSelector:
             matchLabels:

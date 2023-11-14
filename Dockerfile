@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM registry.access.redhat.com/ubi8/go-toolset:1.19.10 as builder
+FROM registry.access.redhat.com/ubi8/go-toolset:1.19 as builder
 ARG TARGETOS
 ARG TARGETARCH
 
@@ -24,7 +24,7 @@ COPY controllers/ controllers/
 USER root
 RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o manager main.go
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.7
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.8
 WORKDIR /
 COPY --from=builder /workspace/manager .
 COPY config/internal config/internal

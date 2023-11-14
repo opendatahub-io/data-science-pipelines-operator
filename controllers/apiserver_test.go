@@ -18,6 +18,7 @@ limitations under the License.
 package controllers
 
 import (
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"testing"
 
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
@@ -28,7 +29,7 @@ import (
 func TestDeployAPIServer(t *testing.T) {
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
-	expectedAPIServerName := "ds-pipeline-testdspa"
+	expectedAPIServerName := apiServerDefaultResourceNamePrefix + testDSPAName
 
 	// Construct DSPASpec with deployed APIServer
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
@@ -77,12 +78,17 @@ func TestDeployAPIServer(t *testing.T) {
 	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedAPIServerName, testNamespace)
 	assert.True(t, created)
 	assert.Nil(t, err)
+
+	// Ensure readiness is handled
+	apiServerReady, err := reconciler.handleReadyCondition(ctx, dspa, params.APIServerDefaultResourceName, config.APIServerReady)
+	assert.Equal(t, "Deploying", apiServerReady.Reason)
+	assert.Nil(t, err)
 }
 
 func TestDontDeployAPIServer(t *testing.T) {
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
-	expectedAPIServerName := "ds-pipeline-testdspa"
+	expectedAPIServerName := apiServerDefaultResourceNamePrefix + testDSPAName
 
 	// Construct DSPASpec with non-deployed APIServer
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{

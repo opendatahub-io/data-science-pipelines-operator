@@ -18,6 +18,7 @@ limitations under the License.
 package controllers
 
 import (
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"testing"
 
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
@@ -28,7 +29,7 @@ import (
 func TestDeployPersistenceAgent(t *testing.T) {
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
-	expectedPersistenceAgentName := "ds-pipeline-persistenceagent-testdspa"
+	expectedPersistenceAgentName := persistenceAgentDefaultResourceNamePrefix + testDSPAName
 
 	// Construct DSPASpec with deployed PersistenceAgent
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
@@ -76,12 +77,17 @@ func TestDeployPersistenceAgent(t *testing.T) {
 	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedPersistenceAgentName, testNamespace)
 	assert.True(t, created)
 	assert.Nil(t, err)
+
+	// Ensure readiness is handled
+	persistenceAgentReady, err := reconciler.handleReadyCondition(ctx, dspa, params.PersistentAgentDefaultResourceName, config.PersistenceAgentReady)
+	assert.Equal(t, "Deploying", persistenceAgentReady.Reason)
+	assert.Nil(t, err)
 }
 
 func TestDontDeployPersistenceAgent(t *testing.T) {
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
-	expectedPersistenceAgentName := "ds-pipeline-persistenceagent-testdspa"
+	expectedPersistenceAgentName := persistenceAgentDefaultResourceNamePrefix + testDSPAName
 
 	// Construct DSPASpec with non-deployed PersistenceAgent
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{

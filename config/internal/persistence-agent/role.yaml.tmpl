@@ -1,10 +1,10 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: ds-pipeline-persistenceagent-{{.Name}}
+  name: {{.PersistentAgentDefaultResourceName}}
   namespace: {{.Namespace}}
   labels:
-    app: ds-pipeline-persistenceagent-{{.Name}}
+    app: {{.PersistentAgentDefaultResourceName}}
     component: data-science-pipelines
 rules:
   - apiGroups:

@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ds-pipeline-{{.Name}}
+  name: {{.APIServerDefaultResourceName}}
   namespace: {{.Namespace}}
   labels:
-    app: ds-pipeline-{{.Name}}
+    app: {{.APIServerDefaultResourceName}}
     component: data-science-pipelines
     dspa: {{.Name}}
 spec:
   selector:
     matchLabels:
-      app: ds-pipeline-{{.Name}}
+      app: {{.APIServerDefaultResourceName}}
       component: data-science-pipelines
       dspa: {{.Name}}
   template:
     metadata:
       labels:
-        app: ds-pipeline-{{.Name}}
+        app: {{.APIServerDefaultResourceName}}
         component: data-science-pipelines
         dspa: {{.Name}}
     spec:
@@ -52,6 +52,14 @@ spec:
               value: "{{.APIServer.ArchiveLogs}}"
             - name: EXECUTIONTYPE
               value: PipelineRun
+            {{ if .APIServer.CABundle }}
+            - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_NAME
+              value: "{{.APIServer.CABundle.ConfigMapName}}"
+            - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_KEY
+              value: "{{.APIServer.CABundle.ConfigMapKey}}"
+            - name: ARTIFACT_COPY_STEP_CABUNDLE_MOUNTPATH
+              value: {{ .PiplinesCABundleMountPath }}
+            {{ end }}
             - name: TRACK_ARTIFACTS
               value: "{{.APIServer.TrackArtifacts}}"
             - name: STRIP_EOF
@@ -74,6 +82,12 @@ spec:
               value: "ds-pipeline-visualizationserver"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
               value: "8888"
+            - name: OBJECTSTORECONFIG_CREDENTIALSSECRET
+              value: "{{.ObjectStorageConnection.CredentialsSecret.SecretName}}"
+            - name: OBJECTSTORECONFIG_CREDENTIALSACCESSKEYKEY
+              value: "{{.ObjectStorageConnection.CredentialsSecret.AccessKey}}"
+            - name: OBJECTSTORECONFIG_CREDENTIALSSECRETKEYKEY
+              value: "{{.ObjectStorageConnection.CredentialsSecret.SecretKey}}"
             - name: OBJECTSTORECONFIG_BUCKETNAME
               value: "{{.ObjectStorageConnection.Bucket}}"
             - name: OBJECTSTORECONFIG_ACCESSKEY
@@ -159,26 +173,32 @@ spec:
               memory: {{.APIServer.Resources.Limits.Memory}}
               {{ end }}
             {{ end }}
-          {{ if .APIServer.EnableSamplePipeline }}
+          {{ if or .APIServer.EnableSamplePipeline .APIServer.CABundle }}
           volumeMounts:
+            {{ if .APIServer.EnableSamplePipeline }}
             - name: sample-config
               mountPath: /config/sample_config.json
               subPath: sample_config.json
             - name: sample-pipeline
               mountPath: /samples/
+            {{ end }}
+            {{ if .APIServer.CABundle }}
+            - mountPath: {{ .APIServerPiplinesCABundleMountPath  }}
+              name: ca-bundle
+            {{ end }}
           {{ end }}
         {{ if .APIServer.EnableRoute }}
         - name: oauth-proxy
           args:
             - --https-address=:8443
             - --provider=openshift
-            - --openshift-service-account=ds-pipeline-{{.Name}}
+            - --openshift-service-account={{.APIServerDefaultResourceName}}
             - --upstream=http://localhost:8888
             - --tls-cert=/etc/tls/private/tls.crt
             - --tls-key=/etc/tls/private/tls.key
             - --cookie-secret=SECRET
-            - '--openshift-delegate-urls={"/": {"group":"route.openshift.io","resource":"routes","verb":"get","name":"ds-pipeline-{{.Name}}","namespace":"{{.Namespace}}"}}'
-            - '--openshift-sar={"namespace":"{{.Namespace}}","resource":"routes","resourceName":"ds-pipeline-{{.Name}}","verb":"get","resourceAPIGroup":"route.openshift.io"}'
+            - '--openshift-delegate-urls={"/": {"group":"route.openshift.io","resource":"routes","verb":"get","name":"{{.APIServerDefaultResourceName}}","namespace":"{{.Namespace}}"}}'
+            - '--openshift-sar={"namespace":"{{.Namespace}}","resource":"routes","resourceName":"{{.APIServerDefaultResourceName}}","verb":"get","resourceAPIGroup":"route.openshift.io"}'
             - --skip-auth-regex='(^/metrics|^/apis/v1beta1/healthz)'
           image: {{.OAuthProxy}}
           ports:
@@ -215,11 +235,19 @@ spec:
             - mountPath: /etc/tls/private
               name: proxy-tls
         {{ end }}
-      serviceAccountName: ds-pipeline-{{.Name}}
+      serviceAccountName: {{.APIServerDefaultResourceName}}
       volumes:
         - name: proxy-tls
           secret:
             secretName: ds-pipelines-proxy-tls-{{.Name}}
+        {{ if .APIServer.CABundle }}
+        - name: ca-bundle
+          configMap:
+            name: {{ .APIServer.CABundle.ConfigMapName }}
+            items:
+              - key: {{ .APIServer.CABundle.ConfigMapKey }}
+                path: {{ .APIServer.CABundle.ConfigMapKey }}
+        {{ end }}
         {{ if .APIServer.EnableSamplePipeline }}
         - name: sample-config
           configMap:

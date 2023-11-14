@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ds-pipeline-persistenceagent-{{.Name}}
+  name: {{.PersistentAgentDefaultResourceName}}
   namespace: {{.Namespace}}
   labels:
-    app: ds-pipeline-persistenceagent-{{.Name}}
+    app: {{.PersistentAgentDefaultResourceName}}
     component: data-science-pipelines
     dspa: {{.Name}}
 spec:
   selector:
     matchLabels:
-      app: ds-pipeline-persistenceagent-{{.Name}}
+      app: {{.PersistentAgentDefaultResourceName}}
       component: data-science-pipelines
       dspa: {{.Name}}
   template:
@@ -18,7 +18,7 @@ spec:
       annotations:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
       labels:
-        app: ds-pipeline-persistenceagent-{{.Name}}
+        app: {{.PersistentAgentDefaultResourceName}}
         component: data-science-pipelines
         dspa: {{.Name}}
     spec:
@@ -85,4 +85,4 @@ spec:
               memory: {{.PersistenceAgent.Resources.Limits.Memory}}
               {{ end }}
             {{ end }}
-      serviceAccountName: ds-pipeline-persistenceagent-{{.Name}}
+      serviceAccountName: {{.PersistentAgentDefaultResourceName}}

@@ -25,15 +25,17 @@ import (
 )
 
 const (
-	DefaultImageValue = "MustSetInConfig"
+	DefaultImageValue                  = "MustSetInConfig"
+	APIServerPiplinesCABundleMountPath = "/etc/pki/tls/certs"
+	PiplinesCABundleMountPath          = "/etc/pki/tls/certs"
+	MLPipelineUIConfigMapPrefix        = "ds-pipeline-ui-configmap-"
+	ArtifactScriptConfigMapNamePrefix  = "ds-pipeline-artifact-script-"
+	ArtifactScriptConfigMapKey         = "artifact_script"
+	DSPServicePrefix                   = "ds-pipeline"
 
-	MLPipelineUIConfigMapPrefix       = "ds-pipeline-ui-configmap-"
-	ArtifactScriptConfigMapNamePrefix = "ds-pipeline-artifact-script-"
-	ArtifactScriptConfigMapKey        = "artifact_script"
-	DSPServicePrefix                  = "ds-pipeline"
-
-	DBSecretNamePrefix = "ds-pipeline-db-"
-	DBSecretKey        = "password"
+	DefaultDBSecretNamePrefix = "ds-pipeline-db-"
+	DefaultDBSecretKey        = "password"
+	GeneratedDBPasswordLength = 12
 
 	MariaDBName        = "mlpipeline"
 	MariaDBHostPrefix  = "mariadb"
@@ -47,26 +49,31 @@ const (
 	MinioDefaultBucket = "mlpipeline"
 	MinioPVCSize       = "10Gi"
 
-	ObjectStorageSecretName = "mlpipeline-minio-artifact" // hardcoded in kfp-tekton
-	ObjectStorageAccessKey  = "accesskey"
-	ObjectStorageSecretKey  = "secretkey"
+	DefaultObjectStorageSecretNamePrefix  = "ds-pipeline-s3-"
+	DefaultObjectStorageAccessKey         = "accesskey"
+	DefaultObjectStorageSecretKey         = "secretkey"
+	GeneratedObjectStorageAccessKeyLength = 16
+	GeneratedObjectStorageSecretKeyLength = 24
 
 	MlmdGrpcPort = "8080"
 )
 
 // DSPO Config File Paths
 const (
-	APIServerImagePath            = "Images.ApiServer"
-	APIServerArtifactImagePath    = "Images.Artifact"
-	PersistenceAgentImagePath     = "Images.PersistentAgent"
-	ScheduledWorkflowImagePath    = "Images.ScheduledWorkflow"
-	APIServerCacheImagePath       = "Images.Cache"
-	APIServerMoveResultsImagePath = "Images.MoveResultsImage"
-	MariaDBImagePath              = "Images.MariaDB"
-	OAuthProxyImagePath           = "Images.OAuthProxy"
-	MlmdEnvoyImagePath            = "Images.MlmdEnvoy"
-	MlmdGRPCImagePath             = "Images.MlmdGRPC"
-	MlmdWriterImagePath           = "Images.MlmdWriter"
+	APIServerImagePath                  = "Images.ApiServer"
+	APIServerArtifactImagePath          = "Images.Artifact"
+	PersistenceAgentImagePath           = "Images.PersistentAgent"
+	ScheduledWorkflowImagePath          = "Images.ScheduledWorkflow"
+	APIServerCacheImagePath             = "Images.Cache"
+	APIServerMoveResultsImagePath       = "Images.MoveResultsImage"
+	MariaDBImagePath                    = "Images.MariaDB"
+	OAuthProxyImagePath                 = "Images.OAuthProxy"
+	MlmdEnvoyImagePath                  = "Images.MlmdEnvoy"
+	MlmdGRPCImagePath                   = "Images.MlmdGRPC"
+	MlmdWriterImagePath                 = "Images.MlmdWriter"
+	ObjStoreConnectionTimeoutConfigName = "DSPO.HealthCheck.ObjectStore.ConnectionTimeout"
+	DBConnectionTimeoutConfigName       = "DSPO.HealthCheck.Database.ConnectionTimeout"
+	RequeueTimeConfigName               = "DSPO.RequeueTime"
 )
 
 // DSPV2 Image Paths
@@ -126,6 +133,8 @@ const DefaultObjStoreConnectionTimeout = time.Second * 15
 
 const DefaultMaxConcurrentReconciles = 10
 
+const DefaultRequeueTime = 2 * time.Minute
+
 func GetConfigRequiredFields() []string {
 	return requiredFields
 }
@@ -161,4 +170,11 @@ func GetStringConfigWithDefault(configName, value string) string {
 		return value
 	}
 	return viper.GetString(configName)
+}
+
+func GetDurationConfigWithDefault(configName string, value time.Duration) time.Duration {
+	if !viper.IsSet(configName) {
+		return value
+	}
+	return viper.GetDuration(configName)
 }

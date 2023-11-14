@@ -35,12 +35,12 @@ spec:
               valueFrom:
                 secretKeyRef:
                   key: "accesskey"
-                  name: "mlpipeline-minio-artifact"
+                  name: "ds-pipeline-s3-testdsp5"
             - name: MINIO_SECRET_KEY
               valueFrom:
                 secretKeyRef:
                   key: "secretkey"
-                  name: "mlpipeline-minio-artifact"
+                  name: "ds-pipeline-s3-testdsp5"
             - name: ALLOW_CUSTOM_VISUALIZATIONS
               value: "true"
             - name: ARGO_ARCHIVE_LOGS

@@ -1,15 +1,15 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: ds-pipeline-{{.Name}}
+  name: {{.APIServerDefaultResourceName}}
   namespace: {{.Namespace}}
   labels:
-    app: ds-pipeline-{{.Name}}
+    app: {{.APIServerDefaultResourceName}}
     component: data-science-pipelines
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: ds-pipeline-{{.Name}}
+  name: {{.APIServerDefaultResourceName}}
 subjects:
   - kind: ServiceAccount
-    name: ds-pipeline-{{.Name}}
+    name: {{.APIServerDefaultResourceName}}

@@ -2,9 +2,9 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   labels:
-    app: ds-pipeline-{{.Name}}
+    app: {{.APIServerDefaultResourceName}}
     component: data-science-pipelines
-  name: ds-pipeline-{{.Name}}
+  name: {{.APIServerDefaultResourceName}}
   namespace: {{.Namespace}}
 spec:
   endpoints:
@@ -12,5 +12,5 @@ spec:
       port: http
   selector:
     matchLabels:
-      app: ds-pipeline-{{.Name}}
+      app: {{.APIServerDefaultResourceName}}
       component: data-science-pipelines

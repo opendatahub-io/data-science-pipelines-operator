@@ -15,11 +15,11 @@ spec:
           - name: IMAGES_SCHEDULEDWORKFLOW
             value: quay.io/opendatahub/ds-pipelines-scheduledworkflow:main
           - name: IMAGES_CACHE
-            value: registry.access.redhat.com/ubi8/ubi-minimal:8.7
+            value: registry.access.redhat.com/ubi8/ubi-minimal:8.8
           - name: IMAGES_DSPO
             value: quay.io/opendatahub/data-science-pipelines-operator:main
           - name: IMAGES_MOVERESULTSIMAGE
-            value: registry.access.redhat.com/ubi8/ubi-micro:8.7
+            value: registry.access.redhat.com/ubi8/ubi-micro:8.8
           - name: IMAGES_MARIADB
             value: registry.redhat.io/rhel8/mariadb-103:1-188
           - name: IMAGES_OAUTHPROXY
