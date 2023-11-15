@@ -18,6 +18,7 @@ package testutil
 
 import (
 	"fmt"
+
 	"github.com/go-test/deep"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -81,6 +82,49 @@ func secretsAreEqual(expected, actual *unstructured.Unstructured) (bool, error) 
 	return true, nil
 }
 
+func compareEnvs(expected, actual []v1.EnvVar) string {
+	errlist := ""
+	if len(expected) != len(actual) {
+		errlist = fmt.Sprintf("Container Env Lengths [expected: %d, actual: %d]\n", len(expected), len(actual))
+	}
+
+	// Iterate across expected list and check for each value in actual env list
+	for e_i, e := range expected {
+		found := false
+		for a_i, a := range actual {
+			if e.Name == a.Name {
+				found = true
+				if e_i != a_i {
+					errlist = fmt.Sprintf("%sExpected Env out-of-order: [%s]\n", errlist, e.Name)
+				}
+				if e.Value != a.Value {
+					errlist = fmt.Sprintf("%sExpected Env Values do not match: [expected: %s, actual: %s]\n", errlist, e.Value, a.Value)
+				}
+				continue
+			}
+		}
+		if !found {
+			errlist = fmt.Sprintf("%sCould not find expected env: [%s]\n", errlist, e.Name)
+		}
+	}
+
+	// Iterate across actual env list and check for each value if they were expected
+	for _, a := range actual {
+		found := false
+		for _, e := range expected {
+			if a.Name == e.Name {
+				found = true
+				continue
+			}
+		}
+		if !found {
+			errlist = fmt.Sprintf("%sExtra Env Found: [%s]\n", errlist, a.Name)
+		}
+	}
+
+	return errlist
+}
+
 func deploymentsAreEqual(expected, actual *unstructured.Unstructured) (bool, error) {
 	expectedDep := &appsv1.Deployment{}
 	actualDep := &appsv1.Deployment{}
@@ -119,8 +163,10 @@ func deploymentsAreEqual(expected, actual *unstructured.Unstructured) (bool, err
 		expectedContainer := expectedDep.Spec.Template.Spec.Containers[i]
 		actualContainer := actualDep.Spec.Template.Spec.Containers[i]
 
+		diffEnvsMsg := compareEnvs(expectedContainer.Env, actualContainer.Env)
+
 		if len(expectedContainer.Env) != len(actualContainer.Env) {
-			return false, notEqualMsg("Container Env Lengths ")
+			return false, notEqualMsg(fmt.Sprintf("Container Env Lengths [expected: %d, actual: %d]\nDivergence(s): %s", len(expectedContainer.Env), len(actualContainer.Env), diffEnvsMsg))
 		}
 		// Check each env individually for a more meaningful response upon failure.
 		for i, expectedEnv := range expectedContainer.Env {
