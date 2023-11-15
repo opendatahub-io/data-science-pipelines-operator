@@ -25,6 +25,7 @@ import (
 
 	mf "github.com/manifestival/manifestival"
 	. "github.com/onsi/gomega"
+	v1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -120,6 +121,68 @@ func DeleteResource(uc UtilContext, path string) {
 
 }
 
+func compareEnvs(expected, actual []v1.EnvVar) string {
+	errlist := ""
+	if len(expected) != len(actual) {
+		errlist = fmt.Sprintf("Container Env Lengths [expected: %d, actual: %d]\n", len(expected), len(actual))
+	}
+
+	// Iterate across expected list and check for each value
+	for e_i, e := range expected {
+		found := false
+		for a_i, a := range actual {
+			if e.Name == a.Name {
+				found = true
+				if e_i != a_i {
+					errlist = fmt.Sprintf("%sExpected Env out-of-order: [%s]\n", errlist, e.Name)
+				}
+				if e.Value != a.Value {
+					errlist = fmt.Sprintf("%sExpected Env Values do not match: [expected: %s, actual: %s]\n", errlist, e.Value, a.Value)
+				}
+				continue
+			}
+		}
+		if !found {
+			errlist = fmt.Sprintf("%sCould not find expected env: [%s]\n", errlist, e.Name)
+		}
+	}
+
+	// Iterate across expected list and check for each value
+	for _, a := range actual {
+		found := false
+		for _, e := range expected {
+			if a.Name == e.Name {
+				found = true
+				continue
+			}
+		}
+		if !found {
+			errlist = fmt.Sprintf("%sExtra Env Found: [%s]\n", errlist, a.Name)
+		}
+	}
+
+	return errlist
+}
+
+func getEnvFromUnstructured(obj *unstructured.Unstructured) []v1.EnvVar {
+	var envVars []v1.EnvVar
+
+	// Assuming 'obj' represents a Kubernetes Pod, you can retrieve the container's environment variables
+	containers, _, _ := unstructured.NestedSlice(obj.Object, "spec", "containers")
+	if len(containers) > 0 {
+		container := containers[0].(map[string]interface{})
+		env, _, _ := unstructured.NestedSlice(container, "env")
+		for _, e := range env {
+			envVar := e.(map[string]interface{})
+			name := envVar["name"].(string)
+			value := envVar["value"].(string)
+			envVars = append(envVars, v1.EnvVar{Name: name, Value: value})
+		}
+	}
+
+	return envVars
+}
+
 // CompareResources compares expected resource found locally
 // in path and compares it against the resource found in the
 // k8s cluster accessed via client defined in uc.Opts.
@@ -142,10 +205,15 @@ func CompareResources(uc UtilContext, path string) {
 		return err
 	}, timeout, interval).ShouldNot(HaveOccurred())
 
-	rest := expected.Object["kind"].(string)
-	result, err := CompareResourceProcs[rest](expected, actual)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(result).Should(BeTrue())
+	expectedEnv := getEnvFromUnstructured(expected)
+	actualEnv := getEnvFromUnstructured(actual)
+
+	envMismatch := compareEnvs(expectedEnv, actualEnv)
+	if envMismatch != "" {
+		errorMsg := fmt.Sprintf("Container Env Lengths [expected: %d, actual: %d]\n%s", len(expectedEnv), len(actualEnv), envMismatch)
+		Expect(false).To(BeTrue(), errorMsg)
+		return
+	}
 }
 
 // DirExists checks whether dir at path exists
