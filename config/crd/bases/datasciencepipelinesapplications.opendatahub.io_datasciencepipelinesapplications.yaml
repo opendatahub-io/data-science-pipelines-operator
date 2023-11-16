@@ -279,6 +279,9 @@ spec:
                                 x-kubernetes-int-or-string: true
                             type: object
                         type: object
+                      storageClassName:
+                        description: Volume Mode Filesystem storageClass to use for PVC creation
+                        type: string
                       username:
                         default: mlpipeline
                         description: 'The MariadB username that will be created. Should
@@ -617,6 +620,9 @@ spec:
                         - secretKey
                         - secretName
                         type: object
+                      storageClassName:
+                        description: Volume Mode Filesystem storageClass to use for PVC creation
+                        type: string
                     required:
                     - image
                     type: object
