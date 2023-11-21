@@ -96,6 +96,17 @@ func (p *DSPAParams) UsingTektonEngineDriver(dsp *dspa.DataSciencePipelinesAppli
 	return !p.UsingV2Pipelines(dsp)
 }
 
+func (p *DSPAParams) GetImageForComponent(dsp *dspa.DataSciencePipelinesApplication, v1Image, v2ArgoImage, v2TektonImage string) string {
+	if p.UsingV2Pipelines(dsp) {
+		if p.UsingArgoEngineDriver(dsp) {
+			return v2ArgoImage
+		} else {
+			return v2TektonImage
+		}
+	}
+	return v1Image
+}
+
 // UsingExternalDB will return true if an external Database is specified in the CR, otherwise false.
 func (p *DSPAParams) UsingExternalDB(dsp *dspa.DataSciencePipelinesApplication) bool {
 	if dsp.Spec.Database != nil && dsp.Spec.Database.ExternalDB != nil {
@@ -373,20 +384,10 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 
 func (p *DSPAParams) SetupMLMD(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, log logr.Logger) error {
 	if p.MLMD != nil {
-		MlmdEnvoyImagePath := config.MlmdEnvoyImagePath
-		MlmdGRPCImagePath := config.MlmdGRPCImagePath
-		MlmdWriterImagePath := config.MlmdWriterImagePath
-		if p.UsingV2Pipelines(dsp) {
-			if p.UsingArgoEngineDriver(dsp) {
-				MlmdEnvoyImagePath = config.MlmdEnvoyImagePathV2Argo
-				MlmdGRPCImagePath = config.MlmdGRPCImagePathV2Argo
-				MlmdWriterImagePath = config.MlmdWriterImagePathV2Argo
-			} else if p.UsingTektonEngineDriver(dsp) {
-				MlmdEnvoyImagePath = config.MlmdEnvoyImagePathV2Tekton
-				MlmdGRPCImagePath = config.MlmdGRPCImagePathV2Tekton
-				MlmdWriterImagePath = config.MlmdWriterImagePathV2Tekton
-			}
-		}
+		MlmdEnvoyImagePath := p.GetImageForComponent(dsp, config.MlmdEnvoyImagePath, config.MlmdEnvoyImagePathV2Argo, config.MlmdEnvoyImagePathV2Tekton)
+		MlmdGRPCImagePath := p.GetImageForComponent(dsp, config.MlmdGRPCImagePath, config.MlmdGRPCImagePathV2Argo, config.MlmdGRPCImagePathV2Tekton)
+		MlmdWriterImagePath := p.GetImageForComponent(dsp, config.MlmdWriterImagePath, config.MlmdWriterImagePathV2Argo, config.MlmdWriterImagePathV2Tekton)
+
 		if p.MLMD.Envoy == nil {
 			p.MLMD.Envoy = &dspa.Envoy{
 				Image: config.GetStringConfigWithDefault(MlmdEnvoyImagePath, config.DefaultImageValue),
@@ -452,28 +453,11 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.APIServerPiplinesCABundleMountPath = config.APIServerPiplinesCABundleMountPath
 	p.PiplinesCABundleMountPath = config.PiplinesCABundleMountPath
 
-	pipelinesV2Images := p.UsingV2Pipelines(dsp)
-	usingArgoEngine := p.UsingArgoEngineDriver(dsp)
-	usingTektonEngine := p.UsingTektonEngineDriver(dsp)
-
 	if p.APIServer != nil {
-		APIServerImagePath := config.APIServerImagePath
-		APIServerArtifactImagePath := config.APIServerArtifactImagePath
-		APIServerCacheImagePath := config.APIServerCacheImagePath
-		APIServerMoveResultsImagePath := config.APIServerMoveResultsImagePath
-		if pipelinesV2Images {
-			if usingArgoEngine {
-				APIServerImagePath = config.APIServerImagePathV2Argo
-				APIServerArtifactImagePath = config.APIServerArtifactImagePathV2Argo
-				APIServerCacheImagePath = config.APIServerCacheImagePathV2Argo
-				APIServerMoveResultsImagePath = config.APIServerMoveResultsImagePathV2Argo
-			} else if usingTektonEngine {
-				APIServerImagePath = config.APIServerImagePathV2Tekton
-				APIServerArtifactImagePath = config.APIServerArtifactImagePathV2Tekton
-				APIServerCacheImagePath = config.APIServerCacheImagePathV2Tekton
-				APIServerMoveResultsImagePath = config.APIServerMoveResultsImagePathV2Tekton
-			}
-		}
+		APIServerImagePath := p.GetImageForComponent(dsp, config.APIServerImagePath, config.APIServerImagePathV2Argo, config.APIServerImagePathV2Tekton)
+		APIServerArtifactImagePath := p.GetImageForComponent(dsp, config.APIServerArtifactImagePath, config.APIServerArtifactImagePathV2Argo, config.APIServerArtifactImagePathV2Tekton)
+		APIServerCacheImagePath := p.GetImageForComponent(dsp, config.APIServerCacheImagePath, config.APIServerCacheImagePathV2Argo, config.APIServerCacheImagePathV2Tekton)
+		APIServerMoveResultsImagePath := p.GetImageForComponent(dsp, config.APIServerMoveResultsImagePath, config.APIServerMoveResultsImagePathV2Argo, config.APIServerMoveResultsImagePathV2Tekton)
 
 		serverImageFromConfig := config.GetStringConfigWithDefault(APIServerImagePath, config.DefaultImageValue)
 		artifactImageFromConfig := config.GetStringConfigWithDefault(APIServerArtifactImagePath, config.DefaultImageValue)
@@ -508,28 +492,13 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	}
 
 	if p.PersistenceAgent != nil {
-		PersistenceAgentImagePath := config.PersistenceAgentImagePath
-		if pipelinesV2Images {
-			if usingArgoEngine {
-				PersistenceAgentImagePath = config.PersistenceAgentImagePathV2Argo
-			} else if usingTektonEngine {
-				PersistenceAgentImagePath = config.PersistenceAgentImagePathV2Tekton
-			}
-		}
+		PersistenceAgentImagePath := p.GetImageForComponent(dsp, config.PersistenceAgentImagePath, config.PersistenceAgentImagePathV2Argo, config.PersistenceAgentImagePathV2Tekton)
 		persistenceAgentImageFromConfig := config.GetStringConfigWithDefault(PersistenceAgentImagePath, config.DefaultImageValue)
 		setStringDefault(persistenceAgentImageFromConfig, &p.PersistenceAgent.Image)
 		setResourcesDefault(config.PersistenceAgentResourceRequirements, &p.PersistenceAgent.Resources)
 	}
 	if p.ScheduledWorkflow != nil {
-		ScheduledWorkflowImagePath := config.ScheduledWorkflowImagePath
-		if pipelinesV2Images {
-			if usingArgoEngine {
-				ScheduledWorkflowImagePath = config.ScheduledWorkflowImagePathV2Argo
-
-			} else if usingTektonEngine {
-				ScheduledWorkflowImagePath = config.ScheduledWorkflowImagePathV2Tekton
-			}
-		}
+		ScheduledWorkflowImagePath := p.GetImageForComponent(dsp, config.ScheduledWorkflowImagePath, config.ScheduledWorkflowImagePathV2Argo, config.ScheduledWorkflowImagePathV2Tekton)
 		scheduledWorkflowImageFromConfig := config.GetStringConfigWithDefault(ScheduledWorkflowImagePath, config.DefaultImageValue)
 		setStringDefault(scheduledWorkflowImageFromConfig, &p.ScheduledWorkflow.Image)
 		setResourcesDefault(config.ScheduledWorkflowResourceRequirements, &p.ScheduledWorkflow.Resources)
