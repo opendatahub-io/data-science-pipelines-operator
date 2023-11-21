@@ -51,7 +51,7 @@ interact with them in the
 To get started you will first need to satisfy the following pre-requisites:
 
 ## Pre-requisites
-1. An OpenShift cluster that is 4.9 or higher.
+1. An OpenShift cluster that is 4.11 or higher.
 2. You will need to be logged into this cluster as [cluster admin] via [oc client].
 3. The OpenShift Cluster must have OpenShift Pipelines 1.8 or higher installed. We recommend channel pipelines-1.8
    on OCP 4.10 and pipelines-1.9 or pipelines-1.10 for OCP 4.11, 4.12 and 4.13.
