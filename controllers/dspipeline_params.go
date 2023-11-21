@@ -36,12 +36,11 @@ import (
 )
 
 type DSPAParams struct {
-<<<<<<< HEAD
 	Name                                 string
 	Namespace                            string
 	Owner                                mf.Owner
 	DSPVersion                           string
-	EngineDriver         string
+	EngineDriver                         string
 	APIServer                            *dspa.APIServer
 	APIServerPiplinesCABundleMountPath   string
 	PiplinesCABundleMountPath            string
@@ -90,11 +89,11 @@ func (p *DSPAParams) UsingV2Pipelines(dsp *dspa.DataSciencePipelinesApplication)
 }
 
 func (p *DSPAParams) UsingArgoEngineDriver(dsp *dspa.DataSciencePipelinesApplication) bool {
-	return dsp.Spec.EngineDriver == "argo"
+	return p.UsingV2Pipelines(dsp)
 }
 
 func (p *DSPAParams) UsingTektonEngineDriver(dsp *dspa.DataSciencePipelinesApplication) bool {
-	return dsp.Spec.EngineDriver == "tekton"
+	return !p.UsingV2Pipelines(dsp)
 }
 
 // UsingExternalDB will return true if an external Database is specified in the CR, otherwise false.
@@ -437,7 +436,6 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.Name = dsp.Name
 	p.Namespace = dsp.Namespace
 	p.DSPVersion = dsp.Spec.DSPVersion
-	p.EngineDriver = dsp.Spec.EngineDriver
 	p.Owner = dsp
 	p.APIServer = dsp.Spec.APIServer.DeepCopy()
 	p.APIServerDefaultResourceName = apiServerDefaultResourceNamePrefix + dsp.Name
@@ -457,9 +455,6 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	pipelinesV2Images := p.UsingV2Pipelines(dsp)
 	usingArgoEngine := p.UsingArgoEngineDriver(dsp)
 	usingTektonEngine := p.UsingTektonEngineDriver(dsp)
-	// if !usingArgoEngine && !usingTektonEngine {
-	// 	return fmt.Errorf(fmt.Sprintf("Illegal Engine Driver (%s) specified, cannot continue.", dsp.Spec.EngineDriver))
-	// }
 
 	if p.APIServer != nil {
 		APIServerImagePath := config.APIServerImagePath

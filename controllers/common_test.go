@@ -34,7 +34,6 @@ func TestDeployCommonPolicies(t *testing.T) {
 	// Construct Basic DSPA Spec
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
 		Spec: dspav1alpha1.DSPASpec{
-			EngineDriver: "tekton",
 			Database: &dspav1alpha1.Database{
 				DisableHealthCheck: false,
 				MariaDB: &dspav1alpha1.MariaDB{

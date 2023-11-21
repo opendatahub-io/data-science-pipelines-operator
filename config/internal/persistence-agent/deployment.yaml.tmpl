@@ -35,10 +35,10 @@ spec:
             - name: KUBEFLOW_USERID_PREFIX
               value: ""
             - name: EXECUTIONTYPE
-              {{ if eq .EngineDriver "tekton" }}
-              value: PipelineRun
-              {{ else }}
+              {{ if eq .DSPVersion "v2" }}
               value: Workflow
+              {{ else }}
+              value: PipelineRun
               {{ end }}
           image: "{{.PersistenceAgent.Image}}"
           imagePullPolicy: IfNotPresent
@@ -89,14 +89,14 @@ spec:
               memory: {{.PersistenceAgent.Resources.Limits.Memory}}
               {{ end }}
             {{ end }}
-          {{ if eq .EngineDriver "argo" }}
+          {{ if eq .DSPVersion "v2" }}
           volumeMounts:
             - mountPath: /var/run/secrets/kubeflow/tokens/persistenceagent-sa-token
               name: persistenceagent-sa-token
               subPath: ds-pipeline-persistenceagent-{{.Name}}-token
           {{ end }}
       serviceAccountName: ds-pipeline-persistenceagent-{{.Name}}
-      {{ if eq .EngineDriver "argo" }}
+      {{ if eq .DSPVersion "v2" }}
       volumes:
         - name: persistenceagent-sa-token
           projected:
