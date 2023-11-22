@@ -1,48 +1,59 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ds-pipeline-scheduledworkflow-testdsp6
+  name: ds-pipeline-persistenceagent-testdsp7
   namespace: default
   labels:
-    app: ds-pipeline-scheduledworkflow-testdsp6
+    app: ds-pipeline-persistenceagent-testdsp7
     component: data-science-pipelines
-    dspa: testdsp6
+    dspa: testdsp7
 spec:
   selector:
     matchLabels:
-      app: ds-pipeline-scheduledworkflow-testdsp6
+      app: ds-pipeline-persistenceagent-testdsp7
       component: data-science-pipelines
-      dspa: testdsp6
+      dspa: testdsp7
   template:
     metadata:
       annotations:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
       labels:
-        app: ds-pipeline-scheduledworkflow-testdsp6
+        app: ds-pipeline-persistenceagent-testdsp7
         component: data-science-pipelines
-        dspa: testdsp6
+        dspa: testdsp7
     spec:
       containers:
         - env:
             - name: NAMESPACE
               value: "default"
-            - name: CRON_SCHEDULE_TIMEZONE
-              value: "EST"
+            - name: TTL_SECONDS_AFTER_WORKFLOW_FINISH
+              value: "86400"
+            - name: NUM_WORKERS
+              value: "2"
+            - name: KUBEFLOW_USERID_HEADER
+              value: kubeflow-userid
+            - name: KUBEFLOW_USERID_PREFIX
+              value: ""
             - name: EXECUTIONTYPE
               value: PipelineRun
-          image: scheduledworkflow:test2
+          image: persistenceagent:test7
           imagePullPolicy: IfNotPresent
-          name: ds-pipeline-scheduledworkflow
+          name: ds-pipeline-persistenceagent
           command:
-            - controller
+            - persistence_agent
             - "--logtostderr=true"
-            - "--namespace=default"
+            - "--ttlSecondsAfterWorkflowFinish=86400"
+            - "--numWorker=5"
+            - "--mlPipelineAPIServerName=ds-pipeline-testdsp7"
+            - "--namespace=testdsp7"
+            - "--mlPipelineServiceHttpPort=8888"
+            - "--mlPipelineServiceGRPCPort=8887"
           livenessProbe:
             exec:
               command:
                 - test
                 - -x
-                - controller
+                - persistence_agent
             initialDelaySeconds: 30
             periodSeconds: 5
             timeoutSeconds: 2
@@ -51,15 +62,15 @@ spec:
               command:
                 - test
                 - -x
-                - controller
+                - persistence_agent
             initialDelaySeconds: 3
             periodSeconds: 5
             timeoutSeconds: 2
           resources:
             requests:
-              cpu: 1235m
+              cpu: 1233m
               memory: 1Gi
             limits:
-              cpu: 2526m
+              cpu: 2524m
               memory: 5Gi
-      serviceAccountName: ds-pipeline-scheduledworkflow-testdsp6
+      serviceAccountName: ds-pipeline-persistenceagent-testdsp7

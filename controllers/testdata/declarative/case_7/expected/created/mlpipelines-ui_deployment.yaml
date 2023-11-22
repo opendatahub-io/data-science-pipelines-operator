@@ -1,26 +1,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ds-pipeline-ui-testdsp6
+  name: ds-pipeline-ui-testdsp7
   namespace: default
   labels:
-    app: ds-pipeline-ui-testdsp6
+    app: ds-pipeline-ui-testdsp7
     component: data-science-pipelines
-    dspa: testdsp6
+    dspa: testdsp7
 spec:
   selector:
     matchLabels:
-      app: ds-pipeline-ui-testdsp6
+      app: ds-pipeline-ui-testdsp7
       component: data-science-pipelines
-      dspa: testdsp6
+      dspa: testdsp7
   template:
     metadata:
       annotations:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
       labels:
-        app: ds-pipeline-ui-testdsp6
+        app: ds-pipeline-ui-testdsp7
         component: data-science-pipelines
-        dspa: testdsp6
+        dspa: testdsp7
     spec:
       containers:
         - env:
@@ -35,25 +35,25 @@ spec:
               valueFrom:
                 secretKeyRef:
                   key: "accesskey"
-                  name: "mlpipeline-minio-artifact"
+                  name: "ds-pipeline-s3-testdsp7"
             - name: MINIO_SECRET_KEY
               valueFrom:
                 secretKeyRef:
                   key: "secretkey"
-                  name: "mlpipeline-minio-artifact"
+                  name: "ds-pipeline-s3-testdsp7"
             - name: ALLOW_CUSTOM_VISUALIZATIONS
               value: "true"
             - name: ARGO_ARCHIVE_LOGS
               value: "true"
             - name: ML_PIPELINE_SERVICE_HOST
-              value: ds-pipeline-testdsp6
+              value: ds-pipeline-testdsp7
             - name: ML_PIPELINE_SERVICE_PORT
               value: '8888'
             - name: METADATA_ENVOY_SERVICE_SERVICE_HOST
-              value: ds-pipeline-metadata-envoy-testdsp6
+              value: ds-pipeline-metadata-envoy-testdsp7
             - name: METADATA_ENVOY_SERVICE_SERVICE_PORT
               value: "9090"
-          image: frontend:test2
+          image: frontend:test7
           imagePullPolicy: IfNotPresent
           livenessProbe:
             exec:
@@ -98,15 +98,15 @@ spec:
           args:
             - --https-address=:8443
             - --provider=openshift
-            - --openshift-service-account=ds-pipeline-ui-testdsp6
+            - --openshift-service-account=ds-pipeline-ui-testdsp7
             - --upstream=http://localhost:3000
             - --tls-cert=/etc/tls/private/tls.crt
             - --tls-key=/etc/tls/private/tls.key
             - --cookie-secret=SECRET
-            - '--openshift-delegate-urls={"/": {"group":"route.openshift.io","resource":"routes","verb":"get","name":"ds-pipeline-ui-testdsp6","namespace":"default"}}'
-            - '--openshift-sar={"namespace":"default","resource":"routes","resourceName":"ds-pipeline-ui-testdsp6","verb":"get","resourceAPIGroup":"route.openshift.io"}'
+            - '--openshift-delegate-urls={"/": {"group":"route.openshift.io","resource":"routes","verb":"get","name":"ds-pipeline-ui-testdsp7","namespace":"default"}}'
+            - '--openshift-sar={"namespace":"default","resource":"routes","resourceName":"ds-pipeline-ui-testdsp7","verb":"get","resourceAPIGroup":"route.openshift.io"}'
             - --skip-auth-regex='(^/metrics|^/apis/v1beta1/healthz)'
-          image: oauth-proxy:test2
+          image: oauth-proxy:test7
           ports:
             - containerPort: 8443
               name: https
@@ -141,7 +141,7 @@ spec:
           volumeMounts:
             - mountPath: /etc/tls/private
               name: proxy-tls
-      serviceAccountName: ds-pipeline-ui-testdsp6
+      serviceAccountName: ds-pipeline-ui-testdsp7
       volumes:
         - configMap:
             name: some-test-configmap
@@ -149,5 +149,5 @@ spec:
           name: config-volume
         - name: proxy-tls
           secret:
-            secretName: ds-pipelines-ui-proxy-tls-testdsp6
+            secretName: ds-pipelines-ui-proxy-tls-testdsp7
             defaultMode: 420

@@ -1,24 +1,24 @@
-apiVersion: apps/v1ds-pipeline-testdsp6
+apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ds-pipeline-testdsp6
+  name: ds-pipeline-testdsp7
   namespace: default
   labels:
-    app: ds-pipeline-testdsp6
+    app: ds-pipeline-testdsp7
     component: data-science-pipelines
-    dspa: testdsp2
+    dspa: testdsp7
 spec:
   selector:
     matchLabels:
-      app: ds-pipeline-testdsp6
+      app: ds-pipeline-testdsp7
       component: data-science-pipelines
-      dspa: testdsp2
+      dspa: testdsp7
   template:
     metadata:
       labels:
-        app: ds-pipeline-testdsp6
+        app: ds-pipeline-testdsp7
         component: data-science-pipelines
-        dspa: testdsp2
+        dspa: testdsp7
     spec:
       containers:
         - env:
@@ -30,24 +30,24 @@ spec:
               valueFrom:
                 secretKeyRef:
                   key: "password"
-                  name: "ds-pipeline-db-testdsp2"
+                  name: "ds-pipeline-db-testdsp7"
             - name: DBCONFIG_DBNAME
               value: "randomDBName"
             - name: DBCONFIG_HOST
-              value: "mariadb-testdsp2.default.svc.cluster.local"
+              value: "mariadb-testdsp7.default.svc.cluster.local"
             - name: DBCONFIG_PORT
               value: "3306"
             - name: ARTIFACT_BUCKET
               value: "mlpipeline"
             - name: ARTIFACT_ENDPOINT
-              value: "http://minio-testdsp2.default.svc.cluster.local:9000"
+              value: "http://minio-testdsp7.default.svc.cluster.local:9000"
             - name: ARTIFACT_SCRIPT
               valueFrom:
                 configMapKeyRef:
                   key: "artifact_script"
-                  name: "ds-pipeline-artifact-script-testdsp2"
+                  name: "ds-pipeline-artifact-script-testdsp7"
             - name: ARTIFACT_IMAGE
-              value: "artifact-manager:test2"
+              value: "artifact-manager:test7"
             - name: ARCHIVE_LOGS
               value: "false"
             - name: EXECUTIONTYPE
@@ -59,7 +59,7 @@ spec:
             - name: PIPELINE_RUNTIME
               value: "tekton"
             - name: DEFAULTPIPELINERUNNERSERVICEACCOUNT
-              value: "pipeline-runner-testdsp2"
+              value: "pipeline-runner-testdsp7"
             - name: INJECT_DEFAULT_SCRIPT
               value: "true"
             - name: APPLY_TEKTON_CUSTOM_RESOURCE
@@ -74,37 +74,43 @@ spec:
               value: "ds-pipeline-visualizationserver"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
               value: "8888"
+            - name: OBJECTSTORECONFIG_CREDENTIALSSECRET
+              value: "ds-pipeline-s3-testdsp7"
+            - name: OBJECTSTORECONFIG_CREDENTIALSACCESSKEYKEY
+              value: "accesskey"
+            - name: OBJECTSTORECONFIG_CREDENTIALSSECRETKEYKEY
+              value: "secretkey"
             - name: OBJECTSTORECONFIG_BUCKETNAME
               value: "mlpipeline"
             - name: OBJECTSTORECONFIG_ACCESSKEY
               valueFrom:
                 secretKeyRef:
                   key: "accesskey"
-                  name: "mlpipeline-minio-artifact"
+                  name: "ds-pipeline-s3-testdsp7"
             - name: OBJECTSTORECONFIG_SECRETACCESSKEY
               valueFrom:
                 secretKeyRef:
                   key: "secretkey"
-                  name: "mlpipeline-minio-artifact"
+                  name: "ds-pipeline-s3-testdsp7"
             - name: OBJECTSTORECONFIG_SECURE
               value: "false"
             - name: MINIO_SERVICE_SERVICE_HOST
-              value: "minio-testdsp2.default.svc.cluster.local"
+              value: "minio-testdsp7.default.svc.cluster.local"
             - name: MINIO_SERVICE_SERVICE_PORT
               value: "9000"
             - name: CACHE_IMAGE
-              value: "ubi-minimal:test2"
+              value: "ubi-minimal:test7"
             - name: MOVERESULTS_IMAGE
-              value: "busybox:test2"
+              value: "busybox:test7"
             - name: METADATA_GRPC_SERVICE_SERVICE_HOST
-              value: "ds-pipeline-metadata-grpc-testdsp2.default.svc.cluster.local"
+              value: "ds-pipeline-metadata-grpc-testdsp7.default.svc.cluster.local"
             - name: METADATA_GRPC_SERVICE_SERVICE_PORT
               value: "8080"
             - name: ML_PIPELINE_SERVICE_HOST
-              value: ds-pipeline-testdsp6.default.svc.cluster.local
+              value: ds-pipeline-testdsp7.default.svc.cluster.local
             - name: ML_PIPELINE_SERVICE_PORT_GRPC
               value: "8887"
-          image: api-server:test2
+          image: api-server:test7
           imagePullPolicy: Always
           name: ds-pipeline-api-server
           ports:
@@ -155,15 +161,15 @@ spec:
           args:
             - --https-address=:8443
             - --provider=openshift
-            - --openshift-service-account=ds-pipeline-testdsp6
+            - --openshift-service-account=ds-pipeline-testdsp7
             - --upstream=http://localhost:8888
             - --tls-cert=/etc/tls/private/tls.crt
             - --tls-key=/etc/tls/private/tls.key
             - --cookie-secret=SECRET
-            - '--openshift-delegate-urls={"/": {"group":"route.openshift.io","resource":"routes","verb":"get","name":"ds-pipeline-testdsp6","namespace":"default"}}'
-            - '--openshift-sar={"namespace":"default","resource":"routes","resourceName":"ds-pipeline-testdsp6","verb":"get","resourceAPIGroup":"route.openshift.io"}'
+            - '--openshift-delegate-urls={"/": {"group":"route.openshift.io","resource":"routes","verb":"get","name":"ds-pipeline-testdsp7","namespace":"default"}}'
+            - '--openshift-sar={"namespace":"default","resource":"routes","resourceName":"ds-pipeline-testdsp7","verb":"get","resourceAPIGroup":"route.openshift.io"}'
             - --skip-auth-regex='(^/metrics|^/apis/v1beta1/healthz)'
-          image: oauth-proxy:test2
+          image: oauth-proxy:test7
           ports:
             - containerPort: 8443
               name: oauth
@@ -201,14 +207,14 @@ spec:
       volumes:
         - name: proxy-tls
           secret:
-            secretName: ds-pipelines-proxy-tls-testdsp2
+            secretName: ds-pipelines-proxy-tls-testdsp7
             defaultMode: 420
         - configMap:
             defaultMode: 420
-            name: sample-config-testdsp2
+            name: sample-config-testdsp7
           name: sample-config
         - configMap:
             defaultMode: 420
-            name: sample-pipeline-testdsp2
+            name: sample-pipeline-testdsp7
           name: sample-pipeline
-      serviceAccountName: ds-pipeline-testdsp6
+      serviceAccountName: ds-pipeline-testdsp7

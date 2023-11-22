@@ -1,17 +1,17 @@
 apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
 kind: DataSciencePipelinesApplication
 metadata:
-  name: testdsp6
+  name: testdsp7
 spec:
   dspVersion: v2
   apiServer:
     deploy: true
-    image: api-server:test6
+    image: api-server:test7
     applyTektonCustomResource: true
     archiveLogs: false
-    artifactImage: artifact-manager:test6
-    cacheImage: ubi-minimal:test6
-    moveResultsImage: busybox:test6
+    artifactImage: artifact-manager:test7
+    cacheImage: ubi-minimal:test7
+    moveResultsImage: busybox:test7
     injectDefaultScript: true
     stripEOF: true
     enableOauth: true
@@ -30,7 +30,7 @@ spec:
         memory: "5Gi"
   persistenceAgent:
     deploy: true
-    image: persistenceagent:test6
+    image: persistenceagent:test7
     numWorkers: 5
     resources:
       requests:
@@ -41,7 +41,7 @@ spec:
         memory: "5Gi"
   scheduledWorkflow:
     deploy: true
-    image: scheduledworkflow:test6
+    image: scheduledworkflow:test7
     cronScheduleTimezone: EST
     resources:
       requests:
@@ -52,7 +52,7 @@ spec:
         memory: "5Gi"
   mlpipelineUI:
     deploy: true
-    image: frontend:test6
+    image: frontend:test7
     configMap: some-test-configmap
     resources:
       requests:
@@ -64,7 +64,7 @@ spec:
   database:
     mariaDB:
       deploy: true
-      image: mariadb:test6
+      image: mariadb:test7
       username: testuser
       pipelineDBName: randomDBName
       pvcSize: 32Gi
@@ -78,7 +78,7 @@ spec:
   objectStorage:
     minio:
       deploy: true
-      image: minio:test6
+      image: minio:test7
       bucket: mlpipeline
       pvcSize: 40Gi
       resources:

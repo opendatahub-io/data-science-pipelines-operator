@@ -2,30 +2,30 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mariadb-testdsp6
+  name: mariadb-testdsp7
   namespace: default
   labels:
-    app: mariadb-testdsp6
+    app: mariadb-testdsp7
     component: data-science-pipelines
-    dspa: testdsp6
+    dspa: testdsp7
 spec:
   strategy:
     type: Recreate  # Need this since backing PVC is ReadWriteOnce, which creates resource lock condition in default Rolling strategy
   selector:
     matchLabels:
-      app: mariadb-testdsp6
+      app: mariadb-testdsp7
       component: data-science-pipelines
-      dspa: testdsp6
+      dspa: testdsp7
   template:
     metadata:
       labels:
-        app: mariadb-testdsp6
+        app: mariadb-testdsp7
         component: data-science-pipelines
-        dspa: testdsp6
+        dspa: testdsp7
     spec:
       containers:
         - name: mariadb
-          image: mariadb:test2
+          image: mariadb:test7
           ports:
             - containerPort: 3306
               protocol: TCP
@@ -58,7 +58,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   key: "password"
-                  name: "ds-pipeline-db-testdsp6"
+                  name: "ds-pipeline-db-testdsp7"
             - name: MYSQL_DATABASE
               value: "randomDBName"
             - name: MYSQL_ALLOW_EMPTY_PASSWORD
@@ -76,4 +76,4 @@ spec:
       volumes:
         - name: mariadb-persistent-storage
           persistentVolumeClaim:
-            claimName: mariadb-testdsp6
+            claimName: mariadb-testdsp7

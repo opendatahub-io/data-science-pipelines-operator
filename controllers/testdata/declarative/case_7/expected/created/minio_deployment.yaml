@@ -1,26 +1,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: minio-testdsp6
+  name: minio-testdsp7
   namespace: default
   labels:
-    app: minio-testdsp6
+    app: minio-testdsp7
     component: data-science-pipelines
-    dspa: testdsp6
+    dspa: testdsp7
 spec:
   selector:
     matchLabels:
-      app: minio-testdsp6
+      app: minio-testdsp7
       component: data-science-pipelines
-      dspa: testdsp6
+      dspa: testdsp7
   strategy:
     type: Recreate
   template:
     metadata:
       labels:
-        app: minio-testdsp6
+        app: minio-testdsp7
         component: data-science-pipelines
-        dspa: testdsp6
+        dspa: testdsp7
     spec:
       containers:
         - args:
@@ -31,13 +31,13 @@ spec:
               valueFrom:
                 secretKeyRef:
                   key: "accesskey"
-                  name: "mlpipeline-minio-artifact"
+                  name: "ds-pipeline-s3-testdsp7"
             - name: MINIO_SECRET_KEY
               valueFrom:
                 secretKeyRef:
                   key: "secretkey"
-                  name: "mlpipeline-minio-artifact"
-          image: minio:test2
+                  name: "ds-pipeline-s3-testdsp7"
+          image: minio:test7
           name: minio
           ports:
             - containerPort: 9000
@@ -72,4 +72,4 @@ spec:
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: minio-testdsp6
+            claimName: minio-testdsp7
