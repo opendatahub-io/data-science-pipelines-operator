@@ -88,6 +88,12 @@ jobs:
         env:
           DSPO_NS: data-science-pipelines-operator
 
+      - name: Prepare for Upgrade Testing
+        run: |
+          # Update the DataScienceCluster manifest with the latest released version
+          sed -i "s/main/${{ inputs.released-version }}/" ${{ env.RESOURCES_DIR }}/datasciencecluster/datasciencecluster.yaml
+        working-directory: ${{ env.RESOURCES_DIR }}/datasciencecluster
+
       - name: Print DataScienceCluster Manifest Contents
         run: cat ${{ env.RESOURCES_DIR }}/datasciencecluster/datasciencecluster.yaml
 
@@ -113,6 +119,12 @@ jobs:
         env:
           DSPA_NS: test-ds-project-1
           WORKING_DIR: ${{ github.workspace }}
+
+      - name: Prepare for Upgrade Testing
+        run: |
+          # Update the DataScienceCluster manifest with the candidate version
+          sed -i "s/${{ inputs.released-version }}/${{ inputs.candidate-version }}/" ${{ env.RESOURCES_DIR }}/datasciencecluster/datasciencecluster.yaml
+        working-directory: ${{ env.RESOURCES_DIR }}/datasciencecluster
 
       - name: Print DataScienceCluster Manifest Contents
         run: cat ${{ env.RESOURCES_DIR }}/datasciencecluster/datasciencecluster.yaml
