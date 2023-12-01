@@ -29,12 +29,12 @@ run:
 	mkdir -p ${LOCAL_ARTIFACT_DIR}/screenshots
 	oc config view --flatten --minify > /tmp/tests-kubeconfig
 	podman run -e SKIP_INSTALL=$(SKIP_INSTALL) -e TESTS_REGEX=$(TESTS_REGEX) -e SKIP_OPERATOR_INSTALL=$(SKIP_OPERATOR_INSTALL) \
-	    -e SKIP_KFDEF_INSTALL=$(SKIP_KFDEF_INSTALL) -e ODHPROJECT=$(ODHPROJECT) \
+	    -e SKIP_DATASCIENCECLUSTER_INSTALL=$(SKIP_DATASCIENCECLUSTER_INSTALL) -e ODHPROJECT=$(ODHPROJECT) \
 		-e OPENSHIFT_USER="$(OPENSHIFT_USER)" -e OPENSHIFT_PASS="$(OPENSHIFT_PASS)" -e OPENSHIFT_LOGIN_PROVIDER=$(OPENSHIFT_LOGIN_PROVIDER) -e ARTIFACT_DIR=$(ARTIFACT_DIR) \
 		-it -v ${LOCAL_ARTIFACT_DIR}/:$(ARTIFACT_DIR):z -v /tmp/tests-kubeconfig:/tmp/kubeconfig:z $(IMAGE)
 
 clean:
-	oc delete -n $(ODHPROJECT) kfdef opendatahub || true
+	oc delete -n $(ODHPROJECT) datasciencecluster opendatahub || true
 	oc delete project $(ODHPROJECT) || echo -e "\n\n==> If the project deletion failed, you can try to use this script to force it: https://raw.githubusercontent.com/jefferyb/useful-scripts/master/openshift/force-delete-openshift-project\n\n"
 	#Clean up openshift-operators namespace
 	oc get csv -n openshift-operators -o name | grep strimzi-cluster-operator | xargs oc delete -n openshift-operators || true

@@ -10,22 +10,21 @@ To deploy the latest DSPO using the changes within this repo via Open Data Hub y
 4. The Open Data Hub operator needs to be installed. You can install it via [OperatorHub][installodh].
 
 
-## Deploy Kfdef
+## Deploy DataScienceCluster
 
 Clone this repository then run the following commands: 
 
 ```bash 
 # If this namespace does not exist
-oc new-project odh-applications 
+oc new-project opendatahub
 
 # Then run
-oc apply -f https://raw.githubusercontent.com/opendatahub-io/data-science-pipelines-operator/main/kfdef/kfdef.yaml -n odh-applications
+oc apply -f data-science-pipelines-operator/datasciencecluster/datasciencecluster.yaml -n opendatahub
 ```
 
 Once done, follow the steps outlined [here][dspa] to get started with deploying your own 
 `DataSciencePipelinesApplication` with the latest changes found within this repository.
 
-[kfdef]: https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/kfdef/kfdef.yaml
 [cluster admin]: https://docs.openshift.com/container-platform/4.12/authentication/using-rbac.html#creating-cluster-admin_using-rbac
 [oc client]: https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/latest/openshift-client-linux.tar.gz
 [OCP Pipelines Operator]: https://docs.openshift.com/container-platform/4.12/cicd/pipelines/installing-pipelines.html#op-installing-pipelines-operator-in-web-console_installing-pipelines
