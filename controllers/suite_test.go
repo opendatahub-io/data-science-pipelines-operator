@@ -73,11 +73,11 @@ func TestAPIs(t *testing.T) {
 
 var _ = BeforeEach(func() {
 	By("Overriding the Database and Object Store live connection functions with trivial stubs")
-	ConnectAndQueryDatabase = func(host string, port string, username string, password string, dbname string, dbConnectionTimeout time.Duration) bool {
-		return true
+	ConnectAndQueryDatabase = func(host string, port string, username string, password string, dbname string, dbConnectionTimeout time.Duration) (bool, error) {
+		return true, nil
 	}
-	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte, objStoreConnectionTimeout time.Duration) bool {
-		return true
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte, objStoreConnectionTimeout time.Duration) (bool, error) {
+		return true, nil
 	}
 })
 
