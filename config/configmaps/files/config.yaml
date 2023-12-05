@@ -37,7 +37,10 @@ ImagesV2:
     MlmdWriter: $(IMAGESV2_TEKTON_MLMDWRITER)
     VisualizationServer: $(IMAGES_TEKTON_VISUALIZATIONSERVER)
     # WorkflowController is an argo-only component
-    # Using argo image here only for fault tolerance, but should handle this in code.
+    # Using argo image here only for fault tolerance, but should handle this in code
+    # In a theoretical example, this is here so that if a V2 DSPA is using Tekton backend but
+    # also requests WorkflowController.deploy=true, we may hit issues if the value just doesn't exist.
+    # Having a fill-in value, even if it doesn't work with the rest of the deployment, alleviates some of those concerns
     WorkflowController: $(IMAGESV2_ARGO_WORKFLOWCONTROLLER)
 DSPO:
   HealthCheck:
