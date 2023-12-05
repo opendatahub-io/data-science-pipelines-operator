@@ -300,9 +300,6 @@ spec:
               dspVersion:
                 default: v1
                 type: string
-              engineDriver:
-                default: tekton
-                type: string
               mlmd:
                 default:
                   deploy: true
@@ -766,7 +763,6 @@ spec:
               workflowController:
                 default:
                   deploy: false
-                description: DS Pipelines Argo Workflow Controller Configuration.
                 properties:
                   deploy:
                     default: true

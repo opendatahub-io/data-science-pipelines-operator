@@ -52,7 +52,7 @@ type DSPASpec struct {
 	// +kubebuilder:default:="v1"
 	DSPVersion string `json:"dspVersion,omitempty"`
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="tekton"
+	// +kubebuilder:default:={deploy: false}
 	*WorkflowController `json:"workflowController,omitempty"`
 }
 
