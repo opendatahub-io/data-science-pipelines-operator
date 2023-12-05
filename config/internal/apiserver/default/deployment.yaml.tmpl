@@ -95,21 +95,11 @@ spec:
             - name: ML_PIPELINE_SERVICE_HOST
               value: "ds-pipeline-{{.Name}}.{{.Namespace}}.svc.cluster.local"
             - name: ML_PIPELINE_SERVICE_PORT_GRPC
-              value: "8887"
-            ## Values change based on Engine Driver ##
-            - name: EXECUTIONTYPE
+              value: "8887"          
             {{ if (eq .DSPVersion "v2") }}
-              value: Workflow
-            {{ else }}
-              value: PipelineRun
-            {{ end }}
             ## Argo-Specific Env Vars ##
-            - name: AUTO_UPDATE_PIPELINE_DEFAULT_VERSION
-              value: "{{.APIServer.AutoUpdatePipelineDefaultVersion}}"
-            - name: OBJECTSTORECONFIG_SECURE
-              value: "false"
-            - name: OBJECTSTORECONFIG_BUCKETNAME
-              value: "{{.ObjectStorageConnection.Bucket}}"
+            - name: EXECUTIONTYPE
+              value: Workflow
             - name: DB_DRIVER_NAME
               value: mysql
             - name: DBCONFIG_MYSQLCONFIG_USER
@@ -125,8 +115,10 @@ spec:
               value: "{{.DBConnection.Host}}"
             - name: DBCONFIG_MYSQLCONFIG_PORT
               value: "{{.DBConnection.Port}}"
+            {{ else }}
             ## Tekton-Specific Env Vars ##
-            {{ if (eq .DSPVersion "v1") }}
+            - name: EXECUTIONTYPE
+              value: PipelineRun
             - name: ARTIFACT_BUCKET
               value: "{{.ObjectStorageConnection.Bucket}}"
             - name: ARTIFACT_ENDPOINT
