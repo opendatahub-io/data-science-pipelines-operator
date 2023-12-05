@@ -2,7 +2,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: argo
 resources:
-# Deploy Argo Controller and Server 
+# Deploy Argo Controller and Server
 # TODO: Only deploy server (not WC?)
 # - https://github.com/argoproj/argo-workflows/releases/download/v3.4.12/install.yaml
 
@@ -35,5 +35,3 @@ resources:
 - crd.workflowtaskresult.yaml
 - crd.workflowtaskset.yaml
 - crd.workflowtemplate.yaml
-
-
