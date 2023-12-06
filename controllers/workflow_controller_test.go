@@ -30,7 +30,7 @@ func TestDeployWorkflowController(t *testing.T) {
 	testDSPAName := "testdspa"
 	expectedWorkflowControllerName := "ds-pipeline-workflow-controller-testdspa"
 
-	// Construct DSPASpec with deployed Visualization Server
+	// Construct DSPASpec with deployed WorkflowController
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
 		Spec: dspav1alpha1.DSPASpec{
 			APIServer: &dspav1alpha1.APIServer{
@@ -64,7 +64,7 @@ func TestDeployWorkflowController(t *testing.T) {
 	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
 	assert.Nil(t, err)
 
-	// Ensure Visualization Server Deployment doesn't yet exist
+	// Ensure WorkflowController Deployment doesn't yet exist
 	deployment := &appsv1.Deployment{}
 	created, err := reconciler.IsResourceCreated(ctx, deployment, expectedWorkflowControllerName, testNamespace)
 	assert.False(t, created)
@@ -74,7 +74,7 @@ func TestDeployWorkflowController(t *testing.T) {
 	err = reconciler.ReconcileWorkflowController(dspa, params)
 	assert.Nil(t, err)
 
-	// Ensure Visualization Server Deployment now exists
+	// Ensure WorkflowController Deployment now exists
 	deployment = &appsv1.Deployment{}
 	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedWorkflowControllerName, testNamespace)
 	assert.True(t, created)
@@ -87,7 +87,7 @@ func TestDontDeployWorkflowController(t *testing.T) {
 	testDSPAName := "testdspa"
 	expectedWorkflowControllerName := "ds-pipeline-workflow-controller-testdspa"
 
-	// Construct DSPASpec with non-deployed Visualization Server
+	// Construct DSPASpec with non-deployed WorkflowController
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
 		Spec: dspav1alpha1.DSPASpec{
 			WorkflowController: &dspav1alpha1.WorkflowController{
@@ -103,7 +103,7 @@ func TestDontDeployWorkflowController(t *testing.T) {
 	// Create Context, Fake Controller and Params
 	ctx, params, reconciler := CreateNewTestObjects()
 
-	// Ensure Visualization Server Deployment doesn't yet exist
+	// Ensure WorkflowController Deployment doesn't yet exist
 	deployment := &appsv1.Deployment{}
 	created, err := reconciler.IsResourceCreated(ctx, deployment, expectedWorkflowControllerName, testNamespace)
 	assert.False(t, created)
@@ -113,7 +113,7 @@ func TestDontDeployWorkflowController(t *testing.T) {
 	err = reconciler.ReconcileWorkflowController(dspa, params)
 	assert.Nil(t, err)
 
-	// Ensure Visualization Server Deployment still doesn't exist
+	// Ensure WorkflowController Deployment still doesn't exist
 	deployment = &appsv1.Deployment{}
 	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedWorkflowControllerName, testNamespace)
 	assert.False(t, created)

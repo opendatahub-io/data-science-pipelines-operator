@@ -28,17 +28,17 @@ func (r *DSPAReconciler) ReconcileWorkflowController(dsp *dspav1alpha1.DataScien
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
 
 	if !dsp.Spec.WorkflowController.Deploy {
-		log.Info("Skipping Application of Visualization Server Resources")
+		log.Info("Skipping Application of WorkflowController Resources")
 		return nil
 	}
 
-	log.Info("Applying Visualization Server Resources")
+	log.Info("Applying WorkflowController Resources")
 
 	err := r.ApplyDir(dsp, params, workflowControllerTemplatesDir)
 	if err != nil {
 		return err
 	}
 
-	log.Info("Finished applying Visualization Server Resources")
+	log.Info("Finished applying WorkflowController Resources")
 	return nil
 }
