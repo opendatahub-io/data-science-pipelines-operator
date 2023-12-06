@@ -162,13 +162,13 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.IMAGESV2_ARGO_ARTIFACT
-  - name: IMAGESV2_ARGO_PERSISTENTAGENT
+  - name: IMAGESV2_ARGO_PERSISTENCEAGENT
     objref:
       kind: ConfigMap
       name: dspo-parameters
       apiVersion: v1
     fieldref:
-      fieldpath: data.IMAGESV2_ARGO_PERSISTENTAGENT
+      fieldpath: data.IMAGESV2_ARGO_PERSISTENCEAGENT
   - name: IMAGESV2_ARGO_SCHEDULEDWORKFLOW
     objref:
       kind: ConfigMap
@@ -190,20 +190,6 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.IMAGESV2_ARGO_MOVERESULTSIMAGE
-  - name: IMAGESV2_ARGO_PERSISTENTAGENT
-    objref:
-      kind: ConfigMap
-      name: dspo-parameters
-      apiVersion: v1
-    fieldref:
-      fieldpath: data.IMAGESV2_PERSISTENTAGENT
-  - name: IMAGESV2_ARGO_SCHEDULEDWORKFLOW
-    objref:
-      kind: ConfigMap
-      name: dspo-parameters
-      apiVersion: v1
-    fieldref:
-      fieldpath: data.IMAGESV2_SCHEDULEDWORKFLOW
   - name: IMAGESV2_ARGO_MLMDENVOY
     objref:
       kind: ConfigMap

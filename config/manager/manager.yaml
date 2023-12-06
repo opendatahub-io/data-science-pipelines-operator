@@ -66,8 +66,8 @@ spec:
             value: $(IMAGESV2_ARGO_APISERVER)
           - name: IMAGESV2_ARGO_ARTIFACT
             value: $(IMAGESV2_ARGO_ARTIFACT)
-          - name: IMAGESV2_ARGO_PERSISTENTAGENT
-            value: $(IMAGESV2_ARGO_PERSISTENTAGENT)
+          - name: IMAGESV2_ARGO_PERSISTENCEAGENT
+            value: $(IMAGESV2_ARGO_PERSISTENCEAGENT)
           - name: IMAGESV2_ARGO_SCHEDULEDWORKFLOW
             value: $(IMAGESV2_ARGO_SCHEDULEDWORKFLOW)
           - name: IMAGESV2_ARGO_CACHE

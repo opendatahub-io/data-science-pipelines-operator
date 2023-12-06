@@ -40,7 +40,6 @@ type DSPAParams struct {
 	Namespace                            string
 	Owner                                mf.Owner
 	DSPVersion                           string
-	EngineDriver                         string
 	APIServer                            *dspa.APIServer
 	APIServerPiplinesCABundleMountPath   string
 	PiplinesCABundleMountPath            string
@@ -96,6 +95,8 @@ func (p *DSPAParams) UsingTektonEngineDriver(dsp *dspa.DataSciencePipelinesAppli
 	return !p.UsingV2Pipelines(dsp)
 }
 
+// TODO: rework to dynamically retrieve image based soley on 'pipelinesVersion' and 'engineDriver' rather than
+// explicitly set images
 func (p *DSPAParams) GetImageForComponent(dsp *dspa.DataSciencePipelinesApplication, v1Image, v2ArgoImage, v2TektonImage string) string {
 	if p.UsingV2Pipelines(dsp) {
 		if p.UsingArgoEngineDriver(dsp) {

@@ -91,6 +91,7 @@ const (
 
 // DSPV2-Tekton Image Paths
 // Note: These won't exist in config but aren't used, adding in case of future support
+// TODO: remove
 const (
 	APIServerImagePathV2Tekton            = "ImagesV2.Tekton.ApiServer"
 	APIServerArtifactImagePathV2Tekton    = "ImagesV2.Tekton.Artifact"

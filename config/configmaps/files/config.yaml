@@ -18,29 +18,12 @@ ImagesV2:
     Artifact: $(IMAGESV2_ARGO_ARTIFACT)
     Cache: $(IMAGESV2_ARGO_CACHE)
     MoveResultsImage: $(IMAGESV2_ARGO_MOVERESULTSIMAGE)
-    PersistentAgent: $(IMAGESV2_ARGO_PERSISTENTAGENT)
+    PersistentAgent: $(IMAGESV2_ARGO_PERSISTENCEAGENT)
     ScheduledWorkflow: $(IMAGESV2_ARGO_SCHEDULEDWORKFLOW)
     MlmdEnvoy: $(IMAGESV2_ARGO_MLMDENVOY)
     MlmdGRPC: $(IMAGESV2_ARGO_MLMDGRPC)
     MlmdWriter: $(IMAGESV2_ARGO_MLMDWRITER)
     VisualizationServer: $(IMAGES_ARGO_VISUALIZATIONSERVER)
-    WorkflowController: $(IMAGESV2_ARGO_WORKFLOWCONTROLLER)
-  Tekton:
-    ApiServer: $(IMAGESV2_TEKTON_APISERVER)
-    Artifact: $(IMAGESV2_TEKTON_ARTIFACT)
-    Cache: $(IMAGESV2_TEKTON_CACHE)
-    MoveResultsImage: $(IMAGESV2_TEKTON_MOVERESULTSIMAGE)
-    PersistentAgent: $(IMAGESV2_TEKTON_PERSISTENTAGENT)
-    ScheduledWorkflow: $(IMAGESV2_TEKTON_SCHEDULEDWORKFLOW)
-    MlmdEnvoy: $(IMAGESV2_TEKTON_MLMDENVOY)
-    MlmdGRPC: $(IMAGESV2_TEKTON_MLMDGRPC)
-    MlmdWriter: $(IMAGESV2_TEKTON_MLMDWRITER)
-    VisualizationServer: $(IMAGES_TEKTON_VISUALIZATIONSERVER)
-    # WorkflowController is an argo-only component
-    # Using argo image here only for fault tolerance, but should handle this in code
-    # In a theoretical example, this is here so that if a V2 DSPA is using Tekton backend but
-    # also requests WorkflowController.deploy=true, we may hit issues if the value just doesn't exist.
-    # Having a fill-in value, even if it doesn't work with the rest of the deployment, alleviates some of those concerns
     WorkflowController: $(IMAGESV2_ARGO_WORKFLOWCONTROLLER)
 DSPO:
   HealthCheck:
