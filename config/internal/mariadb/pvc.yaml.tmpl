@@ -9,7 +9,9 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: {{.MariaDB.StorageClassName}}
+  {{- if .MariaDB.StorageClassName }}
+    storageClassName: {{.MariaDB.StorageClassName}}
+  {{- end }}
   resources:
     requests:
       storage: {{.MariaDB.PVCSize}}
