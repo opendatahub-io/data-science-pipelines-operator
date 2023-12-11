@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ds-pipelines-{{.Name}}
+  namespace: {{.Namespace}}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{.APIServerDefaultResourceName}}
+      component: data-science-pipelines
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 8443
+    - ports:
+        - protocol: TCP
+          port: 8888
+        - protocol: TCP
+          port: 8887

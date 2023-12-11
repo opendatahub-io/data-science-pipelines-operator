@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ds-pipeline-persistenceagent-{{.Name}}
+  name: {{.PersistentAgentDefaultResourceName}}
   namespace: {{.Namespace}}
   labels:
-    app: ds-pipeline-persistenceagent-{{.Name}}
+    app: {{.PersistentAgentDefaultResourceName}}
     component: data-science-pipelines
     dspa: {{.Name}}
 spec:
   selector:
     matchLabels:
-      app: ds-pipeline-persistenceagent-{{.Name}}
+      app: {{.PersistentAgentDefaultResourceName}}
       component: data-science-pipelines
       dspa: {{.Name}}
   template:
@@ -18,7 +18,7 @@ spec:
       annotations:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
       labels:
-        app: ds-pipeline-persistenceagent-{{.Name}}
+        app: {{.PersistentAgentDefaultResourceName}}
         component: data-science-pipelines
         dspa: {{.Name}}
     spec:
@@ -35,7 +35,11 @@ spec:
             - name: KUBEFLOW_USERID_PREFIX
               value: ""
             - name: EXECUTIONTYPE
+              {{ if eq .DSPVersion "v2" }}
+              value: Workflow
+              {{ else }}
               value: PipelineRun
+              {{ end }}
           image: "{{.PersistenceAgent.Image}}"
           imagePullPolicy: IfNotPresent
           name: ds-pipeline-persistenceagent
@@ -85,4 +89,20 @@ spec:
               memory: {{.PersistenceAgent.Resources.Limits.Memory}}
               {{ end }}
             {{ end }}
+          {{ if eq .DSPVersion "v2" }}
+          volumeMounts:
+            - mountPath: /var/run/secrets/kubeflow/tokens/persistenceagent-sa-token
+              name: persistenceagent-sa-token
+              subPath: ds-pipeline-persistenceagent-{{.Name}}-token
+          {{ end }}
       serviceAccountName: ds-pipeline-persistenceagent-{{.Name}}
+      {{ if eq .DSPVersion "v2" }}
+      volumes:
+        - name: persistenceagent-sa-token
+          projected:
+            sources:
+            - serviceAccountToken:
+                audience: pipelines.kubeflow.org
+                expirationSeconds: 3600
+                path: ds-pipeline-persistenceagent-{{.Name}}-token
+      {{ end }}

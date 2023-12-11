@@ -26,6 +26,8 @@ import (
 
 var apiServerTemplatesDir = "apiserver/default"
 
+const apiServerDefaultResourceNamePrefix = "ds-pipeline-"
+
 // serverRoute is a resource deployed conditionally
 // as such it is handled separately
 const serverRoute = "apiserver/route/route.yaml.tmpl"

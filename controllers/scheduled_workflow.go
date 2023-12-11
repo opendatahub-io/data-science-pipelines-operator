@@ -22,6 +22,8 @@ import (
 
 var scheduledWorkflowTemplatesDir = "scheduled-workflow"
 
+const scheduledWorkflowDefaultResourceNamePrefix = "ds-pipeline-scheduledworkflow-"
+
 func (r *DSPAReconciler) ReconcileScheduledWorkflow(dsp *dspav1alpha1.DataSciencePipelinesApplication,
 	params *DSPAParams) error {
 

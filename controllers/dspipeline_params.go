@@ -36,21 +36,28 @@ import (
 )
 
 type DSPAParams struct {
-	Name                 string
-	Namespace            string
-	Owner                mf.Owner
-	DSPVersion           string
-	APIServer            *dspa.APIServer
-	APIServerServiceName string
-	OAuthProxy           string
-	ScheduledWorkflow    *dspa.ScheduledWorkflow
-	PersistenceAgent     *dspa.PersistenceAgent
-	MlPipelineUI         *dspa.MlPipelineUI
-	MariaDB              *dspa.MariaDB
-	Minio                *dspa.Minio
-	MLMD                 *dspa.MLMD
-	CRDViewer            *dspa.CRDViewer
-	VisualizationServer  *dspa.VisualizationServer
+	Name                                 string
+	Namespace                            string
+	Owner                                mf.Owner
+	DSPVersion                           string
+	APIServer                            *dspa.APIServer
+	APIServerPiplinesCABundleMountPath   string
+	PiplinesCABundleMountPath            string
+	APIServerDefaultResourceName         string
+	APIServerServiceName                 string
+	APICustomPemCerts                    []byte
+	OAuthProxy                           string
+	ScheduledWorkflow                    *dspa.ScheduledWorkflow
+	ScheduledWorkflowDefaultResourceName string
+	PersistenceAgent                     *dspa.PersistenceAgent
+	PersistentAgentDefaultResourceName   string
+	MlPipelineUI                         *dspa.MlPipelineUI
+	MariaDB                              *dspa.MariaDB
+	Minio                                *dspa.Minio
+	MLMD                                 *dspa.MLMD
+	CRDViewer                            *dspa.CRDViewer
+	VisualizationServer                  *dspa.VisualizationServer
+	WorkflowController                   *dspa.WorkflowController
 	DBConnection
 	ObjectStorageConnection
 }
@@ -78,6 +85,27 @@ type ObjectStorageConnection struct {
 
 func (p *DSPAParams) UsingV2Pipelines(dsp *dspa.DataSciencePipelinesApplication) bool {
 	return dsp.Spec.DSPVersion == "v2"
+}
+
+func (p *DSPAParams) UsingArgoEngineDriver(dsp *dspa.DataSciencePipelinesApplication) bool {
+	return p.UsingV2Pipelines(dsp)
+}
+
+func (p *DSPAParams) UsingTektonEngineDriver(dsp *dspa.DataSciencePipelinesApplication) bool {
+	return !p.UsingV2Pipelines(dsp)
+}
+
+// TODO: rework to dynamically retrieve image based soley on 'pipelinesVersion' and 'engineDriver' rather than
+// explicitly set images
+func (p *DSPAParams) GetImageForComponent(dsp *dspa.DataSciencePipelinesApplication, v1Image, v2ArgoImage, v2TektonImage string) string {
+	if p.UsingV2Pipelines(dsp) {
+		if p.UsingArgoEngineDriver(dsp) {
+			return v2ArgoImage
+		} else {
+			return v2TektonImage
+		}
+	}
+	return v1Image
 }
 
 // UsingExternalDB will return true if an external Database is specified in the CR, otherwise false.
@@ -122,28 +150,75 @@ func passwordGen(n int) string {
 	return string(b)
 }
 
+func (p *DSPAParams) RetrieveSecret(ctx context.Context, client client.Client, secretName, secretKey string, log logr.Logger) (string, error) {
+	secret := &v1.Secret{}
+	namespacedName := types.NamespacedName{
+		Name:      secretName,
+		Namespace: p.Namespace,
+	}
+	err := client.Get(ctx, namespacedName, secret)
+	if err != nil {
+		log.V(1).Info(fmt.Sprintf("Unable to retrieve secret [%s].", secretName))
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(secret.Data[secretKey]), nil
+}
+
+func (p *DSPAParams) RetrieveOrCreateSecret(ctx context.Context, client client.Client, secretName, secretKey string, generatedPasswordLength int, log logr.Logger) (string, error) {
+	val, err := p.RetrieveSecret(ctx, client, secretName, secretKey, log)
+	if err != nil && apierrs.IsNotFound(err) {
+		generatedPass := passwordGen(generatedPasswordLength)
+		return base64.StdEncoding.EncodeToString([]byte(generatedPass)), nil
+	} else if err != nil {
+		log.Error(err, "Unable to create DB secret...")
+		return "", err
+	}
+	log.Info(fmt.Sprintf("Secret [%s] already exists, using stored value.", secretName))
+	return val, nil
+}
+
+func (p *DSPAParams) RetrieveOrCreateDBSecret(ctx context.Context, client client.Client, secret *dspa.SecretKeyValue, log logr.Logger) (string, error) {
+	dbPassword, err := p.RetrieveOrCreateSecret(ctx, client, secret.Name, secret.Key, config.GeneratedDBPasswordLength, log)
+	if err != nil {
+		return "", err
+	}
+	return dbPassword, nil
+
+}
+
+func (p *DSPAParams) RetrieveOrCreateObjectStoreSecret(ctx context.Context, client client.Client, secret *dspa.S3CredentialSecret, log logr.Logger) (string, string, error) {
+	accessKey, err := p.RetrieveOrCreateSecret(ctx, client, secret.SecretName, secret.AccessKey, config.GeneratedObjectStorageAccessKeyLength, log)
+	if err != nil {
+		return "", "", err
+	}
+	secretKey, err := p.RetrieveOrCreateSecret(ctx, client, secret.SecretName, secret.SecretKey, config.GeneratedObjectStorageSecretKeyLength, log)
+	if err != nil {
+		return "", "", err
+	}
+	return accessKey, secretKey, nil
+}
+
 // SetupDBParams Populates the DB connection Parameters.
 // If an external secret is specified, SetupDBParams will retrieve DB credentials from it.
 // If DSPO is managing a dynamically created secret, then SetupDBParams generates the creds.
 func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, log logr.Logger) error {
 
 	usingExternalDB := p.UsingExternalDB(dsp)
-
-	var customCreds *dspa.SecretKeyValue
-
-	// Even if a secret is specified DSPO will deploy its own secret owned by DSPO
-	p.DBConnection.CredentialsSecret = &dspa.SecretKeyValue{
-		Name: config.DBSecretNamePrefix + p.Name,
-		Key:  config.DBSecretKey,
-	}
-
 	if usingExternalDB {
 		// Assume validation for CR ensures these values exist
 		p.DBConnection.Host = dsp.Spec.Database.ExternalDB.Host
 		p.DBConnection.Port = dsp.Spec.Database.ExternalDB.Port
 		p.DBConnection.Username = dsp.Spec.Database.ExternalDB.Username
 		p.DBConnection.DBName = dsp.Spec.Database.ExternalDB.DBName
-		customCreds = dsp.Spec.Database.ExternalDB.PasswordSecret
+		p.DBConnection.CredentialsSecret = dsp.Spec.Database.ExternalDB.PasswordSecret
+
+		// Retreive DB Password from specified secret.  Ignore error if the secret simply doesn't exist (will be created later)
+		password, err := p.RetrieveSecret(ctx, client, p.DBConnection.CredentialsSecret.Name, p.DBConnection.CredentialsSecret.Key, log)
+		if err != nil && !apierrs.IsNotFound(err) {
+			log.Error(err, "Unexpected error encountered while fetching Database Secret")
+			return err
+		}
+		p.DBConnection.Password = password
 	} else {
 		// If no externalDB or mariaDB is specified, DSPO assumes
 		// MariaDB deployment with defaults.
@@ -157,6 +232,7 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 				PVCSize:   resource.MustParse(config.MariaDBNamePVCSize),
 			}
 		}
+
 		// If MariaDB was specified, ensure missing fields are
 		// populated with defaults.
 		if p.MariaDB.Image == "" {
@@ -174,59 +250,25 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 		p.DBConnection.Port = config.MariaDBHostPort
 		p.DBConnection.Username = p.MariaDB.Username
 		p.DBConnection.DBName = p.MariaDB.DBName
+
+		// If custom DB Secret provided, use its values.  Otherwise generate a default
 		if p.MariaDB.PasswordSecret != nil {
-			customCreds = p.MariaDB.PasswordSecret
-		}
-	}
-
-	// Secret where DB credentials reside on cluster
-	var credsSecretName string
-	var credsPasswordKey string
-
-	customCredentialsSpecified := customCreds != nil
-	if customCredentialsSpecified {
-		credsSecretName = customCreds.Name
-		credsPasswordKey = customCreds.Key
-	} else {
-		credsSecretName = p.DBConnection.CredentialsSecret.Name
-		credsPasswordKey = p.DBConnection.CredentialsSecret.Key
-	}
-
-	dbSecret := &v1.Secret{}
-	namespacedName := types.NamespacedName{
-		Name:      credsSecretName,
-		Namespace: p.Namespace,
-	}
-
-	createNewSecret := false
-
-	// Attempt to fetch the specified DB secret
-	err := client.Get(ctx, namespacedName, dbSecret)
-	if err != nil && apierrs.IsNotFound(err) {
-		if !customCredentialsSpecified {
-			generatedPass := passwordGen(12)
-			p.DBConnection.Password = base64.StdEncoding.EncodeToString([]byte(generatedPass))
-			createNewSecret = true
+			p.DBConnection.CredentialsSecret = p.MariaDB.PasswordSecret
 		} else {
-			log.Error(err, fmt.Sprintf("DB secret [%s] was specified in CR but does not exist.",
-				credsSecretName))
+			p.DBConnection.CredentialsSecret = &dspa.SecretKeyValue{
+				Name: config.DefaultDBSecretNamePrefix + p.Name,
+				Key:  config.DefaultDBSecretKey,
+			}
+		}
+		dbPassword, err := p.RetrieveOrCreateDBSecret(ctx, client, p.DBConnection.CredentialsSecret, log)
+		if err != nil {
 			return err
 		}
-	} else if err != nil {
-		log.Error(err, "Unable to fetch DB secret...")
-		return err
+		p.DBConnection.Password = dbPassword
 	}
-
-	// Password was dynamically generated, no need to retrieve it from fetched secret
-	if createNewSecret {
-		return nil
-	}
-
-	p.DBConnection.Password = base64.StdEncoding.EncodeToString(dbSecret.Data[credsPasswordKey])
-
 	if p.DBConnection.Password == "" {
 		return fmt.Errorf(fmt.Sprintf("DB Password from secret [%s] for key [%s] was not successfully retrieved, "+
-			"ensure that the secret with this key exist.", credsSecretName, credsPasswordKey))
+			"ensure that the secret with this key exist.", p.DBConnection.CredentialsSecret.Name, p.DBConnection.CredentialsSecret.Key))
 	}
 	return nil
 }
@@ -237,16 +279,6 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, log logr.Logger) error {
 
 	usingExternalObjectStorage := p.UsingExternalStorage(dsp)
-
-	var customCreds *dspa.S3CredentialSecret
-
-	// Even if a secret is specified DSPO will deploy its own secret owned by DSPO
-	p.ObjectStorageConnection.CredentialsSecret = &dspa.S3CredentialSecret{
-		SecretName: config.ObjectStorageSecretName,
-		AccessKey:  config.ObjectStorageAccessKey,
-		SecretKey:  config.ObjectStorageSecretKey,
-	}
-
 	if usingExternalObjectStorage {
 		// Assume validation for CR ensures these values exist
 		p.ObjectStorageConnection.Bucket = dsp.Spec.ObjectStorage.ExternalStorage.Bucket
@@ -265,7 +297,21 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 
 		// Port can be empty, which is fine.
 		p.ObjectStorageConnection.Port = dsp.Spec.ObjectStorage.ExternalStorage.Port
-		customCreds = dsp.Spec.ObjectStorage.ExternalStorage.S3CredentialSecret
+		p.ObjectStorageConnection.CredentialsSecret = dsp.Spec.ObjectStorage.ExternalStorage.S3CredentialSecret
+
+		// Retrieve ObjStore Creds from specified secret.  Ignore error if the secret simply doesn't exist (will be created later)
+		accesskey, err := p.RetrieveSecret(ctx, client, p.ObjectStorageConnection.CredentialsSecret.SecretName, p.ObjectStorageConnection.CredentialsSecret.AccessKey, log)
+		if err != nil && !apierrs.IsNotFound(err) {
+			log.Error(err, "Unexpected error encountered while fetching Object Storage Secret")
+			return err
+		}
+		secretkey, err := p.RetrieveSecret(ctx, client, p.ObjectStorageConnection.CredentialsSecret.SecretName, p.ObjectStorageConnection.CredentialsSecret.SecretKey, log)
+		if err != nil && !apierrs.IsNotFound(err) {
+			log.Error(err, "Unexpected error encountered while fetching Object Storage Secret")
+			return err
+		}
+		p.ObjectStorageConnection.AccessKeyID = accesskey
+		p.ObjectStorageConnection.SecretAccessKey = secretkey
 	} else {
 		if p.Minio == nil {
 			return fmt.Errorf("either [spec.objectStorage.minio] or [spec.objectStorage.externalStorage] " +
@@ -295,8 +341,20 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 		p.ObjectStorageConnection.Secure = util.BoolPointer(false)
 
 		if p.Minio.S3CredentialSecret != nil {
-			customCreds = p.Minio.S3CredentialSecret
+			p.ObjectStorageConnection.CredentialsSecret = p.Minio.S3CredentialSecret
+		} else {
+			p.ObjectStorageConnection.CredentialsSecret = &dspa.S3CredentialSecret{
+				SecretName: config.DefaultObjectStorageSecretNamePrefix + p.Name,
+				AccessKey:  config.DefaultObjectStorageAccessKey,
+				SecretKey:  config.DefaultObjectStorageSecretKey,
+			}
 		}
+		accessKey, secretKey, err := p.RetrieveOrCreateObjectStoreSecret(ctx, client, p.ObjectStorageConnection.CredentialsSecret, log)
+		if err != nil {
+			return err
+		}
+		p.ObjectStorageConnection.AccessKeyID = accessKey
+		p.ObjectStorageConnection.SecretAccessKey = secretKey
 	}
 
 	endpoint := fmt.Sprintf(
@@ -315,76 +373,22 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 
 	p.ObjectStorageConnection.Endpoint = endpoint
 
-	// Secret where credentials reside on cluster
-	var credsSecretName string
-	var credsAccessKey string
-	var credsSecretKey string
-
-	customCredentialsSpecified := customCreds != nil
-	if customCredentialsSpecified {
-		credsSecretName = customCreds.SecretName
-		credsAccessKey = customCreds.AccessKey
-		credsSecretKey = customCreds.SecretKey
-	} else {
-		credsSecretName = p.ObjectStorageConnection.CredentialsSecret.SecretName
-		credsAccessKey = p.ObjectStorageConnection.CredentialsSecret.AccessKey
-		credsSecretKey = p.ObjectStorageConnection.CredentialsSecret.SecretKey
-	}
-
-	storageSecret := &v1.Secret{}
-	namespacedName := types.NamespacedName{
-		Name:      credsSecretName,
-		Namespace: p.Namespace,
-	}
-
-	createNewSecret := false
-
-	// Attempt to fetch the specified storage secret
-	err := client.Get(ctx, namespacedName, storageSecret)
-	if err != nil && apierrs.IsNotFound(err) {
-		if !customCredentialsSpecified {
-			generatedPass := passwordGen(16)
-			p.ObjectStorageConnection.AccessKeyID = base64.StdEncoding.EncodeToString([]byte(generatedPass))
-			generatedPass = passwordGen(24)
-			p.ObjectStorageConnection.SecretAccessKey = base64.StdEncoding.EncodeToString([]byte(generatedPass))
-			createNewSecret = true
-		} else {
-			log.Error(err, fmt.Sprintf("Storage secret [%s] was specified in CR but does not exist.",
-				credsSecretName))
-			return err
-		}
-	} else if err != nil {
-		log.Error(err, "Unable to fetch Storage secret...")
-		return err
-	}
-
-	// Password was dynamically generated, no need to retrieve it from fetched secret
-	if createNewSecret {
-		return nil
-	}
-
-	p.ObjectStorageConnection.AccessKeyID = base64.StdEncoding.EncodeToString(storageSecret.Data[credsAccessKey])
-	p.ObjectStorageConnection.SecretAccessKey = base64.StdEncoding.EncodeToString(storageSecret.Data[credsSecretKey])
-
 	if p.ObjectStorageConnection.AccessKeyID == "" || p.ObjectStorageConnection.SecretAccessKey == "" {
 		return fmt.Errorf(fmt.Sprintf("Object Storage Password from secret [%s] for keys [%s, %s] was not "+
-			"successfully retrieved, ensure that the secret with this key exist.", credsSecretName, credsAccessKey, credsSecretKey))
+			"successfully retrieved, ensure that the secret with this key exist.",
+			p.ObjectStorageConnection.CredentialsSecret.SecretName,
+			p.ObjectStorageConnection.CredentialsSecret.AccessKey, p.ObjectStorageConnection.CredentialsSecret.SecretKey))
 	}
-
 	return nil
 
 }
 
 func (p *DSPAParams) SetupMLMD(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, log logr.Logger) error {
 	if p.MLMD != nil {
-		MlmdEnvoyImagePath := config.MlmdEnvoyImagePath
-		MlmdGRPCImagePath := config.MlmdGRPCImagePath
-		MlmdWriterImagePath := config.MlmdWriterImagePath
-		if p.UsingV2Pipelines(dsp) {
-			MlmdEnvoyImagePath = config.MlmdEnvoyImagePathV2
-			MlmdGRPCImagePath = config.MlmdGRPCImagePathV2
-			MlmdWriterImagePath = config.MlmdWriterImagePathV2
-		}
+		MlmdEnvoyImagePath := p.GetImageForComponent(dsp, config.MlmdEnvoyImagePath, config.MlmdEnvoyImagePathV2Argo, config.MlmdEnvoyImagePathV2Tekton)
+		MlmdGRPCImagePath := p.GetImageForComponent(dsp, config.MlmdGRPCImagePath, config.MlmdGRPCImagePathV2Argo, config.MlmdGRPCImagePathV2Tekton)
+		MlmdWriterImagePath := p.GetImageForComponent(dsp, config.MlmdWriterImagePath, config.MlmdWriterImagePathV2Argo, config.MlmdWriterImagePathV2Tekton)
+
 		if p.MLMD.Envoy == nil {
 			p.MLMD.Envoy = &dspa.Envoy{
 				Image: config.GetStringConfigWithDefault(MlmdEnvoyImagePath, config.DefaultImageValue),
@@ -436,30 +440,25 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.DSPVersion = dsp.Spec.DSPVersion
 	p.Owner = dsp
 	p.APIServer = dsp.Spec.APIServer.DeepCopy()
+	p.APIServerDefaultResourceName = apiServerDefaultResourceNamePrefix + dsp.Name
 	p.APIServerServiceName = fmt.Sprintf("%s-%s", config.DSPServicePrefix, p.Name)
 	p.ScheduledWorkflow = dsp.Spec.ScheduledWorkflow.DeepCopy()
+	p.ScheduledWorkflowDefaultResourceName = scheduledWorkflowDefaultResourceNamePrefix + dsp.Name
 	p.PersistenceAgent = dsp.Spec.PersistenceAgent.DeepCopy()
+	p.PersistentAgentDefaultResourceName = persistenceAgentDefaultResourceNamePrefix + dsp.Name
 	p.MlPipelineUI = dsp.Spec.MlPipelineUI.DeepCopy()
 	p.MariaDB = dsp.Spec.Database.MariaDB.DeepCopy()
 	p.Minio = dsp.Spec.ObjectStorage.Minio.DeepCopy()
 	p.OAuthProxy = config.GetStringConfigWithDefault(config.OAuthProxyImagePath, config.DefaultImageValue)
 	p.MLMD = dsp.Spec.MLMD.DeepCopy()
-
-	// TODO: If p.<component> is nil we should create defaults
-
-	pipelinesV2Images := p.UsingV2Pipelines(dsp)
+	p.APIServerPiplinesCABundleMountPath = config.APIServerPiplinesCABundleMountPath
+	p.PiplinesCABundleMountPath = config.PiplinesCABundleMountPath
 
 	if p.APIServer != nil {
-		APIServerImagePath := config.APIServerImagePath
-		APIServerArtifactImagePath := config.APIServerArtifactImagePath
-		APIServerCacheImagePath := config.APIServerCacheImagePath
-		APIServerMoveResultsImagePath := config.APIServerMoveResultsImagePath
-		if pipelinesV2Images {
-			APIServerImagePath = config.APIServerImagePathV2
-			APIServerArtifactImagePath = config.APIServerArtifactImagePathV2
-			APIServerCacheImagePath = config.APIServerCacheImagePathV2
-			APIServerMoveResultsImagePath = config.APIServerMoveResultsImagePathV2
-		}
+		APIServerImagePath := p.GetImageForComponent(dsp, config.APIServerImagePath, config.APIServerImagePathV2Argo, config.APIServerImagePathV2Tekton)
+		APIServerArtifactImagePath := p.GetImageForComponent(dsp, config.APIServerArtifactImagePath, config.APIServerArtifactImagePathV2Argo, config.APIServerArtifactImagePathV2Tekton)
+		APIServerCacheImagePath := p.GetImageForComponent(dsp, config.APIServerCacheImagePath, config.APIServerCacheImagePathV2Argo, config.APIServerCacheImagePathV2Tekton)
+		APIServerMoveResultsImagePath := p.GetImageForComponent(dsp, config.APIServerMoveResultsImagePath, config.APIServerMoveResultsImagePathV2Argo, config.APIServerMoveResultsImagePathV2Tekton)
 
 		serverImageFromConfig := config.GetStringConfigWithDefault(APIServerImagePath, config.DefaultImageValue)
 		artifactImageFromConfig := config.GetStringConfigWithDefault(APIServerArtifactImagePath, config.DefaultImageValue)
@@ -479,21 +478,28 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 				Key:  config.ArtifactScriptConfigMapKey,
 			}
 		}
-	}
-	if p.PersistenceAgent != nil {
-		PersistenceAgentImagePath := config.PersistenceAgentImagePath
-		if pipelinesV2Images {
-			PersistenceAgentImagePath = config.PersistenceAgentImagePathV2
+
+		// If a Custom CA Bundle is specified for injection into DSP API Server Pod
+		// then retrieve the bundle to utilize during storage health check
+		if p.APIServer.CABundle != nil {
+			cfgKey, cfgName := p.APIServer.CABundle.ConfigMapKey, p.APIServer.CABundle.ConfigMapName
+			err, val := util.GetConfigMapValue(ctx, cfgKey, cfgName, p.Namespace, client, log)
+			if err != nil {
+				log.Error(err, "Encountered error when attempting to retrieve CABundle from configmap")
+				return err
+			}
+			p.APICustomPemCerts = []byte(val)
 		}
+	}
+
+	if p.PersistenceAgent != nil {
+		PersistenceAgentImagePath := p.GetImageForComponent(dsp, config.PersistenceAgentImagePath, config.PersistenceAgentImagePathV2Argo, config.PersistenceAgentImagePathV2Tekton)
 		persistenceAgentImageFromConfig := config.GetStringConfigWithDefault(PersistenceAgentImagePath, config.DefaultImageValue)
 		setStringDefault(persistenceAgentImageFromConfig, &p.PersistenceAgent.Image)
 		setResourcesDefault(config.PersistenceAgentResourceRequirements, &p.PersistenceAgent.Resources)
 	}
 	if p.ScheduledWorkflow != nil {
-		ScheduledWorkflowImagePath := config.ScheduledWorkflowImagePath
-		if pipelinesV2Images {
-			ScheduledWorkflowImagePath = config.ScheduledWorkflowImagePathV2
-		}
+		ScheduledWorkflowImagePath := p.GetImageForComponent(dsp, config.ScheduledWorkflowImagePath, config.ScheduledWorkflowImagePathV2Argo, config.ScheduledWorkflowImagePathV2Tekton)
 		scheduledWorkflowImageFromConfig := config.GetStringConfigWithDefault(ScheduledWorkflowImagePath, config.DefaultImageValue)
 		setStringDefault(scheduledWorkflowImageFromConfig, &p.ScheduledWorkflow.Image)
 		setResourcesDefault(config.ScheduledWorkflowResourceRequirements, &p.ScheduledWorkflow.Resources)
@@ -506,6 +512,8 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		setStringDefault(config.MLPipelineUIConfigMapPrefix+dsp.Name, &p.MlPipelineUI.ConfigMapName)
 		setResourcesDefault(config.MlPipelineUIResourceRequirements, &p.MlPipelineUI.Resources)
 	}
+
+	// TODO (gfrasca): believe we need to set default VisualizationServer and WorkflowController Images here
 
 	err := p.SetupMLMD(ctx, dsp, client, log)
 	if err != nil {

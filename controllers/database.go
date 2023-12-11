@@ -24,16 +24,22 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
+	"time"
 )
 
 const dbSecret = "mariadb/generated-secret/secret.yaml.tmpl"
 
-var dbTemplatesDir = "mariadb/default"
+var mariadbTemplates = []string{
+	"mariadb/default/deployment.yaml.tmpl",
+	"mariadb/default/pvc.yaml.tmpl",
+	"mariadb/default/service.yaml.tmpl",
+	"mariadb/default/mariadb-sa.yaml.tmpl",
+}
 
 // extract to var for mocking in testing
-var ConnectAndQueryDatabase = func(host, port, username, password, dbname string) bool {
+var ConnectAndQueryDatabase = func(host, port, username, password, dbname string, dbConnectionTimeout time.Duration) bool {
 	// Create a context with a timeout of 1 second
-	ctx, cancel := context.WithTimeout(context.Background(), config.DefaultDBConnectionTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), dbConnectionTimeout)
 	defer cancel()
 
 	connectionString := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", username, password, host, port, dbname)
@@ -67,11 +73,16 @@ func (r *DSPAReconciler) isDatabaseAccessible(ctx context.Context, dsp *dspav1al
 	}
 
 	decodePass, _ := b64.StdEncoding.DecodeString(params.DBConnection.Password)
+	dbConnectionTimeout := config.GetDurationConfigWithDefault(config.DBConnectionTimeoutConfigName, config.DefaultDBConnectionTimeout)
+
+	log.V(1).Info(fmt.Sprintf("Database Heath Check connection timeout: %s", dbConnectionTimeout))
+
 	dbHealthCheckPassed := ConnectAndQueryDatabase(params.DBConnection.Host,
 		params.DBConnection.Port,
 		params.DBConnection.Username,
 		string(decodePass),
-		params.DBConnection.DBName)
+		params.DBConnection.DBName,
+		dbConnectionTimeout)
 	if dbHealthCheckPassed {
 		log.Info("Database Health Check Successful")
 	} else {
@@ -95,24 +106,26 @@ func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha
 	// Default DB is currently MariaDB as well, but storing these bools seperately in case that changes
 	deployDefaultDB := !databaseSpecified || defaultDBRequired
 
+	externalDBCredentialsProvided := externalDBSpecified && (dsp.Spec.Database.ExternalDB.PasswordSecret != nil)
+	mariaDBCredentialsProvided := mariaDBSpecified && (dsp.Spec.Database.MariaDB.PasswordSecret != nil)
+	databaseCredentialsProvided := externalDBCredentialsProvided || mariaDBCredentialsProvided
+
 	// If external db is specified, it takes precedence
 	if externalDBSpecified {
-		log.Info("Deploying external db secret.")
-		// If using external DB, we just need to create the secret
-		// for apiserver
-		err := r.Apply(dsp, params, dbSecret)
-		if err != nil {
-			return err
-		}
+		log.Info("Using externalDB, bypassing database deployment.")
 	} else if deployMariaDB || deployDefaultDB {
-		log.Info("Applying mariaDB resources.")
-		err := r.ApplyDir(dsp, params, dbTemplatesDir)
-		if err != nil {
-			return err
+		if !databaseCredentialsProvided {
+			err := r.Apply(dsp, params, dbSecret)
+			if err != nil {
+				return err
+			}
 		}
-		err = r.Apply(dsp, params, dbSecret)
-		if err != nil {
-			return err
+		log.Info("Applying mariaDB resources.")
+		for _, template := range mariadbTemplates {
+			err := r.Apply(dsp, params, template)
+			if err != nil {
+				return err
+			}
 		}
 		// If no database was not specified, deploy mariaDB by default.
 		// Update the CR with the state of mariaDB to accurately portray

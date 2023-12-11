@@ -51,6 +51,10 @@ type DSPASpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="v1"
 	DSPVersion string `json:"dspVersion,omitempty"`
+	// WorkflowController is an argo-specific component that manages a DSPA's Workflow objects and handles the orchestration of them with the central Argo server
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={deploy: false}
+	*WorkflowController `json:"workflowController,omitempty"`
 }
 
 type APIServer struct {
@@ -110,6 +114,22 @@ type APIServer struct {
 	AutoUpdatePipelineDefaultVersion bool `json:"autoUpdatePipelineDefaultVersion"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
+
+	// If the Object store/DB is behind a TLS secured connection that is
+	// unrecognized by the host OpenShift/K8s cluster, then you can
+	// provide a PEM formatted CA bundle to be injected into the DSP
+	// server pod to trust this connection. CA Bundle should be provided
+	// as values within configmaps, mapped to keys.
+	CABundle *CABundle `json:"cABundle,omitempty"`
+}
+
+type CABundle struct {
+	// +kubebuilder:validation:Required
+	ConfigMapName string `json:"configMapName"`
+	// Key should map to a CA bundle. The key is also used to name
+	// the CA bundle file (e.g. ca-bundle.crt)
+	// +kubebuilder:validation:Required
+	ConfigMapKey string `json:"configMapKey"`
 }
 
 type ArtifactScriptConfigMap struct {
@@ -207,6 +227,10 @@ type ObjectStorage struct {
 	// +kubebuilder:default:=false
 	// +kubebuilder:validation:Optional
 	DisableHealthCheck bool `json:"disableHealthCheck"`
+	// Enable an external route so the object storage is reachable from outside the cluster. Default: false
+	// +kubebuilder:default:=false
+	// +kubebuilder:validation:Optional
+	EnableExternalRoute bool `json:"enableExternalRoute"`
 }
 
 type Minio struct {
@@ -267,6 +291,13 @@ type CRDViewer struct {
 }
 
 type VisualizationServer struct {
+	// +kubebuilder:default:=true
+	// +kubebuilder:validation:Optional
+	Deploy bool   `json:"deploy"`
+	Image  string `json:"image,omitempty"`
+}
+
+type WorkflowController struct {
 	// +kubebuilder:default:=true
 	// +kubebuilder:validation:Optional
 	Deploy bool   `json:"deploy"`

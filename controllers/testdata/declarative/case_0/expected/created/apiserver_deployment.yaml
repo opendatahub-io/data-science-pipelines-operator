@@ -37,35 +37,6 @@ spec:
               value: "mariadb-testdsp0.default.svc.cluster.local"
             - name: DBCONFIG_PORT
               value: "3306"
-            - name: ARTIFACT_BUCKET
-              value: "mlpipeline"
-            - name: ARTIFACT_ENDPOINT
-              value: "http://minio-testdsp0.default.svc.cluster.local:9000"
-            - name: ARTIFACT_SCRIPT
-              valueFrom:
-                configMapKeyRef:
-                  key: "artifact_script"
-                  name: "ds-pipeline-artifact-script-testdsp0"
-            - name: ARTIFACT_IMAGE
-              value: "artifact-manager:test0"
-            - name: ARCHIVE_LOGS
-              value: "false"
-            - name: EXECUTIONTYPE
-              value: PipelineRun
-            - name: TRACK_ARTIFACTS
-              value: "true"
-            - name: STRIP_EOF
-              value: "true"
-            - name: PIPELINE_RUNTIME
-              value: "tekton"
-            - name: DEFAULTPIPELINERUNNERSERVICEACCOUNT
-              value: "pipeline-runner-testdsp0"
-            - name: INJECT_DEFAULT_SCRIPT
-              value: "true"
-            - name: APPLY_TEKTON_CUSTOM_RESOURCE
-              value: "true"
-            - name: TERMINATE_STATUS
-              value: "Cancelled"
             - name: AUTO_UPDATE_PIPELINE_DEFAULT_VERSION
               value: "true"
             - name: DBCONFIG_CONMAXLIFETIMESEC
@@ -74,18 +45,26 @@ spec:
               value: "ds-pipeline-visualizationserver"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
               value: "8888"
+            - name: OBJECTSTORECONFIG_CREDENTIALSSECRET
+              value: "ds-pipeline-s3-testdsp0"
+            - name: OBJECTSTORECONFIG_CREDENTIALSACCESSKEYKEY
+              value: "accesskey"
+            - name: OBJECTSTORECONFIG_CREDENTIALSSECRETKEYKEY
+              value: "secretkey"
+            - name: DEFAULTPIPELINERUNNERSERVICEACCOUNT
+              value: "pipeline-runner-testdsp0"
             - name: OBJECTSTORECONFIG_BUCKETNAME
               value: "mlpipeline"
             - name: OBJECTSTORECONFIG_ACCESSKEY
               valueFrom:
                 secretKeyRef:
                   key: "accesskey"
-                  name: "mlpipeline-minio-artifact"
+                  name: "ds-pipeline-s3-testdsp0"
             - name: OBJECTSTORECONFIG_SECRETACCESSKEY
               valueFrom:
                 secretKeyRef:
                   key: "secretkey"
-                  name: "mlpipeline-minio-artifact"
+                  name: "ds-pipeline-s3-testdsp0"
             - name: OBJECTSTORECONFIG_SECURE
               value: "false"
             - name: MINIO_SERVICE_SERVICE_HOST
@@ -104,6 +83,33 @@ spec:
               value: ds-pipeline-testdsp0.default.svc.cluster.local
             - name: ML_PIPELINE_SERVICE_PORT_GRPC
               value: "8887"
+            - name: EXECUTIONTYPE
+              value: PipelineRun
+            - name: ARTIFACT_BUCKET
+              value: "mlpipeline"
+            - name: ARTIFACT_ENDPOINT
+              value: "http://minio-testdsp0.default.svc.cluster.local:9000"
+            - name: ARTIFACT_SCRIPT
+              valueFrom:
+                configMapKeyRef:
+                  key: "artifact_script"
+                  name: "ds-pipeline-artifact-script-testdsp0"
+            - name: ARTIFACT_IMAGE
+              value: "artifact-manager:test0"
+            - name: ARCHIVE_LOGS
+              value: "false"
+            - name: TRACK_ARTIFACTS
+              value: "true"
+            - name: STRIP_EOF
+              value: "true"
+            - name: PIPELINE_RUNTIME
+              value: "tekton"
+            - name: INJECT_DEFAULT_SCRIPT
+              value: "true"
+            - name: APPLY_TEKTON_CUSTOM_RESOURCE
+              value: "true"
+            - name: TERMINATE_STATUS
+              value: "Cancelled"
           image: api-server:test0
           imagePullPolicy: Always
           name: ds-pipeline-api-server

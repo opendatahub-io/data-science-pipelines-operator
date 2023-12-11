@@ -54,6 +54,8 @@ ENVTEST_K8S_VERSION = 1.25.0
 OPERATOR_NS ?= odh-applications
 # Namespace to deploy v2 infrastructure
 V2INFRA_NS ?= openshift-pipelines
+# Namespace to deploy argo infrastructure
+ARGO_NS ?= argo
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -161,17 +163,18 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 	cd config/overlays/make-deploy && $(KUSTOMIZE) edit set namespace ${OPERATOR_NS}
 	$(KUSTOMIZE) build config/overlays/make-deploy | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
-.PHONY: v2deploy
-v2deploy: manifests kustomize
-	cd config/overlays/make-v2deploy \
-		&& $(KUSTOMIZE) edit set namespace ${V2INFRA_NS}
-	$(KUSTOMIZE) build config/overlays/make-v2deploy | kubectl apply -f -
+.PHONY: argodeploy
+argodeploy: manifests kustomize
+	cd config/overlays/make-argodeploy \
+		&& $(KUSTOMIZE) edit set namespace ${ARGO_NS}
+	$(KUSTOMIZE) build config/overlays/make-argodeploy | kubectl apply -f -
 
-.PHONY: v2undeploy
-v2undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	cd config/overlays/make-v2deploy \
-	    && $(KUSTOMIZE) edit set namespace ${V2INFRA_NS}
-	$(KUSTOMIZE) build config/overlays/make-v2deploy | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+.PHONY: argoundeploy
+argoundeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+	cd config/overlays/make-argodeploy \
+	    && $(KUSTOMIZE) edit set namespace ${ARGO_NS}
+	$(KUSTOMIZE) build config/overlays/make-argodeploy | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+
 
 ##@ Build Dependencies
 

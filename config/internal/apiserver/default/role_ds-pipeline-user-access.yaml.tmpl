@@ -4,7 +4,7 @@ metadata:
   name: ds-pipeline-user-access-{{.Name}}
   namespace: {{.Namespace}}
   labels:
-    app: ds-pipeline-{{.Name}}
+    app: {{.APIServerDefaultResourceName}}
     component: data-science-pipelines
 rules:
 - apiGroups:

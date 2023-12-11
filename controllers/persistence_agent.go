@@ -22,6 +22,8 @@ import (
 
 var persistenceAgentTemplatesDir = "persistence-agent"
 
+const persistenceAgentDefaultResourceNamePrefix = "ds-pipeline-persistenceagent-"
+
 func (r *DSPAReconciler) ReconcilePersistenceAgent(dsp *dspav1alpha1.DataSciencePipelinesApplication,
 	params *DSPAParams) error {
 

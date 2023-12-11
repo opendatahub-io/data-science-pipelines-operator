@@ -6,7 +6,7 @@ metadata:
   annotations:
     service.alpha.openshift.io/serving-cert-secret-name: ds-pipelines-proxy-tls-{{.Name}}
   labels:
-    app: ds-pipeline-{{.Name}}
+    app: {{.APIServerDefaultResourceName}}
     component: data-science-pipelines
 spec:
   ports:
@@ -23,5 +23,5 @@ spec:
       protocol: TCP
       targetPort: 8887
   selector:
-    app: ds-pipeline-{{.Name}}
+    app: {{.APIServerDefaultResourceName}}
     component: data-science-pipelines

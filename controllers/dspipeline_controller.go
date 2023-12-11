@@ -19,8 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"time"
-
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
 	"github.com/go-logr/logr"
@@ -29,6 +27,7 @@ import (
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/util"
 	routev1 "github.com/openshift/api/route/v1"
+	"github.com/prometheus/client_golang/prometheus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -49,9 +48,10 @@ const finalizerName = "datasciencepipelinesapplications.opendatahub.io/finalizer
 // DSPAReconciler reconciles a DSPAParams object
 type DSPAReconciler struct {
 	client.Client
-	Scheme        *runtime.Scheme
-	Log           logr.Logger
-	TemplatesPath string
+	Scheme                  *runtime.Scheme
+	Log                     logr.Logger
+	TemplatesPath           string
+	MaxConcurrentReconciles int
 }
 
 func (r *DSPAReconciler) ApplyDir(owner mf.Owner, params *DSPAParams, directory string, fns ...mf.Transformer) error {
@@ -224,10 +224,11 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, nil
 	}
 
+	requeueTime := config.GetDurationConfigWithDefault(config.RequeueTimeConfigName, config.DefaultRequeueTime)
 	err = params.ExtractParams(ctx, dspa, r.Client, r.Log)
 	if err != nil {
 		log.Info(fmt.Sprintf("Encountered error when parsing CR: [%s]", err))
-		return ctrl.Result{Requeue: true, RequeueAfter: 2 * time.Minute}, nil
+		return ctrl.Result{Requeue: true, RequeueAfter: requeueTime}, nil
 	}
 
 	err = r.ReconcileDatabase(ctx, dspa, params)
@@ -243,7 +244,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	// Get Prereq Status (DB and ObjStore Ready)
 	dbAvailable := r.isDatabaseAccessible(ctx, dspa, params)
 	objStoreAvailable := r.isObjectStorageAccessible(ctx, dspa, params)
-	dspaPrereqsReady := (dbAvailable && objStoreAvailable)
+	dspaPrereqsReady := dbAvailable && objStoreAvailable
 
 	if dspaPrereqsReady {
 		// Manage Common Manifests
@@ -287,6 +288,11 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			return ctrl.Result{}, err
 		}
 
+		err = r.ReconcileWorkflowController(dspa, params)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
 	}
 
 	log.Info("Updating CR status")
@@ -297,7 +303,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	conditions, err := r.GenerateStatus(ctx, dspa, dbAvailable, objStoreAvailable)
+	conditions, err := r.GenerateStatus(ctx, dspa, params, dbAvailable, objStoreAvailable)
 	if err != nil {
 		log.Info(err.Error())
 		return ctrl.Result{}, err
@@ -310,28 +316,24 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		log.Info(err.Error())
 		return ctrl.Result{}, err
 	}
-
-	r.PublishMetrics(
-		dspa,
-		util.GetConditionByType(config.DatabaseAvailable, conditions),
-		util.GetConditionByType(config.ObjectStoreAvailable, conditions),
-		util.GetConditionByType(config.APIServerReady, conditions),
-		util.GetConditionByType(config.PersistenceAgentReady, conditions),
-		util.GetConditionByType(config.ScheduledWorkflowReady, conditions),
-		util.GetConditionByType(config.CrReady, conditions),
-	)
+	metricsMap := map[metav1.Condition]*prometheus.GaugeVec{
+		util.GetConditionByType(config.DatabaseAvailable, conditions):      DBAvailableMetric,
+		util.GetConditionByType(config.ObjectStoreAvailable, conditions):   ObjectStoreAvailableMetric,
+		util.GetConditionByType(config.APIServerReady, conditions):         APIServerReadyMetric,
+		util.GetConditionByType(config.PersistenceAgentReady, conditions):  PersistenceAgentReadyMetric,
+		util.GetConditionByType(config.ScheduledWorkflowReady, conditions): ScheduledWorkflowReadyMetric,
+		util.GetConditionByType(config.CrReady, conditions):                CrReadyMetric,
+	}
+	r.PublishMetrics(dspa, metricsMap)
 	return ctrl.Result{}, nil
 }
 
 // handleReadyCondition evaluates if condition with "name" is in condition of type "conditionType".
 // this procedure is valid only for conditions with bool status type, for conditions of non bool type
 // results are undefined.
-func (r *DSPAReconciler) handleReadyCondition(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication, name string, condition string) (metav1.Condition, error) {
+func (r *DSPAReconciler) handleReadyCondition(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication, component string, condition string) (metav1.Condition, error) {
 	readyCondition := r.buildCondition(condition, dspa, config.MinimumReplicasAvailable)
 	deployment := &appsv1.Deployment{}
-
-	// Every Deployment in DSPA is the name followed by the DSPA CR name
-	component := name + "-" + dspa.Name
 
 	err := r.Get(ctx, types.NamespacedName{Name: component, Namespace: dspa.Namespace}, deployment)
 	if err != nil {
@@ -442,7 +444,8 @@ func (r *DSPAReconciler) handleReadyCondition(ctx context.Context, dspa *dspav1a
 
 }
 
-func (r *DSPAReconciler) GenerateStatus(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication, dbAvailableStatus, objStoreAvailableStatus bool) ([]metav1.Condition, error) {
+func (r *DSPAReconciler) GenerateStatus(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication,
+	params *DSPAParams, dbAvailableStatus, objStoreAvailableStatus bool) ([]metav1.Condition, error) {
 	// Create Database Availability Condition
 	databaseAvailable := r.buildCondition(config.DatabaseAvailable, dspa, config.DatabaseAvailable)
 	if dbAvailableStatus {
@@ -462,19 +465,19 @@ func (r *DSPAReconciler) GenerateStatus(ctx context.Context, dspa *dspav1alpha1.
 	}
 
 	// Create APIServer Readiness Condition
-	apiServerReady, err := r.handleReadyCondition(ctx, dspa, "ds-pipeline", config.APIServerReady)
+	apiServerReady, err := r.handleReadyCondition(ctx, dspa, params.APIServerDefaultResourceName, config.APIServerReady)
 	if err != nil {
 		return []metav1.Condition{}, err
 	}
 
 	// Create PersistenceAgent Readiness Condition
-	persistenceAgentReady, err := r.handleReadyCondition(ctx, dspa, "ds-pipeline-persistenceagent", config.PersistenceAgentReady)
+	persistenceAgentReady, err := r.handleReadyCondition(ctx, dspa, params.PersistentAgentDefaultResourceName, config.PersistenceAgentReady)
 	if err != nil {
 		return []metav1.Condition{}, err
 	}
 
 	// Create ScheduledWorkflow Readiness Condition
-	scheduledWorkflowReady, err := r.handleReadyCondition(ctx, dspa, "ds-pipeline-scheduledworkflow", config.ScheduledWorkflowReady)
+	scheduledWorkflowReady, err := r.handleReadyCondition(ctx, dspa, params.ScheduledWorkflowDefaultResourceName, config.ScheduledWorkflowReady)
 	if err != nil {
 		return []metav1.Condition{}, err
 	}
@@ -518,49 +521,19 @@ func (r *DSPAReconciler) GenerateStatus(ctx context.Context, dspa *dspav1alpha1.
 	return conditions, nil
 }
 
-func (r *DSPAReconciler) PublishMetrics(dspa *dspav1alpha1.DataSciencePipelinesApplication,
-	dbAvailable, objStoreAvailable, apiServerReady, persistenceAgentReady, scheduledWorkflowReady,
-	crReady metav1.Condition) {
+func (r *DSPAReconciler) PublishMetrics(dspa *dspav1alpha1.DataSciencePipelinesApplication, metricsMap map[metav1.Condition]*prometheus.GaugeVec) {
 	log := r.Log.WithValues("namespace", dspa.Namespace).WithValues("dspa_name", dspa.Name)
 	log.Info("Publishing Ready Metrics")
-	if dbAvailable.Status == metav1.ConditionTrue {
-		log.Info("Database Accessible")
-		DBAvailableMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(1)
-	} else {
-		log.Info("Database Not Yet Accessible")
-		DBAvailableMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(0)
-	}
 
-	if objStoreAvailable.Status == metav1.ConditionTrue {
-		log.Info("Object Store Accessible")
-		ObjectStoreAvailableMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(1)
-	} else {
-		log.Info("Object Store Not Yet Accessible")
-		ObjectStoreAvailableMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(0)
-	}
-
-	if persistenceAgentReady.Status == metav1.ConditionTrue {
-		log.Info("PersistanceAgent Ready")
-		PersistenceAgentReadyMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(1)
-	} else {
-		log.Info("PersistanceAgent Not Ready")
-		PersistenceAgentReadyMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(0)
-	}
-
-	if scheduledWorkflowReady.Status == metav1.ConditionTrue {
-		log.Info("ScheduledWorkflow Ready")
-		ScheduledWorkflowReadyMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(1)
-	} else {
-		log.Info("ScheduledWorkflow Not Ready")
-		ScheduledWorkflowReadyMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(0)
-	}
-
-	if crReady.Status == metav1.ConditionTrue {
-		log.Info("CR Fully Ready")
-		CrReadyMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(1)
-	} else {
-		log.Info("CR Not Ready")
-		CrReadyMetric.WithLabelValues(dspa.Name, dspa.Namespace).Set(0)
+	for conditionType, metric := range metricsMap {
+		condition := conditionType
+		status := condition.Status
+		value := 0
+		if status == metav1.ConditionTrue {
+			value = 1
+		}
+		log.Info(condition.Type, " Status:", status)
+		metric.WithLabelValues(dspa.Name, dspa.Namespace).Set(float64(value))
 	}
 }
 
@@ -606,7 +579,7 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			})).
 		// TODO: Add watcher for ui cluster rbac since it has no owner
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: config.DefaultMaxConcurrentReconciles,
+			MaxConcurrentReconciles: r.MaxConcurrentReconciles,
 		}).
 		Complete(r)
 }
