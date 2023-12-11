@@ -37,41 +37,12 @@ spec:
               value: "mariadb-testdsp6.default.svc.cluster.local"
             - name: DBCONFIG_PORT
               value: "3306"
-            - name: ARTIFACT_BUCKET
-              value: "mlpipeline"
-            - name: ARTIFACT_ENDPOINT
-              value: "http://minio-testdsp6.default.svc.cluster.local:9000"
-            - name: ARTIFACT_SCRIPT
-              valueFrom:
-                configMapKeyRef:
-                  key: "artifact_script"
-                  name: "ds-pipeline-artifact-script-testdsp6"
-            - name: ARTIFACT_IMAGE
-              value: "artifact-manager:test6"
-            - name: ARCHIVE_LOGS
-              value: "false"
-            - name: EXECUTIONTYPE
-              value: PipelineRun
             - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_NAME
               value: testcabundleconfigmap6
             - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_KEY
               value: testcabundleconfigmapkey6.crt
             - name: ARTIFACT_COPY_STEP_CABUNDLE_MOUNTPATH
               value: /etc/pki/tls/certs
-            - name: TRACK_ARTIFACTS
-              value: "true"
-            - name: STRIP_EOF
-              value: "true"
-            - name: PIPELINE_RUNTIME
-              value: "tekton"
-            - name: DEFAULTPIPELINERUNNERSERVICEACCOUNT
-              value: "pipeline-runner-testdsp6"
-            - name: INJECT_DEFAULT_SCRIPT
-              value: "true"
-            - name: APPLY_TEKTON_CUSTOM_RESOURCE
-              value: "true"
-            - name: TERMINATE_STATUS
-              value: "Cancelled"
             - name: AUTO_UPDATE_PIPELINE_DEFAULT_VERSION
               value: "true"
             - name: DBCONFIG_CONMAXLIFETIMESEC
@@ -86,6 +57,8 @@ spec:
               value: "accesskey"
             - name: OBJECTSTORECONFIG_CREDENTIALSSECRETKEYKEY
               value: "secretkey"
+            - name: DEFAULTPIPELINERUNNERSERVICEACCOUNT
+              value: "pipeline-runner-testdsp6"
             - name: OBJECTSTORECONFIG_BUCKETNAME
               value: "mlpipeline"
             - name: OBJECTSTORECONFIG_ACCESSKEY
@@ -112,6 +85,33 @@ spec:
               value: ds-pipeline-testdsp6.default.svc.cluster.local
             - name: ML_PIPELINE_SERVICE_PORT_GRPC
               value: "8887"
+            - name: EXECUTIONTYPE
+              value: PipelineRun
+            - name: ARTIFACT_BUCKET
+              value: "mlpipeline"
+            - name: ARTIFACT_ENDPOINT
+              value: "http://minio-testdsp6.default.svc.cluster.local:9000"
+            - name: ARTIFACT_SCRIPT
+              valueFrom:
+                configMapKeyRef:
+                  key: "artifact_script"
+                  name: "ds-pipeline-artifact-script-testdsp6"
+            - name: ARTIFACT_IMAGE
+              value: "artifact-manager:test6"
+            - name: ARCHIVE_LOGS
+              value: "false"
+            - name: TRACK_ARTIFACTS
+              value: "true"
+            - name: STRIP_EOF
+              value: "true"
+            - name: PIPELINE_RUNTIME
+              value: "tekton"
+            - name: INJECT_DEFAULT_SCRIPT
+              value: "true"
+            - name: APPLY_TEKTON_CUSTOM_RESOURCE
+              value: "true"
+            - name: TERMINATE_STATUS
+              value: "Cancelled"
           image: api-server:test6
           imagePullPolicy: Always
           name: ds-pipeline-api-server

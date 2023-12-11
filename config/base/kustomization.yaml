@@ -148,68 +148,82 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.DSPO_REQUEUE_TIME
-  - name: IMAGESV2_APISERVER
+  - name: IMAGESV2_ARGO_APISERVER
     objref:
       kind: ConfigMap
       name: dspo-parameters
       apiVersion: v1
     fieldref:
-      fieldpath: data.IMAGESV2_APISERVER
-  - name: IMAGESV2_ARTIFACT
+      fieldpath: data.IMAGESV2_ARGO_APISERVER
+  - name: IMAGESV2_ARGO_ARTIFACT
     objref:
       kind: ConfigMap
       name: dspo-parameters
       apiVersion: v1
     fieldref:
-      fieldpath: data.IMAGESV2_ARTIFACT
-  - name: IMAGESV2_CACHE
+      fieldpath: data.IMAGESV2_ARGO_ARTIFACT
+  - name: IMAGESV2_ARGO_PERSISTENCEAGENT
     objref:
       kind: ConfigMap
       name: dspo-parameters
       apiVersion: v1
     fieldref:
-      fieldpath: data.IMAGESV2_CACHE
-  - name: IMAGESV2_MOVERESULTSIMAGE
+      fieldpath: data.IMAGESV2_ARGO_PERSISTENCEAGENT
+  - name: IMAGESV2_ARGO_SCHEDULEDWORKFLOW
     objref:
       kind: ConfigMap
       name: dspo-parameters
       apiVersion: v1
     fieldref:
-      fieldpath: data.IMAGESV2_MOVERESULTSIMAGE
-  - name: IMAGESV2_PERSISTENTAGENT
+      fieldpath: data.IMAGESV2_ARGO_SCHEDULEDWORKFLOW
+  - name: IMAGESV2_ARGO_CACHE
     objref:
       kind: ConfigMap
       name: dspo-parameters
       apiVersion: v1
     fieldref:
-      fieldpath: data.IMAGESV2_PERSISTENTAGENT
-  - name: IMAGESV2_SCHEDULEDWORKFLOW
+      fieldpath: data.IMAGESV2_ARGO_CACHE
+  - name: IMAGESV2_ARGO_MOVERESULTSIMAGE
     objref:
       kind: ConfigMap
       name: dspo-parameters
       apiVersion: v1
     fieldref:
-      fieldpath: data.IMAGESV2_SCHEDULEDWORKFLOW
-  - name: IMAGESV2_MLMDENVOY
+      fieldpath: data.IMAGESV2_ARGO_MOVERESULTSIMAGE
+  - name: IMAGESV2_ARGO_MLMDENVOY
     objref:
       kind: ConfigMap
       name: dspo-parameters
       apiVersion: v1
     fieldref:
-      fieldpath: data.IMAGESV2_MLMDENVOY
-  - name: IMAGESV2_MLMDGRPC
+      fieldpath: data.IMAGESV2_ARGO_MLMDENVOY
+  - name: IMAGESV2_ARGO_MLMDGRPC
     objref:
       kind: ConfigMap
       name: dspo-parameters
       apiVersion: v1
     fieldref:
-      fieldpath: data.IMAGESV2_MLMDGRPC
-  - name: IMAGESV2_MLMDWRITER
+      fieldpath: data.IMAGESV2_ARGO_MLMDGRPC
+  - name: IMAGESV2_ARGO_MLMDWRITER
     objref:
       kind: ConfigMap
       name: dspo-parameters
       apiVersion: v1
     fieldref:
-      fieldpath: data.IMAGESV2_MLMDWRITER
+      fieldpath: data.IMAGESV2_ARGO_MLMDWRITER
+  - name: IMAGESV2_ARGO_VISUALIZATIONSERVER
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGESV2_ARGO_VISUALIZATIONSERVER
+  - name: IMAGESV2_ARGO_WORKFLOWCONTROLLER
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGESV2_ARGO_WORKFLOWCONTROLLER
 configurations:
   - params.yaml

@@ -37,21 +37,6 @@ spec:
               value: "{{.DBConnection.Host}}"
             - name: DBCONFIG_PORT
               value: "{{.DBConnection.Port}}"
-            - name: ARTIFACT_BUCKET
-              value: "{{.ObjectStorageConnection.Bucket}}"
-            - name: ARTIFACT_ENDPOINT
-              value: "{{.ObjectStorageConnection.Endpoint}}"
-            - name: ARTIFACT_SCRIPT
-              valueFrom:
-                configMapKeyRef:
-                  key: "{{ .APIServer.ArtifactScriptConfigMap.Key }}"
-                  name: "{{ .APIServer.ArtifactScriptConfigMap.Name }}"
-            - name: ARTIFACT_IMAGE
-              value: "{{.APIServer.ArtifactImage}}"
-            - name: ARCHIVE_LOGS
-              value: "{{.APIServer.ArchiveLogs}}"
-            - name: EXECUTIONTYPE
-              value: PipelineRun
             {{ if .APIServer.CABundle }}
             - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_NAME
               value: "{{.APIServer.CABundle.ConfigMapName}}"
@@ -60,20 +45,6 @@ spec:
             - name: ARTIFACT_COPY_STEP_CABUNDLE_MOUNTPATH
               value: {{ .PiplinesCABundleMountPath }}
             {{ end }}
-            - name: TRACK_ARTIFACTS
-              value: "{{.APIServer.TrackArtifacts}}"
-            - name: STRIP_EOF
-              value: "{{.APIServer.StripEOF}}"
-            - name: PIPELINE_RUNTIME
-              value: "tekton"
-            - name: DEFAULTPIPELINERUNNERSERVICEACCOUNT
-              value: "pipeline-runner-{{.Name}}"
-            - name: INJECT_DEFAULT_SCRIPT
-              value: "{{.APIServer.InjectDefaultScript}}"
-            - name: APPLY_TEKTON_CUSTOM_RESOURCE
-              value: "{{.APIServer.ApplyTektonCustomResource}}"
-            - name: TERMINATE_STATUS
-              value: "{{.APIServer.TerminateStatus}}"
             - name: AUTO_UPDATE_PIPELINE_DEFAULT_VERSION
               value: "{{.APIServer.AutoUpdatePipelineDefaultVersion}}"
             - name: DBCONFIG_CONMAXLIFETIMESEC
@@ -88,6 +59,8 @@ spec:
               value: "{{.ObjectStorageConnection.CredentialsSecret.AccessKey}}"
             - name: OBJECTSTORECONFIG_CREDENTIALSSECRETKEYKEY
               value: "{{.ObjectStorageConnection.CredentialsSecret.SecretKey}}"
+            - name: DEFAULTPIPELINERUNNERSERVICEACCOUNT
+              value: "pipeline-runner-{{.Name}}"
             - name: OBJECTSTORECONFIG_BUCKETNAME
               value: "{{.ObjectStorageConnection.Bucket}}"
             - name: OBJECTSTORECONFIG_ACCESSKEY
@@ -110,6 +83,7 @@ spec:
               value: "{{.APIServer.CacheImage}}"
             - name: MOVERESULTS_IMAGE
               value: "{{.APIServer.MoveResultsImage}}"
+            ## Env Vars to only include if MLMD Deployed ##
             {{ if .MLMD.Deploy }}
             - name: METADATA_GRPC_SERVICE_SERVICE_HOST
               value: "ds-pipeline-metadata-grpc-{{.Name}}.{{.Namespace}}.svc.cluster.local"
@@ -119,9 +93,58 @@ spec:
             {{ end }}
             {{ end }}
             - name: ML_PIPELINE_SERVICE_HOST
-              value: ds-pipeline-{{.Name}}.{{.Namespace}}.svc.cluster.local
+              value: "ds-pipeline-{{.Name}}.{{.Namespace}}.svc.cluster.local"
             - name: ML_PIPELINE_SERVICE_PORT_GRPC
               value: "8887"
+            {{ if (eq .DSPVersion "v2") }}
+            ## Argo-Specific Env Vars ##
+            - name: EXECUTIONTYPE
+              value: Workflow
+            - name: DB_DRIVER_NAME
+              value: mysql
+            - name: DBCONFIG_MYSQLCONFIG_USER
+              value: "{{.DBConnection.Username}}"
+            - name: DBCONFIG_MYSQLCONFIG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: "{{.DBConnection.CredentialsSecret.Key}}"
+                  name: "{{.DBConnection.CredentialsSecret.Name}}"
+            - name: DBCONFIG_MYSQLCONFIG_DBNAME
+              value: "{{.DBConnection.DBName}}"
+            - name: DBCONFIG_MYSQLCONFIG_HOST
+              value: "{{.DBConnection.Host}}"
+            - name: DBCONFIG_MYSQLCONFIG_PORT
+              value: "{{.DBConnection.Port}}"
+            {{ else }}
+            ## Tekton-Specific Env Vars ##
+            - name: EXECUTIONTYPE
+              value: PipelineRun
+            - name: ARTIFACT_BUCKET
+              value: "{{.ObjectStorageConnection.Bucket}}"
+            - name: ARTIFACT_ENDPOINT
+              value: "{{.ObjectStorageConnection.Endpoint}}"
+            - name: ARTIFACT_SCRIPT
+              valueFrom:
+                configMapKeyRef:
+                  key: "{{ .APIServer.ArtifactScriptConfigMap.Key }}"
+                  name: "{{ .APIServer.ArtifactScriptConfigMap.Name }}"
+            - name: ARTIFACT_IMAGE
+              value: "{{.APIServer.ArtifactImage}}"
+            - name: ARCHIVE_LOGS
+              value: "{{.APIServer.ArchiveLogs}}"
+            - name: TRACK_ARTIFACTS
+              value: "{{.APIServer.TrackArtifacts}}"
+            - name: STRIP_EOF
+              value: "{{.APIServer.StripEOF}}"
+            - name: PIPELINE_RUNTIME
+              value: "tekton"
+            - name: INJECT_DEFAULT_SCRIPT
+              value: "{{.APIServer.InjectDefaultScript}}"
+            - name: APPLY_TEKTON_CUSTOM_RESOURCE
+              value: "{{.APIServer.ApplyTektonCustomResource}}"
+            - name: TERMINATE_STATUS
+              value: "{{.APIServer.TerminateStatus}}"
+            {{ end }}
           image: {{.APIServer.Image}}
           imagePullPolicy: Always
           name: ds-pipeline-api-server

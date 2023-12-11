@@ -51,6 +51,10 @@ type DSPASpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="v1"
 	DSPVersion string `json:"dspVersion,omitempty"`
+	// WorkflowController is an argo-specific component that manages a DSPA's Workflow objects and handles the orchestration of them with the central Argo server
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={deploy: false}
+	*WorkflowController `json:"workflowController,omitempty"`
 }
 
 type APIServer struct {
@@ -287,6 +291,13 @@ type CRDViewer struct {
 }
 
 type VisualizationServer struct {
+	// +kubebuilder:default:=true
+	// +kubebuilder:validation:Optional
+	Deploy bool   `json:"deploy"`
+	Image  string `json:"image,omitempty"`
+}
+
+type WorkflowController struct {
 	// +kubebuilder:default:=true
 	// +kubebuilder:validation:Optional
 	Deploy bool   `json:"deploy"`

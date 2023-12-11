@@ -76,17 +76,32 @@ const (
 	RequeueTimeConfigName               = "DSPO.RequeueTime"
 )
 
-// DSPV2 Image Paths
+// DSPV2-Argo Image Paths
 const (
-	APIServerImagePathV2            = "ImagesV2.ApiServer"
-	APIServerArtifactImagePathV2    = "ImagesV2.Artifact"
-	APIServerCacheImagePathV2       = "ImagesV2.Cache"
-	APIServerMoveResultsImagePathV2 = "ImagesV2.MoveResultsImage"
-	PersistenceAgentImagePathV2     = "ImagesV2.PersistentAgent"
-	ScheduledWorkflowImagePathV2    = "ImagesV2.ScheduledWorkflow"
-	MlmdEnvoyImagePathV2            = "ImagesV2.MlmdEnvoy"
-	MlmdGRPCImagePathV2             = "ImagesV2.MlmdGRPC"
-	MlmdWriterImagePathV2           = "ImagesV2.MlmdWriter"
+	APIServerImagePathV2Argo            = "ImagesV2.Argo.ApiServer"
+	APIServerArtifactImagePathV2Argo    = "ImagesV2.Argo.Artifact"
+	APIServerCacheImagePathV2Argo       = "ImagesV2.Argo.Cache"
+	APIServerMoveResultsImagePathV2Argo = "ImagesV2.Argo.MoveResultsImage"
+	PersistenceAgentImagePathV2Argo     = "ImagesV2.Argo.PersistentAgent"
+	ScheduledWorkflowImagePathV2Argo    = "ImagesV2.Argo.ScheduledWorkflow"
+	MlmdEnvoyImagePathV2Argo            = "ImagesV2.Argo.MlmdEnvoy"
+	MlmdGRPCImagePathV2Argo             = "ImagesV2.Argo.MlmdGRPC"
+	MlmdWriterImagePathV2Argo           = "ImagesV2.Argo.MlmdWriter"
+)
+
+// DSPV2-Tekton Image Paths
+// Note: These won't exist in config but aren't used, adding in case of future support
+// TODO: remove
+const (
+	APIServerImagePathV2Tekton            = "ImagesV2.Tekton.ApiServer"
+	APIServerArtifactImagePathV2Tekton    = "ImagesV2.Tekton.Artifact"
+	APIServerCacheImagePathV2Tekton       = "ImagesV2.Tekton.Cache"
+	APIServerMoveResultsImagePathV2Tekton = "ImagesV2.Tekton.MoveResultsImage"
+	PersistenceAgentImagePathV2Tekton     = "ImagesV2.Tekton.PersistentAgent"
+	ScheduledWorkflowImagePathV2Tekton    = "ImagesV2.Tekton.ScheduledWorkflow"
+	MlmdEnvoyImagePathV2Tekton            = "ImagesV2.Tekton.MlmdEnvoy"
+	MlmdGRPCImagePathV2Tekton             = "ImagesV2.Tekton.MlmdGRPC"
+	MlmdWriterImagePathV2Tekton           = "ImagesV2.Tekton.MlmdWriter"
 )
 
 // DSPA Status Condition Types

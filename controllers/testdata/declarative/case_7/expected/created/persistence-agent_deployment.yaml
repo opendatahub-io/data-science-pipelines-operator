@@ -35,7 +35,7 @@ spec:
             - name: KUBEFLOW_USERID_PREFIX
               value: ""
             - name: EXECUTIONTYPE
-              value: PipelineRun
+              value: Workflow
           image: persistenceagent:test7
           imagePullPolicy: IfNotPresent
           name: ds-pipeline-persistenceagent
@@ -73,4 +73,17 @@ spec:
             limits:
               cpu: 2524m
               memory: 5Gi
+          volumeMounts:
+            - mountPath: /var/run/secrets/kubeflow/tokens/persistenceagent-sa-token
+              name: persistenceagent-sa-token
+              subPath: ds-pipeline-persistenceagent-testdsp7-token
       serviceAccountName: ds-pipeline-persistenceagent-testdsp7
+      volumes:
+        - name: persistenceagent-sa-token
+          projected:
+            sources:
+            - serviceAccountToken:
+                audience: pipelines.kubeflow.org
+                expirationSeconds: 3600
+                path: ds-pipeline-persistenceagent-testdsp7-token
+            defaultMode: 420

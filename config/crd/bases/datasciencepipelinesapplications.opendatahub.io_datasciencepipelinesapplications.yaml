@@ -760,6 +760,19 @@ spec:
                   image:
                     type: string
                 type: object
+              workflowController:
+                default:
+                  deploy: false
+                description: WorkflowController is an argo-specific component that
+                  manages a DSPA's Workflow objects and handles the orchestration
+                  of them with the central Argo server
+                properties:
+                  deploy:
+                    default: true
+                    type: boolean
+                  image:
+                    type: string
+                type: object
             required:
             - objectStorage
             type: object
