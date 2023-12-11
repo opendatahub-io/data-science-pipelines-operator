@@ -49,10 +49,6 @@ spec:
               value: "{{.APIServer.AutoUpdatePipelineDefaultVersion}}"
             - name: DBCONFIG_CONMAXLIFETIMESEC
               value: "{{.APIServer.DBConfigConMaxLifetimeSec}}"
-            - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_HOST
-              value: "ds-pipeline-visualizationserver"
-            - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
-              value: "8888"
             - name: OBJECTSTORECONFIG_CREDENTIALSSECRET
               value: "{{.ObjectStorageConnection.CredentialsSecret.SecretName}}"
             - name: OBJECTSTORECONFIG_CREDENTIALSACCESSKEYKEY

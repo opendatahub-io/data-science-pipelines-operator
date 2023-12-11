@@ -41,10 +41,6 @@ spec:
               value: "true"
             - name: DBCONFIG_CONMAXLIFETIMESEC
               value: "125"
-            - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_HOST
-              value: "ds-pipeline-visualizationserver"
-            - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
-              value: "8888"
             - name: OBJECTSTORECONFIG_CREDENTIALSSECRET
               value: "mlpipeline-minio-artifact"
             - name: OBJECTSTORECONFIG_CREDENTIALSACCESSKEYKEY

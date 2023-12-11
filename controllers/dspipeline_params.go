@@ -56,7 +56,6 @@ type DSPAParams struct {
 	Minio                                *dspa.Minio
 	MLMD                                 *dspa.MLMD
 	CRDViewer                            *dspa.CRDViewer
-	VisualizationServer                  *dspa.VisualizationServer
 	WorkflowController                   *dspa.WorkflowController
 	DBConnection
 	ObjectStorageConnection
@@ -87,6 +86,10 @@ func (p *DSPAParams) UsingV2Pipelines(dsp *dspa.DataSciencePipelinesApplication)
 	return dsp.Spec.DSPVersion == "v2"
 }
 
+func (p *DSPAParams) UsingV1Pipelines(dsp *dspa.DataSciencePipelinesApplication) bool {
+	return dsp.Spec.DSPVersion == "v1" || dsp.Spec.DSPVersion == ""
+}
+
 func (p *DSPAParams) UsingArgoEngineDriver(dsp *dspa.DataSciencePipelinesApplication) bool {
 	return p.UsingV2Pipelines(dsp)
 }
@@ -99,13 +102,17 @@ func (p *DSPAParams) UsingTektonEngineDriver(dsp *dspa.DataSciencePipelinesAppli
 // explicitly set images
 func (p *DSPAParams) GetImageForComponent(dsp *dspa.DataSciencePipelinesApplication, v1Image, v2ArgoImage, v2TektonImage string) string {
 	if p.UsingV2Pipelines(dsp) {
-		if p.UsingArgoEngineDriver(dsp) {
-			return v2ArgoImage
-		} else {
-			return v2TektonImage
-		}
+		return p.GetImageForComponentV2(dsp, v2ArgoImage, v2TektonImage)
 	}
 	return v1Image
+}
+
+func (p *DSPAParams) GetImageForComponentV2(dsp *dspa.DataSciencePipelinesApplication, v2ArgoImage, v2TektonImage string) string {
+	if p.UsingArgoEngineDriver(dsp) {
+		return v2ArgoImage
+	} else {
+		return v2TektonImage
+	}
 }
 
 // UsingExternalDB will return true if an external Database is specified in the CR, otherwise false.
@@ -389,11 +396,11 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 
 }
 
-func (p *DSPAParams) SetupMLMD(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, log logr.Logger) error {
+func (p *DSPAParams) SetupMlmdV1() error {
 	if p.MLMD != nil {
-		MlmdEnvoyImagePath := p.GetImageForComponent(dsp, config.MlmdEnvoyImagePath, config.MlmdEnvoyImagePathV2Argo, config.MlmdEnvoyImagePathV2Tekton)
-		MlmdGRPCImagePath := p.GetImageForComponent(dsp, config.MlmdGRPCImagePath, config.MlmdGRPCImagePathV2Argo, config.MlmdGRPCImagePathV2Tekton)
-		MlmdWriterImagePath := p.GetImageForComponent(dsp, config.MlmdWriterImagePath, config.MlmdWriterImagePathV2Argo, config.MlmdWriterImagePathV2Tekton)
+		MlmdEnvoyImagePath := config.MlmdEnvoyImagePath
+		MlmdGRPCImagePath := config.MlmdGRPCImagePath
+		MlmdWriterImagePath := config.MlmdWriterImagePath
 
 		if p.MLMD.Envoy == nil {
 			p.MLMD.Envoy = &dspa.Envoy{
@@ -422,6 +429,39 @@ func (p *DSPAParams) SetupMLMD(ctx context.Context, dsp *dspa.DataSciencePipelin
 		setResourcesDefault(config.MlmdEnvoyResourceRequirements, &p.MLMD.Envoy.Resources)
 		setResourcesDefault(config.MlmdGRPCResourceRequirements, &p.MLMD.GRPC.Resources)
 		setResourcesDefault(config.MlmdWriterResourceRequirements, &p.MLMD.Writer.Resources)
+
+		setStringDefault(config.MlmdGrpcPort, &p.MLMD.GRPC.Port)
+	}
+	return nil
+}
+
+func (p *DSPAParams) SetupMlmdV2(dsp *dspa.DataSciencePipelinesApplication, log logr.Logger) error {
+	if p.MLMD != nil {
+		mlmdEnvoyImagePath := p.GetImageForComponentV2(dsp, config.MlmdEnvoyImagePathV2Argo, config.MlmdEnvoyImagePathV2Tekton)
+		mlmdGRPCImagePath := p.GetImageForComponentV2(dsp, config.MlmdGRPCImagePathV2Argo, config.MlmdGRPCImagePathV2Tekton)
+
+		if p.MLMD.Envoy == nil {
+			p.MLMD.Envoy = &dspa.Envoy{
+				Image: config.GetStringConfigWithDefault(mlmdEnvoyImagePath, config.DefaultImageValue),
+			}
+		}
+		if p.MLMD.GRPC == nil {
+			p.MLMD.GRPC = &dspa.GRPC{
+				Image: config.GetStringConfigWithDefault(mlmdGRPCImagePath, config.DefaultImageValue),
+			}
+		}
+		if p.MLMD.Writer != nil {
+			log.Info("MLMD Writer is not supported in pipelines V2")
+		}
+
+		mlmdEnvoyImageFromConfig := config.GetStringConfigWithDefault(mlmdEnvoyImagePath, config.DefaultImageValue)
+		mlmdGRPCImageFromConfig := config.GetStringConfigWithDefault(mlmdGRPCImagePath, config.DefaultImageValue)
+
+		setStringDefault(mlmdEnvoyImageFromConfig, &p.MLMD.Envoy.Image)
+		setStringDefault(mlmdGRPCImageFromConfig, &p.MLMD.GRPC.Image)
+
+		setResourcesDefault(config.MlmdEnvoyResourceRequirements, &p.MLMD.Envoy.Resources)
+		setResourcesDefault(config.MlmdGRPCResourceRequirements, &p.MLMD.GRPC.Resources)
 
 		setStringDefault(config.MlmdGrpcPort, &p.MLMD.GRPC.Port)
 	}
@@ -519,9 +559,18 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		setResourcesDefault(config.MlPipelineUIResourceRequirements, &p.MlPipelineUI.Resources)
 	}
 
-	// TODO (gfrasca): believe we need to set default VisualizationServer and WorkflowController Images here
+	// TODO (gfrasca): believe we need to set default WorkflowController Images here
 
-	err := p.SetupMLMD(ctx, dsp, client, log)
+	var err error
+
+	if p.UsingV2Pipelines(dsp) {
+		err = p.SetupMlmdV2(dsp, log)
+	} else if p.UsingV1Pipelines(dsp) {
+		err = p.SetupMlmdV1()
+	} else {
+		err = fmt.Errorf("unsupported pipelines version: %s", dsp.Spec.DSPVersion)
+	}
+
 	if err != nil {
 		return err
 	}
