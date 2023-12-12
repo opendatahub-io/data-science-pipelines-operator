@@ -146,7 +146,7 @@ var ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoin
 
 		// Every other error means the endpoint in inaccessible, or the credentials provided do not have, at a minimum GetObject, permissions
 		errorMessage := fmt.Sprintf("Could not connect to (%s), Error: %s", endpoint, err.Error())
-		log.Error(err, errorMessage)
+		log.Info(errorMessage)
 		return false, errors.New(errorMessage)
 	}
 
