@@ -10,7 +10,7 @@ spec:
   accessModes:
     - ReadWriteOnce
   {{- if .MariaDB.StorageClassName }}
-    storageClassName: {{.MariaDB.StorageClassName}}
+  storageClassName: {{.MariaDB.StorageClassName}}
   {{- end }}
   resources:
     requests:
