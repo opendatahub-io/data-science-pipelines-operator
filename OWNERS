@@ -1,6 +1,5 @@
 approvers:
   - accorvin
-  - anishasthana
   - DharmitD
   - dsp-developers
   - gmfrasca
@@ -12,7 +11,9 @@ reviewers:
   - DharmitD
   - gmfrasca
   - gregsheremeta
+  - hbelmiro
   - HumairAK
   - rimolive
+  - VaniHaripriya
 emeritus_approvers:
   - harshad16

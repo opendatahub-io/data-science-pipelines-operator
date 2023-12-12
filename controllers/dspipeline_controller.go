@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
 	"github.com/go-logr/logr"
@@ -242,8 +243,17 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	// Get Prereq Status (DB and ObjStore Ready)
-	dbAvailable := r.isDatabaseAccessible(ctx, dspa, params)
-	objStoreAvailable := r.isObjectStorageAccessible(ctx, dspa, params)
+	dbAvailableErrorMsg, objStoreAvailableErrorMsg := "", ""
+	dbAvailable, err := r.isDatabaseAccessible(ctx, dspa, params)
+
+	if err != nil {
+		dbAvailableErrorMsg = err.Error()
+	}
+	objStoreAvailable, err := r.isObjectStorageAccessible(ctx, dspa, params)
+	if err != nil {
+		objStoreAvailableErrorMsg = err.Error()
+	}
+
 	dspaPrereqsReady := dbAvailable && objStoreAvailable
 
 	if dspaPrereqsReady {
@@ -303,7 +313,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	conditions, err := r.GenerateStatus(ctx, dspa, params, dbAvailable, objStoreAvailable)
+	conditions, err := r.GenerateStatus(ctx, dspa, params, dbAvailable, objStoreAvailable, dbAvailableErrorMsg, objStoreAvailableErrorMsg)
 	if err != nil {
 		log.Info(err.Error())
 		return ctrl.Result{}, err
@@ -445,14 +455,15 @@ func (r *DSPAReconciler) handleReadyCondition(ctx context.Context, dspa *dspav1a
 }
 
 func (r *DSPAReconciler) GenerateStatus(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication,
-	params *DSPAParams, dbAvailableStatus, objStoreAvailableStatus bool) ([]metav1.Condition, error) {
+	params *DSPAParams, dbAvailableStatus bool, objStoreAvailableStatus bool, dbAvailableErrorMsg string,
+	objStoreAvailableErrorMsg string) ([]metav1.Condition, error) {
 	// Create Database Availability Condition
 	databaseAvailable := r.buildCondition(config.DatabaseAvailable, dspa, config.DatabaseAvailable)
 	if dbAvailableStatus {
 		databaseAvailable.Status = metav1.ConditionTrue
 		databaseAvailable.Message = "Database connectivity successfully verified"
 	} else {
-		databaseAvailable.Message = "Could not connect to database"
+		databaseAvailable.Message = dbAvailableErrorMsg
 	}
 
 	// Create Object Storage Availability Condition
@@ -461,7 +472,7 @@ func (r *DSPAReconciler) GenerateStatus(ctx context.Context, dspa *dspav1alpha1.
 		objStoreAvailable.Status = metav1.ConditionTrue
 		objStoreAvailable.Message = "Object Store connectivity successfully verified"
 	} else {
-		objStoreAvailable.Message = "Could not connect to Object Store"
+		objStoreAvailable.Message = objStoreAvailableErrorMsg
 	}
 
 	// Create APIServer Readiness Condition

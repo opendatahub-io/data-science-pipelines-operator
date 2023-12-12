@@ -9,6 +9,9 @@ metadata:
 spec:
     accessModes:
         - ReadWriteOnce
+    {{- if .Minio.StorageClassName }}
+      storageClassName: {{.Minio.StorageClassName}}
+    {{- end }}
     resources:
         requests:
             storage: {{.Minio.PVCSize}}

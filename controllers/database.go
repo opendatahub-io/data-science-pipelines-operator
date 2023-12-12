@@ -21,10 +21,13 @@ import (
 	b64 "encoding/base64"
 	"fmt"
 
+	"time"
+
+	"errors"
+
 	_ "github.com/go-sql-driver/mysql"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
-	"time"
 )
 
 const dbSecret = "mariadb/generated-secret/secret.yaml.tmpl"
@@ -37,7 +40,7 @@ var mariadbTemplates = []string{
 }
 
 // extract to var for mocking in testing
-var ConnectAndQueryDatabase = func(host, port, username, password, dbname string, dbConnectionTimeout time.Duration) bool {
+var ConnectAndQueryDatabase = func(host, port, username, password, dbname string, dbConnectionTimeout time.Duration) (bool, error) {
 	// Create a context with a timeout of 1 second
 	ctx, cancel := context.WithTimeout(context.Background(), dbConnectionTimeout)
 	defer cancel()
@@ -45,22 +48,23 @@ var ConnectAndQueryDatabase = func(host, port, username, password, dbname string
 	connectionString := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", username, password, host, port, dbname)
 	db, err := sql.Open("mysql", connectionString)
 	if err != nil {
-		return false
+		return false, err
 	}
 	defer db.Close()
 
 	testStatement := "SELECT 1;"
 	_, err = db.QueryContext(ctx, testStatement)
-	return err == nil
+	return err == nil, nil
 }
 
 func (r *DSPAReconciler) isDatabaseAccessible(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,
-	params *DSPAParams) bool {
+	params *DSPAParams) (bool, error) {
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
 
 	if params.DatabaseHealthCheckDisabled(dsp) {
-		log.V(1).Info("Database health check disabled, assuming database is available and ready.")
-		return true
+		infoMessage := "Database health check disabled, assuming database is available and ready."
+		log.V(1).Info(infoMessage)
+		return true, nil
 	}
 
 	log.Info("Performing Database Health Check")
@@ -68,8 +72,9 @@ func (r *DSPAReconciler) isDatabaseAccessible(ctx context.Context, dsp *dspav1al
 	usingExternalDB := params.UsingExternalDB(dsp)
 	usingMariaDB := !databaseSpecified || dsp.Spec.Database.MariaDB != nil
 	if !usingMariaDB && !usingExternalDB {
-		log.Info("Could not connect to Database: Unsupported Type")
-		return false
+		errorMessage := "Could not connect to Database: Unsupported Type"
+		log.Error(nil, errorMessage)
+		return false, errors.New(errorMessage)
 	}
 
 	decodePass, _ := b64.StdEncoding.DecodeString(params.DBConnection.Password)
@@ -77,18 +82,20 @@ func (r *DSPAReconciler) isDatabaseAccessible(ctx context.Context, dsp *dspav1al
 
 	log.V(1).Info(fmt.Sprintf("Database Heath Check connection timeout: %s", dbConnectionTimeout))
 
-	dbHealthCheckPassed := ConnectAndQueryDatabase(params.DBConnection.Host,
+	dbHealthCheckPassed, err := ConnectAndQueryDatabase(params.DBConnection.Host,
 		params.DBConnection.Port,
 		params.DBConnection.Username,
 		string(decodePass),
 		params.DBConnection.DBName,
 		dbConnectionTimeout)
-	if dbHealthCheckPassed {
-		log.Info("Database Health Check Successful")
-	} else {
+
+	if err != nil {
 		log.Info("Unable to connect to Database")
+	} else {
+		log.Info("Database Health Check Successful")
 	}
-	return dbHealthCheckPassed
+
+	return dbHealthCheckPassed, err
 }
 
 func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,

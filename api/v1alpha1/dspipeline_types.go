@@ -206,6 +206,9 @@ type MariaDB struct {
 	// Customize the size of the PVC created for the default MariaDB instance. Default: 10Gi
 	// +kubebuilder:default:="10Gi"
 	PVCSize resource.Quantity `json:"pvcSize,omitempty"`
+	// Volume Mode Filesystem storageClass to use for PVC creation
+	// +kubebuilder:validation:Optional
+	StorageClassName string `json:"storageClassName,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
 }
@@ -246,6 +249,9 @@ type Minio struct {
 	// Customize the size of the PVC created for the Minio instance. Default: 10Gi
 	// +kubebuilder:default:="10Gi"
 	PVCSize resource.Quantity `json:"pvcSize,omitempty"`
+	// Volume Mode Filesystem storageClass to use for PVC creation
+	// +kubebuilder:validation:Optional
+	StorageClassName string `json:"storageClassName,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
 	// Specify a custom image for Minio pod.

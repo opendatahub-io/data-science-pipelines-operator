@@ -20,6 +20,7 @@ package controllers
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"testing"
 	"time"
 
@@ -270,8 +271,8 @@ func TestDefaultDeployBehaviorStorage(t *testing.T) {
 
 func TestIsDatabaseAccessibleTrue(t *testing.T) {
 	// Override the live connection function with a mock version
-	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte, objStoreConnectionTimeout time.Duration) bool {
-		return true
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte, objStoreConnectionTimeout time.Duration) (bool, error) {
+		return true, nil
 	}
 
 	testNamespace := "testnamespace"
@@ -302,14 +303,14 @@ func TestIsDatabaseAccessibleTrue(t *testing.T) {
 		},
 	}
 
-	verified := reconciler.isObjectStorageAccessible(ctx, dspa, params)
-	assert.True(t, verified)
+	verified, err := reconciler.isObjectStorageAccessible(ctx, dspa, params)
+	assert.True(t, verified, err)
 }
 
 func TestIsDatabaseNotAccessibleFalse(t *testing.T) {
 	// Override the live connection function with a mock version
-	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte, objStoreConnectionTimeout time.Duration) bool {
-		return false
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte, objStoreConnectionTimeout time.Duration) (bool, error) {
+		return false, errors.New("Object Store is not Accessible")
 	}
 
 	testNamespace := "testnamespace"
@@ -340,14 +341,14 @@ func TestIsDatabaseNotAccessibleFalse(t *testing.T) {
 		},
 	}
 
-	verified := reconciler.isObjectStorageAccessible(ctx, dspa, params)
-	assert.False(t, verified)
+	verified, err := reconciler.isObjectStorageAccessible(ctx, dspa, params)
+	assert.False(t, verified, err)
 }
 
 func TestDisabledHealthCheckReturnsTrue(t *testing.T) {
 	// Override the live connection function with a mock version that would always return false if called
-	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte, objStoreConnectionTimeout time.Duration) bool {
-		return false
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte, objStoreConnectionTimeout time.Duration) (bool, error) {
+		return false, errors.New("Object Store is not Accessible")
 	}
 
 	testNamespace := "testnamespace"
@@ -378,16 +379,16 @@ func TestDisabledHealthCheckReturnsTrue(t *testing.T) {
 		},
 	}
 
-	verified := reconciler.isObjectStorageAccessible(ctx, dspa, params)
+	verified, err := reconciler.isObjectStorageAccessible(ctx, dspa, params)
 	// if health check is disabled this should always return True
 	// even thought the mock connection function would return false if called
-	assert.True(t, verified)
+	assert.True(t, verified, err)
 }
 
 func TestIsDatabaseAccessibleBadAccessKey(t *testing.T) {
 	// Override the live connection function with a mock version
-	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte, objStoreConnectionTimeout time.Duration) bool {
-		return true
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte, objStoreConnectionTimeout time.Duration) (bool, error) {
+		return true, nil
 	}
 
 	testNamespace := "testnamespace"
@@ -418,14 +419,14 @@ func TestIsDatabaseAccessibleBadAccessKey(t *testing.T) {
 		},
 	}
 
-	verified := reconciler.isObjectStorageAccessible(ctx, dspa, params)
-	assert.False(t, verified)
+	verified, err := reconciler.isObjectStorageAccessible(ctx, dspa, params)
+	assert.False(t, verified, err)
 }
 
 func TestIsDatabaseAccessibleBadSecretKey(t *testing.T) {
 	// Override the live connection function with a mock version
-	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte, objStoreConnectionTimeout time.Duration) bool {
-		return true
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte, objStoreConnectionTimeout time.Duration) (bool, error) {
+		return true, nil
 	}
 
 	testNamespace := "testnamespace"
@@ -456,8 +457,8 @@ func TestIsDatabaseAccessibleBadSecretKey(t *testing.T) {
 		},
 	}
 
-	verified := reconciler.isObjectStorageAccessible(ctx, dspa, params)
-	assert.False(t, verified)
+	verified, err := reconciler.isObjectStorageAccessible(ctx, dspa, params)
+	assert.False(t, verified, err)
 }
 
 func TestJoinHostPort(t *testing.T) {

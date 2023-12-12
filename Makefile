@@ -51,7 +51,7 @@ IMG ?= quay.io/opendatahub/data-science-pipelines-operator:main
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.25.0
 # Namespace to deploy the operator
-OPERATOR_NS ?= odh-applications
+OPERATOR_NS ?= opendatahub
 # Namespace to deploy v2 infrastructure
 V2INFRA_NS ?= openshift-pipelines
 # Namespace to deploy argo infrastructure
