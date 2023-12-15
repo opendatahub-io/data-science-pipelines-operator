@@ -392,11 +392,10 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 
 }
 
-func (p *DSPAParams) SetupMlmdV1() error {
+func (p *DSPAParams) SetupMLMD(dsp *dspa.DataSciencePipelinesApplication) error {
 	if p.MLMD != nil {
-		MlmdEnvoyImagePath := config.MlmdEnvoyImagePath
-		MlmdGRPCImagePath := config.MlmdGRPCImagePath
-		MlmdWriterImagePath := config.MlmdWriterImagePath
+		MlmdEnvoyImagePath := p.GetImageForComponent(dsp, config.MlmdEnvoyImagePath, config.MlmdEnvoyImagePathV2Argo, config.MlmdEnvoyImagePathV2Tekton)
+		MlmdGRPCImagePath := p.GetImageForComponent(dsp, config.MlmdGRPCImagePath, config.MlmdGRPCImagePathV2Argo, config.MlmdGRPCImagePathV2Tekton)
 
 		if p.MLMD.Envoy == nil {
 			p.MLMD.Envoy = &dspa.Envoy{
@@ -408,50 +407,9 @@ func (p *DSPAParams) SetupMlmdV1() error {
 				Image: config.GetStringConfigWithDefault(MlmdGRPCImagePath, config.DefaultImageValue),
 			}
 		}
-		if p.MLMD.Writer == nil {
-			p.MLMD.Writer = &dspa.Writer{
-				Image: config.GetStringConfigWithDefault(MlmdWriterImagePath, config.DefaultImageValue),
-			}
-		}
 
 		mlmdEnvoyImageFromConfig := config.GetStringConfigWithDefault(MlmdEnvoyImagePath, config.DefaultImageValue)
 		mlmdGRPCImageFromConfig := config.GetStringConfigWithDefault(MlmdGRPCImagePath, config.DefaultImageValue)
-		mlmdWriterImageFromConfig := config.GetStringConfigWithDefault(MlmdWriterImagePath, config.DefaultImageValue)
-
-		setStringDefault(mlmdEnvoyImageFromConfig, &p.MLMD.Envoy.Image)
-		setStringDefault(mlmdGRPCImageFromConfig, &p.MLMD.GRPC.Image)
-		setStringDefault(mlmdWriterImageFromConfig, &p.MLMD.Writer.Image)
-
-		setResourcesDefault(config.MlmdEnvoyResourceRequirements, &p.MLMD.Envoy.Resources)
-		setResourcesDefault(config.MlmdGRPCResourceRequirements, &p.MLMD.GRPC.Resources)
-		setResourcesDefault(config.MlmdWriterResourceRequirements, &p.MLMD.Writer.Resources)
-
-		setStringDefault(config.MlmdGrpcPort, &p.MLMD.GRPC.Port)
-	}
-	return nil
-}
-
-func (p *DSPAParams) SetupMlmdV2(dsp *dspa.DataSciencePipelinesApplication, log logr.Logger) error {
-	if p.MLMD != nil {
-		mlmdEnvoyImagePath := p.GetImageForComponent(dsp, "", config.MlmdEnvoyImagePathV2Argo, config.MlmdEnvoyImagePathV2Tekton)
-		mlmdGRPCImagePath := p.GetImageForComponent(dsp, "", config.MlmdGRPCImagePathV2Argo, config.MlmdGRPCImagePathV2Tekton)
-
-		if p.MLMD.Envoy == nil {
-			p.MLMD.Envoy = &dspa.Envoy{
-				Image: config.GetStringConfigWithDefault(mlmdEnvoyImagePath, config.DefaultImageValue),
-			}
-		}
-		if p.MLMD.GRPC == nil {
-			p.MLMD.GRPC = &dspa.GRPC{
-				Image: config.GetStringConfigWithDefault(mlmdGRPCImagePath, config.DefaultImageValue),
-			}
-		}
-		if p.MLMD.Writer != nil {
-			log.Info("MLMD Writer is not supported in pipelines V2")
-		}
-
-		mlmdEnvoyImageFromConfig := config.GetStringConfigWithDefault(mlmdEnvoyImagePath, config.DefaultImageValue)
-		mlmdGRPCImageFromConfig := config.GetStringConfigWithDefault(mlmdGRPCImagePath, config.DefaultImageValue)
 
 		setStringDefault(mlmdEnvoyImageFromConfig, &p.MLMD.Envoy.Image)
 		setStringDefault(mlmdGRPCImageFromConfig, &p.MLMD.GRPC.Image)
@@ -460,6 +418,20 @@ func (p *DSPAParams) SetupMlmdV2(dsp *dspa.DataSciencePipelinesApplication, log 
 		setResourcesDefault(config.MlmdGRPCResourceRequirements, &p.MLMD.GRPC.Resources)
 
 		setStringDefault(config.MlmdGrpcPort, &p.MLMD.GRPC.Port)
+
+		if p.UsingV1Pipelines(dsp) {
+			MlmdWriterImagePath := config.MlmdWriterImagePath
+
+			if p.MLMD.Writer == nil {
+				p.MLMD.Writer = &dspa.Writer{
+					Image: config.GetStringConfigWithDefault(MlmdWriterImagePath, config.DefaultImageValue),
+				}
+			}
+
+			mlmdWriterImageFromConfig := config.GetStringConfigWithDefault(MlmdWriterImagePath, config.DefaultImageValue)
+			setStringDefault(mlmdWriterImageFromConfig, &p.MLMD.Writer.Image)
+			setResourcesDefault(config.MlmdWriterResourceRequirements, &p.MLMD.Writer.Resources)
+		}
 	}
 	return nil
 }
@@ -557,16 +529,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 
 	// TODO (gfrasca): believe we need to set default WorkflowController Images here
 
-	var err error
-
-	if p.UsingV2Pipelines(dsp) {
-		err = p.SetupMlmdV2(dsp, log)
-	} else if p.UsingV1Pipelines(dsp) {
-		err = p.SetupMlmdV1()
-	} else {
-		err = fmt.Errorf("unsupported pipelines version: %s", dsp.Spec.DSPVersion)
-	}
-
+	err := p.SetupMLMD(dsp)
 	if err != nil {
 		return err
 	}
