@@ -102,17 +102,13 @@ func (p *DSPAParams) UsingTektonEngineDriver(dsp *dspa.DataSciencePipelinesAppli
 // explicitly set images
 func (p *DSPAParams) GetImageForComponent(dsp *dspa.DataSciencePipelinesApplication, v1Image, v2ArgoImage, v2TektonImage string) string {
 	if p.UsingV2Pipelines(dsp) {
-		return p.GetImageForComponentV2(dsp, v2ArgoImage, v2TektonImage)
+		if p.UsingArgoEngineDriver(dsp) {
+			return v2ArgoImage
+		} else {
+			return v2TektonImage
+		}
 	}
 	return v1Image
-}
-
-func (p *DSPAParams) GetImageForComponentV2(dsp *dspa.DataSciencePipelinesApplication, v2ArgoImage, v2TektonImage string) string {
-	if p.UsingArgoEngineDriver(dsp) {
-		return v2ArgoImage
-	} else {
-		return v2TektonImage
-	}
 }
 
 // UsingExternalDB will return true if an external Database is specified in the CR, otherwise false.
@@ -437,8 +433,8 @@ func (p *DSPAParams) SetupMlmdV1() error {
 
 func (p *DSPAParams) SetupMlmdV2(dsp *dspa.DataSciencePipelinesApplication, log logr.Logger) error {
 	if p.MLMD != nil {
-		mlmdEnvoyImagePath := p.GetImageForComponentV2(dsp, config.MlmdEnvoyImagePathV2Argo, config.MlmdEnvoyImagePathV2Tekton)
-		mlmdGRPCImagePath := p.GetImageForComponentV2(dsp, config.MlmdGRPCImagePathV2Argo, config.MlmdGRPCImagePathV2Tekton)
+		mlmdEnvoyImagePath := p.GetImageForComponent(dsp, "", config.MlmdEnvoyImagePathV2Argo, config.MlmdEnvoyImagePathV2Tekton)
+		mlmdGRPCImagePath := p.GetImageForComponent(dsp, "", config.MlmdGRPCImagePathV2Argo, config.MlmdGRPCImagePathV2Tekton)
 
 		if p.MLMD.Envoy == nil {
 			p.MLMD.Envoy = &dspa.Envoy{
