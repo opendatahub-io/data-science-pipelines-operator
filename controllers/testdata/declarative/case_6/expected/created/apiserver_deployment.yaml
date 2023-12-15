@@ -47,6 +47,10 @@ spec:
               value: "true"
             - name: DBCONFIG_CONMAXLIFETIMESEC
               value: "120"
+            - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_HOST
+              value: "ds-pipeline-visualizationserver"
+            - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
+              value: "8888"
             - name: OBJECTSTORECONFIG_CREDENTIALSSECRET
               value: "ds-pipeline-s3-testdsp6"
             - name: OBJECTSTORECONFIG_CREDENTIALSACCESSKEYKEY

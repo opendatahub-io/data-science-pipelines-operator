@@ -7,5 +7,5 @@ patchesStrategicMerge:
 - img_patch.yaml
 images:
 - name: controller
-  newName: quay.io/opendatahub/data-science-pipelines-operator
-  newTag: main
+  newName: quay.io/hbelmiro/dspo
+  newTag: dev-issue-495-1702651405
