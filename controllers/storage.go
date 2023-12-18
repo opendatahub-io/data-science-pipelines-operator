@@ -132,7 +132,15 @@ var ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoin
 		// In the case that the Error is NoSuchKey (or NoSuchBucket), we can verify that the endpoint worked and the object just doesn't exist
 		case minio.ErrorResponse:
 			if err.Code == "NoSuchKey" || err.Code == "NoSuchBucket" {
-				return true, err
+				return true, nil
+			}
+			// This condition is added to handle the service unavailble error when the external route pod takes long time to send successful readiness checks
+			if err.Code == "503 Service Unavailable" {
+				errorMessage := "503 Service Unavailable. This could be a special condition when minio external route is used " +
+					"and health check is trying to reach the service, where the pod is up and running but takes long time " +
+					"to pass the successful readiness checks."
+				log.Info(errorMessage)
+				return false, errors.New(errorMessage)
 			}
 		}
 
@@ -141,7 +149,7 @@ var ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoin
 				"If using an tls S3 connection with  self-signed certs, you may specify a custom CABundle " +
 				"to mount on the DSP API Server via the DSPA cr under the spec.apiServer.cABundle field. If you have already " +
 				"provided a CABundle, verify the validity of the provided CABundle."
-			log.Error(err, errorMessage)
+			log.Info(errorMessage)
 			return false, errors.New(errorMessage)
 		}
 

@@ -28,6 +28,7 @@ import (
 	dspa "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/util"
+	routev1 "github.com/openshift/api/route/v1"
 	v1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -82,6 +83,7 @@ type ObjectStorageConnection struct {
 	Endpoint          string // scheme://host:port
 	AccessKeyID       string
 	SecretAccessKey   string
+	ExternalRouteURL  string
 }
 
 func (p *DSPAParams) UsingV2Pipelines(dsp *dspa.DataSciencePipelinesApplication) bool {
@@ -143,6 +145,26 @@ func (p *DSPAParams) ObjectStorageHealthCheckDisabled(dsp *dspa.DataSciencePipel
 		return dsp.Spec.ObjectStorage.DisableHealthCheck
 	}
 	return false
+}
+
+// ExternalRouteEnabled will return true if an external route is enabled in the CR, otherwise false.
+func (p *DSPAParams) ExternalRouteEnabled(dsp *dspa.DataSciencePipelinesApplication) bool {
+	if dsp.Spec.ObjectStorage != nil {
+		return dsp.Spec.ObjectStorage.EnableExternalRoute
+	}
+	return false
+}
+
+func (p *DSPAParams) RetrieveAndSetExternalRoute(ctx context.Context, client client.Client, log logr.Logger) (*routev1.Route, error) {
+	// Retrieve the external route
+	route := &routev1.Route{}
+	namespacedName := types.NamespacedName{
+		Name:      "minio-" + p.Name,
+		Namespace: p.Namespace,
+	}
+	err := client.Get(ctx, namespacedName, route)
+
+	return route, err
 }
 
 func passwordGen(n int) string {
@@ -372,8 +394,22 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 		}
 		p.ObjectStorageConnection.AccessKeyID = accessKey
 		p.ObjectStorageConnection.SecretAccessKey = secretKey
+
 	}
 
+	if p.ExternalRouteEnabled(dsp) {
+		route, err := p.RetrieveAndSetExternalRoute(ctx, client, log)
+		if err != nil {
+			log.Info("Unable to retrieve route", "error", err)
+		}
+		p.ObjectStorageConnection.ExternalRouteURL = route.Spec.Host
+		p.ObjectStorageConnection.Endpoint = route.Spec.Host
+		p.ObjectStorageConnection.Secure = util.BoolPointer(true)
+		p.ObjectStorageConnection.Host = route.Spec.Host
+		p.ObjectStorageConnection.Scheme = "https"
+		//port should be empty when external route is specified
+		p.ObjectStorageConnection.Port = ""
+	}
 	endpoint := fmt.Sprintf(
 		"%s://%s",
 		p.ObjectStorageConnection.Scheme,
