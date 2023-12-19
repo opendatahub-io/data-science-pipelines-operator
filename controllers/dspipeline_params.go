@@ -87,7 +87,7 @@ func (p *DSPAParams) UsingV2Pipelines(dsp *dspa.DataSciencePipelinesApplication)
 }
 
 func (p *DSPAParams) UsingV1Pipelines(dsp *dspa.DataSciencePipelinesApplication) bool {
-	return dsp.Spec.DSPVersion == "v1" || dsp.Spec.DSPVersion == ""
+	return !p.UsingV2Pipelines(dsp)
 }
 
 func (p *DSPAParams) UsingArgoEngineDriver(dsp *dspa.DataSciencePipelinesApplication) bool {
