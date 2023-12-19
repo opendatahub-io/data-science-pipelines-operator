@@ -77,7 +77,7 @@ cat <<EOF | oc apply -f -
 kind: DataScienceCluster
 apiVersion: datasciencecluster.opendatahub.io/v1
 metadata:
-  name: data-science-pipelines-operator
+  name: data-science-cluster
   namespace: ${ODH_NS}
 spec:
   components:
@@ -116,7 +116,8 @@ The `DataSciencePipelines` YAML should look like:
 kind: DataScienceCluster
 apiVersion: datasciencecluster.opendatahub.io/v1
 metadata:
-  name: data-science-pipelines-operator
+   name: data-science-cluster
+   namespace: ${ODH_NS}
 spec:
   components:
     dashboard:
