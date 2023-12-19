@@ -62,7 +62,15 @@ To get started you will first need to satisfy the following pre-requisites:
 
 ## Deploy the Operator via ODH
 
+On a cluster with ODH installed, create a namespace where you would like to install DSPO:
 Deploy the following `DataScienceCluster`:
+
+```bash
+ODH_NS=opendatahub
+oc new-project ${ODH_NS}
+```
+
+Then deploy the following `DataScienceCluster` into the namespace created above:
 
 ```bash
 cat <<EOF | oc apply -f -
@@ -70,6 +78,7 @@ kind: DataScienceCluster
 apiVersion: datasciencecluster.opendatahub.io/v1
 metadata:
   name: data-science-pipelines-operator
+  namespace: ${ODH_NS}
 spec:
   components:
     dashboard:
@@ -86,7 +95,7 @@ EOF
 Confirm the pods are successfully deployed and reach running state:
 
 ```bash
-oc get pods -n ${DSPO_NS}
+oc get pods -n ${ODH_NS}
 ```
 
 Once all pods are ready, we can proceed to deploying the first Data Science Pipelines (DSP) instance. Instructions
@@ -135,23 +144,23 @@ DSPO can be installed in any namespace, we'll deploy it in the following namespa
 variable accordingly.
 
 ```bash
-DSPO_NS=data-science-pipelines-operator
+ODH_NS=opendatahub
 
 # Create the namespace if it doesn't already exist
-oc new-project ${DSPO_NS}
+oc new-project ${ODH_NS}
 ```
 
 Now we will navigate to the DSPO manifests then build and deploy them to this namespace.
 
 ```bash
 cd ${WORKING_DIR}
-make deploy OPERATOR_NS=${DSPO_NS}
+make deploy OPERATOR_NS=${ODH_NS}
 ```
 
 Confirm the pods are successfully deployed and reach running state:
 
 ```bash
-oc get pods -n ${DSPO_NS}
+oc get pods -n ${ODH_NS}
 ```
 
 Once all pods are ready, we can proceed to deploying the first Data Science Pipelines (DSP) instance. Instructions
@@ -458,8 +467,8 @@ To uninstall DSPO via ODH run the following:
 
 ```bash
 DSC_NAME=$(oc get DataScienceCluster -o jsonpath='{.items[0].metadata.name}')
-DSPO_NS=$(oc get DataScienceCluster -o jsonpath='{.items[0].metadata.namespace}')
-oc delete datasciencecluster ${DSC_NAME} -n "${DSPO_NS}"
+ODH_NS=$(oc get DataScienceCluster -o jsonpath='{.items[0].metadata.namespace}')
+oc delete datasciencecluster ${DSC_NAME} -n "${ODH_NS}"
 ```
 
 ## Cleanup Standalone Installation
@@ -469,8 +478,8 @@ To clean up standalone DSPO deployment:
 ```bash
 # WORKING_DIR must be the root of this repository's clone
 cd ${WORKING_DIR}
-make undeploy OPERATOR_NS=${DSPO_NS}
-oc delete project ${DSPO_NS}
+make undeploy OPERATOR_NS=${ODH_NS}
+oc delete project ${ODH_NS}
 ```
 
 # Run tests 
