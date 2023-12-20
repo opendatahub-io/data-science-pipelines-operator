@@ -283,7 +283,7 @@ data:
             "parent_task": "data-prep"}], "validate-model": [{"name": "train-model-model",
             "parent_task": "train-model"}]}'
           tekton.dev/artifact_bucket: mlpipeline
-          tekton.dev/artifact_endpoint: minio-service.kubeflow:9000
+          tekton.dev/artifact_endpoint: ${MINIO_SERVICE_SERVICE_HOST}:${MINIO_SERVICE_SERVICE_PORT}
           tekton.dev/artifact_endpoint_scheme: http://
           tekton.dev/artifact_items: '{"data-prep": [["X_test", "$(workspaces.data-prep.path)/artifacts/$ORIG_PR_NAME/$(context.taskRun.name)/X_test"],
             ["X_train", "$(workspaces.data-prep.path)/artifacts/$ORIG_PR_NAME/$(context.taskRun.name)/X_train"],
