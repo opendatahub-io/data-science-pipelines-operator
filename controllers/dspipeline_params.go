@@ -36,18 +36,21 @@ import (
 )
 
 type DSPAParams struct {
-	Name                 string
-	Namespace            string
-	Owner                mf.Owner
-	APIServer            *dspa.APIServer
-	APIServerServiceName string
-	OAuthProxy           string
-	ScheduledWorkflow    *dspa.ScheduledWorkflow
-	PersistenceAgent     *dspa.PersistenceAgent
-	MlPipelineUI         *dspa.MlPipelineUI
-	MariaDB              *dspa.MariaDB
-	Minio                *dspa.Minio
-	MLMD                 *dspa.MLMD
+	Name                               string
+	Namespace                          string
+	Owner                              mf.Owner
+	APIServer                          *dspa.APIServer
+	APIServerPiplinesCABundleMountPath string
+	PiplinesCABundleMountPath          string
+	APIServerServiceName               string
+	APICustomPemCerts                  []byte
+	OAuthProxy                         string
+	ScheduledWorkflow                  *dspa.ScheduledWorkflow
+	PersistenceAgent                   *dspa.PersistenceAgent
+	MlPipelineUI                       *dspa.MlPipelineUI
+	MariaDB                            *dspa.MariaDB
+	Minio                              *dspa.Minio
+	MLMD                               *dspa.MLMD
 	DBConnection
 	ObjectStorageConnection
 }
@@ -435,8 +438,8 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.Minio = dsp.Spec.ObjectStorage.Minio.DeepCopy()
 	p.OAuthProxy = config.GetStringConfigWithDefault(config.OAuthProxyImagePath, config.DefaultImageValue)
 	p.MLMD = dsp.Spec.MLMD.DeepCopy()
-
-	// TODO: If p.<component> is nil we should create defaults
+	p.APIServerPiplinesCABundleMountPath = config.APIServerPiplinesCABundleMountPath
+	p.PiplinesCABundleMountPath = config.PiplinesCABundleMountPath
 
 	if p.APIServer != nil {
 
@@ -458,7 +461,20 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 				Key:  config.ArtifactScriptConfigMapKey,
 			}
 		}
+
+		// If a Custom CA Bundle is specified for injection into DSP API Server Pod
+		// then retrieve the bundle to utilize during storage health check
+		if p.APIServer.CABundle != nil {
+			cfgKey, cfgName := p.APIServer.CABundle.ConfigMapKey, p.APIServer.CABundle.ConfigMapName
+			err, val := util.GetConfigMapValue(ctx, cfgKey, cfgName, p.Namespace, client, log)
+			if err != nil {
+				log.Error(err, "Encountered error when attempting to retrieve CABundle from configmap")
+				return err
+			}
+			p.APICustomPemCerts = []byte(val)
+		}
 	}
+
 	if p.PersistenceAgent != nil {
 		persistenceAgentImageFromConfig := config.GetStringConfigWithDefault(config.PersistenceAgentImagePath, config.DefaultImageValue)
 		setStringDefault(persistenceAgentImageFromConfig, &p.PersistenceAgent.Image)

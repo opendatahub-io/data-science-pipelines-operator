@@ -90,6 +90,7 @@ func TestDeployStorage(t *testing.T) {
 	assert.True(t, created)
 	assert.Nil(t, err)
 }
+
 func TestDontDeployStorage(t *testing.T) {
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
@@ -188,7 +189,7 @@ func TestDefaultDeployBehaviorStorage(t *testing.T) {
 
 func TestIsDatabaseAccessibleTrue(t *testing.T) {
 	// Override the live connection function with a mock version
-	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool) bool {
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte) bool {
 		return true
 	}
 
@@ -226,7 +227,7 @@ func TestIsDatabaseAccessibleTrue(t *testing.T) {
 
 func TestIsDatabaseNotAccessibleFalse(t *testing.T) {
 	// Override the live connection function with a mock version
-	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool) bool {
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte) bool {
 		return false
 	}
 
@@ -264,7 +265,7 @@ func TestIsDatabaseNotAccessibleFalse(t *testing.T) {
 
 func TestDisabledHealthCheckReturnsTrue(t *testing.T) {
 	// Override the live connection function with a mock version that would always return false if called
-	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool) bool {
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte) bool {
 		return false
 	}
 
@@ -304,7 +305,7 @@ func TestDisabledHealthCheckReturnsTrue(t *testing.T) {
 
 func TestIsDatabaseAccessibleBadAccessKey(t *testing.T) {
 	// Override the live connection function with a mock version
-	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool) bool {
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte) bool {
 		return true
 	}
 
@@ -342,7 +343,7 @@ func TestIsDatabaseAccessibleBadAccessKey(t *testing.T) {
 
 func TestIsDatabaseAccessibleBadSecretKey(t *testing.T) {
 	// Override the live connection function with a mock version
-	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool) bool {
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte) bool {
 		return true
 	}
 
@@ -439,4 +440,39 @@ func TestCreateCredentialProvidersChain(t *testing.T) {
 		actualSigType := actualCreds.SignerType
 		assert.Equal(t, test.expectedSigType, actualSigType)
 	}
+}
+
+func TestGetHttpsTransportWithCACert(t *testing.T) {
+	validCert := `
+-----BEGIN CERTIFICATE-----
+MIIDUTCCAjmgAwIBAgIINk8kYK1jtAYwDQYJKoZIhvcNAQELBQAwNjE0MDIGA1UE
+Awwrb3BlbnNoaWZ0LXNlcnZpY2Utc2VydmluZy1zaWduZXJAMTY5NzQ4MDY4NjAe
+Fw0yMzEwMTYxODI0NDVaFw0yNTEyMTQxODI0NDZaMDYxNDAyBgNVBAMMK29wZW5z
+aGlmdC1zZXJ2aWNlLXNlcnZpbmctc2lnbmVyQDE2OTc0ODA2ODYwggEiMA0GCSqG
+SIb3DQEBAQUAA4IBDwAwggEKAoIBAQDzSg9LmRucYyv9OUbMjbTGlvLFXl9+vsKd
+rdZEq+jR5jr+lhxvU06rezHcTn7hXmm9g66YQhjfJ239VSh/YkQFqlaGY89lEtfr
+fJzAkxpX0xmPhjAQ4fpsBs6LfkgC2v846oR2+gsI5hh5VuWNRS6BJlgRIQYUHBqM
+p/d8QghkST1mheZKQZh4V9L1aB4Hgo4SCPNVGa/t0Q5sBZmlvC+6JqxsZW8miF/v
+rs0oqm9dwhyAsTuLdDAD4bnLPXBQD7z+aq87uBNWcOrl0p/TdJy85lhE0dmbVKS6
+c21lQ4Va5JNje25fJmtEviFDAVXc/akMWSHf94ZfbWN8eah29oHNAgMBAAGjYzBh
+MA4GA1UdDwEB/wQEAwICpDAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBRxBglm
+SbrHzzijOCr6EQ2LOTZi5jAfBgNVHSMEGDAWgBRxBglmSbrHzzijOCr6EQ2LOTZi
+5jANBgkqhkiG9w0BAQsFAAOCAQEAeENDkKOUebgjb5Jg3d0WLHjqF+xMofXo1Gvg
+wkfrZ35hQTMOiFUAffyPRoMfZOJ5x4zUVPkXN1qjVe/oIc19EFgb7ppDXUTJDndu
+4RfZCF/yim5C6vUFmPPHjbFxnJIo85pKWGLwGg79iTnExDYMUUg5pRfK1uNgfro9
+jEtEoP3F3YVZ8g75TF70Ad9AHPWD2c1D8xOI4XwFvyi5BJJ+jsChl1e3v8D07ohj
+Em/2fyF49JL+vAPFMWRFpaExUr3gMbELo4YABQGg024d623LK0ienEF0p4jMVNbP
+S9IA40yOaVHMI51Fr1i1EIWvP8oJY8rAPWq45JnfFen3tOqKfw==
+-----END CERTIFICATE-----
+`
+	_, _, reconciler := CreateNewTestObjects()
+
+	transport, err := getHttpsTransportWithCACert(reconciler.Log, []byte(validCert))
+	assert.Nil(t, err)
+	assert.NotNil(t, transport)
+
+	invalidCert := "invalidCert"
+	transport, err = getHttpsTransportWithCACert(reconciler.Log, []byte(invalidCert))
+	assert.NotNil(t, err)
+	assert.Nil(t, transport)
 }
