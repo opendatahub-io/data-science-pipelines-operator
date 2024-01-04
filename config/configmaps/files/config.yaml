@@ -28,4 +28,4 @@ DSPO:
       ConnectionTimeout: $(DSPO_HEALTHCHECK_DATABASE_CONNECTIONTIMEOUT)
     ObjectStore:
       ConnectionTimeout: $(DSPO_HEALTHCHECK_OBJECTSTORE_CONNECTIONTIMEOUT)
-  RequeueTime: $(DSPO_REQUEUE_TIME)
+  RequeueTime: $(REQUEUE_TIME)
