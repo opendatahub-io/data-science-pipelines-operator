@@ -1,6 +1,6 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: odh-applications
+namespace: opendatahub
 namePrefix: data-science-pipelines-operator-
 resources:
   - ../crd
@@ -9,7 +9,6 @@ resources:
   - ../prometheus
   - ../configmaps
 
-# Parameterize images via KfDef in ODH
 configMapGenerator:
   - name: dspo-parameters
     envs:

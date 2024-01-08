@@ -14,7 +14,7 @@ metadata:
       "random-num-2"}], "print-msg-4": [{"name": "random-num-2-Output", "parent_task":
       "random-num-2"}]}'
     tekton.dev/artifact_bucket: mlpipeline
-    tekton.dev/artifact_endpoint: minio-service.kubeflow:9000
+    tekton.dev/artifact_endpoint: ${MINIO_SERVICE_SERVICE_HOST}:${MINIO_SERVICE_SERVICE_PORT}
     tekton.dev/artifact_endpoint_scheme: http://
     tekton.dev/artifact_items: '{"flip-coin": [["Output", "$(results.Output.path)"]],
       "print-msg": [], "print-msg-2": [], "print-msg-3": [], "print-msg-4": [], "random-num":

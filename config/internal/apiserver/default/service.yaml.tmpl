@@ -10,10 +10,12 @@ metadata:
     component: data-science-pipelines
 spec:
   ports:
+    {{ if .APIServer.EnableRoute }}
     - name: oauth
       port: 8443
       protocol: TCP
       targetPort: oauth
+    {{ end }}
     - name: http
       port: 8888
       protocol: TCP

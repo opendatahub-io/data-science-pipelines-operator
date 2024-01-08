@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "Installing kfDef from test directory"
+echo "Installing DataScienceCluster from test directory"
 
 set -x
 
@@ -41,32 +41,32 @@ else
   git am ${PULL_NUMBER}.patch
 fi
 popd
-## Point kfctl_openshift.yaml to the manifests in the PR
-pushd ~/kfdef
+## Point datasciencecluster_openshift.yaml to the manifests in the PR
+pushd ~/datasciencecluster
 if [ -z "$PULL_NUMBER" ]; then
-  echo "No pull number, not modifying kfctl_openshift.yaml"
+  echo "No pull number, not modifying datasciencecluster_openshift.yaml"
 else
   IMAGE_TAG=${IMAGE_TAG:-"quay.io/opendatahub/data-science-pipelines-operator:pr-$PULL_NUMBER"}
-  sed -i "s#value: quay.io/opendatahub/data-science-pipelines-operator:latest#value: $IMAGE_TAG#" ./kfctl_openshift.yaml
+  sed -i "s#value: quay.io/opendatahub/data-science-pipelines-operator:latest#value: $IMAGE_TAG#" ./datasciencecluster_openshift.yaml
   if [ $REPO_NAME == $ODHREPO ]; then
-    echo "Setting manifests in kfctl_openshift to use pull number: $PULL_NUMBER"
-    sed -i "s#uri: https://github.com/opendatahub-io/${ODHREPO}/tarball/main#uri: https://api.github.com/repos/opendatahub-io/${ODHREPO}/tarball/pull/${PULL_NUMBER}/head#" ./kfctl_openshift.yaml
+    echo "Setting manifests in datasciencecluster_openshift to use pull number: $PULL_NUMBER"
+    sed -i "s#uri: https://github.com/opendatahub-io/${ODHREPO}/tarball/main#uri: https://api.github.com/repos/opendatahub-io/${ODHREPO}/tarball/pull/${PULL_NUMBER}/head#" ./datasciencecluster_openshift.yaml
   fi
 fi
 
-if ! [ -z "${SKIP_KFDEF_INSTALL}" ]; then
-  ## SKIP_KFDEF_INSTALL is useful in an instance where the
+if ! [ -z "${SKIP_DATASCIENCECLUSTER_INSTALL}" ]; then
+  ## SKIP_DATASCIENCECLUSTER_INSTALL is useful in an instance where the
   ## operator install comes with an init container to handle
-  ## the KfDef creation
-  echo "Relying on existing KfDef because SKIP_KFDEF_INSTALL was set"
+  ## the DataScienceCluster creation
+  echo "Relying on existing DataScienceCluster because SKIP_DATASCIENCECLUSTER_INSTALL was set"
 else
-  echo "Creating the following KfDef"
-  cat ./kfctl_openshift.yaml > ${ARTIFACT_DIR}/kfctl_openshift.yaml
-  oc apply -f ./kfctl_openshift.yaml
-  kfctl_result=$?
-  if [ "$kfctl_result" -ne 0 ]; then
+  echo "Creating the following DataScienceCluster"
+  cat ./datasciencecluster_openshift.yaml > ${ARTIFACT_DIR}/datasciencecluster_openshift.yaml
+  oc apply -f ./datasciencecluster_openshift.yaml
+  datasciencecluster_result=$?
+  if [ "$datasciencecluster_result" -ne 0 ]; then
     echo "The installation failed"
-    exit $kfctl_result
+    exit $datasciencecluster_result
   fi
 fi
 set +x

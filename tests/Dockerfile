@@ -53,10 +53,10 @@ RUN pip3 install micropipenv &&\
 COPY setup/operatorsetup scripts/install.sh scripts/installandtest.sh $HOME/peak/
 COPY resources $HOME/peak/operator-tests/${REPO}/resources
 COPY util $HOME/peak/operator-tests/${REPO}
-COPY setup/kfctl_openshift.yaml $HOME/kfdef/
+COPY setup/datasciencecluster_openshift.yaml $HOME/datasciencecluster/
 COPY basictests $HOME/peak/operator-tests/${REPO}/basictests
 
-RUN chmod -R 777 $HOME/kfdef && \
+RUN chmod -R 777 $HOME/datasciencecluster && \
     mkdir -p $HOME/.kube && \
     chmod -R 777 $HOME/.kube && \
     chmod -R 777 $HOME/peak && \

@@ -24,13 +24,14 @@ import (
 	"fmt"
 	"net/http"
 
+	"time"
+
 	"github.com/go-logr/logr"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/util"
-	"time"
 )
 
 const storageSecret = "minio/generated-secret/secret.yaml.tmpl"
@@ -95,7 +96,7 @@ func getHttpsTransportWithCACert(log logr.Logger, pemCerts []byte) (*http.Transp
 	return transport, nil
 }
 
-var ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte, objStoreConnectionTimeout time.Duration) bool {
+var ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte, objStoreConnectionTimeout time.Duration) (bool, error) {
 	cred := createCredentialProvidersChain(string(accesskey), string(secretkey))
 
 	opts := &minio.Options{
@@ -106,16 +107,18 @@ var ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoin
 	if len(pemCerts) != 0 {
 		tr, err := getHttpsTransportWithCACert(log, pemCerts)
 		if err != nil {
-			log.Error(err, "Encountered error when processing custom ca bundle.")
-			return false
+			errorMessage := "Encountered error when processing custom ca bundle."
+			log.Error(err, errorMessage)
+			return false, errors.New(errorMessage)
 		}
 		opts.Transport = tr
 	}
 
 	minioClient, err := minio.New(endpoint, opts)
 	if err != nil {
-		log.Info(fmt.Sprintf("Could not connect to object storage endpoint: %s", endpoint))
-		return false
+		errorMessage := fmt.Sprintf("Could not connect to object storage endpoint: %s", endpoint)
+		log.Error(err, errorMessage)
+		return false, errors.New(errorMessage)
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, objStoreConnectionTimeout)
@@ -129,68 +132,74 @@ var ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoin
 		// In the case that the Error is NoSuchKey (or NoSuchBucket), we can verify that the endpoint worked and the object just doesn't exist
 		case minio.ErrorResponse:
 			if err.Code == "NoSuchKey" || err.Code == "NoSuchBucket" {
-				return true
+				return true, err
 			}
 		}
 
 		if util.IsX509UnknownAuthorityError(err) {
-			log.Error(err, "Encountered x509 UnknownAuthorityError when connecting to ObjectStore. "+
-				"If using an tls S3 connection with  self-signed certs, you may specify a custom CABundle "+
-				"to mount on the DSP API Server via the DSPA cr under the spec.cABundle field. If you have already "+
-				"provided a CABundle, verify the validity of the provided CABundle.")
-			return false
+			errorMessage := "Encountered x509 UnknownAuthorityError when connecting to ObjectStore. " +
+				"If using an tls S3 connection with  self-signed certs, you may specify a custom CABundle " +
+				"to mount on the DSP API Server via the DSPA cr under the spec.cABundle field. If you have already " +
+				"provided a CABundle, verify the validity of the provided CABundle."
+			log.Error(err, errorMessage)
+			return false, errors.New(errorMessage)
 		}
 
 		// Every other error means the endpoint in inaccessible, or the credentials provided do not have, at a minimum GetObject, permissions
-		log.Info(fmt.Sprintf("Could not connect to (%s), Error: %s", endpoint, err.Error()))
-		return false
+		errorMessage := fmt.Sprintf("Could not connect to (%s), Error: %s", endpoint, err.Error())
+		log.Info(errorMessage)
+		return false, errors.New(errorMessage)
 	}
 
 	// Getting here means the health check passed
-	return true
+	return true, nil
 }
 
 func (r *DSPAReconciler) isObjectStorageAccessible(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,
-	params *DSPAParams) bool {
+	params *DSPAParams) (bool, error) {
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
 	if params.ObjectStorageHealthCheckDisabled(dsp) {
-		log.V(1).Info("Object Storage health check disabled, assuming object store is available and ready.")
-		return true
+		infoMessage := "Object Storage health check disabled, assuming object store is available and ready."
+		log.V(1).Info(infoMessage)
+		return true, nil
 	}
 
 	log.Info("Performing Object Storage Health Check")
 
 	endpoint, err := joinHostPort(params.ObjectStorageConnection.Host, params.ObjectStorageConnection.Port)
 	if err != nil {
-		log.Error(err, "Could not determine Object Storage Endpoint")
-		return false
+		errorMessage := "Could not determine Object Storage Endpoint"
+		log.Error(err, errorMessage)
+		return false, errors.New(errorMessage)
 	}
 
 	accesskey, err := base64.StdEncoding.DecodeString(params.ObjectStorageConnection.AccessKeyID)
 	if err != nil {
-		log.Error(err, "Could not decode Object Storage Access Key ID")
-		return false
+		errorMessage := "Could not decode Object Storage Access Key ID"
+		log.Error(err, errorMessage)
+		return false, errors.New(errorMessage)
 	}
 
 	secretkey, err := base64.StdEncoding.DecodeString(params.ObjectStorageConnection.SecretAccessKey)
 	if err != nil {
-		log.Error(err, "Could not decode Object Storage Secret Access Key")
-		return false
+		errorMessage := "Could not decode Object Storage Secret Access Key"
+		log.Error(err, errorMessage)
+		return false, errors.New(errorMessage)
 	}
 
 	objStoreConnectionTimeout := config.GetDurationConfigWithDefault(config.ObjStoreConnectionTimeoutConfigName, config.DefaultObjStoreConnectionTimeout)
 
 	log.V(1).Info(fmt.Sprintf("Object Store connection timeout: %s", objStoreConnectionTimeout))
 
-	verified := ConnectAndQueryObjStore(ctx, log, endpoint, params.ObjectStorageConnection.Bucket, accesskey, secretkey,
+	verified, err := ConnectAndQueryObjStore(ctx, log, endpoint, params.ObjectStorageConnection.Bucket, accesskey, secretkey,
 		*params.ObjectStorageConnection.Secure, params.APICustomPemCerts, objStoreConnectionTimeout)
 
-	if verified {
-		log.Info("Object Storage Health Check Successful")
-	} else {
+	if err != nil {
 		log.Info("Object Storage Health Check Failed")
+	} else {
+		log.Info("Object Storage Health Check Successful")
 	}
-	return verified
+	return verified, err
 }
 
 // ReconcileStorage will set up Storage Connection.
