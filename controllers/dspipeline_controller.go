@@ -165,7 +165,6 @@ func (r *DSPAReconciler) buildCondition(conditionType string, dspa *dspav1alpha1
 //+kubebuilder:rbac:groups=machinelearning.seldon.io,resources=seldondeployments,verbs=*
 //+kubebuilder:rbac:groups=tekton.dev,resources=*,verbs=*
 //+kubebuilder:rbac:groups=custom.tekton.dev,resources=pipelineloops,verbs=*
-//+kubebuilder:rbac:groups=mcad.ibm.com,resources=appwrappers,verbs=create;get;list;patch;delete
 //+kubebuilder:rbac:groups=ray.io,resources=rayclusters;rayjobs;rayservices,verbs=create;get;list;patch;delete
 //+kubebuilder:rbac:groups=authorization.k8s.io,resources=subjectaccessreviews,verbs=create
 //+kubebuilder:rbac:groups=authentication.k8s.io,resources=tokenreviews,verbs=create

@@ -1,0 +1,57 @@
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: test-dspa
+spec:
+  apiServer:
+    deploy: true
+    enableOauth: false
+    resources:
+      limits:
+        cpu: 20m
+        memory: 500Mi
+      requests:
+        cpu: 20m
+        memory: 100m
+  scheduledWorkflow:
+    deploy: true
+    resources:
+      limits:
+        cpu: 20m
+        memory: 500Mi
+      requests:
+        cpu: 20m
+        memory: 100m
+  persistenceAgent:
+    deploy: true
+    resources:
+      limits:
+        cpu: 20m
+        memory: 500Mi
+      requests:
+        cpu: 20m
+        memory: 100Mi
+  database:
+    mariaDB:
+      deploy: true
+      image: quay.io/centos7/mariadb-103-centos7:ea07c0dade9571d78a272b453fd2dea92077dc7f
+      pvcSize: 500Mi
+      resources:
+        limits:
+          cpu: 20m
+          memory: 500Mi
+        requests:
+          cpu: 20m
+          memory: 100m
+  objectStorage:
+    minio:
+      deploy: true
+      image: 'quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance'
+      pvcSize: 500Mi
+      resources:
+        limits:
+          cpu: 20m
+          memory: 500Mi
+        requests:
+          cpu: 20m
+          memory: 100m
