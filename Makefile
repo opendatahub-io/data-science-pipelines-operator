@@ -53,6 +53,12 @@ ENVTEST_K8S_VERSION = 1.25.0
 # Namespace to deploy the operator
 OPERATOR_NS ?= opendatahub
 
+# Integration Test ENVvars
+KUBECONFIGPATH ?= $(HOME)/.kube/config
+K8SAPISERVERHOST ?= http://localhost:6443
+DSPANAMESPACE ?= default
+DSPAPATH ?= resources/dspa-lite.yaml
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -115,6 +121,11 @@ unittest: manifests generate fmt vet envtest ## Run tests.
 functest: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... --tags=test_functional -coverprofile cover.out
 
+.PHONY: integrationtest
+integrationtest: ## Run integration tests
+	cd tests && \
+	go run github.com/onsi/ginkgo/v2/ginkgo --tags=test_integration -- -kubeconfig=${KUBECONFIGPATH} -k8sApiServerHost=${K8SAPISERVERHOST} -DSPANamespace=${DSPANAMESPACE} -DSPAPath=${DSPAPATH} -ginkgo.v
+
 ##@ Build
 
 .PHONY: build
@@ -126,7 +137,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
 .PHONY: podman-build
-podman-build: test ## Build container image with the manager.
+podman-build: ## Build container image with the manager.
 	podman build -t ${IMG} .
 
 .PHONY: podman-push
@@ -154,10 +165,23 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 		&& $(KUSTOMIZE) edit set namespace ${OPERATOR_NS}
 	$(KUSTOMIZE) build config/overlays/make-deploy | kubectl apply -f -
 
+.PHONY: deploy-kind
+deploy-kind:
+	cd config/overlays/kind-tests \
+		&& kustomize edit set image controller=${IMG} \
+		&& kustomize edit set namespace ${OPERATOR_NS}
+	kustomize build config/overlays/kind-tests | kubectl apply -f -
+
 .PHONY: undeploy
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	cd config/overlays/make-deploy && $(KUSTOMIZE) edit set namespace ${OPERATOR_NS}
 	$(KUSTOMIZE) build config/overlays/make-deploy | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+
+.PHONY: undeploy-kind
+undeploy-kind: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+	cd config/overlays/kind-tests \
+		&& kustomize edit set namespace ${OPERATOR_NS}
+	kustomize build config/overlays/kind-tests | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 ##@ Build Dependencies
 
