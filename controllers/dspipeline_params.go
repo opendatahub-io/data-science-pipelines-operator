@@ -384,6 +384,17 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 }
 
 func (p *DSPAParams) SetupMLMD(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, log logr.Logger) error {
+	if p.UsingV2Pipelines(dsp) {
+		if p.MLMD == nil {
+			log.Info("MLMD not specified, but is a required component for V2 Pipelines. Including MLMD with default specs.")
+			p.MLMD = &dspa.MLMD{
+				Deploy: true,
+			}
+		} else {
+			log.Info("MLMD disabled in DSPA, but is a required component for V2 Pipelines. Overriding to enable component")
+			p.MLMD.Deploy = true
+		}
+	}
 	if p.MLMD != nil {
 		MlmdEnvoyImagePath := p.GetImageForComponent(dsp, config.MlmdEnvoyImagePath, config.MlmdEnvoyImagePathV2Argo, config.MlmdEnvoyImagePathV2Tekton)
 		MlmdGRPCImagePath := p.GetImageForComponent(dsp, config.MlmdGRPCImagePath, config.MlmdGRPCImagePathV2Argo, config.MlmdGRPCImagePathV2Tekton)

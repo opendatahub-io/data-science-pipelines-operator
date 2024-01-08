@@ -84,12 +84,14 @@ spec:
             - name: MOVERESULTS_IMAGE
               value: "{{.APIServer.MoveResultsImage}}"
             ## Env Vars to only include if MLMD Deployed ##
+            {{ if .MLMD }}
             {{ if .MLMD.Deploy }}
             - name: METADATA_GRPC_SERVICE_SERVICE_HOST
               value: "ds-pipeline-metadata-grpc-{{.Name}}.{{.Namespace}}.svc.cluster.local"
             {{ if.MLMD.GRPC.Port }}
             - name: METADATA_GRPC_SERVICE_SERVICE_PORT
               value: "{{.MLMD.GRPC.Port}}"
+            {{ end }}
             {{ end }}
             {{ end }}
             - name: ML_PIPELINE_SERVICE_HOST

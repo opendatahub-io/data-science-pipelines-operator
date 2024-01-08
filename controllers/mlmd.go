@@ -26,7 +26,7 @@ func (r *DSPAReconciler) ReconcileMLMD(dsp *dspav1alpha1.DataSciencePipelinesApp
 
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
 
-	if !dsp.Spec.MLMD.Deploy {
+	if (params.MLMD == nil || !params.MLMD.Deploy) && (dsp.Spec.MLMD == nil || !dsp.Spec.MLMD.Deploy) {
 		r.Log.Info("Skipping Application of ML-Metadata (MLMD) Resources")
 		return nil
 	}

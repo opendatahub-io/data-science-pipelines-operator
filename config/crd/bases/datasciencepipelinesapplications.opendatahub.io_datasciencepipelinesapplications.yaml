@@ -305,11 +305,9 @@ spec:
                 default: v1
                 type: string
               mlmd:
-                default:
-                  deploy: true
                 properties:
                   deploy:
-                    default: true
+                    default: false
                     description: 'Enable DS Pipelines Operator management of MLMD.
                       Setting Deploy to false disables operator reconciliation. Default:
                       true'
