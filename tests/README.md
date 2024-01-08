@@ -57,4 +57,4 @@ go run github.com/onsi/ginkgo/v2/ginkgo --tags=test_integration -- \
 
 The `skipDeploy` and `skipCleanup` flags are independent, and can be added/left out as needed for your use case.
 
-[kind-workflow]: ../.github/workflows/ci-kind-tests.yml
+[kind-workflow]: ../.github/workflows/kind-integration.yml

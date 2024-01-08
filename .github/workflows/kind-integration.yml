@@ -62,13 +62,13 @@ jobs:
         env:
           DSPO_IMAGE: ${{env.REGISTRY_ADDRESS}}/data-science-pipelines-operator
         run: |
-          kubectl create namespace odh-applications
+          kubectl create namespace opendatahub
           make podman-push -e IMG="${DSPO_IMAGE}"
           make deploy-kind -e IMG="${DSPO_IMAGE}"
 
       - name: Wait for DSPO deployment
         run: |
-          kubectl wait -n odh-applications --timeout=60s --for=condition=Available=true deployment data-science-pipelines-operator-controller-manager
+          kubectl wait -n opendatahub --timeout=60s --for=condition=Available=true deployment data-science-pipelines-operator-controller-manager
 
       - name: Create DSPA Namespace
         run: |
