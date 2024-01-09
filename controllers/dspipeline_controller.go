@@ -292,11 +292,6 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			return ctrl.Result{}, err
 		}
 
-		err = r.ReconcileVisualizationServer(dspa, params)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-
 		err = r.ReconcileWorkflowController(dspa, params)
 		if err != nil {
 			return ctrl.Result{}, err

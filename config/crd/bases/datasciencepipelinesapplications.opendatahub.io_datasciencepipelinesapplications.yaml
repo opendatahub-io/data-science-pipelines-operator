@@ -537,6 +537,7 @@ spec:
                           secretKey:
                             type: string
                           secretName:
+                            description: 'Note: In V2 this value needs to be mlpipeline-minio-artifact'
                             type: string
                         required:
                         - accessKey
@@ -631,6 +632,7 @@ spec:
                           secretKey:
                             type: string
                           secretName:
+                            description: 'Note: In V2 this value needs to be mlpipeline-minio-artifact'
                             type: string
                         required:
                         - accessKey
@@ -755,16 +757,6 @@ spec:
                             x-kubernetes-int-or-string: true
                         type: object
                     type: object
-                type: object
-              visualizationServer:
-                default:
-                  deploy: false
-                properties:
-                  deploy:
-                    default: true
-                    type: boolean
-                  image:
-                    type: string
                 type: object
               workflowController:
                 default:

@@ -46,7 +46,7 @@ spec:
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
               value: "8888"
             - name: OBJECTSTORECONFIG_CREDENTIALSSECRET
-              value: "ds-pipeline-s3-testdsp7"
+              value: "mlpipeline-minio-artifact"
             - name: OBJECTSTORECONFIG_CREDENTIALSACCESSKEYKEY
               value: "accesskey"
             - name: OBJECTSTORECONFIG_CREDENTIALSSECRETKEYKEY
@@ -59,12 +59,12 @@ spec:
               valueFrom:
                 secretKeyRef:
                   key: "accesskey"
-                  name: "ds-pipeline-s3-testdsp7"
+                  name: "mlpipeline-minio-artifact"
             - name: OBJECTSTORECONFIG_SECRETACCESSKEY
               valueFrom:
                 secretKeyRef:
                   key: "secretkey"
-                  name: "ds-pipeline-s3-testdsp7"
+                  name: "mlpipeline-minio-artifact"
             - name: OBJECTSTORECONFIG_SECURE
               value: "false"
             - name: MINIO_SERVICE_SERVICE_HOST

@@ -32,8 +32,6 @@ spec:
             value: quay.io/opendatahub/ds-pipelines-metadata-writer:1.1.0
           - name: IMAGES_CRDVIEWER
             value: gcr.io/ml-pipeline/viewer-crd-controller:2.0.0-rc.2
-          - name: IMAGES_VISUALIZATIONSERVER
-            value: gcr.io/ml-pipeline/visualization-server:2.0.0-rc.2
           - name: IMAGESV2_ARGO_APISERVER
             value: gcr.io/ml-pipeline/api-server:2.0.2
           - name: IMAGESV2_ARGO_ARTIFACT
@@ -52,10 +50,6 @@ spec:
             value: gcr.io/ml-pipeline/metadata-envoy:2.0.2
           - name: IMAGESV2_ARGO_MLMDGRPC
             value: gcr.io/tfx-oss-public/ml_metadata_store_server:1.14.0
-          - name: IMAGESV2_ARGO_MLMDWRITER
-            value: gcr.io/ml-pipeline/metadata-writer:2.0.2
-          - name: IMAGESV2_ARGO_VISUALIZATIONSERVER
-            value: gcr.io/ml-pipeline/visualization-server:2.0.2
           - name: IMAGESV2_ARGO_WORKFLOWCONTROLLER
             value: gcr.io/ml-pipeline/workflow-controller:v3.3.10-license-compliance
         repoRef:

@@ -45,9 +45,6 @@ type DSPASpec struct {
 	// +kubebuilder:default:={deploy: false}
 	*CRDViewer `json:"crdviewer"`
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:={deploy: false}
-	*VisualizationServer `json:"visualizationServer"`
-	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="v1"
 	DSPVersion string `json:"dspVersion,omitempty"`
 	// WorkflowController is an argo-specific component that manages a DSPA's Workflow objects and handles the orchestration of them with the central Argo server
@@ -295,13 +292,6 @@ type CRDViewer struct {
 	Image  string `json:"image,omitempty"`
 }
 
-type VisualizationServer struct {
-	// +kubebuilder:default:=true
-	// +kubebuilder:validation:Optional
-	Deploy bool   `json:"deploy"`
-	Image  string `json:"image,omitempty"`
-}
-
 type WorkflowController struct {
 	// +kubebuilder:default:=true
 	// +kubebuilder:validation:Optional
@@ -336,6 +326,7 @@ type ExternalStorage struct {
 
 type S3CredentialSecret struct {
 	// +kubebuilder:validation:Required
+	// Note: In V2 this value needs to be mlpipeline-minio-artifact
 	SecretName string `json:"secretName"`
 	// The "Keys" in the k8sSecret key/value pairs. Not to be confused with the values.
 	AccessKey string `json:"accessKey"`

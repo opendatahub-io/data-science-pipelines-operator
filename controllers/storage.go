@@ -41,6 +41,7 @@ var minioTemplates = []string{
 	"minio/default/deployment.yaml.tmpl",
 	"minio/default/pvc.yaml.tmpl",
 	"minio/default/service.yaml.tmpl",
+	"minio/default/service.minioservice.yaml.tmpl",
 	"minio/default/minio-sa.yaml.tmpl",
 	storageRoute,
 }

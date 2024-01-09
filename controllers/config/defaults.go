@@ -86,7 +86,6 @@ const (
 	ScheduledWorkflowImagePathV2Argo    = "ImagesV2.Argo.ScheduledWorkflow"
 	MlmdEnvoyImagePathV2Argo            = "ImagesV2.Argo.MlmdEnvoy"
 	MlmdGRPCImagePathV2Argo             = "ImagesV2.Argo.MlmdGRPC"
-	MlmdWriterImagePathV2Argo           = "ImagesV2.Argo.MlmdWriter"
 )
 
 // DSPV2-Tekton Image Paths
@@ -101,7 +100,6 @@ const (
 	ScheduledWorkflowImagePathV2Tekton    = "ImagesV2.Tekton.ScheduledWorkflow"
 	MlmdEnvoyImagePathV2Tekton            = "ImagesV2.Tekton.MlmdEnvoy"
 	MlmdGRPCImagePathV2Tekton             = "ImagesV2.Tekton.MlmdGRPC"
-	MlmdWriterImagePathV2Tekton           = "ImagesV2.Tekton.MlmdWriter"
 )
 
 // DSPA Status Condition Types

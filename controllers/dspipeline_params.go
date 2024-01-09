@@ -56,7 +56,6 @@ type DSPAParams struct {
 	Minio                                *dspa.Minio
 	MLMD                                 *dspa.MLMD
 	CRDViewer                            *dspa.CRDViewer
-	VisualizationServer                  *dspa.VisualizationServer
 	WorkflowController                   *dspa.WorkflowController
 	DBConnection
 	ObjectStorageConnection
@@ -85,6 +84,10 @@ type ObjectStorageConnection struct {
 
 func (p *DSPAParams) UsingV2Pipelines(dsp *dspa.DataSciencePipelinesApplication) bool {
 	return dsp.Spec.DSPVersion == "v2"
+}
+
+func (p *DSPAParams) UsingV1Pipelines(dsp *dspa.DataSciencePipelinesApplication) bool {
+	return !p.UsingV2Pipelines(dsp)
 }
 
 func (p *DSPAParams) UsingArgoEngineDriver(dsp *dspa.DataSciencePipelinesApplication) bool {
@@ -349,6 +352,12 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 				SecretKey:  config.DefaultObjectStorageSecretKey,
 			}
 		}
+
+		// TODO: Remove once v2launcher minio secret is parameterized during artifact passing
+		if p.UsingV2Pipelines(dsp) {
+			p.ObjectStorageConnection.CredentialsSecret.SecretName = "mlpipeline-minio-artifact"
+		}
+
 		accessKey, secretKey, err := p.RetrieveOrCreateObjectStoreSecret(ctx, client, p.ObjectStorageConnection.CredentialsSecret, log)
 		if err != nil {
 			return err
@@ -397,7 +406,6 @@ func (p *DSPAParams) SetupMLMD(ctx context.Context, dsp *dspa.DataSciencePipelin
 	if p.MLMD != nil {
 		MlmdEnvoyImagePath := p.GetImageForComponent(dsp, config.MlmdEnvoyImagePath, config.MlmdEnvoyImagePathV2Argo, config.MlmdEnvoyImagePathV2Tekton)
 		MlmdGRPCImagePath := p.GetImageForComponent(dsp, config.MlmdGRPCImagePath, config.MlmdGRPCImagePathV2Argo, config.MlmdGRPCImagePathV2Tekton)
-		MlmdWriterImagePath := p.GetImageForComponent(dsp, config.MlmdWriterImagePath, config.MlmdWriterImagePathV2Argo, config.MlmdWriterImagePathV2Tekton)
 
 		if p.MLMD.Envoy == nil {
 			p.MLMD.Envoy = &dspa.Envoy{
@@ -409,25 +417,31 @@ func (p *DSPAParams) SetupMLMD(ctx context.Context, dsp *dspa.DataSciencePipelin
 				Image: config.GetStringConfigWithDefault(MlmdGRPCImagePath, config.DefaultImageValue),
 			}
 		}
-		if p.MLMD.Writer == nil {
-			p.MLMD.Writer = &dspa.Writer{
-				Image: config.GetStringConfigWithDefault(MlmdWriterImagePath, config.DefaultImageValue),
-			}
-		}
 
 		mlmdEnvoyImageFromConfig := config.GetStringConfigWithDefault(MlmdEnvoyImagePath, config.DefaultImageValue)
 		mlmdGRPCImageFromConfig := config.GetStringConfigWithDefault(MlmdGRPCImagePath, config.DefaultImageValue)
-		mlmdWriterImageFromConfig := config.GetStringConfigWithDefault(MlmdWriterImagePath, config.DefaultImageValue)
 
 		setStringDefault(mlmdEnvoyImageFromConfig, &p.MLMD.Envoy.Image)
 		setStringDefault(mlmdGRPCImageFromConfig, &p.MLMD.GRPC.Image)
-		setStringDefault(mlmdWriterImageFromConfig, &p.MLMD.Writer.Image)
 
 		setResourcesDefault(config.MlmdEnvoyResourceRequirements, &p.MLMD.Envoy.Resources)
 		setResourcesDefault(config.MlmdGRPCResourceRequirements, &p.MLMD.GRPC.Resources)
-		setResourcesDefault(config.MlmdWriterResourceRequirements, &p.MLMD.Writer.Resources)
 
 		setStringDefault(config.MlmdGrpcPort, &p.MLMD.GRPC.Port)
+
+		if p.UsingV1Pipelines(dsp) {
+			MlmdWriterImagePath := config.MlmdWriterImagePath
+
+			if p.MLMD.Writer == nil {
+				p.MLMD.Writer = &dspa.Writer{
+					Image: config.GetStringConfigWithDefault(MlmdWriterImagePath, config.DefaultImageValue),
+				}
+			}
+
+			mlmdWriterImageFromConfig := config.GetStringConfigWithDefault(MlmdWriterImagePath, config.DefaultImageValue)
+			setStringDefault(mlmdWriterImageFromConfig, &p.MLMD.Writer.Image)
+			setResourcesDefault(config.MlmdWriterResourceRequirements, &p.MLMD.Writer.Resources)
+		}
 	}
 	return nil
 }
@@ -523,7 +537,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		setResourcesDefault(config.MlPipelineUIResourceRequirements, &p.MlPipelineUI.Resources)
 	}
 
-	// TODO (gfrasca): believe we need to set default VisualizationServer and WorkflowController Images here
+	// TODO (gfrasca): believe we need to set default WorkflowController Images here
 
 	err := p.SetupMLMD(ctx, dsp, client, log)
 	if err != nil {

@@ -98,13 +98,6 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.IMAGES_CRDVIEWER
-  - name: IMAGES_VISUALIZATIONSERVER
-    objref:
-      kind: ConfigMap
-      name: dspo-parameters
-      apiVersion: v1
-    fieldref:
-      fieldpath: data.IMAGES_VISUALIZATIONSERVER
   - name: IMAGES_DSPO
     objref:
       kind: ConfigMap
@@ -203,20 +196,6 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.IMAGESV2_ARGO_MLMDGRPC
-  - name: IMAGESV2_ARGO_MLMDWRITER
-    objref:
-      kind: ConfigMap
-      name: dspo-parameters
-      apiVersion: v1
-    fieldref:
-      fieldpath: data.IMAGESV2_ARGO_MLMDWRITER
-  - name: IMAGESV2_ARGO_VISUALIZATIONSERVER
-    objref:
-      kind: ConfigMap
-      name: dspo-parameters
-      apiVersion: v1
-    fieldref:
-      fieldpath: data.IMAGESV2_ARGO_VISUALIZATIONSERVER
   - name: IMAGESV2_ARGO_WORKFLOWCONTROLLER
     objref:
       kind: ConfigMap

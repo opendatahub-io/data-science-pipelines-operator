@@ -61,8 +61,6 @@ spec:
             value: $(IMAGES_MLMDWRITER)
           - name: IMAGES_CRDVIEWER
             value: $(IMAGES_CRDVIEWER)
-          - name: IMAGES_VISUALIZATIONSERVER
-            value: $(IMAGES_VISUALIZATIONSERVER)
           - name: IMAGESV2_ARGO_APISERVER
             value: $(IMAGESV2_ARGO_APISERVER)
           - name: IMAGESV2_ARGO_ARTIFACT
@@ -79,10 +77,6 @@ spec:
             value: $(IMAGESV2_ARGO_MLMDENVOY)
           - name: IMAGESV2_ARGO_MLMDGRPC
             value: $(IMAGESV2_ARGO_MLMDGRPC)
-          - name: IMAGESV2_ARGO_MLMDWRITER
-            value: $(IMAGESV2_ARGO_MLMDWRITER)
-          - name: IMAGESV2_ARGO_VISUALIZATIONSERVER
-            value: $(IMAGESV2_ARGO_VISUALIZATIONSERVER)
           - name: IMAGESV2_ARGO_WORKFLOWCONTROLLER
             value: $(IMAGESV2_ARGO_WORKFLOWCONTROLLER)
           - name: ZAP_LOG_LEVEL

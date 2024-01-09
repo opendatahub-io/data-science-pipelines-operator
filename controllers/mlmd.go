@@ -38,6 +38,13 @@ func (r *DSPAReconciler) ReconcileMLMD(dsp *dspav1alpha1.DataSciencePipelinesApp
 		return err
 	}
 
+	if params.UsingV1Pipelines(dsp) {
+		err = r.ApplyDir(dsp, params, mlmdTemplatesDir+"/v1")
+		if err != nil {
+			return err
+		}
+	}
+
 	log.Info("Finished applying MLMD Resources")
 	return nil
 }
