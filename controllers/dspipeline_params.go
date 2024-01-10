@@ -392,7 +392,17 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 
 }
 
-func (p *DSPAParams) SetupMLMD(dsp *dspa.DataSciencePipelinesApplication) error {
+func (p *DSPAParams) SetupMLMD(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, log logr.Logger) error {
+	if p.UsingV2Pipelines(dsp) {
+		if p.MLMD == nil {
+			log.Info("MLMD not specified, but is a required component for V2 Pipelines. Including MLMD with default specs.")
+			p.MLMD = &dspa.MLMD{
+				Deploy: true,
+			}
+		} else if !p.MLMD.Deploy {
+			return fmt.Errorf("MLMD explicitly disabled in DSPA, but is a required component for V2 Pipelines")
+		}
+	}
 	if p.MLMD != nil {
 		MlmdEnvoyImagePath := p.GetImageForComponent(dsp, config.MlmdEnvoyImagePath, config.MlmdEnvoyImagePathV2Argo, config.MlmdEnvoyImagePathV2Tekton)
 		MlmdGRPCImagePath := p.GetImageForComponent(dsp, config.MlmdGRPCImagePath, config.MlmdGRPCImagePathV2Argo, config.MlmdGRPCImagePathV2Tekton)
@@ -529,7 +539,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 
 	// TODO (gfrasca): believe we need to set default WorkflowController Images here
 
-	err := p.SetupMLMD(dsp)
+	err := p.SetupMLMD(ctx, dsp, client, log)
 	if err != nil {
 		return err
 	}

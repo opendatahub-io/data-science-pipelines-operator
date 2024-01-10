@@ -1,0 +1,87 @@
+name: KinD DSPO/DSP Integration Tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - controllers/**
+      - api/**
+      - config/**
+      - tests/**
+    types:
+      - opened
+      - reopened
+      - closed
+      - synchronize
+
+concurrency:
+  group: ${{ github.head_ref }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+env:
+  IMAGE_REPO_DSPO: data-science-pipelines-operator
+  DSPA_NAMESPACE: test-dspa
+  DSPA_NAME: test-dspa
+  DSPA_DEPLOY_WAIT_TIMEOUT: 300
+  INTEGRATION_TESTS_DIR: ${{ github.workspace }}/tests
+jobs:
+  dspo-tests:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v1
+        with:
+          go-version: '1.19.x'
+        id: go
+
+      - name: Setup and start KinD cluster
+        uses: ./.github/actions/kind
+
+      # TODO: Consolidate testing CRDS (2 locations)
+      - name: Apply OCP CRDs
+        env:
+          RESOURCES_DIR: ${{ github.workspace }}/.github/resources
+          CONFIG_DIR: ${{ github.workspace }}/config
+        run: |
+          kubectl apply -f ${{ env.RESOURCES_DIR }}/crds
+          kubectl apply -f ${{ env.CONFIG_DIR }}/crd/external/route.openshift.io_routes.yaml
+
+      - name: Build image
+        env:
+          DSPO_IMAGE: ${{env.REGISTRY_ADDRESS}}/data-science-pipelines-operator
+        run: |
+          make podman-build -e IMG="${DSPO_IMAGE}"
+
+      - name: Deploy DSPO
+        env:
+          DSPO_IMAGE: ${{env.REGISTRY_ADDRESS}}/data-science-pipelines-operator
+        run: |
+          kubectl create namespace opendatahub
+          make podman-push -e IMG="${DSPO_IMAGE}"
+          make deploy-kind -e IMG="${DSPO_IMAGE}"
+
+      - name: Wait for DSPO deployment
+        run: |
+          kubectl wait -n opendatahub --timeout=60s --for=condition=Available=true deployment data-science-pipelines-operator-controller-manager
+
+      - name: Create DSPA Namespace
+        run: |
+          kubectl create namespace ${{ env.DSPA_NAMESPACE }}
+
+      - name: Run tests
+        working-directory: ${{ github.workspace }}
+        env:
+          NAMESPACE: ${{ env.DSPA_NAMESPACE }}
+          DSPA_NAME: ${{ env.DSPA_NAME }}
+        run: |
+          make integrationtest K8SAPISERVERHOST=$(oc whoami --show-server) DSPANAMESPACE=${NAMESPACE}
+
+      - name: Clean up
+        run: |
+          make undeploy-kind

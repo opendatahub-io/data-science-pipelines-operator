@@ -155,16 +155,6 @@ rules:
   verbs:
   - '*'
 - apiGroups:
-  - mcad.ibm.com
-  resources:
-  - appwrappers
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-- apiGroups:
   - monitoring.coreos.com
   resources:
   - servicemonitors
