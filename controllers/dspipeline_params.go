@@ -399,7 +399,7 @@ func (p *DSPAParams) SetupMLMD(ctx context.Context, dsp *dspa.DataSciencePipelin
 			p.MLMD = &dspa.MLMD{
 				Deploy: true,
 			}
-		} else {
+		} else if !p.MLMD.Deploy {
 			return fmt.Errorf("MLMD explicitly disabled in DSPA, but is a required component for V2 Pipelines")
 		}
 	}
