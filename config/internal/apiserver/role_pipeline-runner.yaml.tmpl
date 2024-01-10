@@ -120,3 +120,18 @@ rules:
       - list
       - patch
       - delete
+  - apiGroups:
+      - workload.codeflare.dev
+    resources:
+      - appwrappers
+      - appwrappers/finalizers
+      - appwrappers/status
+    verbs:
+      - create
+      - delete
+      - deletecollection
+      - get
+      - list
+      - patch
+      - update
+      - watch

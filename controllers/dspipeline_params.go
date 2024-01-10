@@ -36,21 +36,21 @@ import (
 )
 
 type DSPAParams struct {
-	Name                                 string
-	Namespace                            string
-	Owner                                mf.Owner
-	APIServer                            *dspa.APIServer
-	APIServerPiplinesCABundleMountPath   string
-	PiplinesCABundleMountPath            string
-	APIServerServiceName                 string
-	APICustomPemCerts                    []byte
-	OAuthProxy                           string
-	ScheduledWorkflow                    *dspa.ScheduledWorkflow
-	PersistenceAgent                     *dspa.PersistenceAgent
-	MlPipelineUI                         *dspa.MlPipelineUI
-	MariaDB                              *dspa.MariaDB
-	Minio                                *dspa.Minio
-	MLMD                                 *dspa.MLMD
+	Name                               string
+	Namespace                          string
+	Owner                              mf.Owner
+	APIServer                          *dspa.APIServer
+	APIServerPiplinesCABundleMountPath string
+	PiplinesCABundleMountPath          string
+	APIServerServiceName               string
+	APICustomPemCerts                  []byte
+	OAuthProxy                         string
+	ScheduledWorkflow                  *dspa.ScheduledWorkflow
+	PersistenceAgent                   *dspa.PersistenceAgent
+	MlPipelineUI                       *dspa.MlPipelineUI
+	MariaDB                            *dspa.MariaDB
+	Minio                              *dspa.Minio
+	MLMD                               *dspa.MLMD
 	DBConnection
 	ObjectStorageConnection
 }
