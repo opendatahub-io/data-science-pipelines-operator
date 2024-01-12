@@ -20,7 +20,7 @@ on:
         required: true
       dsp_org_repo:
         type: string
-        default: 'opendatahub-io/data-science-pipelines'
+        default: 'opendatahub-io/data-science-pipelines-tekton'
         description: 'DSP org/repo'
         required: true
       overwrite_imgs:
@@ -43,7 +43,7 @@ on:
         description: 'Quay Organization'
         required: true
       dsp_org_repo:
-        default: 'opendatahub-io/data-science-pipelines'
+        default: 'opendatahub-io/data-science-pipelines-tekton'
         description: 'DSP org/repo'
         required: true
       overwrite_imgs:

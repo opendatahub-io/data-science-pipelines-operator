@@ -12,7 +12,7 @@ git push origin ${MINOR_RELEASE_BRANCH}
 echo "::notice:: Created DSPO ${MINOR_RELEASE_BRANCH} branch"
 
 echo "Current branches in ${DSP_REPOSITORY_FULL}"
-DSP_DIR=$(dirname ${WORKING_DIR})/data-science-pipelines
+DSP_DIR=$(dirname ${WORKING_DIR})/data-science-pipelines-tekton
 git clone \
   --depth=1 \
   --branch=master \

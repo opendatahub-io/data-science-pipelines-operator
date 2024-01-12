@@ -39,8 +39,8 @@ env:
   GH_ORG: ${{ inputs.gh_org }}
   DSPO_REPOSITORY: data-science-pipelines-operator
   DSPO_REPOSITORY_FULL: ${{ inputs.gh_org }}/data-science-pipelines-operator
-  DSP_REPOSITORY: data-science-pipelines
-  DSP_REPOSITORY_FULL: ${{ inputs.gh_org }}/data-science-pipelines
+  DSP_REPOSITORY: data-science-pipelines-tekton
+  DSP_REPOSITORY_FULL: ${{ inputs.gh_org }}/data-science-pipelines-tekton
   PREVIOUS_RELEASE_TAG: ${{ inputs.previous_release_tag }}
   OVERWRITE_IMAGES: ${{ inputs.overwrite_imgs }}
   CONFIG_TEMPLATE: "./.github/scripts/release_prep/templates/config.yaml"

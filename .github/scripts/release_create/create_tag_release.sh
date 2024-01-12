@@ -17,7 +17,7 @@ gh release create ${TARGET_VERSION_TAG} --target ${RELEASE_BRANCH} --generate-no
 cat <<EOF >> /tmp/release-notes.md
 
 This is a release comprising of multiple repos:
-* DSP component for ${TARGET_VERSION_TAG} can be found [here](https://github.com/${GH_ORG}/data-science-pipelines/releases/tag/${TARGET_VERSION_TAG})
+* DSP component for ${TARGET_VERSION_TAG} can be found [here](https://github.com/${GH_ORG}/data-science-pipelines-tekton/releases/tag/${TARGET_VERSION_TAG})
 * DSPO component for ${TARGET_VERSION_TAG} can be found [here](https://github.com/${GH_ORG}/data-science-pipelines-operator/releases/tag/${TARGET_VERSION_TAG})
 
 Version Table for components can be found [here](https://github.com/${GH_ORG}/data-science-pipelines-operator/blob/main/docs/release/compatibility.md)

@@ -7,7 +7,7 @@ on:
       - completed
 env:
   DSPO_REPOSITORY: data-science-pipelines-operator
-  DSP_REPOSITORY: data-science-pipelines
+  DSP_REPOSITORY: data-science-pipelines-tekton
   GH_USER_NAME: dsp-developers
 jobs:
   fetch-data:

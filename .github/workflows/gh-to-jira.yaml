@@ -16,7 +16,7 @@ on:
         required: true
       repos:
         default: |
-          [{"repo_name":"data-science-pipelines","target_release":"UPDATE","previous_release":"UPDATE"},{"repo_name":"data-science-pipelines-operator","target_release":"UPDATE","previous_release":"UPDATE"}]
+          [{"repo_name":"data-science-pipelines-tekton","target_release":"UPDATE","previous_release":"UPDATE"},{"repo_name":"data-science-pipelines-operator","target_release":"UPDATE","previous_release":"UPDATE"}]
         description: 'Upstream Source Repos & Tags'
         required: true
       labels:
