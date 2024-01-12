@@ -76,7 +76,7 @@
   ubi-micro: 8.8
   openshift: 4.11,4.12,4.13
 - dsp: 1.7.x
-  kfp-tekton:
+  kfp-tekton: 1.5.1
   argo: 3.3.10
   ml-metadata: 1.5.0
   envoy: 2.0.2
@@ -85,4 +85,4 @@
   mariadb-103: 1
   ubi-minimal: 8.7
   ubi-micro: 8.7
-  openshift: 4.11,4.12,4.13
+  openshift: 4.12,4.13,4.14
