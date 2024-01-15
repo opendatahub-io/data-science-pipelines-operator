@@ -6,5 +6,7 @@ Images:
   ScheduledWorkflow: this-scheduledworkflow-image-from-config-should-not-be-used:test4
   Cache: this-ubi-minimal-image-from-config-should-not-be-used:test4
   MoveResultsImage: this-busybox-image-from-config-should-not-be-used:test4
+  KFPLauncherImage: this-kfplauncher-image-from-cr-should-be-used:test4
+  DriverImage: this-driver-image-from-cr-should-be-used:test4
   MariaDB: this-mariadb-image-from-config-should-not-be-used:test4
   OAuthProxy: oauth-proxy:test4

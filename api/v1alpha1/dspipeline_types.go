@@ -107,7 +107,9 @@ type APIServer struct {
 	// Default: true
 	// +kubebuilder:default:=true
 	// +kubebuilder:validation:Optional
-	AutoUpdatePipelineDefaultVersion bool `json:"autoUpdatePipelineDefaultVersion"`
+	AutoUpdatePipelineDefaultVersion bool   `json:"autoUpdatePipelineDefaultVersion"`
+	KFPLauncherImage                 string `json:"kfpLauncherImage,omitempty"`
+	DriverImage                      string `json:"driverImage,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
 

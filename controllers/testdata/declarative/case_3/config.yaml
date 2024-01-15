@@ -6,5 +6,7 @@ Images:
   ScheduledWorkflow: scheduledworkflow:test3
   Cache: ubi-minimal:test3
   MoveResultsImage: busybox:test3
+  KFPLauncherImage: kfpLauncherImage:test3
+  DriverImage: driverImage:test3
   MariaDB: mariadb:test3
   OAuthProxy: oauth-proxy:test3

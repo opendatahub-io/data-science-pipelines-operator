@@ -94,6 +94,8 @@ spec:
                       Server. Setting Deploy to false disables operator reconciliation.
                       Default: true'
                     type: boolean
+                  driverImage:
+                    type: string
                   enableOauth:
                     default: true
                     description: 'Create an Openshift Route for this DSP API Server.
@@ -111,6 +113,8 @@ spec:
                     default: true
                     description: 'Inject the archive step script. Default: true'
                     type: boolean
+                  kfpLauncherImage:
+                    type: string
                   moveResultsImage:
                     description: Image used for internal artifact passing handling
                       within Tekton taskruns. This field specifies the image used

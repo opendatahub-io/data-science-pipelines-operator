@@ -83,6 +83,10 @@ spec:
               value: "{{.APIServer.CacheImage}}"
             - name: MOVERESULTS_IMAGE
               value: "{{.APIServer.MoveResultsImage}}"
+            - name: KFPLAUNCHER_IMAGE
+              value: "{{.APIServer.KFPLauncherImage}}"
+            - name: DRIVER_IMAGE
+              value: "{{.APIServer.DriverImage}}"
             ## Env Vars to only include if MLMD Deployed ##
             {{ if .MLMD }}
             {{ if .MLMD.Deploy }}

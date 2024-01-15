@@ -52,6 +52,10 @@ spec:
             value: gcr.io/tfx-oss-public/ml_metadata_store_server:1.14.0
           - name: IMAGESV2_ARGO_WORKFLOWCONTROLLER
             value: gcr.io/ml-pipeline/workflow-controller:v3.3.10-license-compliance
+          - name: V2_LAUNCHER_IMAGE
+            value: gcr.io/ml-pipeline/kfp-launcher@sha256:80cf120abd125db84fa547640fd6386c4b2a26936e0c2b04a7d3634991a850a4
+          - name: V2_DRIVER_IMAGE
+            value: gcr.io/ml-pipeline/kfp-driver@sha256:8e60086b04d92b657898a310ca9757631d58547e76bbbb8bfc376d654bef1707
         repoRef:
           name: manifests
           path: config

@@ -6,6 +6,8 @@ Images:
   ScheduledWorkflow: scheduledworkflow:test0
   Cache: ubi-minimal:test0
   MoveResultsImage: busybox:test0
+  KFPLauncherImage: kfpLauncherImage:test0
+  DriverImage: driverImage:test0
   MlPipelineUI: frontend:test0
   MariaDB: mariadb:test0
   Minio: minio:test0
