@@ -66,8 +66,6 @@ const (
 	ScheduledWorkflowImagePath          = "Images.ScheduledWorkflow"
 	APIServerCacheImagePath             = "Images.Cache"
 	APIServerMoveResultsImagePath       = "Images.MoveResultsImage"
-	APIServerKFPLauncherImagePath       = "Images.KFPLauncherImage"
-	APIServerDriverImagePath            = "Images.DriverImage"
 	MariaDBImagePath                    = "Images.MariaDB"
 	OAuthProxyImagePath                 = "Images.OAuthProxy"
 	MlmdEnvoyImagePath                  = "Images.MlmdEnvoy"
@@ -80,16 +78,16 @@ const (
 
 // DSPV2-Argo Image Paths
 const (
-	APIServerImagePathV2Argo            = "ImagesV2.Argo.ApiServer"
-	APIServerArtifactImagePathV2Argo    = "ImagesV2.Argo.Artifact"
-	APIServerCacheImagePathV2Argo       = "ImagesV2.Argo.Cache"
-	APIServerMoveResultsImagePathV2Argo = "ImagesV2.Argo.MoveResultsImage"
-	APIServerKFPLauncherImagePathV2Argo = "ImagesV2.Argo.KFPLauncherImage"
-	APIServerDriverImagePathV2Argo      = "ImagesV2.Argo.DriverImage"
-	PersistenceAgentImagePathV2Argo     = "ImagesV2.Argo.PersistentAgent"
-	ScheduledWorkflowImagePathV2Argo    = "ImagesV2.Argo.ScheduledWorkflow"
-	MlmdEnvoyImagePathV2Argo            = "ImagesV2.Argo.MlmdEnvoy"
-	MlmdGRPCImagePathV2Argo             = "ImagesV2.Argo.MlmdGRPC"
+	APIServerImagePathV2Argo             = "ImagesV2.Argo.ApiServer"
+	APIServerArtifactImagePathV2Argo     = "ImagesV2.Argo.Artifact"
+	APIServerCacheImagePathV2Argo        = "ImagesV2.Argo.Cache"
+	APIServerMoveResultsImagePathV2Argo  = "ImagesV2.Argo.MoveResultsImage"
+	APIServerArgoLauncherImagePathV2Argo = "ImagesV2.Argo.ArgoLauncherImage"
+	APIServerArgoDriverImagePathV2Argo   = "ImagesV2.Argo.ArgoDriverImage"
+	PersistenceAgentImagePathV2Argo      = "ImagesV2.Argo.PersistentAgent"
+	ScheduledWorkflowImagePathV2Argo     = "ImagesV2.Argo.ScheduledWorkflow"
+	MlmdEnvoyImagePathV2Argo             = "ImagesV2.Argo.MlmdEnvoy"
+	MlmdGRPCImagePathV2Argo              = "ImagesV2.Argo.MlmdGRPC"
 )
 
 // DSPV2-Tekton Image Paths
@@ -100,8 +98,6 @@ const (
 	APIServerArtifactImagePathV2Tekton    = "ImagesV2.Tekton.Artifact"
 	APIServerCacheImagePathV2Tekton       = "ImagesV2.Tekton.Cache"
 	APIServerMoveResultsImagePathV2Tekton = "ImagesV2.Tekton.MoveResultsImage"
-	APIServerKFPLauncherImagePathV2Tekton = "ImagesV2.Tekton.KFPLauncherImage"
-	APIServerDriverImagePathV2Tekton      = "ImagesV2.Tekton.DriverImage"
 	PersistenceAgentImagePathV2Tekton     = "ImagesV2.Tekton.PersistentAgent"
 	ScheduledWorkflowImagePathV2Tekton    = "ImagesV2.Tekton.ScheduledWorkflow"
 	MlmdEnvoyImagePathV2Tekton            = "ImagesV2.Tekton.MlmdEnvoy"

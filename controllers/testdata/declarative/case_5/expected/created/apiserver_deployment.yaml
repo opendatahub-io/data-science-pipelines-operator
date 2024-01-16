@@ -75,10 +75,10 @@ spec:
               value: "ubi-minimal:test5"
             - name: MOVERESULTS_IMAGE
               value: "busybox:test5"
-            - name: KFPLAUNCHER_IMAGE
-              value: "kfpLauncherImage:test5"
-            - name: DRIVER_IMAGE
-              value: "driverImage:test5"
+            - name: ARGOLAUNCHER_IMAGE
+              value: "argolauncherimage:test5"
+            - name: ARGODRIVER_IMAGE
+              value: "argodriverimage:test5"
             - name: METADATA_GRPC_SERVICE_SERVICE_HOST
               value: "ds-pipeline-metadata-grpc-testdsp5.default.svc.cluster.local"
             - name: METADATA_GRPC_SERVICE_SERVICE_PORT

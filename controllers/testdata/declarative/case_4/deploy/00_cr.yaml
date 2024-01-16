@@ -12,6 +12,8 @@ spec:
     artifactImage: this-artifact-manager-image-from-cr-should-be-used:test4
     cacheImage: this-ubi-minimal-image-from-cr-should-be-used:test4
     moveResultsImage: this-busybox-image-from-cr-should-be-used:test4
+    argoLauncherImage: this-argolauncher-image-from-cr-should-be-used:test4
+    argoDriverImage: this-argodriver-image-from-cr-should-be-used:test4
     injectDefaultScript: true
     stripEOF: true
     enableOauth: true

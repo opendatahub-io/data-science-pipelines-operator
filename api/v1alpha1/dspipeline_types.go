@@ -108,8 +108,8 @@ type APIServer struct {
 	// +kubebuilder:default:=true
 	// +kubebuilder:validation:Optional
 	AutoUpdatePipelineDefaultVersion bool   `json:"autoUpdatePipelineDefaultVersion"`
-	KFPLauncherImage                 string `json:"kfpLauncherImage,omitempty"`
-	DriverImage                      string `json:"driverImage,omitempty"`
+	ArgoLauncherImage                string `json:"argoLauncherImage,omitempty"`
+	ArgoDriverImage                  string `json:"argoDriverImage,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
 

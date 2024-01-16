@@ -75,10 +75,10 @@ spec:
               value: "ubi-minimal:test7"
             - name: MOVERESULTS_IMAGE
               value: "busybox:test7"
-            - name: KFPLAUNCHER_IMAGE
-              value: "kfpLauncherImage:test7"
-            - name: DRIVER_IMAGE
-              value: "driverImage:test7"
+            - name: ARGOLAUNCHER_IMAGE
+              value: "argolauncherimage:test7"
+            - name: ARGODRIVER_IMAGE
+              value: "argodriverimage:test7"
             - name: METADATA_GRPC_SERVICE_SERVICE_HOST
               value: "ds-pipeline-metadata-grpc-testdsp7.default.svc.cluster.local"
             - name: METADATA_GRPC_SERVICE_SERVICE_PORT

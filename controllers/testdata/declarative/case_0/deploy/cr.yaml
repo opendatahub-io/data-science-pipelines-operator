@@ -3,6 +3,9 @@ kind: DataSciencePipelinesApplication
 metadata:
   name: testdsp0
 spec:
+  apiServer:
+    argoLauncherImage: argolauncherimage:test0
+    argoDriverImage: argodriverimage:test0
   objectStorage:
     minio:
       image: minio:test0

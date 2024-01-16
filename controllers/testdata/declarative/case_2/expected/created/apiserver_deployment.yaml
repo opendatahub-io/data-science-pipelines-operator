@@ -75,10 +75,10 @@ spec:
               value: "ubi-minimal:test2"
             - name: MOVERESULTS_IMAGE
               value: "busybox:test2"
-            - name: KFPLAUNCHER_IMAGE
-              value: "kfpLauncherImage:test2"
-            - name: DRIVER_IMAGE
-              value: "driverImage:test2"
+            - name: ARGOLAUNCHER_IMAGE
+              value: "argolauncherimage:test2"
+            - name: ARGODRIVER_IMAGE
+              value: "argodriverimage:test2"
             - name: ML_PIPELINE_SERVICE_HOST
               value: ds-pipeline-testdsp2.default.svc.cluster.local
             - name: ML_PIPELINE_SERVICE_PORT_GRPC
