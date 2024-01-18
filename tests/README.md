@@ -31,7 +31,7 @@ TARGET_NAMESPACE=dspa # Do not use the same namespace as where DSPO is deployed 
 git clone git@github.com:opendatahub-io/data-science-pipelines-operator.git ${DSPO_REPO}
 
 # Make sure DSPO is already deployed, if not then run: 
-oc new-project odh-applications
+oc new-project opendatahub
 make deploy
 
 make integrationtest \
