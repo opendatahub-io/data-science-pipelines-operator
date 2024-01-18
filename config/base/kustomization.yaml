@@ -203,5 +203,19 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.IMAGESV2_ARGO_WORKFLOWCONTROLLER
+  - name: V2_LAUNCHER_IMAGE
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.V2_LAUNCHER_IMAGE
+  - name: V2_DRIVER_IMAGE
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.V2_DRIVER_IMAGE
 configurations:
   - params.yaml

@@ -78,14 +78,16 @@ const (
 
 // DSPV2-Argo Image Paths
 const (
-	APIServerImagePathV2Argo            = "ImagesV2.Argo.ApiServer"
-	APIServerArtifactImagePathV2Argo    = "ImagesV2.Argo.Artifact"
-	APIServerCacheImagePathV2Argo       = "ImagesV2.Argo.Cache"
-	APIServerMoveResultsImagePathV2Argo = "ImagesV2.Argo.MoveResultsImage"
-	PersistenceAgentImagePathV2Argo     = "ImagesV2.Argo.PersistentAgent"
-	ScheduledWorkflowImagePathV2Argo    = "ImagesV2.Argo.ScheduledWorkflow"
-	MlmdEnvoyImagePathV2Argo            = "ImagesV2.Argo.MlmdEnvoy"
-	MlmdGRPCImagePathV2Argo             = "ImagesV2.Argo.MlmdGRPC"
+	APIServerImagePathV2Argo             = "ImagesV2.Argo.ApiServer"
+	APIServerArtifactImagePathV2Argo     = "ImagesV2.Argo.Artifact"
+	APIServerCacheImagePathV2Argo        = "ImagesV2.Argo.Cache"
+	APIServerMoveResultsImagePathV2Argo  = "ImagesV2.Argo.MoveResultsImage"
+	APIServerArgoLauncherImagePathV2Argo = "ImagesV2.Argo.ArgoLauncherImage"
+	APIServerArgoDriverImagePathV2Argo   = "ImagesV2.Argo.ArgoDriverImage"
+	PersistenceAgentImagePathV2Argo      = "ImagesV2.Argo.PersistentAgent"
+	ScheduledWorkflowImagePathV2Argo     = "ImagesV2.Argo.ScheduledWorkflow"
+	MlmdEnvoyImagePathV2Argo             = "ImagesV2.Argo.MlmdEnvoy"
+	MlmdGRPCImagePathV2Argo              = "ImagesV2.Argo.MlmdGRPC"
 )
 
 // DSPV2-Tekton Image Paths

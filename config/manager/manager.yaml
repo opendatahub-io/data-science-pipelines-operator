@@ -79,6 +79,10 @@ spec:
             value: $(IMAGESV2_ARGO_MLMDGRPC)
           - name: IMAGESV2_ARGO_WORKFLOWCONTROLLER
             value: $(IMAGESV2_ARGO_WORKFLOWCONTROLLER)
+          - name: V2_LAUNCHER_IMAGE
+            value: $(V2_LAUNCHER_IMAGE)
+          - name: V2_DRIVER_IMAGE
+            value: $(V2_DRIVER_IMAGE)
           - name: ZAP_LOG_LEVEL
             value: $(ZAP_LOG_LEVEL)
           - name: MAX_CONCURRENT_RECONCILES

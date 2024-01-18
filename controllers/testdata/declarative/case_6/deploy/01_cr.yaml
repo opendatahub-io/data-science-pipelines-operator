@@ -9,6 +9,8 @@ spec:
     cABundle:
       configMapName: testcabundleconfigmap6
       configMapKey: testcabundleconfigmapkey6.crt
+    argoLauncherImage: argolauncherimage:test6
+    argoDriverImage: argodriverimage:test6
   persistenceAgent:
     deploy: false
   scheduledWorkflow:

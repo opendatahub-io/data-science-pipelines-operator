@@ -12,6 +12,8 @@ spec:
     artifactImage: artifact-manager:test7
     cacheImage: ubi-minimal:test7
     moveResultsImage: busybox:test7
+    argoLauncherImage: argolauncherimage:test7
+    argoDriverImage: argodriverimage:test7
     injectDefaultScript: true
     stripEOF: true
     enableOauth: true

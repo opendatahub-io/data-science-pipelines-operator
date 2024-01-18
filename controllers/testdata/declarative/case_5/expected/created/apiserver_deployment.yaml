@@ -75,6 +75,10 @@ spec:
               value: "ubi-minimal:test5"
             - name: MOVERESULTS_IMAGE
               value: "busybox:test5"
+            - name: V2_LAUNCHER_IMAGE
+              value: "argolauncherimage:test5"
+            - name: V2_DRIVER_IMAGE
+              value: "argodriverimage:test5"
             - name: METADATA_GRPC_SERVICE_SERVICE_HOST
               value: "ds-pipeline-metadata-grpc-testdsp5.default.svc.cluster.local"
             - name: METADATA_GRPC_SERVICE_SERVICE_PORT

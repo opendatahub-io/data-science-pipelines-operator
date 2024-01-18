@@ -10,6 +10,8 @@ spec:
       name: doesnotexist
       key: "somekey"
     deploy: true
+    argoLauncherImage: argolauncherimage:test3
+    argoDriverImage: argodriverimage:test3
   persistenceAgent: {}
   scheduledWorkflow: {}
   database:

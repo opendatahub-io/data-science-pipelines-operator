@@ -483,16 +483,22 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		APIServerArtifactImagePath := p.GetImageForComponent(dsp, config.APIServerArtifactImagePath, config.APIServerArtifactImagePathV2Argo, config.APIServerArtifactImagePathV2Tekton)
 		APIServerCacheImagePath := p.GetImageForComponent(dsp, config.APIServerCacheImagePath, config.APIServerCacheImagePathV2Argo, config.APIServerCacheImagePathV2Tekton)
 		APIServerMoveResultsImagePath := p.GetImageForComponent(dsp, config.APIServerMoveResultsImagePath, config.APIServerMoveResultsImagePathV2Argo, config.APIServerMoveResultsImagePathV2Tekton)
+		APIServerArgoLauncherImagePath := config.APIServerArgoLauncherImagePathV2Argo
+		APIServerArgoDriverImagePath := config.APIServerArgoDriverImagePathV2Argo
 
 		serverImageFromConfig := config.GetStringConfigWithDefault(APIServerImagePath, config.DefaultImageValue)
 		artifactImageFromConfig := config.GetStringConfigWithDefault(APIServerArtifactImagePath, config.DefaultImageValue)
 		cacheImageFromConfig := config.GetStringConfigWithDefault(APIServerCacheImagePath, config.DefaultImageValue)
 		moveResultsImageFromConfig := config.GetStringConfigWithDefault(APIServerMoveResultsImagePath, config.DefaultImageValue)
+		argoLauncherImageFromConfig := config.GetStringConfigWithDefault(APIServerArgoLauncherImagePath, config.DefaultImageValue)
+		argoDriverImageFromConfig := config.GetStringConfigWithDefault(APIServerArgoDriverImagePath, config.DefaultImageValue)
 
 		setStringDefault(serverImageFromConfig, &p.APIServer.Image)
 		setStringDefault(artifactImageFromConfig, &p.APIServer.ArtifactImage)
 		setStringDefault(cacheImageFromConfig, &p.APIServer.CacheImage)
 		setStringDefault(moveResultsImageFromConfig, &p.APIServer.MoveResultsImage)
+		setStringDefault(argoLauncherImageFromConfig, &p.APIServer.ArgoLauncherImage)
+		setStringDefault(argoDriverImageFromConfig, &p.APIServer.ArgoDriverImage)
 
 		setResourcesDefault(config.APIServerResourceRequirements, &p.APIServer.Resources)
 

@@ -48,6 +48,10 @@ spec:
                     default: false
                     description: 'Default: false'
                     type: boolean
+                  argoDriverImage:
+                    type: string
+                  argoLauncherImage:
+                    type: string
                   artifactImage:
                     type: string
                   artifactScriptConfigMap:
