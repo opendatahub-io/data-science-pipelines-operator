@@ -83,9 +83,9 @@ spec:
               value: "{{.APIServer.CacheImage}}"
             - name: MOVERESULTS_IMAGE
               value: "{{.APIServer.MoveResultsImage}}"
-            - name: ARGOLAUNCHER_IMAGE
+            - name: V2_LAUNCHER_IMAGE
               value: "{{.APIServer.ArgoLauncherImage}}"
-            - name: ARGODRIVER_IMAGE
+            - name: V2_DRIVER_IMAGE
               value: "{{.APIServer.ArgoDriverImage}}"
             ## Env Vars to only include if MLMD Deployed ##
             {{ if .MLMD }}

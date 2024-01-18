@@ -75,9 +75,9 @@ spec:
               value: "ubi-minimal:test7"
             - name: MOVERESULTS_IMAGE
               value: "busybox:test7"
-            - name: ARGOLAUNCHER_IMAGE
+            - name: V2_LAUNCHER_IMAGE
               value: "argolauncherimage:test7"
-            - name: ARGODRIVER_IMAGE
+            - name: V2_DRIVER_IMAGE
               value: "argodriverimage:test7"
             - name: METADATA_GRPC_SERVICE_SERVICE_HOST
               value: "ds-pipeline-metadata-grpc-testdsp7.default.svc.cluster.local"

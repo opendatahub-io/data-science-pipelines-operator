@@ -75,9 +75,9 @@ spec:
               value: "this-ubi-minimal-image-from-cr-should-be-used:test4"
             - name: MOVERESULTS_IMAGE
               value: "this-busybox-image-from-cr-should-be-used:test4"
-            - name: ARGOLAUNCHER_IMAGE
+            - name: V2_LAUNCHER_IMAGE
               value: "this-argolauncher-image-from-cr-should-be-used:test4"
-            - name: ARGODRIVER_IMAGE
+            - name: V2_DRIVER_IMAGE
               value: "this-argodriver-image-from-cr-should-be-used:test4"
             - name: ML_PIPELINE_SERVICE_HOST
               value: ds-pipeline-testdsp4.default.svc.cluster.local

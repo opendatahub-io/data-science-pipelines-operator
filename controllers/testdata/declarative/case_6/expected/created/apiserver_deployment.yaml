@@ -81,9 +81,9 @@ spec:
               value: "ubi-minimal:test6"
             - name: MOVERESULTS_IMAGE
               value: "busybox:test6"
-            - name: ARGOLAUNCHER_IMAGE
+            - name: V2_LAUNCHER_IMAGE
               value: "argolauncherimage:test6"
-            - name: ARGODRIVER_IMAGE
+            - name: V2_DRIVER_IMAGE
               value: "argodriverimage:test6"
             - name: ML_PIPELINE_SERVICE_HOST
               value: ds-pipeline-testdsp6.default.svc.cluster.local
