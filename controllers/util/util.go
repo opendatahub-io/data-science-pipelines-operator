@@ -17,6 +17,9 @@ limitations under the License.
 package util
 
 import (
+	"os"
+	"path/filepath"
+
 	"context"
 	"crypto/x509"
 	"fmt"
@@ -52,6 +55,21 @@ func GetDeploymentCondition(status appsv1.DeploymentStatus, condType appsv1.Depl
 
 func BoolPointer(b bool) *bool {
 	return &b
+}
+
+func GetTemplatesInDir(templatesDirectory, componentSubdirectory string) ([]string, error) {
+	files, err := os.ReadDir(templatesDirectory + componentSubdirectory)
+	if err != nil {
+		return nil, err
+	}
+
+	var templates []string
+	for _, f := range files {
+		if !f.IsDir() {
+			templates = append(templates, filepath.Join(componentSubdirectory, f.Name()))
+		}
+	}
+	return templates, nil
 }
 
 // IsX509UnknownAuthorityError checks whether an error is of type x509.UnknownAuthorityError.

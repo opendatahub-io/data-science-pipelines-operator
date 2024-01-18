@@ -39,6 +39,7 @@ type DSPAParams struct {
 	Name                                 string
 	Namespace                            string
 	Owner                                mf.Owner
+	DSPVersion                           string
 	APIServer                            *dspa.APIServer
 	APIServerPiplinesCABundleMountPath   string
 	PiplinesCABundleMountPath            string
@@ -54,6 +55,8 @@ type DSPAParams struct {
 	MariaDB                              *dspa.MariaDB
 	Minio                                *dspa.Minio
 	MLMD                                 *dspa.MLMD
+	CRDViewer                            *dspa.CRDViewer
+	WorkflowController                   *dspa.WorkflowController
 	DBConnection
 	ObjectStorageConnection
 }
@@ -77,6 +80,35 @@ type ObjectStorageConnection struct {
 	Endpoint          string // scheme://host:port
 	AccessKeyID       string
 	SecretAccessKey   string
+}
+
+func (p *DSPAParams) UsingV2Pipelines(dsp *dspa.DataSciencePipelinesApplication) bool {
+	return dsp.Spec.DSPVersion == "v2"
+}
+
+func (p *DSPAParams) UsingV1Pipelines(dsp *dspa.DataSciencePipelinesApplication) bool {
+	return !p.UsingV2Pipelines(dsp)
+}
+
+func (p *DSPAParams) UsingArgoEngineDriver(dsp *dspa.DataSciencePipelinesApplication) bool {
+	return p.UsingV2Pipelines(dsp)
+}
+
+func (p *DSPAParams) UsingTektonEngineDriver(dsp *dspa.DataSciencePipelinesApplication) bool {
+	return !p.UsingV2Pipelines(dsp)
+}
+
+// TODO: rework to dynamically retrieve image based soley on 'pipelinesVersion' and 'engineDriver' rather than
+// explicitly set images
+func (p *DSPAParams) GetImageForComponent(dsp *dspa.DataSciencePipelinesApplication, v1Image, v2ArgoImage, v2TektonImage string) string {
+	if p.UsingV2Pipelines(dsp) {
+		if p.UsingArgoEngineDriver(dsp) {
+			return v2ArgoImage
+		} else {
+			return v2TektonImage
+		}
+	}
+	return v1Image
 }
 
 // UsingExternalDB will return true if an external Database is specified in the CR, otherwise false.
@@ -107,13 +139,6 @@ func (p *DSPAParams) UsingExternalStorage(dsp *dspa.DataSciencePipelinesApplicat
 func (p *DSPAParams) ObjectStorageHealthCheckDisabled(dsp *dspa.DataSciencePipelinesApplication) bool {
 	if dsp.Spec.ObjectStorage != nil {
 		return dsp.Spec.ObjectStorage.DisableHealthCheck
-	}
-	return false
-}
-
-func (p *DSPAParams) UsingMLMD(dsp *dspa.DataSciencePipelinesApplication) bool {
-	if dsp.Spec.MLMD != nil {
-		return dsp.Spec.MLMD.Deploy
 	}
 	return false
 }
@@ -327,6 +352,12 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 				SecretKey:  config.DefaultObjectStorageSecretKey,
 			}
 		}
+
+		// TODO: Remove once v2launcher minio secret is parameterized during artifact passing
+		if p.UsingV2Pipelines(dsp) {
+			p.ObjectStorageConnection.CredentialsSecret.SecretName = "mlpipeline-minio-artifact"
+		}
+
 		accessKey, secretKey, err := p.RetrieveOrCreateObjectStoreSecret(ctx, client, p.ObjectStorageConnection.CredentialsSecret, log)
 		if err != nil {
 			return err
@@ -362,36 +393,55 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 }
 
 func (p *DSPAParams) SetupMLMD(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, log logr.Logger) error {
+	if p.UsingV2Pipelines(dsp) {
+		if p.MLMD == nil {
+			log.Info("MLMD not specified, but is a required component for V2 Pipelines. Including MLMD with default specs.")
+			p.MLMD = &dspa.MLMD{
+				Deploy: true,
+			}
+		} else if !p.MLMD.Deploy {
+			return fmt.Errorf("MLMD explicitly disabled in DSPA, but is a required component for V2 Pipelines")
+		}
+	}
 	if p.MLMD != nil {
+		MlmdEnvoyImagePath := p.GetImageForComponent(dsp, config.MlmdEnvoyImagePath, config.MlmdEnvoyImagePathV2Argo, config.MlmdEnvoyImagePathV2Tekton)
+		MlmdGRPCImagePath := p.GetImageForComponent(dsp, config.MlmdGRPCImagePath, config.MlmdGRPCImagePathV2Argo, config.MlmdGRPCImagePathV2Tekton)
+
 		if p.MLMD.Envoy == nil {
 			p.MLMD.Envoy = &dspa.Envoy{
-				Image: config.GetStringConfigWithDefault(config.MlmdEnvoyImagePath, config.DefaultImageValue),
+				Image: config.GetStringConfigWithDefault(MlmdEnvoyImagePath, config.DefaultImageValue),
 			}
 		}
 		if p.MLMD.GRPC == nil {
 			p.MLMD.GRPC = &dspa.GRPC{
-				Image: config.GetStringConfigWithDefault(config.MlmdGRPCImagePath, config.DefaultImageValue),
-			}
-		}
-		if p.MLMD.Writer == nil {
-			p.MLMD.Writer = &dspa.Writer{
-				Image: config.GetStringConfigWithDefault(config.MlmdWriterImagePath, config.DefaultImageValue),
+				Image: config.GetStringConfigWithDefault(MlmdGRPCImagePath, config.DefaultImageValue),
 			}
 		}
 
-		mlmdEnvoyImageFromConfig := config.GetStringConfigWithDefault(config.MlmdEnvoyImagePath, config.DefaultImageValue)
-		mlmdGRPCImageFromConfig := config.GetStringConfigWithDefault(config.MlmdGRPCImagePath, config.DefaultImageValue)
-		mlmdWriterImageFromConfig := config.GetStringConfigWithDefault(config.MlmdWriterImagePath, config.DefaultImageValue)
+		mlmdEnvoyImageFromConfig := config.GetStringConfigWithDefault(MlmdEnvoyImagePath, config.DefaultImageValue)
+		mlmdGRPCImageFromConfig := config.GetStringConfigWithDefault(MlmdGRPCImagePath, config.DefaultImageValue)
 
 		setStringDefault(mlmdEnvoyImageFromConfig, &p.MLMD.Envoy.Image)
 		setStringDefault(mlmdGRPCImageFromConfig, &p.MLMD.GRPC.Image)
-		setStringDefault(mlmdWriterImageFromConfig, &p.MLMD.Writer.Image)
 
 		setResourcesDefault(config.MlmdEnvoyResourceRequirements, &p.MLMD.Envoy.Resources)
 		setResourcesDefault(config.MlmdGRPCResourceRequirements, &p.MLMD.GRPC.Resources)
-		setResourcesDefault(config.MlmdWriterResourceRequirements, &p.MLMD.Writer.Resources)
 
 		setStringDefault(config.MlmdGrpcPort, &p.MLMD.GRPC.Port)
+
+		if p.UsingV1Pipelines(dsp) {
+			MlmdWriterImagePath := config.MlmdWriterImagePath
+
+			if p.MLMD.Writer == nil {
+				p.MLMD.Writer = &dspa.Writer{
+					Image: config.GetStringConfigWithDefault(MlmdWriterImagePath, config.DefaultImageValue),
+				}
+			}
+
+			mlmdWriterImageFromConfig := config.GetStringConfigWithDefault(MlmdWriterImagePath, config.DefaultImageValue)
+			setStringDefault(mlmdWriterImageFromConfig, &p.MLMD.Writer.Image)
+			setResourcesDefault(config.MlmdWriterResourceRequirements, &p.MLMD.Writer.Resources)
+		}
 	}
 	return nil
 }
@@ -411,6 +461,7 @@ func setResourcesDefault(defaultValue dspa.ResourceRequirements, value **dspa.Re
 func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, log logr.Logger) error {
 	p.Name = dsp.Name
 	p.Namespace = dsp.Namespace
+	p.DSPVersion = dsp.Spec.DSPVersion
 	p.Owner = dsp
 	p.APIServer = dsp.Spec.APIServer.DeepCopy()
 	p.APIServerDefaultResourceName = apiServerDefaultResourceNamePrefix + dsp.Name
@@ -428,11 +479,15 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.PiplinesCABundleMountPath = config.PiplinesCABundleMountPath
 
 	if p.APIServer != nil {
+		APIServerImagePath := p.GetImageForComponent(dsp, config.APIServerImagePath, config.APIServerImagePathV2Argo, config.APIServerImagePathV2Tekton)
+		APIServerArtifactImagePath := p.GetImageForComponent(dsp, config.APIServerArtifactImagePath, config.APIServerArtifactImagePathV2Argo, config.APIServerArtifactImagePathV2Tekton)
+		APIServerCacheImagePath := p.GetImageForComponent(dsp, config.APIServerCacheImagePath, config.APIServerCacheImagePathV2Argo, config.APIServerCacheImagePathV2Tekton)
+		APIServerMoveResultsImagePath := p.GetImageForComponent(dsp, config.APIServerMoveResultsImagePath, config.APIServerMoveResultsImagePathV2Argo, config.APIServerMoveResultsImagePathV2Tekton)
 
-		serverImageFromConfig := config.GetStringConfigWithDefault(config.APIServerImagePath, config.DefaultImageValue)
-		artifactImageFromConfig := config.GetStringConfigWithDefault(config.APIServerArtifactImagePath, config.DefaultImageValue)
-		cacheImageFromConfig := config.GetStringConfigWithDefault(config.APIServerCacheImagePath, config.DefaultImageValue)
-		moveResultsImageFromConfig := config.GetStringConfigWithDefault(config.APIServerMoveResultsImagePath, config.DefaultImageValue)
+		serverImageFromConfig := config.GetStringConfigWithDefault(APIServerImagePath, config.DefaultImageValue)
+		artifactImageFromConfig := config.GetStringConfigWithDefault(APIServerArtifactImagePath, config.DefaultImageValue)
+		cacheImageFromConfig := config.GetStringConfigWithDefault(APIServerCacheImagePath, config.DefaultImageValue)
+		moveResultsImageFromConfig := config.GetStringConfigWithDefault(APIServerMoveResultsImagePath, config.DefaultImageValue)
 
 		setStringDefault(serverImageFromConfig, &p.APIServer.Image)
 		setStringDefault(artifactImageFromConfig, &p.APIServer.ArtifactImage)
@@ -462,12 +517,14 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	}
 
 	if p.PersistenceAgent != nil {
-		persistenceAgentImageFromConfig := config.GetStringConfigWithDefault(config.PersistenceAgentImagePath, config.DefaultImageValue)
+		PersistenceAgentImagePath := p.GetImageForComponent(dsp, config.PersistenceAgentImagePath, config.PersistenceAgentImagePathV2Argo, config.PersistenceAgentImagePathV2Tekton)
+		persistenceAgentImageFromConfig := config.GetStringConfigWithDefault(PersistenceAgentImagePath, config.DefaultImageValue)
 		setStringDefault(persistenceAgentImageFromConfig, &p.PersistenceAgent.Image)
 		setResourcesDefault(config.PersistenceAgentResourceRequirements, &p.PersistenceAgent.Resources)
 	}
 	if p.ScheduledWorkflow != nil {
-		scheduledWorkflowImageFromConfig := config.GetStringConfigWithDefault(config.ScheduledWorkflowImagePath, config.DefaultImageValue)
+		ScheduledWorkflowImagePath := p.GetImageForComponent(dsp, config.ScheduledWorkflowImagePath, config.ScheduledWorkflowImagePathV2Argo, config.ScheduledWorkflowImagePathV2Tekton)
+		scheduledWorkflowImageFromConfig := config.GetStringConfigWithDefault(ScheduledWorkflowImagePath, config.DefaultImageValue)
 		setStringDefault(scheduledWorkflowImageFromConfig, &p.ScheduledWorkflow.Image)
 		setResourcesDefault(config.ScheduledWorkflowResourceRequirements, &p.ScheduledWorkflow.Resources)
 	}
@@ -479,6 +536,8 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		setStringDefault(config.MLPipelineUIConfigMapPrefix+dsp.Name, &p.MlPipelineUI.ConfigMapName)
 		setResourcesDefault(config.MlPipelineUIResourceRequirements, &p.MlPipelineUI.Resources)
 	}
+
+	// TODO (gfrasca): believe we need to set default WorkflowController Images here
 
 	err := p.SetupMLMD(ctx, dsp, client, log)
 	if err != nil {

@@ -40,9 +40,17 @@ type DSPASpec struct {
 	// ObjectStorage specifies Object Store configurations, used for DS Pipelines artifact passing and storage. Specify either the your own External Storage (e.g. AWS S3), or use the default Minio deployment (unsupported, primarily for development, and testing) .
 	// +kubebuilder:validation:Required
 	*ObjectStorage `json:"objectStorage"`
+	*MLMD          `json:"mlmd,omitempty"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:={deploy: false}
-	*MLMD `json:"mlmd"`
+	*CRDViewer `json:"crdviewer"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="v1"
+	DSPVersion string `json:"dspVersion,omitempty"`
+	// WorkflowController is an argo-specific component that manages a DSPA's Workflow objects and handles the orchestration of them with the central Argo server
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={deploy: false}
+	*WorkflowController `json:"workflowController,omitempty"`
 }
 
 type APIServer struct {
@@ -248,7 +256,7 @@ type Minio struct {
 }
 
 type MLMD struct {
-	// Enable DS Pipelines Operator management of MLMD. Setting Deploy to false disables operator reconciliation. Default: false
+	// Enable DS Pipelines Operator management of MLMD. Setting Deploy to false disables operator reconciliation. Default: true
 	// +kubebuilder:default:=false
 	// +kubebuilder:validation:Optional
 	Deploy  bool `json:"deploy"`
@@ -275,6 +283,20 @@ type Writer struct {
 	Resources *ResourceRequirements `json:"resources,omitempty"`
 	// +kubebuilder:validation:Required
 	Image string `json:"image"`
+}
+
+type CRDViewer struct {
+	// +kubebuilder:default:=true
+	// +kubebuilder:validation:Optional
+	Deploy bool   `json:"deploy"`
+	Image  string `json:"image,omitempty"`
+}
+
+type WorkflowController struct {
+	// +kubebuilder:default:=true
+	// +kubebuilder:validation:Optional
+	Deploy bool   `json:"deploy"`
+	Image  string `json:"image,omitempty"`
 }
 
 // ResourceRequirements structures compute resource requirements.
@@ -304,6 +326,7 @@ type ExternalStorage struct {
 
 type S3CredentialSecret struct {
 	// +kubebuilder:validation:Required
+	// Note: In V2 this value needs to be mlpipeline-minio-artifact
 	SecretName string `json:"secretName"`
 	// The "Keys" in the k8sSecret key/value pairs. Not to be confused with the values.
 	AccessKey string `json:"accessKey"`

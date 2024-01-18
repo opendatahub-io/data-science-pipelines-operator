@@ -24,31 +24,19 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-const apiServerDefaultResourceNamePrefix = "ds-pipeline-"
+var apiServerTemplatesDir = "apiserver/default"
 
-var apiServerTemplates = []string{
-	"apiserver/artifact_script.yaml.tmpl",
-	"apiserver/role_ds-pipeline.yaml.tmpl",
-	"apiserver/role_pipeline-runner.yaml.tmpl",
-	"apiserver/role_ds-pipeline-user-access.yaml.tmpl",
-	"apiserver/rolebinding_ds-pipeline.yaml.tmpl",
-	"apiserver/rolebinding_pipeline-runner.yaml.tmpl",
-	"apiserver/sa_ds-pipeline.yaml.tmpl",
-	"apiserver/sa_pipeline-runner.yaml.tmpl",
-	"apiserver/service.yaml.tmpl",
-	"apiserver/deployment.yaml.tmpl",
-	"apiserver/monitor.yaml.tmpl",
-}
+const apiServerDefaultResourceNamePrefix = "ds-pipeline-"
 
 // serverRoute is a resource deployed conditionally
 // as such it is handled separately
-const serverRoute = "apiserver/route.yaml.tmpl"
+const serverRoute = "apiserver/route/route.yaml.tmpl"
 
 // Sample Pipeline and Config are resources deployed conditionally
 // as such it is handled separately
 var samplePipelineTemplates = map[string]string{
-	"sample-pipeline": "apiserver/sample-pipeline.yaml.tmpl",
-	"sample-config":   "apiserver/sample-config.yaml.tmpl",
+	"sample-pipeline": "apiserver/sample-pipeline/sample-pipeline.yaml.tmpl",
+	"sample-config":   "apiserver/sample-pipeline/sample-config.yaml.tmpl",
 }
 
 func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication, params *DSPAParams) error {
@@ -60,12 +48,9 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1alph
 	}
 
 	log.Info("Applying APIServer Resources")
-
-	for _, template := range apiServerTemplates {
-		err := r.Apply(dsp, params, template)
-		if err != nil {
-			return err
-		}
+	err := r.ApplyDir(dsp, params, apiServerTemplatesDir)
+	if err != nil {
+		return err
 	}
 
 	if dsp.Spec.APIServer.EnableRoute {

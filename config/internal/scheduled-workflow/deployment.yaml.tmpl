@@ -24,8 +24,12 @@ spec:
     spec:
       containers:
         - env:
+            - name: NAMESPACE
+              value: "{{.Namespace}}"
             - name: CRON_SCHEDULE_TIMEZONE
               value: "{{.ScheduledWorkflow.CronScheduleTimezone}}"
+            - name: EXECUTIONTYPE
+              value: PipelineRun
           image: "{{.ScheduledWorkflow.Image}}"
           imagePullPolicy: IfNotPresent
           name: ds-pipeline-scheduledworkflow

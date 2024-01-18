@@ -30,13 +30,13 @@ import (
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 )
 
-const dbSecret = "mariadb/secret.yaml.tmpl"
+const dbSecret = "mariadb/generated-secret/secret.yaml.tmpl"
 
 var mariadbTemplates = []string{
-	"mariadb/deployment.yaml.tmpl",
-	"mariadb/pvc.yaml.tmpl",
-	"mariadb/service.yaml.tmpl",
-	"mariadb/mariadb-sa.yaml.tmpl",
+	"mariadb/default/deployment.yaml.tmpl",
+	"mariadb/default/pvc.yaml.tmpl",
+	"mariadb/default/service.yaml.tmpl",
+	"mariadb/default/mariadb-sa.yaml.tmpl",
 }
 
 // extract to var for mocking in testing

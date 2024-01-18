@@ -33,6 +33,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/format"
 
 	"github.com/go-logr/logr"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -83,6 +84,8 @@ var _ = BeforeEach(func() {
 
 var _ = BeforeSuite(func() {
 	ctx, cancel = context.WithCancel(context.TODO())
+
+	format.MaxLength = 0
 
 	// Initialize logger
 	opts := zap.Options{

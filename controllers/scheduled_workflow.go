@@ -20,16 +20,9 @@ import (
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 )
 
-const scheduledWorkflowDefaultResourceNamePrefix = "ds-pipeline-scheduledworkflow-"
+var scheduledWorkflowTemplatesDir = "scheduled-workflow"
 
-var scheduledWorkflowTemplates = []string{
-	"scheduled-workflow/deployment.yaml.tmpl",
-	"scheduled-workflow/role.yaml.tmpl",
-	"scheduled-workflow/rolebinding.yaml.tmpl",
-	"scheduled-workflow/sa.yaml.tmpl",
-	"scheduled-workflow/role.yaml.tmpl",
-	"scheduled-workflow/rolebinding.yaml.tmpl",
-}
+const scheduledWorkflowDefaultResourceNamePrefix = "ds-pipeline-scheduledworkflow-"
 
 func (r *DSPAReconciler) ReconcileScheduledWorkflow(dsp *dspav1alpha1.DataSciencePipelinesApplication,
 	params *DSPAParams) error {
@@ -43,11 +36,9 @@ func (r *DSPAReconciler) ReconcileScheduledWorkflow(dsp *dspav1alpha1.DataScienc
 
 	log.Info("Applying ScheduledWorkflow Resources")
 
-	for _, template := range scheduledWorkflowTemplates {
-		err := r.Apply(dsp, params, template)
-		if err != nil {
-			return err
-		}
+	err := r.ApplyDir(dsp, params, scheduledWorkflowTemplatesDir)
+	if err != nil {
+		return err
 	}
 
 	log.Info("Finished applying ScheduledWorkflow Resources")

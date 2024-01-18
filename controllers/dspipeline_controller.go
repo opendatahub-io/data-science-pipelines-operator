@@ -55,6 +55,24 @@ type DSPAReconciler struct {
 	MaxConcurrentReconciles int
 }
 
+func (r *DSPAReconciler) ApplyDir(owner mf.Owner, params *DSPAParams, directory string, fns ...mf.Transformer) error {
+	templates, err := util.GetTemplatesInDir(r.TemplatesPath, directory)
+	if err != nil {
+		return err
+	}
+	return r.ApplyAll(owner, params, templates)
+}
+
+func (r *DSPAReconciler) ApplyAll(owner mf.Owner, params *DSPAParams, templates []string, fns ...mf.Transformer) error {
+	for _, template := range templates {
+		err := r.Apply(owner, params, template)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *DSPAReconciler) Apply(owner mf.Owner, params *DSPAParams, template string, fns ...mf.Transformer) error {
 	tmplManifest, err := config.Manifest(r.Client, r.TemplatesPath+template, params)
 	if err != nil {
@@ -268,6 +286,17 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		if err != nil {
 			return ctrl.Result{}, err
 		}
+
+		err = r.ReconcileCRDViewer(dspa, params)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		err = r.ReconcileWorkflowController(dspa, params)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
 	}
 
 	log.Info("Updating CR status")

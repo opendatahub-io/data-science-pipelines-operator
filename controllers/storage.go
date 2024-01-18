@@ -34,14 +34,15 @@ import (
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/util"
 )
 
-const storageSecret = "minio/secret.yaml.tmpl"
+const storageSecret = "minio/generated-secret/secret.yaml.tmpl"
 const storageRoute = "minio/route.yaml.tmpl"
 
 var minioTemplates = []string{
-	"minio/deployment.yaml.tmpl",
-	"minio/pvc.yaml.tmpl",
-	"minio/service.yaml.tmpl",
-	"minio/minio-sa.yaml.tmpl",
+	"minio/default/deployment.yaml.tmpl",
+	"minio/default/pvc.yaml.tmpl",
+	"minio/default/service.yaml.tmpl",
+	"minio/default/service.minioservice.yaml.tmpl",
+	"minio/default/minio-sa.yaml.tmpl",
 	storageRoute,
 }
 

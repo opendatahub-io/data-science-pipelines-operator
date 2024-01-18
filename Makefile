@@ -52,6 +52,10 @@ IMG ?= quay.io/opendatahub/data-science-pipelines-operator:main
 ENVTEST_K8S_VERSION = 1.25.0
 # Namespace to deploy the operator
 OPERATOR_NS ?= opendatahub
+# Namespace to deploy v2 infrastructure
+V2INFRA_NS ?= openshift-pipelines
+# Namespace to deploy argo infrastructure
+ARGO_NS ?= argo
 
 # Integration Test ENVvars
 KUBECONFIGPATH ?= $(HOME)/.kube/config
@@ -176,6 +180,18 @@ deploy-kind:
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	cd config/overlays/make-deploy && $(KUSTOMIZE) edit set namespace ${OPERATOR_NS}
 	$(KUSTOMIZE) build config/overlays/make-deploy | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+
+.PHONY: argodeploy
+argodeploy: manifests kustomize
+	cd config/overlays/make-argodeploy \
+		&& $(KUSTOMIZE) edit set namespace ${ARGO_NS}
+	$(KUSTOMIZE) build config/overlays/make-argodeploy | kubectl apply -f -
+
+.PHONY: argoundeploy
+argoundeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+	cd config/overlays/make-argodeploy \
+	    && $(KUSTOMIZE) edit set namespace ${ARGO_NS}
+	$(KUSTOMIZE) build config/overlays/make-argodeploy | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: undeploy-kind
 undeploy-kind: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.

@@ -24,8 +24,12 @@ spec:
     spec:
       containers:
         - env:
+            - name: NAMESPACE
+              value: "default"
             - name: CRON_SCHEDULE_TIMEZONE
               value: "EST"
+            - name: EXECUTIONTYPE
+              value: PipelineRun
           image: this-scheduledworkflow-image-from-cr-should-be-used:test4
           imagePullPolicy: IfNotPresent
           name: ds-pipeline-scheduledworkflow

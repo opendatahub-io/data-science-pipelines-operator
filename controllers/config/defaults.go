@@ -17,10 +17,11 @@ limitations under the License.
 package config
 
 import (
+	"time"
+
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/spf13/viper"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"time"
 )
 
 const (
@@ -73,6 +74,32 @@ const (
 	ObjStoreConnectionTimeoutConfigName = "DSPO.HealthCheck.ObjectStore.ConnectionTimeout"
 	DBConnectionTimeoutConfigName       = "DSPO.HealthCheck.Database.ConnectionTimeout"
 	RequeueTimeConfigName               = "DSPO.RequeueTime"
+)
+
+// DSPV2-Argo Image Paths
+const (
+	APIServerImagePathV2Argo            = "ImagesV2.Argo.ApiServer"
+	APIServerArtifactImagePathV2Argo    = "ImagesV2.Argo.Artifact"
+	APIServerCacheImagePathV2Argo       = "ImagesV2.Argo.Cache"
+	APIServerMoveResultsImagePathV2Argo = "ImagesV2.Argo.MoveResultsImage"
+	PersistenceAgentImagePathV2Argo     = "ImagesV2.Argo.PersistentAgent"
+	ScheduledWorkflowImagePathV2Argo    = "ImagesV2.Argo.ScheduledWorkflow"
+	MlmdEnvoyImagePathV2Argo            = "ImagesV2.Argo.MlmdEnvoy"
+	MlmdGRPCImagePathV2Argo             = "ImagesV2.Argo.MlmdGRPC"
+)
+
+// DSPV2-Tekton Image Paths
+// Note: These won't exist in config but aren't used, adding in case of future support
+// TODO: remove
+const (
+	APIServerImagePathV2Tekton            = "ImagesV2.Tekton.ApiServer"
+	APIServerArtifactImagePathV2Tekton    = "ImagesV2.Tekton.Artifact"
+	APIServerCacheImagePathV2Tekton       = "ImagesV2.Tekton.Cache"
+	APIServerMoveResultsImagePathV2Tekton = "ImagesV2.Tekton.MoveResultsImage"
+	PersistenceAgentImagePathV2Tekton     = "ImagesV2.Tekton.PersistentAgent"
+	ScheduledWorkflowImagePathV2Tekton    = "ImagesV2.Tekton.ScheduledWorkflow"
+	MlmdEnvoyImagePathV2Tekton            = "ImagesV2.Tekton.MlmdEnvoy"
+	MlmdGRPCImagePathV2Tekton             = "ImagesV2.Tekton.MlmdGRPC"
 )
 
 // DSPA Status Condition Types

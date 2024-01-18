@@ -1,0 +1,90 @@
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: testdsp7
+spec:
+  dspVersion: v2
+  apiServer:
+    deploy: true
+    image: api-server:test7
+    applyTektonCustomResource: true
+    archiveLogs: false
+    artifactImage: artifact-manager:test7
+    cacheImage: ubi-minimal:test7
+    moveResultsImage: busybox:test7
+    injectDefaultScript: true
+    stripEOF: true
+    enableOauth: true
+    enableSamplePipeline: true
+    terminateStatus: Cancelled
+    trackArtifacts: true
+    dbConfigConMaxLifetimeSec: 125
+    collectMetrics: true
+    autoUpdatePipelineDefaultVersion: true
+    resources:
+      requests:
+        cpu: "1231m"
+        memory: "1Gi"
+      limits:
+        cpu: "2522m"
+        memory: "5Gi"
+  persistenceAgent:
+    deploy: true
+    image: persistenceagent:test7
+    numWorkers: 5
+    resources:
+      requests:
+        cpu: "1233m"
+        memory: "1Gi"
+      limits:
+        cpu: "2524m"
+        memory: "5Gi"
+  scheduledWorkflow:
+    deploy: true
+    image: scheduledworkflow:test7
+    cronScheduleTimezone: EST
+    resources:
+      requests:
+        cpu: "1235m"
+        memory: "1Gi"
+      limits:
+        cpu: "2526m"
+        memory: "5Gi"
+  mlpipelineUI:
+    deploy: true
+    image: frontend:test7
+    configMap: some-test-configmap
+    resources:
+      requests:
+        cpu: "1239m"
+        memory: "1Gi"
+      limits:
+        cpu: "2530m"
+        memory: "5Gi"
+  database:
+    mariaDB:
+      deploy: true
+      image: mariadb:test7
+      username: testuser
+      pipelineDBName: randomDBName
+      pvcSize: 32Gi
+      resources:
+        requests:
+          cpu: "1212m"
+          memory: "1Gi"
+        limits:
+          cpu: "2554m"
+          memory: "5Gi"
+  objectStorage:
+    minio:
+      deploy: true
+      image: minio:test7
+      bucket: mlpipeline
+      pvcSize: 40Gi
+      resources:
+        requests:
+          cpu: "1334m"
+          memory: "1Gi"
+        limits:
+          cpu: "2535m"
+          memory: "5Gi"

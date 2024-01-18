@@ -91,6 +91,13 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.IMAGES_MLMDWRITER
+  - name: IMAGES_CRDVIEWER
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGES_CRDVIEWER
   - name: IMAGES_DSPO
     objref:
       kind: ConfigMap
@@ -133,5 +140,68 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.DSPO_REQUEUE_TIME
+  - name: IMAGESV2_ARGO_APISERVER
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGESV2_ARGO_APISERVER
+  - name: IMAGESV2_ARGO_ARTIFACT
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGESV2_ARGO_ARTIFACT
+  - name: IMAGESV2_ARGO_PERSISTENCEAGENT
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGESV2_ARGO_PERSISTENCEAGENT
+  - name: IMAGESV2_ARGO_SCHEDULEDWORKFLOW
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGESV2_ARGO_SCHEDULEDWORKFLOW
+  - name: IMAGESV2_ARGO_CACHE
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGESV2_ARGO_CACHE
+  - name: IMAGESV2_ARGO_MOVERESULTSIMAGE
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGESV2_ARGO_MOVERESULTSIMAGE
+  - name: IMAGESV2_ARGO_MLMDENVOY
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGESV2_ARGO_MLMDENVOY
+  - name: IMAGESV2_ARGO_MLMDGRPC
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGESV2_ARGO_MLMDGRPC
+  - name: IMAGESV2_ARGO_WORKFLOWCONTROLLER
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGESV2_ARGO_WORKFLOWCONTROLLER
 configurations:
   - params.yaml

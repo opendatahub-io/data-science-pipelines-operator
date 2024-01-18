@@ -19,34 +19,32 @@ import (
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 )
 
-var mlmdTemplates = []string{
-	"ml-metadata/metadata-envoy.configmap.yaml.tmpl",
-	"ml-metadata/metadata-envoy.deployment.yaml.tmpl",
-	"ml-metadata/metadata-envoy.service.yaml.tmpl",
-	"ml-metadata/metadata-grpc.deployment.yaml.tmpl",
-	"ml-metadata/metadata-grpc.service.yaml.tmpl",
-	"ml-metadata/metadata-grpc.serviceaccount.yaml.tmpl",
-	"ml-metadata/metadata-writer.deployment.yaml.tmpl",
-	"ml-metadata/metadata-writer.role.yaml.tmpl",
-	"ml-metadata/metadata-writer.rolebinding.yaml.tmpl",
-	"ml-metadata/metadata-writer.serviceaccount.yaml.tmpl",
-}
+var mlmdTemplatesDir = "ml-metadata"
 
 func (r *DSPAReconciler) ReconcileMLMD(dsp *dspav1alpha1.DataSciencePipelinesApplication,
 	params *DSPAParams) error {
 
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
 
-	if params.UsingMLMD(dsp) {
-		log.Info("Applying ML-Metadata (MLMD) Resources")
-
-		for _, template := range mlmdTemplates {
-			err := r.Apply(dsp, params, template)
-			if err != nil {
-				return err
-			}
-		}
-		log.Info("Finished applying MLMD Resources")
+	if (params.MLMD == nil || !params.MLMD.Deploy) && (dsp.Spec.MLMD == nil || !dsp.Spec.MLMD.Deploy) {
+		r.Log.Info("Skipping Application of ML-Metadata (MLMD) Resources")
+		return nil
 	}
+
+	log.Info("Applying ML-Metadata (MLMD) Resources")
+
+	err := r.ApplyDir(dsp, params, mlmdTemplatesDir)
+	if err != nil {
+		return err
+	}
+
+	if params.UsingV1Pipelines(dsp) {
+		err = r.ApplyDir(dsp, params, mlmdTemplatesDir+"/v1")
+		if err != nil {
+			return err
+		}
+	}
+
+	log.Info("Finished applying MLMD Resources")
 	return nil
 }

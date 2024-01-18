@@ -1,0 +1,210 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ds-pipeline-testdsp7
+  namespace: default
+  labels:
+    app: ds-pipeline-testdsp7
+    component: data-science-pipelines
+    dspa: testdsp7
+spec:
+  selector:
+    matchLabels:
+      app: ds-pipeline-testdsp7
+      component: data-science-pipelines
+      dspa: testdsp7
+  template:
+    metadata:
+      labels:
+        app: ds-pipeline-testdsp7
+        component: data-science-pipelines
+        dspa: testdsp7
+    spec:
+      containers:
+        - env:
+            - name: POD_NAMESPACE
+              value: "default"
+            - name: DBCONFIG_USER
+              value: "testuser"
+            - name: DBCONFIG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: "password"
+                  name: "ds-pipeline-db-testdsp7"
+            - name: DBCONFIG_DBNAME
+              value: "randomDBName"
+            - name: DBCONFIG_HOST
+              value: "mariadb-testdsp7.default.svc.cluster.local"
+            - name: DBCONFIG_PORT
+              value: "3306"
+            - name: AUTO_UPDATE_PIPELINE_DEFAULT_VERSION
+              value: "true"
+            - name: DBCONFIG_CONMAXLIFETIMESEC
+              value: "125"
+            - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_HOST
+              value: "ds-pipeline-visualizationserver"
+            - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
+              value: "8888"
+            - name: OBJECTSTORECONFIG_CREDENTIALSSECRET
+              value: "mlpipeline-minio-artifact"
+            - name: OBJECTSTORECONFIG_CREDENTIALSACCESSKEYKEY
+              value: "accesskey"
+            - name: OBJECTSTORECONFIG_CREDENTIALSSECRETKEYKEY
+              value: "secretkey"
+            - name: DEFAULTPIPELINERUNNERSERVICEACCOUNT
+              value: "pipeline-runner-testdsp7"
+            - name: OBJECTSTORECONFIG_BUCKETNAME
+              value: "mlpipeline"
+            - name: OBJECTSTORECONFIG_ACCESSKEY
+              valueFrom:
+                secretKeyRef:
+                  key: "accesskey"
+                  name: "mlpipeline-minio-artifact"
+            - name: OBJECTSTORECONFIG_SECRETACCESSKEY
+              valueFrom:
+                secretKeyRef:
+                  key: "secretkey"
+                  name: "mlpipeline-minio-artifact"
+            - name: OBJECTSTORECONFIG_SECURE
+              value: "false"
+            - name: MINIO_SERVICE_SERVICE_HOST
+              value: "minio-testdsp7.default.svc.cluster.local"
+            - name: MINIO_SERVICE_SERVICE_PORT
+              value: "9000"
+            - name: CACHE_IMAGE
+              value: "ubi-minimal:test7"
+            - name: MOVERESULTS_IMAGE
+              value: "busybox:test7"
+            - name: METADATA_GRPC_SERVICE_SERVICE_HOST
+              value: "ds-pipeline-metadata-grpc-testdsp7.default.svc.cluster.local"
+            - name: METADATA_GRPC_SERVICE_SERVICE_PORT
+              value: "8080"
+            - name: ML_PIPELINE_SERVICE_HOST
+              value: ds-pipeline-testdsp7.default.svc.cluster.local
+            - name: ML_PIPELINE_SERVICE_PORT_GRPC
+              value: "8887"
+            - name: EXECUTIONTYPE
+              value: Workflow
+            - name: DB_DRIVER_NAME
+              value: mysql
+            - name: DBCONFIG_MYSQLCONFIG_USER
+              value: testuser
+            - name: DBCONFIG_MYSQLCONFIG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: "password"
+                  name: "ds-pipeline-db-testdsp7"
+            - name: DBCONFIG_MYSQLCONFIG_DBNAME
+              value: "randomDBName"
+            - name: DBCONFIG_MYSQLCONFIG_HOST
+              value: "mariadb-testdsp7.default.svc.cluster.local"
+            - name: DBCONFIG_MYSQLCONFIG_PORT
+              value: "3306"
+          image: api-server:test7
+          imagePullPolicy: Always
+          name: ds-pipeline-api-server
+          ports:
+            - containerPort: 8888
+              name: http
+              protocol: TCP
+            - containerPort: 8887
+              name: grpc
+              protocol: TCP
+          livenessProbe:
+            exec:
+              command:
+                - wget
+                - -q
+                - -S
+                - -O
+                - '-'
+                - http://localhost:8888/apis/v1beta1/healthz
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+          readinessProbe:
+            exec:
+              command:
+                - wget
+                - -q
+                - -S
+                - -O
+                - '-'
+                - http://localhost:8888/apis/v1beta1/healthz
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+          resources:
+            requests:
+              cpu: 1231m
+              memory: 1Gi
+            limits:
+              cpu: 2522m
+              memory: 5Gi
+          volumeMounts:
+            - mountPath: /config/sample_config.json
+              name: sample-config
+              subPath: sample_config.json
+            - mountPath: /samples/
+              name: sample-pipeline
+        - name: oauth-proxy
+          args:
+            - --https-address=:8443
+            - --provider=openshift
+            - --openshift-service-account=ds-pipeline-testdsp7
+            - --upstream=http://localhost:8888
+            - --tls-cert=/etc/tls/private/tls.crt
+            - --tls-key=/etc/tls/private/tls.key
+            - --cookie-secret=SECRET
+            - '--openshift-delegate-urls={"/": {"group":"route.openshift.io","resource":"routes","verb":"get","name":"ds-pipeline-testdsp7","namespace":"default"}}'
+            - '--openshift-sar={"namespace":"default","resource":"routes","resourceName":"ds-pipeline-testdsp7","verb":"get","resourceAPIGroup":"route.openshift.io"}'
+            - --skip-auth-regex='(^/metrics|^/apis/v1beta1/healthz)'
+          image: oauth-proxy:test7
+          ports:
+            - containerPort: 8443
+              name: oauth
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /oauth/healthz
+              port: oauth
+              scheme: HTTPS
+            initialDelaySeconds: 30
+            timeoutSeconds: 1
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /oauth/healthz
+              port: oauth
+              scheme: HTTPS
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          resources:
+            limits:
+              cpu: 100m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          volumeMounts:
+            - mountPath: /etc/tls/private
+              name: proxy-tls
+      volumes:
+        - name: proxy-tls
+          secret:
+            secretName: ds-pipelines-proxy-tls-testdsp7
+            defaultMode: 420
+        - configMap:
+            defaultMode: 420
+            name: sample-config-testdsp7
+          name: sample-config
+        - configMap:
+            defaultMode: 420
+            name: sample-pipeline-testdsp7
+          name: sample-pipeline
+      serviceAccountName: ds-pipeline-testdsp7

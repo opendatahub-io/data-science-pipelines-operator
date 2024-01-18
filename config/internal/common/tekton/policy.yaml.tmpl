@@ -6,7 +6,7 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      app: {{.APIServerDefaultResourceName}}
+      app: ds-pipeline-{{.Name}}
       component: data-science-pipelines
   policyTypes:
     - Ingress
@@ -25,6 +25,13 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: redhat-ods-monitoring
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-pipelines
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/managed-by: tekton-pipelines
+              pipelines.kubeflow.org/v2_component: 'true'
         - podSelector:
             matchLabels:
               app: mariadb-{{.Name}}
@@ -39,11 +46,11 @@ spec:
               component: data-science-pipelines
         - podSelector:
             matchLabels:
-              app: {{.PersistentAgentDefaultResourceName}}
+              app: ds-pipeline-persistenceagent-{{.Name}}
               component: data-science-pipelines
         - podSelector:
             matchLabels:
-              app: {{.ScheduledWorkflowDefaultResourceName}}
+              app: ds-pipeline-scheduledworkflow-{{.Name}}
               component: data-science-pipelines
         - podSelector:
             matchLabels:
@@ -62,3 +69,13 @@ spec:
           port: 8888
         - protocol: TCP
           port: 8887
+    - ports:
+        - protocol: TCP
+          port: 8080
+      from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: data-science-pipelines-operator-driver
+          namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-pipelines
