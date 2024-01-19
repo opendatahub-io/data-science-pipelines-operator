@@ -111,7 +111,8 @@ jobs:
     if: needs.prereqs.outputs.prereqs_successful == 'true'
     uses: ./.github/workflows/build-tags.yml
     with:
-      src_branch: ${{  needs.get-env-vars.outputs.MINOR_RELEASE_BRANCH }}
+      src_dspo_branch: ${{  needs.get-env-vars.outputs.MINOR_RELEASE_BRANCH }}
+      src_dsp_branch: ${{  needs.get-env-vars.outputs.MINOR_RELEASE_BRANCH }}
       target_tag: ${{  needs.get-env-vars.outputs.MINOR_RELEASE_TAG }}
       quay_org: ${{  needs.get-env-vars.outputs.QUAY_ORG }}
       dsp_org_repo: ${{  needs.get-env-vars.outputs.DSPO_GH_ORG }}
