@@ -75,6 +75,10 @@ spec:
                   name: "{{.ObjectStorageConnection.CredentialsSecret.SecretName}}"
             - name: OBJECTSTORECONFIG_SECURE
               value: "{{.ObjectStorageConnection.Secure}}"
+            {{ if .ObjectStorageConnection.BasePath }}
+            - name: OBJECTSTORECONFIG_PIPELINEPATH
+              value: "{{.ObjectStorageConnection.BasePath}}"
+            {{ end }}
             - name: MINIO_SERVICE_SERVICE_HOST
               value: "{{.ObjectStorageConnection.Host}}"
             - name: MINIO_SERVICE_SERVICE_PORT

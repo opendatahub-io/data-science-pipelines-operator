@@ -316,9 +316,13 @@ type Resources struct {
 
 type ExternalStorage struct {
 	// +kubebuilder:validation:Required
-	Host                string `json:"host"`
-	Bucket              string `json:"bucket"`
-	Scheme              string `json:"scheme"`
+	Host   string `json:"host"`
+	Bucket string `json:"bucket"`
+	Scheme string `json:"scheme"`
+	// +kubebuilder:validation:Optional
+	Region string `json:"region"`
+	// +kubebuilder:validation:Optional
+	BasePath            string `json:"basePath"`
 	*S3CredentialSecret `json:"s3CredentialsSecret"`
 	// +kubebuilder:validation:Optional
 	Secure *bool `json:"secure"`
