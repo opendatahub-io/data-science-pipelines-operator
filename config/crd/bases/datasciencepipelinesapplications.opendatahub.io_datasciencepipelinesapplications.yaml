@@ -526,11 +526,15 @@ spec:
                     type: boolean
                   externalStorage:
                     properties:
+                      basePath:
+                        type: string
                       bucket:
                         type: string
                       host:
                         type: string
                       port:
+                        type: string
+                      region:
                         type: string
                       s3CredentialsSecret:
                         properties:

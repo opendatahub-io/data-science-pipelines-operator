@@ -6,7 +6,8 @@ spec:
   objectStorage:
     externalStorage:
       bucket: rhods-dsp-dev
-      host: s3.amazonaws.com
+      host: s3.us-east-2.amazonaws.com
+      region: us-east-2
       s3CredentialsSecret:
         accessKey: k8saccesskey
         secretKey: k8ssecretkey

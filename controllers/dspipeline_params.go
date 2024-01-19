@@ -76,6 +76,8 @@ type ObjectStorageConnection struct {
 	Host              string
 	Port              string
 	Scheme            string
+	Region            string
+	BasePath          string
 	Secure            *bool
 	Endpoint          string // scheme://host:port
 	AccessKeyID       string
@@ -287,6 +289,11 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 		p.ObjectStorageConnection.Bucket = dsp.Spec.ObjectStorage.ExternalStorage.Bucket
 		p.ObjectStorageConnection.Host = dsp.Spec.ObjectStorage.ExternalStorage.Host
 		p.ObjectStorageConnection.Scheme = dsp.Spec.ObjectStorage.ExternalStorage.Scheme
+		p.ObjectStorageConnection.BasePath = dsp.Spec.ObjectStorage.ExternalStorage.BasePath
+		p.ObjectStorageConnection.Region = dsp.Spec.ObjectStorage.ExternalStorage.Region
+		if p.ObjectStorageConnection.Region == "" {
+			p.ObjectStorageConnection.Region = "auto"
+		}
 
 		if dsp.Spec.ObjectStorage.ExternalStorage.Secure == nil {
 			if p.ObjectStorageConnection.Scheme == "https" {
@@ -342,6 +349,7 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 		p.ObjectStorageConnection.Port = config.MinioPort
 		p.ObjectStorageConnection.Scheme = config.MinioScheme
 		p.ObjectStorageConnection.Secure = util.BoolPointer(false)
+		p.ObjectStorageConnection.Region = "minio"
 
 		if p.Minio.S3CredentialSecret != nil {
 			p.ObjectStorageConnection.CredentialsSecret = p.Minio.S3CredentialSecret
