@@ -60,6 +60,8 @@ env:
   IMAGE_REPO_SWF: ds-pipelines-scheduledworkflow
   IMAGE_REPO_VC: ds-pipelines-viewercontroller
   IMAGE_REPO_ARTIFACT: ds-pipelines-artifact-manager
+  IMAGE_REPO_LAUNCHER: ds-pipelines-launcher
+  IMAGE_REPO_DRIVER: ds-pipelines-driver
   IMAGE_REPO_MLMD_WRITER: ds-pipelines-metadata-writer
   IMAGE_REPO_MLMD_ENVOY: ds-pipelines-metadata-envoy
   IMAGE_REPO_MLMD_GRPC: ds-pipelines-metadata-grpc
@@ -168,7 +170,7 @@ jobs:
           GH_REPO: ${{ inputs.dsp_org_repo }}
           OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
 
-  ARTIFACT-build:
+  DRIVER-build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -177,12 +179,12 @@ jobs:
       - uses: ./.github/actions/build
         name: Build Image
         with:
-          IMAGE_REPO: ${{ env.IMAGE_REPO_ARTIFACT }}
-          DOCKERFILE: backend/artifact_manager/Dockerfile
+          IMAGE_REPO: ${{ env.IMAGE_REPO_DRIVER }}
+          DOCKERFILE: backend/Dockerfile.driver
           GH_REPO: ${{ inputs.dsp_org_repo }}
           OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
 
-  MLMD_WRITER-build:
+  LAUNCHER-build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -191,8 +193,8 @@ jobs:
       - uses: ./.github/actions/build
         name: Build Image
         with:
-          IMAGE_REPO: ${{ env.IMAGE_REPO_MLMD_WRITER }}
-          DOCKERFILE: backend/metadata_writer/Dockerfile
+          IMAGE_REPO: ${{ env.IMAGE_REPO_LAUNCHER }}
+          DOCKERFILE: backend/Dockerfile.launcher
           GH_REPO: ${{ inputs.dsp_org_repo }}
           OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
 
