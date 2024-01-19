@@ -17,7 +17,7 @@ resources:
 - configmap.workflow-controller-configmap.yaml
 - deployment.argo-server.yaml
 # - deployment.workflow-controller.yaml
-- priorityclass.yaml
+# - priorityclass.yaml
 - role.argo.yaml
 - rolebinding.argo-binding.yaml
 - service.argo-server.yaml
@@ -28,7 +28,6 @@ resources:
 - crd.applications.yaml
 - crd.clusterworkflowtemplates.yaml
 - crd.cronworkflows.yaml
-- crd.scheduledworkflows.yaml
 - crd.viewers.yaml
 - crd.workfloweventbinding.yaml
 - crd.workflows.yaml

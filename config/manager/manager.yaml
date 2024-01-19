@@ -79,6 +79,8 @@ spec:
             value: $(IMAGESV2_ARGO_MLMDGRPC)
           - name: IMAGESV2_ARGO_WORKFLOWCONTROLLER
             value: $(IMAGESV2_ARGO_WORKFLOWCONTROLLER)
+          - name: IMAGESV2_ARGO_ARGOEXEC
+            value: $(IMAGESV2_ARGO_ARGOEXEC)
           - name: V2_LAUNCHER_IMAGE
             value: $(V2_LAUNCHER_IMAGE)
           - name: V2_DRIVER_IMAGE

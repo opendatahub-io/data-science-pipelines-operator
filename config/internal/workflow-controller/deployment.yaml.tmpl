@@ -28,7 +28,7 @@ spec:
         - --configmap
         - ds-pipeline-workflow-controller-{{.Name}}
         - --executor-image
-        - gcr.io/ml-pipeline/argoexec:v3.3.10-license-compliance
+        - {{ .WorkflowController.ArgoExecImage }}
         - --namespaced
         command:
         - workflow-controller
@@ -38,7 +38,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.name
-        image: gcr.io/ml-pipeline/workflow-controller:v3.3.10-license-compliance # TODO
+        image: {{ .WorkflowController.Image }}
         livenessProbe:
           failureThreshold: 3
           httpGet:
@@ -65,7 +65,6 @@ spec:
           runAsNonRoot: true
       nodeSelector:
         kubernetes.io/os: linux
-      priorityClassName: ds-pipelines-workflow-controller-priorityclass
       securityContext:
         runAsNonRoot: true
       serviceAccountName: ds-pipeline-workflow-controller-{{.Name}}
