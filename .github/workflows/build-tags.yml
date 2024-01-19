@@ -240,7 +240,7 @@ jobs:
           SOURCE_BRANCH: ${{ env.SOURCE_DSP_BRANCH }}
         with:
           IMAGE_REPO: ${{ env.IMAGE_REPO_MLMD_GRPC }}
-          DOCKERFILE: third-party/ml-metadata/Dockerfile
+          DOCKERFILE: third_party/ml-metadata/Dockerfile
           GH_REPO: ${{ inputs.dsp_org_repo }}
           OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
 
@@ -256,6 +256,6 @@ jobs:
           SOURCE_BRANCH: ${{ env.SOURCE_DSP_BRANCH }}
         with:
           IMAGE_REPO: ${{ env.IMAGE_REPO_MLMD_ENVOY }}
-          DOCKERFILE: third-party/metadata_envoy/Dockerfile
+          DOCKERFILE: third_party/metadata_envoy/Dockerfile
           GH_REPO: ${{ inputs.dsp_org_repo }}
           OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
