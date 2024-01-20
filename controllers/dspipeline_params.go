@@ -551,7 +551,23 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		setResourcesDefault(config.MlPipelineUIResourceRequirements, &p.MlPipelineUI.Resources)
 	}
 
-	// TODO (gfrasca): believe we need to set default WorkflowController Images here
+	// If user did not specify WorkflowController
+	if dsp.Spec.WorkflowController == nil {
+		dsp.Spec.WorkflowController = &dspa.WorkflowController{
+			Deploy: false,
+		}
+		if p.UsingV2Pipelines(dsp) {
+			dsp.Spec.WorkflowController.Deploy = true
+		}
+	}
+	p.WorkflowController = dsp.Spec.WorkflowController.DeepCopy()
+
+	if p.WorkflowController != nil {
+		argoWorkflowImageFromConfig := config.GetStringConfigWithDefault(config.ArgoWorkflowControllerImagePath, config.DefaultImageValue)
+		argoExecImageFromConfig := config.GetStringConfigWithDefault(config.ArgoExecImagePath, config.DefaultImageValue)
+		setStringDefault(argoWorkflowImageFromConfig, &p.WorkflowController.Image)
+		setStringDefault(argoExecImageFromConfig, &p.WorkflowController.ArgoExecImage)
+	}
 
 	err := p.SetupMLMD(ctx, dsp, client, log)
 	if err != nil {

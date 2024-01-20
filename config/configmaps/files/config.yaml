@@ -22,6 +22,7 @@ ImagesV2:
     MlmdEnvoy: $(IMAGESV2_ARGO_MLMDENVOY)
     MlmdGRPC: $(IMAGESV2_ARGO_MLMDGRPC)
     WorkflowController: $(IMAGESV2_ARGO_WORKFLOWCONTROLLER)
+    ArgoExecImage: $(IMAGESV2_ARGO_ARGOEXEC)
     ArgoLauncherImage: $(V2_LAUNCHER_IMAGE)
     ArgoDriverImage: $(V2_DRIVER_IMAGE)
 DSPO:

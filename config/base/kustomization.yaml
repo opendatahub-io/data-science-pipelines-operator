@@ -196,6 +196,13 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.IMAGESV2_ARGO_MLMDGRPC
+  - name: IMAGESV2_ARGO_ARGOEXEC
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGESV2_ARGO_ARGOEXEC
   - name: IMAGESV2_ARGO_WORKFLOWCONTROLLER
     objref:
       kind: ConfigMap

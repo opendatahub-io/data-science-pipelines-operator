@@ -3,3 +3,8 @@ kind: Kustomization
 namespace: argo
 resources:
 - ../../argo
+
+images:
+- name: quay.io/argoproj/argocli
+  newName: quay.io/opendatahub/ds-pipelines-argo-server
+  newTag: 3.3.10-upstream

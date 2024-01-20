@@ -88,6 +88,8 @@ const (
 	ScheduledWorkflowImagePathV2Argo     = "ImagesV2.Argo.ScheduledWorkflow"
 	MlmdEnvoyImagePathV2Argo             = "ImagesV2.Argo.MlmdEnvoy"
 	MlmdGRPCImagePathV2Argo              = "ImagesV2.Argo.MlmdGRPC"
+	ArgoWorkflowControllerImagePath      = "ImagesV2.Argo.WorkflowController"
+	ArgoExecImagePath                    = "ImagesV2.Argo.ArgoExecImage"
 )
 
 // DSPV2-Tekton Image Paths

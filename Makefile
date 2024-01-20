@@ -199,6 +199,17 @@ undeploy-kind: ## Undeploy controller from the K8s cluster specified in ~/.kube/
 		&& kustomize edit set namespace ${OPERATOR_NS}
 	kustomize build config/overlays/kind-tests | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
+.PHONY: deployODH
+deployODH: manifests kustomize
+	cd config/overlays/make-deploy && $(KUSTOMIZE) edit set image controller=${IMG} && $(KUSTOMIZE) edit set namespace ${OPERATOR_NS}
+	$(KUSTOMIZE) build config/overlays/odh | kubectl apply -f -
+
+.PHONY: undeployODH
+undeployODH:
+	cd config/overlays/odh && $(KUSTOMIZE) edit set namespace ${OPERATOR_NS}
+	$(KUSTOMIZE) build config/overlays/odh | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+
+
 ##@ Build Dependencies
 
 ## Location to install dependencies to
