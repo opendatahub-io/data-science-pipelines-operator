@@ -52,6 +52,24 @@ spec:
               value: ds-pipeline-metadata-envoy-{{.Name}}
             - name: METADATA_ENVOY_SERVICE_SERVICE_PORT
               value: "9090"
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{.ObjectStorageConnection.CredentialsSecret.SecretName}}
+                  key: {{.ObjectStorageConnection.CredentialsSecret.AccessKey}}
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{.ObjectStorageConnection.CredentialsSecret.SecretName}}
+                  key: {{.ObjectStorageConnection.CredentialsSecret.SecretKey}}
+            - name: AWS_REGION
+              value: {{.ObjectStorageConnection.Region}}
+            - name: AWS_S3_ENDPOINT
+              value: {{.ObjectStorageConnection.Host}}
+            {{ if eq .ObjectStorageConnection.Scheme "http"}}
+            - name: AWS_SSL
+              value: "false"
+            {{ end }}
           image: {{.MlPipelineUI.Image}}
           imagePullPolicy: IfNotPresent
           livenessProbe:

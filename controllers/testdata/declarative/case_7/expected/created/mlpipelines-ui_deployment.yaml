@@ -53,6 +53,22 @@ spec:
               value: ds-pipeline-metadata-envoy-testdsp7
             - name: METADATA_ENVOY_SERVICE_SERVICE_PORT
               value: "9090"
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  key: "accesskey"
+                  name: "mlpipeline-minio-artifact"
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: "secretkey"
+                  name: "mlpipeline-minio-artifact"
+            - name: AWS_REGION
+              value: "minio"
+            - name: AWS_S3_ENDPOINT
+              value: "minio-testdsp7.default.svc.cluster.local"
+            - name: AWS_SSL
+              value: "false"
           image: frontend:test7
           imagePullPolicy: IfNotPresent
           livenessProbe:
