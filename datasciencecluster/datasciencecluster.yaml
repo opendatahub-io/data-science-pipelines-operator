@@ -4,9 +4,8 @@ metadata:
   name: data-science-pipelines-operator
 spec:
   components:
-    dashboard:
-      managementState: Managed
     datasciencepipelines:
+      managementState: Managed
       devFlags:
         manifests:
           - uri: https://github.com/opendatahub-io/data-science-pipelines-operator/tarball/main
