@@ -53,6 +53,22 @@ spec:
               value: ds-pipeline-metadata-envoy-testdsp5
             - name: METADATA_ENVOY_SERVICE_SERVICE_PORT
               value: "9090"
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  key: "accesskey"
+                  name: "ds-pipeline-s3-testdsp5"
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: "secretkey"
+                  name: "ds-pipeline-s3-testdsp5"
+            - name: AWS_REGION
+              value: "minio"
+            - name: AWS_S3_ENDPOINT
+              value: "minio-testdsp5.default.svc.cluster.local"
+            - name: AWS_SSL
+              value: "false"
           image: frontend:test5
           imagePullPolicy: IfNotPresent
           livenessProbe:
