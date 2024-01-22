@@ -55,7 +55,7 @@ OPERATOR_NS ?= opendatahub
 # Namespace to deploy v2 infrastructure
 V2INFRA_NS ?= openshift-pipelines
 # Namespace to deploy argo infrastructure
-ARGO_NS ?= argo
+ARGO_NS ?= opendatahub
 
 # Integration Test ENVvars
 KUBECONFIGPATH ?= $(HOME)/.kube/config
