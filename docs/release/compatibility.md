@@ -4,31 +4,16 @@
 This is an auto generated DSP version compatibility table.
 Each row outlines the versions for individual subcomponents and images that are leveraged within DSP.
 
-For some components, the versions match with their respective image tags within their respective Quay, GCR, or RedHat image
-registries, this is true for the following:
-
-* [ml-metadata]
-* [envoy]
-* [oauth-proxy]
-  * for Oauth Proxy DSP follows the same version digest as the Oauth Proxy leveraged within the rest of ODH.
-* [mariaDB]
-  * for MariaDB the entire column represents different tag versions for MariDB Version 10.3, DSP follows the latest digest for the `1` tag
-    for each DSP release.
-* [ubi-minimal]
-  * Used for default base images during Pipeline Runs
-* [ubi-micro]
-  * Used for default cache image for runs
-
-
-| dsp | kfp-tekton | ml-metadata | envoy | ocp-pipelines | oauth-proxy | mariadb-103 | ubi-minimal | ubi-micro | openshift |
-|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|
-| 1.0.x | 1.5.1 | 1.5.0 | 1.8.4 | 1.8 | v4.12 | 1 | 8.8 | 8.8 | 4.10,4.11,4.12 |
-| 1.1.x | 1.5.1 | 1.5.0 | 1.8.4 | 1.8 | v4.12 | 1 | 8.8 | 8.8 | 4.10,4.11,4.12 |
-| 1.2.x | 1.5.1 | 1.5.0 | 1.8.4 | 1.8 | v4.10 | 1 | 8.8 | 8.8 | 4.10,4.11,4.12 |
-| 1.3.x | 1.5.1 | 1.5.0 | 1.8.4 | 1.8 | v4.10 | 1 | 8.8 | 8.8 | 4.10,4.11,4.12 |
-| 1.4.x | 1.5.1 | 1.5.0 | 1.8.4 | 1.8 | v4.10 | 1 | 8.8 | 8.8 | 4.11,4.12,4.13 |
-| 1.5.x | 1.5.1 | 1.5.0 | 1.8.4 | 1.8 | v4.10 | 1 | 8.8 | 8.8 | 4.11,4.12,4.13 |
-| 1.6.x | 1.5.1 | 1.5.0 | 1.8.4 | 1.8 | v4.10 | 1 | 8.8 | 8.8 | 4.11,4.12,4.13 |
+| dsp | kfp | argo | ml-metadata | envoy | ocp-pipelines | oauth-proxy | mariadb-103 | ubi-minimal | ubi-micro | openshift |
+|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|
+| 1.0.x | 1.5.1 (tktn) | None | 1.5.0 | 1.8.4 | 1.8 | v4.12 | 1 | 8.8 | 8.8 | 4.10,4.11,4.12 |
+| 1.1.x | 1.5.1 (tktn) | None | 1.5.0 | 1.8.4 | 1.8 | v4.12 | 1 | 8.8 | 8.8 | 4.10,4.11,4.12 |
+| 1.2.x | 1.5.1 (tktn) | None | 1.5.0 | 1.8.4 | 1.8 | v4.10 | 1 | 8.8 | 8.8 | 4.10,4.11,4.12 |
+| 1.3.x | 1.5.1 (tktn) | None | 1.5.0 | 1.8.4 | 1.8 | v4.10 | 1 | 8.8 | 8.8 | 4.10,4.11,4.12 |
+| 1.4.x | 1.5.1 (tktn) | None | 1.5.0 | 1.8.4 | 1.8 | v4.10 | 1 | 8.8 | 8.8 | 4.11,4.12,4.13 |
+| 1.5.x | 1.5.1 (tktn) | None | 1.5.0 | 1.8.4 | 1.8 | v4.10 | 1 | 8.8 | 8.8 | 4.11,4.12,4.13 |
+| 1.6.x | 1.5.1 (tktn) | None | 1.5.0 | 1.8.4 | 1.8 | v4.10 | 1 | 8.8 | 8.8 | 4.11,4.12,4.13 |
+| 2.0-alpha-1 | 2.0.5 | 3.3.10 | 1.14.0 | 1.12.2 | N/A | v4.10 | 1 | N/A | N/A | 4.12,4.13,4.14 |
 
 
 
