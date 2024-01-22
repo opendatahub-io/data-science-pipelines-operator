@@ -1,5 +1,5 @@
 - dsp: 1.0.x
-  kfp-tekton: 1.5.1
+  kfp: 1.5.1 (tktn)
   argo:
   ml-metadata: 1.5.0
   envoy: 1.8.4
@@ -10,7 +10,7 @@
   ubi-micro: 8.8
   openshift: 4.10,4.11,4.12
 - dsp: 1.1.x
-  kfp-tekton: 1.5.1
+  kfp: 1.5.1 (tktn)
   argo:
   ml-metadata: 1.5.0
   envoy: 1.8.4
@@ -21,7 +21,7 @@
   ubi-micro: 8.8
   openshift: 4.10,4.11,4.12
 - dsp: 1.2.x
-  kfp-tekton: 1.5.1
+  kfp: 1.5.1 (tktn)
   argo:
   ml-metadata: 1.5.0
   envoy: 1.8.4
@@ -32,7 +32,7 @@
   ubi-micro: 8.8
   openshift: 4.10,4.11,4.12
 - dsp: 1.3.x
-  kfp-tekton: 1.5.1
+  kfp: 1.5.1 (tktn)
   argo:
   ml-metadata: 1.5.0
   envoy: 1.8.4
@@ -43,7 +43,7 @@
   ubi-micro: 8.8
   openshift: 4.10,4.11,4.12
 - dsp: 1.4.x
-  kfp-tekton: 1.5.1
+  kfp: 1.5.1 (tktn)
   argo:
   ml-metadata: 1.5.0
   envoy: 1.8.4
@@ -54,7 +54,7 @@
   ubi-micro: 8.8
   openshift: 4.11,4.12,4.13
 - dsp: 1.5.x
-  kfp-tekton: 1.5.1
+  kfp: 1.5.1 (tktn)
   argo:
   ml-metadata: 1.5.0
   envoy: 1.8.4
@@ -65,7 +65,7 @@
   ubi-micro: 8.8
   openshift: 4.11,4.12,4.13
 - dsp: 1.6.x
-  kfp-tekton: 1.5.1
+  kfp: 1.5.1 (tktn)
   argo:
   ml-metadata: 1.5.0
   envoy: 1.8.4
@@ -75,14 +75,14 @@
   ubi-minimal: 8.8
   ubi-micro: 8.8
   openshift: 4.11,4.12,4.13
-- dsp: 1.7.x
-  kfp-tekton: 1.5.1
+- dsp: 2.0-alpha-1
+  kfp: 2.0.5
   argo: 3.3.10
-  ml-metadata: 1.5.0
-  envoy: 2.0.2
-  ocp-pipelines: 1.8
+  ml-metadata: 1.14.0
+  envoy: 1.12.2
+  ocp-pipelines: "N/A"
   oauth-proxy: v4.10
   mariadb-103: 1
-  ubi-minimal: 8.7
-  ubi-micro: 8.7
+  ubi-minimal: "N/A"
+  ubi-micro: "N/A"
   openshift: 4.12,4.13,4.14

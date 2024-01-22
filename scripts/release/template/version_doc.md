@@ -3,22 +3,6 @@
 This is an auto generated DSP version compatibility table.
 Each row outlines the versions for individual subcomponents and images that are leveraged within DSP.
 
-For some components, the versions match with their respective image tags within their respective Quay, GCR, or RedHat image
-registries, this is true for the following:
-
-* [ml-metadata]
-* [envoy]
-* [oauth-proxy]
-  * for Oauth Proxy DSP follows the same version digest as the Oauth Proxy leveraged within the rest of ODH.
-* [mariaDB]
-  * for MariaDB the entire column represents different tag versions for MariDB Version 10.3, DSP follows the latest digest for the `1` tag
-    for each DSP release.
-* [ubi-minimal]
-  * Used for default base images during Pipeline Runs
-* [ubi-micro]
-  * Used for default cache image for runs
-
-
 <<GENERATED_COMPATIBILITY_TABLE>>
 
 
