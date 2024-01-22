@@ -71,10 +71,6 @@ spec:
               value: "minio-testdsp5.default.svc.cluster.local"
             - name: MINIO_SERVICE_SERVICE_PORT
               value: "9000"
-            - name: CACHE_IMAGE
-              value: "ubi-minimal:test5"
-            - name: MOVERESULTS_IMAGE
-              value: "busybox:test5"
             - name: V2_LAUNCHER_IMAGE
               value: "argolauncherimage:test5"
             - name: V2_DRIVER_IMAGE
@@ -89,6 +85,12 @@ spec:
               value: "8887"
             - name: EXECUTIONTYPE
               value: PipelineRun
+            - name: CACHE_IMAGE
+              value: "ubi-minimal:test5"
+            - name: MOVERESULTS_IMAGE
+              value: "busybox:test5"
+            - name: ARTIFACT_IMAGE
+              value: "artifact-manager:test5"
             - name: ARTIFACT_BUCKET
               value: "mlpipeline"
             - name: ARTIFACT_ENDPOINT
@@ -98,8 +100,6 @@ spec:
                 configMapKeyRef:
                   key: "artifact_script"
                   name: "ds-pipeline-artifact-script-testdsp5"
-            - name: ARTIFACT_IMAGE
-              value: "artifact-manager:test5"
             - name: ARCHIVE_LOGS
               value: "false"
             - name: TRACK_ARTIFACTS

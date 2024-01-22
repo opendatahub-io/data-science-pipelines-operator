@@ -63,16 +63,10 @@ spec:
             value: $(IMAGES_CRDVIEWER)
           - name: IMAGESV2_ARGO_APISERVER
             value: $(IMAGESV2_ARGO_APISERVER)
-          - name: IMAGESV2_ARGO_ARTIFACT
-            value: $(IMAGESV2_ARGO_ARTIFACT)
           - name: IMAGESV2_ARGO_PERSISTENCEAGENT
             value: $(IMAGESV2_ARGO_PERSISTENCEAGENT)
           - name: IMAGESV2_ARGO_SCHEDULEDWORKFLOW
             value: $(IMAGESV2_ARGO_SCHEDULEDWORKFLOW)
-          - name: IMAGESV2_ARGO_CACHE
-            value: $(IMAGESV2_ARGO_CACHE)
-          - name: IMAGESV2_ARGO_MOVERESULTSIMAGE
-            value: $(IMAGESV2_ARGO_MOVERESULTSIMAGE)
           - name: IMAGESV2_ARGO_MLMDENVOY
             value: $(IMAGESV2_ARGO_MLMDENVOY)
           - name: IMAGESV2_ARGO_MLMDGRPC

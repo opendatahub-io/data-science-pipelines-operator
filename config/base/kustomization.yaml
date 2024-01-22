@@ -112,6 +112,13 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.ZAP_LOG_LEVEL
+  - name: DSPO_REQUEUE_TIME
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.DSPO_REQUEUE_TIME
   - name: MAX_CONCURRENT_RECONCILES
     objref:
       kind: ConfigMap
@@ -147,13 +154,6 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.IMAGESV2_ARGO_APISERVER
-  - name: IMAGESV2_ARGO_ARTIFACT
-    objref:
-      kind: ConfigMap
-      name: dspo-parameters
-      apiVersion: v1
-    fieldref:
-      fieldpath: data.IMAGESV2_ARGO_ARTIFACT
   - name: IMAGESV2_ARGO_PERSISTENCEAGENT
     objref:
       kind: ConfigMap
@@ -168,20 +168,6 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.IMAGESV2_ARGO_SCHEDULEDWORKFLOW
-  - name: IMAGESV2_ARGO_CACHE
-    objref:
-      kind: ConfigMap
-      name: dspo-parameters
-      apiVersion: v1
-    fieldref:
-      fieldpath: data.IMAGESV2_ARGO_CACHE
-  - name: IMAGESV2_ARGO_MOVERESULTSIMAGE
-    objref:
-      kind: ConfigMap
-      name: dspo-parameters
-      apiVersion: v1
-    fieldref:
-      fieldpath: data.IMAGESV2_ARGO_MOVERESULTSIMAGE
   - name: IMAGESV2_ARGO_MLMDENVOY
     objref:
       kind: ConfigMap
