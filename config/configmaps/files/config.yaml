@@ -14,9 +14,6 @@ Images:
 ImagesV2:
   Argo:
     ApiServer: $(IMAGESV2_ARGO_APISERVER)
-    Artifact: $(IMAGESV2_ARGO_ARTIFACT)
-    Cache: $(IMAGESV2_ARGO_CACHE)
-    MoveResultsImage: $(IMAGESV2_ARGO_MOVERESULTSIMAGE)
     PersistentAgent: $(IMAGESV2_ARGO_PERSISTENCEAGENT)
     ScheduledWorkflow: $(IMAGESV2_ARGO_SCHEDULEDWORKFLOW)
     MlmdEnvoy: $(IMAGESV2_ARGO_MLMDENVOY)

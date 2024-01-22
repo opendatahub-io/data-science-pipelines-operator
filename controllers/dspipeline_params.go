@@ -488,9 +488,9 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 
 	if p.APIServer != nil {
 		APIServerImagePath := p.GetImageForComponent(dsp, config.APIServerImagePath, config.APIServerImagePathV2Argo, config.APIServerImagePathV2Tekton)
-		APIServerArtifactImagePath := p.GetImageForComponent(dsp, config.APIServerArtifactImagePath, config.APIServerArtifactImagePathV2Argo, config.APIServerArtifactImagePathV2Tekton)
-		APIServerCacheImagePath := p.GetImageForComponent(dsp, config.APIServerCacheImagePath, config.APIServerCacheImagePathV2Argo, config.APIServerCacheImagePathV2Tekton)
-		APIServerMoveResultsImagePath := p.GetImageForComponent(dsp, config.APIServerMoveResultsImagePath, config.APIServerMoveResultsImagePathV2Argo, config.APIServerMoveResultsImagePathV2Tekton)
+		APIServerArtifactImagePath := config.APIServerArtifactImagePath
+		APIServerCacheImagePath := config.APIServerCacheImagePath
+		APIServerMoveResultsImagePath := config.APIServerMoveResultsImagePath
 		APIServerArgoLauncherImagePath := config.APIServerArgoLauncherImagePathV2Argo
 		APIServerArgoDriverImagePath := config.APIServerArgoDriverImagePathV2Argo
 

@@ -83,10 +83,6 @@ spec:
               value: "{{.ObjectStorageConnection.Host}}"
             - name: MINIO_SERVICE_SERVICE_PORT
               value: "{{.ObjectStorageConnection.Port}}"
-            - name: CACHE_IMAGE
-              value: "{{.APIServer.CacheImage}}"
-            - name: MOVERESULTS_IMAGE
-              value: "{{.APIServer.MoveResultsImage}}"
             - name: V2_LAUNCHER_IMAGE
               value: "{{.APIServer.ArgoLauncherImage}}"
             - name: V2_DRIVER_IMAGE
@@ -96,7 +92,7 @@ spec:
             {{ if .MLMD.Deploy }}
             - name: METADATA_GRPC_SERVICE_SERVICE_HOST
               value: "ds-pipeline-metadata-grpc-{{.Name}}.{{.Namespace}}.svc.cluster.local"
-            {{ if.MLMD.GRPC.Port }}
+            {{ if .MLMD.GRPC.Port }}
             - name: METADATA_GRPC_SERVICE_SERVICE_PORT
               value: "{{.MLMD.GRPC.Port}}"
             {{ end }}
@@ -129,6 +125,12 @@ spec:
             ## Tekton-Specific Env Vars ##
             - name: EXECUTIONTYPE
               value: PipelineRun
+            - name: CACHE_IMAGE
+              value: "{{.APIServer.CacheImage}}"
+            - name: MOVERESULTS_IMAGE
+              value: "{{.APIServer.MoveResultsImage}}"
+            - name: ARTIFACT_IMAGE
+              value: "{{.APIServer.ArtifactImage}}"
             - name: ARTIFACT_BUCKET
               value: "{{.ObjectStorageConnection.Bucket}}"
             - name: ARTIFACT_ENDPOINT
@@ -138,8 +140,6 @@ spec:
                 configMapKeyRef:
                   key: "{{ .APIServer.ArtifactScriptConfigMap.Key }}"
                   name: "{{ .APIServer.ArtifactScriptConfigMap.Name }}"
-            - name: ARTIFACT_IMAGE
-              value: "{{.APIServer.ArtifactImage}}"
             - name: ARCHIVE_LOGS
               value: "{{.APIServer.ArchiveLogs}}"
             - name: TRACK_ARTIFACTS
