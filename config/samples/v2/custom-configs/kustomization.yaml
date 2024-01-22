@@ -3,6 +3,5 @@ kind: Kustomization
 resources:
   - dspa.yaml
   - db-creds.yaml
-  - artifact_script.yaml
   - storage-creds.yaml
   - ui-configmap.yaml

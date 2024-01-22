@@ -7,21 +7,12 @@ spec:
   apiServer:
     deploy: true
     image: gcr.io/ml-pipeline/api-server:2.0.2
-    applyTektonCustomResource: true
-    archiveLogs: false
-    artifactImage: quay.io/modh/odh-ml-pipelines-artifact-manager-container:v1.18.0-8
-    cacheImage: registry.access.redhat.com/ubi8/ubi-minimal
-    moveResultsImage: busybox
-    injectDefaultScript: true
     stripEOF: true
     terminateStatus: Cancelled
     trackArtifacts: true
     dbConfigConMaxLifetimeSec: 120
     collectMetrics: true
     autoUpdatePipelineDefaultVersion: true
-    artifactScriptConfigMap:
-      name: custom-artifact-script
-      key: "somekey"
     resources:
       requests:
         cpu: 250m
