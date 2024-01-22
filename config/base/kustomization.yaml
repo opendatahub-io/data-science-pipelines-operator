@@ -112,6 +112,13 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.ZAP_LOG_LEVEL
+  - name: DSPO_REQUEUE_TIME
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.DSPO_REQUEUE_TIME
   - name: MAX_CONCURRENT_RECONCILES
     objref:
       kind: ConfigMap
