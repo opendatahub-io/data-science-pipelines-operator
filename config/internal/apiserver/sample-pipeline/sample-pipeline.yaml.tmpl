@@ -97,7 +97,7 @@ data:
                 \    col_names = [\n        'Sepal_Length', 'Sepal_Width', 'Petal_Length',\
                 \ 'Petal_Width', 'Labels'\n    ]\n    df = pd.read_csv(csv_url, names=col_names)\n\
                 \n    with open(iris_dataset.path, 'w') as f:\n        df.to_csv(f)\n\n"
-              image: quay.io/rmartine/data-science:test9
+              image: quay.io/hukhan/iris-base:1
           exec-normalize-dataset:
             container:
               args:
@@ -135,7 +135,7 @@ data:
                 \    df['Labels'] = labels\n    normalized_iris_dataset.metadata['state']\
                 \ = \"Normalized\"\n    with open(normalized_iris_dataset.path, 'w') as\
                 \ f:\n        df.to_csv(f)\n\n"
-              image: quay.io/rmartine/data-science:test9
+              image: quay.io/hukhan/iris-base:1
           exec-train-model:
             container:
               args:
@@ -176,7 +176,7 @@ data:
                 \  # .tolist() to convert np array to list.\n    )\n\n    model.metadata['framework']\
                 \ = 'scikit-learn'\n    with open(model.path, 'wb') as f:\n        pickle.dump(clf,\
                 \ f)\n\n"
-              image: quay.io/rmartine/data-science:test9
+              image: quay.io/hukhan/iris-base:1
       pipelineInfo:
         name: iris-training-pipeline
       root:
