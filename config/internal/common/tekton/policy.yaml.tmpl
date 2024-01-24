@@ -64,6 +64,12 @@ spec:
             matchLabels:
               app: ds-pipeline-metadata-writer-{{.Name}}
               component: data-science-pipelines
+        - podSelector:
+            matchLabels:
+              opendatahub.io/dashboard: 'true'
+          namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{.Namespace}}
       ports:
         - protocol: TCP
           port: 8888
