@@ -5,7 +5,7 @@ metadata:
     app.kubernetes.io/component: webhook
     app.kubernetes.io/instance: default
     app.kubernetes.io/part-of: kfp-tekton
-  name: webhook-cluster-access-clusterrole
+  name: webhook-cluster-access
 rules:
 - apiGroups:
   - apiextensions.k8s.io

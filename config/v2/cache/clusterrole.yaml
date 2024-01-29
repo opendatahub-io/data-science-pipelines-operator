@@ -2,8 +2,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
-    app: cache-deployer-clusterrole
-  name: cache-deployer-clusterrole
+    app: cache-deployer
+  name: cache-deployer
 rules:
 - apiGroups:
   - certificates.k8s.io
