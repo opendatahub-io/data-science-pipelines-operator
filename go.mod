@@ -129,3 +129,5 @@ require (
 )
 
 replace google.golang.org/grpc => google.golang.org/grpc v1.56.3
+
+replace go.opentelemetry.io/contrib v0.20.0 => go.opentelemetry.io/contrib v0.44.0
