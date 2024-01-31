@@ -128,8 +128,9 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-replace google.golang.org/grpc => google.golang.org/grpc v1.56.3
-
-replace go.opentelemetry.io/contrib v0.20.0 => go.opentelemetry.io/contrib v0.44.0
-
-replace github.com/openshift/api v0.0.0-20231118005202-0f638a8a4705 => github.com/openshift/api v0.0.0-20231118005202-0f638a8a4705
+replace (
+	github.com/gin-gonic/gin v1.7.3 => github.com/gin-gonic/gin v1.9.1
+	github.com/openshift/api v0.0.0-20231118005202-0f638a8a4705 => github.com/openshift/api v0.0.0-20231118005202-0f638a8a4705
+	go.opentelemetry.io/contrib v0.20.0 => go.opentelemetry.io/contrib v0.44.0
+	google.golang.org/grpc => google.golang.org/grpc v1.56.3
+)
