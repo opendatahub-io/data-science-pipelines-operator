@@ -2,6 +2,8 @@ name: Trigger build images for PRs
 on:
   pull_request:
     paths:
+      - go.mod
+      - go.sum
       - controllers/**
       - api/**
       - config/**
