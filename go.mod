@@ -14,13 +14,13 @@ require (
 	github.com/minio/minio-go/v7 v7.0.56
 	github.com/onsi/ginkgo/v2 v2.8.4
 	github.com/onsi/gomega v1.27.1
-	github.com/openshift/api v3.9.0+incompatible
+	github.com/openshift/api v0.0.0-20231118005202-0f638a8a4705
 	github.com/prometheus/client_golang v1.12.2
 	github.com/spf13/viper v1.8.1
 	github.com/stretchr/testify v1.8.3
 	go.uber.org/zap v1.21.0
-	k8s.io/api v0.25.0
-	k8s.io/apimachinery v0.25.0
+	k8s.io/api v0.26.1
+	k8s.io/apimachinery v0.26.1
 	k8s.io/client-go v0.25.0
 	sigs.k8s.io/controller-runtime v0.13.0
 )
@@ -118,9 +118,9 @@ require (
 	k8s.io/apiextensions-apiserver v0.25.0 // indirect
 	k8s.io/cli-runtime v0.24.17 // indirect
 	k8s.io/component-base v0.25.0 // indirect
-	k8s.io/klog/v2 v2.70.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20220803162953-67bda5d908f1 // indirect
-	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed // indirect
+	k8s.io/klog/v2 v2.80.1 // indirect
+	k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280 // indirect
+	k8s.io/utils v0.0.0-20221107191617-1a15be271d1d // indirect
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
 	sigs.k8s.io/kustomize/api v0.11.4 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.13.6 // indirect
@@ -128,7 +128,8 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-replace (
-	go.opentelemetry.io/contrib v0.20.0 => go.opentelemetry.io/contrib v0.44.0
-	google.golang.org/grpc => google.golang.org/grpc v1.56.3
-)
+replace google.golang.org/grpc => google.golang.org/grpc v1.56.3
+
+replace go.opentelemetry.io/contrib v0.20.0 => go.opentelemetry.io/contrib v0.44.0
+
+replace github.com/openshift/api v0.0.0-20231118005202-0f638a8a4705 => github.com/openshift/api v0.0.0-20231118005202-0f638a8a4705
