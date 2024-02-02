@@ -28,7 +28,7 @@ import (
 
 var _ = Describe("A successfully deployed DSPA", func() {
 	It("Should successfully fetch experiments.", func() {
-		response, err := http.Get(fmt.Sprintf("%s/apis/v1beta1/experiments", APIServerURL))
+		response, err := http.Get(fmt.Sprintf("%s/apis/v2beta1/experiments", APIServerURL))
 		Expect(err).ToNot(HaveOccurred())
 		responseData, err := ioutil.ReadAll(response.Body)
 		loggr.Info(string(responseData))
