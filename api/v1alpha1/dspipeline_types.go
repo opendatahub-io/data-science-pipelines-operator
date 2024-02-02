@@ -268,14 +268,12 @@ type MLMD struct {
 
 type Envoy struct {
 	Resources *ResourceRequirements `json:"resources,omitempty"`
-	// +kubebuilder:validation:Required
-	Image string `json:"image"`
+	Image     string                `json:"image,omitempty"`
 }
 
 type GRPC struct {
 	Resources *ResourceRequirements `json:"resources,omitempty"`
-	// +kubebuilder:validation:Required
-	Image string `json:"image"`
+	Image     string                `json:"image,omitempty"`
 	// +kubebuilder:validation:Optional
 	Port string `json:"port"`
 }
