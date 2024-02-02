@@ -29,7 +29,7 @@ import (
 
 var _ = Describe("A successfully deployed API Server", func() {
 	It("Should successfully fetch pipelines.", func() {
-		response, err := http.Get(fmt.Sprintf("%s/apis/v1beta1/pipelines", APIServerURL))
+		response, err := http.Get(fmt.Sprintf("%s/apis/v2beta1/pipelines", APIServerURL))
 		Expect(err).ToNot(HaveOccurred())
 
 		responseData, err := ioutil.ReadAll(response.Body)
@@ -39,7 +39,7 @@ var _ = Describe("A successfully deployed API Server", func() {
 	})
 
 	It("Should successfully upload a pipeline.", func() {
-		postUrl := fmt.Sprintf("%s/apis/v1beta1/pipelines/upload", APIServerURL)
+		postUrl := fmt.Sprintf("%s/apis/v2beta1/pipelines/upload", APIServerURL)
 		vals := map[string]string{
 			"uploadfile": "@resources/test-pipeline-run.yaml",
 		}
