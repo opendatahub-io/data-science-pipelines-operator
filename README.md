@@ -182,14 +182,14 @@ components, your DB and Storage configurations, and so forth. For now, we'll use
 inspect this sample resource to see other configurable options.
 
 ```bash
-cd ${WORKING_DIR}/config/samples
+cd ${WORKING_DIR}/config/samples/v2/dspa-simple
 kustomize build . | oc -n ${DSP_Namespace} apply -f -
 ```
 
 > Note: the sample CR used here deploys a minio instance so DSP may work out of the box
 > this is unsupported in production environments and we recommend to provide your own 
 > object storage connection details via spec.objectStorage.externalStorage
-> see ${WORKING_DIR}/config/samples/dspa_simple_external_storage.yaml for an example.
+> see ${WORKING_DIR}/config/samples/v2/external-object-storage/dspa.yaml for an example.
 
 Confirm all pods reach ready state by running: 
 
@@ -207,7 +207,7 @@ we deployed a `DataSciencePipelinesApplication` resource named `sample`. We can 
 ```bash
 DSP_Namespace_2=test-ds-project-2
 oc new-project ${DSP_Namespace_2}
-cd ${WORKING_DIR}/config/samples
+cd ${WORKING_DIR}/config/samples/v2/dspa-simple
 kustomize build . | oc -n ${DSP_Namespace_2} apply -f -
 ```
 
@@ -220,7 +220,7 @@ you can simply investigate and deploy the following path:
 ```bash
 DSP_Namespace_3=test-ds-project-3
 oc new-project ${DSP_Namespace_3}
-cd ${WORKING_DIR}/config/samples/custom-configs
+cd ${WORKING_DIR}/config/samples/v2/custom-configs
 kustomize build . | oc -n ${DSP_Namespace_3} apply -f -
 ```
 
@@ -232,16 +232,16 @@ These can be configured by the end user as needed.
 ### Deploy a DSP with external Object Storage
 
 To specify a custom Object Storage (example an AWS s3 bucket) you will need to provide DSPO with your S3 credentials in 
-the form of a k8s `Secret`, see an example of such a secret here `config/samples/external-object-storage/storage-creds.yaml`.
+the form of a k8s `Secret`, see an example of such a secret here `config/samples/v2/external-object-storage/storage-creds.yaml`.
 
 DSPO can deploy a DSPA instance and use this S3 bucket for storing its metadata and pipeline artifacts. A sample 
-configuration for a DSPA that does this is found in `config/samples/external-object-storage`, you can update this as 
+configuration for a DSPA that does this is found in `config/samples/v2/external-object-storage`, you can update this as 
 needed, and deploy this DSPA by running the following:
 
 ```bash
 DSP_Namespace_3=test-ds-project-4
 oc new-project ${DSP_Namespace_4}
-cd ${WORKING_DIR}/config/samples/external-object-storage
+cd ${WORKING_DIR}/config/samples/v2/external-object-storage
 kustomize build . | oc -n ${DSP_Namespace_3} apply -f -
 ```
 
@@ -264,7 +264,7 @@ To understand how these components interact with each other please refer to the 
 ## Deploying Optional Components
 
 ### MariaDB
-To deploy a standalone MariaDB metadata database (rather than providing your own database connection details), simply add a `mariaDB` item under the `spec.database` in your DSPA definition with an `deploy` key set to `true`.  All other fields are defaultable/optional, see [All Fields DSPA Example](./config/samples/dspa_all_fields.yaml) for full details.  Note that this component is mutually exclusive with externally-provided databases (defined by `spec.database.externalDB`).
+To deploy a standalone MariaDB metadata database (rather than providing your own database connection details), simply add a `mariaDB` item under the `spec.database` in your DSPA definition with an `deploy` key set to `true`.  All other fields are defaultable/optional, see [All Fields DSPA Example](config/samples/v2/dspa-all-fields/dspa_all_fields.yaml) for full details.  Note that this component is mutually exclusive with externally-provided databases (defined by `spec.database.externalDB`).
 
 ```
 apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
@@ -280,7 +280,7 @@ spec:
 ```
 
 ### Minio
-To deploy a Minio Object Storage component (rather than providing your own object storage connection details), simply add a `minio` item under the `spec.objectStorage` in your DSPA definition with an `image` key set to a valid minio component container image.  All other fields are defaultable/optional, see [All Fields DSPA Example](./config/samples/dspa_all_fields.yaml) for full details.  Note that this component is mutually exclusive with externally-provided object stores (defined by `spec.objectStorage.externalStorage`).
+To deploy a Minio Object Storage component (rather than providing your own object storage connection details), simply add a `minio` item under the `spec.objectStorage` in your DSPA definition with an `image` key set to a valid minio component container image.  All other fields are defaultable/optional, see [All Fields DSPA Example](config/samples/v2/dspa-all-fields/dspa_all_fields.yaml) for full details.  Note that this component is mutually exclusive with externally-provided object stores (defined by `spec.objectStorage.externalStorage`).
 
 ```
 apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
@@ -297,7 +297,7 @@ spec:
 ```
 
 ### ML Pipelines UI
-To deploy the standalone DS Pipelines UI component, simply add a `spec.mlpipelineUI` item to your DSPA with an `image` key set to a valid ui component container image.  All other fields are defaultable/optional, see [All Fields DSPA Example](./config/samples/dspa_all_fields.yaml) for full details.
+To deploy the standalone DS Pipelines UI component, simply add a `spec.mlpipelineUI` item to your DSPA with an `image` key set to a valid ui component container image.  All other fields are defaultable/optional, see [All Fields DSPA Example](config/samples/v2/dspa-all-fields/dspa_all_fields.yaml) for full details.
 
 ```
 apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
@@ -314,7 +314,7 @@ spec:
 
 
 ### ML Metadata
-To deploy the ML Metadata artifact linage/metadata component, simply add a `spec.mlmd` item to your DSPA with `deploy` set to `true`.  All other fields are defaultable/optional, see [All Fields DSPA Example](./config/samples/dspa_all_fields.yaml) for full details.
+To deploy the ML Metadata artifact linage/metadata component, simply add a `spec.mlmd` item to your DSPA with `deploy` set to `true`.  All other fields are defaultable/optional, see [All Fields DSPA Example](config/samples/v2/dspa-all-fields/dspa_all_fields.yaml) for full details.
 
 ```
 apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
@@ -643,6 +643,6 @@ Refer to this [repo][kubeflow-pipelines-examples] to see examples of different p
 [thirdparty-images]: https://github.com/opendatahub-io/data-science-pipelines/tree/master/third-party
 [pre-commit-installation]: https://pre-commit.com/
 [kubebuilder-docs]: https://book.kubebuilder.io/
-[dspa-yaml]: https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/config/samples/dspa_all_fields.yaml#L77
-[sample-yaml]: https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/config/samples/dspa_simple.yaml
+[dspa-yaml]: https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/config/samples/v2/dspa-all-fields/dspa_all_fields.yaml#L77
+[sample-yaml]: https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/config/samples/v2/dspa-simple/dspa_simple.yaml
 [kubeflow-pipelines-examples]: https://github.com/rh-datascience-and-edge-practice/kubeflow-pipelines-examples 
