@@ -200,5 +200,7 @@ var _ = AfterSuite(func() {
 	if !skipCleanup {
 		systemsTesttUtil.DeleteDSPA(ctx, clientmgr.k8sClient, DSPA.Name, DSPANamespace, DeployTimeout, PollInterval)
 	}
-	forwarderResult.Close()
+	if forwarderResult != nil {
+		forwarderResult.Close()
+	}
 })
