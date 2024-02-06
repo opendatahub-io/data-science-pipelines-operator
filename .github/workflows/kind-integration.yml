@@ -85,13 +85,26 @@ jobs:
         run: |
           kubectl create namespace ${{ env.DSPA_NAMESPACE }}
 
-      - name: Run tests
-        working-directory: ${{ github.workspace }}
-        env:
-          NAMESPACE: ${{ env.DSPA_NAMESPACE }}
-          DSPA_NAME: ${{ env.DSPA_NAME }}
+      - name: Debugger
+        working-directory: ${{ github.workspace }}/tests/resources
         run: |
-          make integrationtest K8SAPISERVERHOST=$(oc whoami --show-server) DSPANAMESPACE=${NAMESPACE}
+          kubectl -n ${{ env.DSPA_NAMESPACE }} apply -f dspa-lite.yaml
+          secs=300
+          endTime=$(( $(date +%s) + secs )) # Calculate end time.
+          
+          while [ $(date +%s) -lt $endTime ]; do
+            oc  -n ${{ env.DSPA_NAMESPACE }} get dspa test-dspa -o yaml | yq .status
+            oc  -n ${{ env.DSPA_NAMESPACE }} get pods 
+            sleep 5s
+          done
+#
+#      - name: Run tests
+#        working-directory: ${{ github.workspace }}
+#        env:
+#          NAMESPACE: ${{ env.DSPA_NAMESPACE }}
+#          DSPA_NAME: ${{ env.DSPA_NAME }}
+#        run: |
+#          make integrationtest K8SAPISERVERHOST=$(oc whoami --show-server) DSPANAMESPACE=${NAMESPACE}
 
       - name: Clean up
         run: |
