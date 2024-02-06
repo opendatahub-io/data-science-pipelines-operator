@@ -53,9 +53,10 @@ To get started you will first need to satisfy the following pre-requisites:
 ## Pre-requisites
 1. An OpenShift cluster that is 4.11 or higher.
 2. You will need to be logged into this cluster as [cluster admin] via [oc client].
-3. The OpenShift Cluster must have OpenShift Pipelines 1.8 or higher installed. We recommend channel pipelines-1.8
-   on OCP 4.10 and pipelines-1.9 or pipelines-1.10 for OCP 4.11, 4.12 and 4.13.
-   Instructions [here][OCP Pipelines Operator].
+3. Based on which DSP version to install you will need to do the following:
+   1. For DSPv1: The OpenShift Cluster must have OpenShift Pipelines 1.8 or higher installed. We recommend channel pipelines-1.8
+      on OCP 4.10 and pipelines-1.9 or pipelines-1.10 for OCP 4.11, 4.12 and 4.13. Instructions [here][OCP Pipelines Operator].
+   2. For DSPv2: The OpenShift Cluster must be Argo Workflows installed. You can follow the steps listed in the standalone deployment section [here](#deploy-the-operator-standalone).
 4. Based on installation type you will need one of the following:
    1. For Standalone method: You will need to have [Kustomize] version 4.5+ installed
    2. For ODH method: The Open Data Hub operator needs to be installed. You can install it via [OperatorHub][installodh].
@@ -153,6 +154,13 @@ oc new-project ${ODH_NS}
 
 Now we will navigate to the DSPO manifests then build and deploy them to this namespace.
 
+If you wish to deploy Argo Workflows, run the following commands:
+```bash
+cd ${WORKING_DIR}
+make argodeploy OPERATOR_NS=${ODH_NS}
+```
+
+If not, build DSPO manifests directly:
 ```bash
 cd ${WORKING_DIR}
 make deploy OPERATOR_NS=${ODH_NS}
