@@ -29,7 +29,7 @@ import (
 
 var _ = Describe("A successfully deployed DSPA", func() {
 
-	podCount := 5
+	podCount := 8
 
 	Context("with default MariaDB and Minio", func() {
 		It(fmt.Sprintf("should have %d pods", podCount), func() {
@@ -57,7 +57,5 @@ var _ = Describe("A successfully deployed DSPA", func() {
 		It(fmt.Sprintf("should have a ready %s deployment", "Minio"), func() {
 			systemsTesttUtil.TestForSuccessfulDeployment(ctx, DSPANamespace, fmt.Sprintf("minio-%s", DSPA.Name), clientmgr.k8sClient)
 		})
-
 	})
-
 })

@@ -46,6 +46,13 @@ rules:
   verbs:
   - '*'
 - apiGroups:
+  - argoproj.io
+  resources:
+  - workflowtaskresults
+  verbs:
+  - create
+  - patch
+- apiGroups:
   - authentication.k8s.io
   resources:
   - tokenreviews

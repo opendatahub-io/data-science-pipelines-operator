@@ -158,6 +158,7 @@ func (r *DSPAReconciler) buildCondition(conditionType string, dspa *dspav1alpha1
 //+kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=snapshot.storage.k8s.io,resources=volumesnapshots,verbs=create;delete;get
 //+kubebuilder:rbac:groups=argoproj.io,resources=workflows,verbs=*
+//+kubebuilder:rbac:groups=argoproj.io,resources=workflowtaskresults,verbs=create;patch
 //+kubebuilder:rbac:groups=core,resources=pods;pods/exec;pods/log;services,verbs=*
 //+kubebuilder:rbac:groups=core;apps;extensions,resources=deployments;replicasets,verbs=*
 //+kubebuilder:rbac:groups=kubeflow.org,resources=*,verbs=*
@@ -296,7 +297,6 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-
 	}
 
 	log.Info("Updating CR status")

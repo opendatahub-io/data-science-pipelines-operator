@@ -39,6 +39,13 @@ rules:
   - apiGroups:
       - argoproj.io
     resources:
+      - workflowtaskresults
+    verbs:
+      - create
+      - patch
+  - apiGroups:
+      - argoproj.io
+    resources:
       - workflows
     verbs:
       - get
