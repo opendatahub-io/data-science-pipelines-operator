@@ -121,6 +121,7 @@ jobs:
           cd data-science-pipelines-operator/
           git fetch origin pull/${{ needs.fetch-data.outputs.pr_number }}/head
           git checkout -b pullrequest ${{ env.SOURCE_BRANCH }}
+          oc new-project opendatahub
           make deploy IMG="${{ env.IMG }}"
           ```
 
