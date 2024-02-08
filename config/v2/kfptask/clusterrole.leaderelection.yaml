@@ -4,7 +4,7 @@ metadata:
   labels:
     app.kubernetes.io/instance: default
     app.kubernetes.io/part-of: kfp-tekton
-  name: leader-election-clusterrole
+  name: leader-election
 rules:
 - apiGroups:
   - coordination.k8s.io
