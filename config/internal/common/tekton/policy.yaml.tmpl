@@ -6,7 +6,7 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      app: ds-pipeline-{{.Name}}
+      app: {{.APIServerDefaultResourceName}}
       component: data-science-pipelines
   policyTypes:
     - Ingress
