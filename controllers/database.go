@@ -54,7 +54,10 @@ var ConnectAndQueryDatabase = func(host, port, username, password, dbname string
 
 	testStatement := "SELECT 1;"
 	_, err = db.QueryContext(ctx, testStatement)
-	return err == nil, nil
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func (r *DSPAReconciler) isDatabaseAccessible(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,
@@ -80,7 +83,7 @@ func (r *DSPAReconciler) isDatabaseAccessible(ctx context.Context, dsp *dspav1al
 	decodePass, _ := b64.StdEncoding.DecodeString(params.DBConnection.Password)
 	dbConnectionTimeout := config.GetDurationConfigWithDefault(config.DBConnectionTimeoutConfigName, config.DefaultDBConnectionTimeout)
 
-	log.V(1).Info(fmt.Sprintf("Database Heath Check connection timeout: %s", dbConnectionTimeout))
+	log.V(1).Info(fmt.Sprintf("Attempting Database Heath Check connection (with timeout: %s)", dbConnectionTimeout))
 
 	dbHealthCheckPassed, err := ConnectAndQueryDatabase(params.DBConnection.Host,
 		params.DBConnection.Port,
@@ -90,8 +93,11 @@ func (r *DSPAReconciler) isDatabaseAccessible(ctx context.Context, dsp *dspav1al
 		dbConnectionTimeout)
 
 	if err != nil {
-		log.Info("Unable to connect to Database")
-	} else {
+		log.Info(fmt.Sprintf("Unable to connect to Database: %v", err))
+		return false, err
+	}
+
+	if dbHealthCheckPassed {
 		log.Info("Database Health Check Successful")
 	}
 
