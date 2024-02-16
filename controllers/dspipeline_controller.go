@@ -329,6 +329,13 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		util.GetConditionByType(config.CrReady, conditions):                CrReadyMetric,
 	}
 	r.PublishMetrics(dspa, metricsMap)
+
+	if !dspaPrereqsReady {
+		log.Info(fmt.Sprintf("Health check for Database or Object Store failed, retrying in %d seconds.", int(requeueTime.Seconds())))
+
+		return ctrl.Result{Requeue: true, RequeueAfter: requeueTime}, nil
+	}
+
 	return ctrl.Result{}, nil
 }
 

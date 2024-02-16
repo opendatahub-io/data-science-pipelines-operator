@@ -150,7 +150,7 @@ const DefaultObjStoreConnectionTimeout = time.Second * 15
 
 const DefaultMaxConcurrentReconciles = 10
 
-const DefaultRequeueTime = 2 * time.Minute
+const DefaultRequeueTime = time.Second * 20
 
 func GetConfigRequiredFields() []string {
 	return requiredFields
