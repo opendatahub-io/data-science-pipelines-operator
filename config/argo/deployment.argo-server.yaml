@@ -17,7 +17,7 @@ spec:
       - args:
         - server
         env: []
-        image: quay.io/argoproj/argocli:v3.4.12
+        image: $(IMAGES_ARGO_SERVER)
         name: argo-server
         ports:
         - containerPort: 2746

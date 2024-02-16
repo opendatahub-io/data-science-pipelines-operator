@@ -4,6 +4,11 @@ namespace: opendatahub
 resources:
 - ../../argo
 
+# This patch is to override the `$(IMAGES_ARGO_SERVER)` param in config/argo
+# It is then overwridden by the `images` field further down, allowing us patch
+# the image from this overlays root kustomization `images` field.
+patchesStrategicMerge:
+- argo-server-image-patch.yaml
 images:
 - name: quay.io/argoproj/argocli
   newName: quay.io/opendatahub/ds-pipelines-argo-server
