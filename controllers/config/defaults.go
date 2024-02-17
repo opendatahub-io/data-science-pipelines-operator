@@ -51,7 +51,8 @@ const (
 	ObjectStorageAccessKey  = "accesskey"
 	ObjectStorageSecretKey  = "secretkey"
 
-	MlmdGrpcPort = "8080"
+	MlmdGrpcPort          = "8080"
+	RequeueTimeConfigName = "DSPO.RequeueTime"
 )
 
 // DSPO Config File Paths
@@ -113,6 +114,8 @@ const DefaultObjStoreConnectionTimeout = time.Second * 15
 
 const DefaultMaxConcurrentReconciles = 10
 
+const DefaultRequeueTime = time.Second * 20
+
 func GetConfigRequiredFields() []string {
 	return requiredFields
 }
@@ -148,4 +151,11 @@ func GetStringConfigWithDefault(configName, value string) string {
 		return value
 	}
 	return viper.GetString(configName)
+}
+
+func GetDurationConfigWithDefault(configName string, value time.Duration) time.Duration {
+	if !viper.IsSet(configName) {
+		return value
+	}
+	return viper.GetDuration(configName)
 }

@@ -19,9 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"time"
-
 	"github.com/go-logr/logr"
 	mf "github.com/manifestival/manifestival"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
@@ -38,6 +35,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -172,7 +170,6 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		log.Error(err, "Encountered error when fetching DSPA")
 		return ctrl.Result{}, err
 	}
-
 	// FixMe: Hack for stubbing gvk during tests as these are not populated by test suite
 	// https://github.com/opendatahub-io/data-science-pipelines-operator/pull/7#discussion_r1102887037
 	// In production we expect these to be populated
@@ -207,10 +204,11 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, nil
 	}
 
+	requeueTime := config.GetDurationConfigWithDefault(config.RequeueTimeConfigName, config.DefaultRequeueTime)
 	err = params.ExtractParams(ctx, dspa, r.Client, r.Log)
 	if err != nil {
 		log.Info(fmt.Sprintf("Encountered error when parsing CR: [%s]", err))
-		return ctrl.Result{Requeue: true, RequeueAfter: 2 * time.Minute}, nil
+		return ctrl.Result{Requeue: true, RequeueAfter: requeueTime}, nil
 	}
 
 	err = r.ReconcileDatabase(ctx, dspa, params)
@@ -291,6 +289,10 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		util.GetConditionByType(config.CrReady, conditions):                CrReadyMetric,
 	}
 	r.PublishMetrics(dspa, metricsMap)
+	if !dspaPrereqsReady {
+		log.Info(fmt.Sprintf("Health check for Database or Object Store failed, retrying in %d seconds.", int(requeueTime.Seconds())))
+		return ctrl.Result{Requeue: true, RequeueAfter: requeueTime}, nil
+	}
 	return ctrl.Result{}, nil
 }
 
