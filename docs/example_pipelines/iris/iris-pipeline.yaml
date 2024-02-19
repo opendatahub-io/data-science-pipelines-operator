@@ -83,7 +83,7 @@ deploymentSpec:
           \    col_names = [\n        'Sepal_Length', 'Sepal_Width', 'Petal_Length',\
           \ 'Petal_Width', 'Labels'\n    ]\n    df = pd.read_csv(csv_url, names=col_names)\n\
           \n    with open(iris_dataset.path, 'w') as f:\n        df.to_csv(f)\n\n"
-        image: quay.io/rhn_support_ddalvi/ds-pipelines-iris-base:v1.0
+        image: quay.io/opendatahub/ds-pipelines-iris-base:v1.0
     exec-normalize-dataset:
       container:
         args:
@@ -124,7 +124,7 @@ deploymentSpec:
           \    df['Labels'] = labels\n    normalized_iris_dataset.metadata['state']\
           \ = \"Normalized\"\n    with open(normalized_iris_dataset.path, 'w') as\
           \ f:\n        df.to_csv(f)\n\n"
-        image: quay.io/rhn_support_ddalvi/ds-pipelines-iris-base:v1.0
+        image: quay.io/opendatahub/ds-pipelines-iris-base:v1.0
     exec-train-model:
       container:
         args:
@@ -161,7 +161,8 @@ deploymentSpec:
           \ random_state=0)\n\n    clf = KNeighborsClassifier(n_neighbors=n_neighbors)\n\
           \    clf.fit(X_train, y_train)\n\n    model.metadata['framework'] = 'scikit-learn'\n\
           \    with open(model.path, 'wb') as f:\n        pickle.dump(clf, f)\n\n"
-        image: quay.io/rhn_support_ddalvi/ds-pipelines-iris-base:v1.0
+
+        image: quay.io/opendatahub/ds-pipelines-iris-base:v1.0
 pipelineInfo:
   name: iris-training-pipeline
 root:
