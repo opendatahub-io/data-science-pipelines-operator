@@ -1,15 +1,18 @@
 from typing import List
-
-from kfp import client
+import kfp
 from kfp import compiler
 from kfp import dsl
+from kfp import Client
 from kfp.dsl import Dataset
 from kfp.dsl import Input
 from kfp.dsl import Model
 from kfp.dsl import Output
 
 
-@dsl.component()
+@dsl.component(
+    base_image="quay.io/rhn_support_ddalvi/ds-pipelines-iris-base:v1.0",
+    packages_to_install=['pandas==2.2.0']
+)
 def create_dataset(iris_dataset: Output[Dataset]):
     import pandas as pd
 
@@ -22,8 +25,10 @@ def create_dataset(iris_dataset: Output[Dataset]):
     with open(iris_dataset.path, 'w') as f:
         df.to_csv(f)
 
-
-@dsl.component()
+@dsl.component(
+    base_image="quay.io/rhn_support_ddalvi/ds-pipelines-iris-base:v1.0",
+    packages_to_install=['pandas==2.2.0', 'scikit-learn==1.4.0']
+)
 def normalize_dataset(
     input_iris_dataset: Input[Dataset],
     normalized_iris_dataset: Output[Dataset],
@@ -54,7 +59,10 @@ def normalize_dataset(
         df.to_csv(f)
 
 
-@dsl.component()
+@dsl.component(
+    base_image="quay.io/rhn_support_ddalvi/ds-pipelines-iris-base:v1.0",
+    packages_to_install=['pandas==2.2.0', 'scikit-learn==1.4.0']
+)
 def train_model(
     normalized_iris_dataset: Input[Dataset],
     model: Output[Model],
@@ -100,42 +108,9 @@ def my_pipeline(
         .outputs['normalized_iris_dataset'],
         n_neighbors=neighbors)
 
-
-# @dsl.pipeline(name='iris-training-pipeline')
-# def my_pipeline(
-#     standard_scaler: bool,
-#     min_max_scaler: bool,
-#     neighbors: List[int],
-# ):
-#     create_dataset_task = create_dataset()
-
-#     normalize_dataset_task = normalize_dataset(
-#         input_iris_dataset=create_dataset_task.outputs['iris_dataset'],
-#         standard_scaler=True,
-#         min_max_scaler=False)
-
-#     with dsl.ParallelFor(neighbors) as n_neighbors:
-#         train_model(
-#             normalized_iris_dataset=normalize_dataset_task
-#             .outputs['normalized_iris_dataset'],
-#             n_neighbors=n_neighbors)
-
-
 endpoint = 'http://ml-pipeline-ui-kubeflow.apps.rmartine.dev.datahub.redhat.com/'
 
 compiler.Compiler().compile(
     pipeline_func=my_pipeline,
     package_path= __file__.replace('.py', '-v2.yaml'))
 
-# kfp_client = client.Client(host=endpoint)
-# run = kfp_client.create_run_from_pipeline_func(
-#     my_pipeline,
-#     arguments={
-#         'min_max_scaler': True,
-#         'standard_scaler': False,
-#         'neighbors': [3, 6, 9]
-#     },
-# )
-
-# url = f'{endpoint}/#/runs/details/{run.run_id}'
-# print(url)

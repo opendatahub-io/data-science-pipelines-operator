@@ -63,9 +63,10 @@ deploymentSpec:
         - -c
         - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
           \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
-          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.6.0'\
-          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
-          $0\" \"$@\"\n"
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.7.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"'  &&\
+          \  python3 -m pip install --quiet --no-warn-script-location 'pandas==2.2.0'\
+          \ && \"$0\" \"$@\"\n"
         - sh
         - -ec
         - 'program_path=$(mktemp -d)
@@ -82,7 +83,7 @@ deploymentSpec:
           \    col_names = [\n        'Sepal_Length', 'Sepal_Width', 'Petal_Length',\
           \ 'Petal_Width', 'Labels'\n    ]\n    df = pd.read_csv(csv_url, names=col_names)\n\
           \n    with open(iris_dataset.path, 'w') as f:\n        df.to_csv(f)\n\n"
-        image: quay.io/opendatahub/ds-pipelines-iris-base:v1.0
+        image: quay.io/rhn_support_ddalvi/ds-pipelines-iris-base:v1.0
     exec-normalize-dataset:
       container:
         args:
@@ -95,9 +96,10 @@ deploymentSpec:
         - -c
         - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
           \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
-          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.6.0'\
-          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
-          $0\" \"$@\"\n"
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.7.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"'  &&\
+          \  python3 -m pip install --quiet --no-warn-script-location 'pandas==2.2.0'\
+          \ 'scikit-learn==1.4.0' && \"$0\" \"$@\"\n"
         - sh
         - -ec
         - 'program_path=$(mktemp -d)
@@ -122,7 +124,7 @@ deploymentSpec:
           \    df['Labels'] = labels\n    normalized_iris_dataset.metadata['state']\
           \ = \"Normalized\"\n    with open(normalized_iris_dataset.path, 'w') as\
           \ f:\n        df.to_csv(f)\n\n"
-        image: quay.io/opendatahub/ds-pipelines-iris-base:v1.0
+        image: quay.io/rhn_support_ddalvi/ds-pipelines-iris-base:v1.0
     exec-train-model:
       container:
         args:
@@ -135,9 +137,10 @@ deploymentSpec:
         - -c
         - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
           \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
-          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.6.0'\
-          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
-          $0\" \"$@\"\n"
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.7.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"'  &&\
+          \  python3 -m pip install --quiet --no-warn-script-location 'pandas==2.2.0'\
+          \ 'scikit-learn==1.4.0' && \"$0\" \"$@\"\n"
         - sh
         - -ec
         - 'program_path=$(mktemp -d)
@@ -158,7 +161,7 @@ deploymentSpec:
           \ random_state=0)\n\n    clf = KNeighborsClassifier(n_neighbors=n_neighbors)\n\
           \    clf.fit(X_train, y_train)\n\n    model.metadata['framework'] = 'scikit-learn'\n\
           \    with open(model.path, 'wb') as f:\n        pickle.dump(clf, f)\n\n"
-        image: quay.io/opendatahub/ds-pipelines-iris-base:v1.0
+        image: quay.io/rhn_support_ddalvi/ds-pipelines-iris-base:v1.0
 pipelineInfo:
   name: iris-training-pipeline
 root:
@@ -220,4 +223,4 @@ root:
       standard_scaler:
         parameterType: BOOLEAN
 schemaVersion: 2.1.0
-sdkVersion: kfp-2.6.0
+sdkVersion: kfp-2.7.0
