@@ -516,6 +516,38 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&rbacv1.Role{}).
 		Owns(&rbacv1.RoleBinding{}).
 		Owns(&routev1.Route{}).
+		// Watch for global ca bundle, if one is added to this namespace
+		// we need to reconcile on all the dspa's in this namespace
+		// so they may mount this cert in the appropriate containers
+		Watches(&source.Kind{Type: &corev1.ConfigMap{}},
+			handler.EnqueueRequestsFromMapFunc(func(o client.Object) []reconcile.Request {
+				thisNamespace := o.GetNamespace()
+				log := r.Log.WithValues("namespace", thisNamespace)
+
+				if o.GetName() != "odh-trusted-ca-bundle" {
+					return []reconcile.Request{}
+				}
+
+				log.V(1).Info(fmt.Sprintf("Reconcile event triggered by change in event on Global CA Bundle: %s", o.GetName()))
+
+				var dspaList dspav1alpha1.DataSciencePipelinesApplicationList
+				ctx := context.Background()
+				if err := r.List(ctx, &dspaList, client.InNamespace(thisNamespace)); err != nil {
+					log.Error(err, "unable to list DSPA's when attempting to handle Global CA Bundle event.")
+					return []reconcile.Request{}
+				}
+
+				var reconcileRequests []reconcile.Request
+				for _, dspa := range dspaList.Items {
+					namespacedName := types.NamespacedName{
+						Name:      dspa.Name,
+						Namespace: thisNamespace,
+					}
+					reconcileRequests = append(reconcileRequests, reconcile.Request{NamespacedName: namespacedName})
+				}
+
+				return reconcileRequests
+			})).
 		// Watch for Pods belonging to DSPA
 		Watches(&source.Kind{Type: &corev1.Pod{}},
 			handler.EnqueueRequestsFromMapFunc(func(o client.Object) []reconcile.Request {
