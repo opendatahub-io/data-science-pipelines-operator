@@ -17,12 +17,18 @@ package controllers
 
 import (
 	"context"
+	cryptoTls "crypto/tls"
+	"crypto/x509"
 	"database/sql"
 	b64 "encoding/base64"
 	"fmt"
+	"github.com/go-logr/logr"
+	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
+	"k8s.io/apimachinery/pkg/util/json"
+	"os"
 )
 
 const dbSecret = "mariadb/secret.yaml.tmpl"
@@ -35,22 +41,115 @@ var dbTemplates = []string{
 	dbSecret,
 }
 
-// extract to var for mocking in testing
-var ConnectAndQueryDatabase = func(host, port, username, password, dbname string) bool {
+func tLSClientConfig(pem []byte) (*cryptoTls.Config, error) {
+	rootCertPool := x509.NewCertPool()
+
+	if f := os.Getenv("SSL_CERT_FILE"); f != "" {
+		data, err := os.ReadFile(f)
+		if err == nil {
+			rootCertPool.AppendCertsFromPEM(data)
+		}
+	}
+
+	if ok := rootCertPool.AppendCertsFromPEM(pem); !ok {
+		return nil, fmt.Errorf("error parsing CA Certificate, ensure provided certs are in valid PEM format")
+	}
+	tlsConfig := &cryptoTls.Config{
+		RootCAs: rootCertPool,
+	}
+	return tlsConfig, nil
+}
+
+func createMySQLConfig(user, password string, mysqlServiceHost string,
+	mysqlServicePort string, dbName string, mysqlExtraParams map[string]string) *mysql.Config {
+
+	params := map[string]string{
+		"charset":   "utf8",
+		"parseTime": "True",
+		"loc":       "Local",
+	}
+
+	for k, v := range mysqlExtraParams {
+		params[k] = v
+	}
+
+	return &mysql.Config{
+		User:                 user,
+		Passwd:               password,
+		Net:                  "tcp",
+		Addr:                 fmt.Sprintf("%s:%s", mysqlServiceHost, mysqlServicePort),
+		Params:               params,
+		DBName:               dbName,
+		AllowNativePasswords: true,
+	}
+}
+
+var ConnectAndQueryDatabase = func(
+	host string,
+	log logr.Logger,
+	port, username, password, dbname, tls string,
+	pemCerts []byte,
+	extraParams map[string]string) (bool, error) {
+
+	mysqlConfig := createMySQLConfig(
+		username,
+		password,
+		host,
+		port,
+		"",
+		extraParams,
+	)
+
 	// Create a context with a timeout of 1 second
 	ctx, cancel := context.WithTimeout(context.Background(), config.DefaultDBConnectionTimeout)
 	defer cancel()
 
-	connectionString := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", username, password, host, port, dbname)
-	db, err := sql.Open("mysql", connectionString)
+	var tlsConfig *cryptoTls.Config
+	switch tls {
+	case "false", "":
+		// don't set anything
+	case "true":
+		if len(pemCerts) != 0 {
+			var err error
+			tlsConfig, err = tLSClientConfig(pemCerts)
+			if err != nil {
+				log.Info(fmt.Sprintf("Encountered error when processing custom ca bundle, Error: %v", err))
+				return false, err
+			}
+		}
+	case "skip-verify", "preferred":
+		tlsConfig = &cryptoTls.Config{InsecureSkipVerify: true}
+	default:
+		// Unknown config, default to don't set anything
+	}
+
+	// Only register tls config in the case of: "true", "skip-verify", "preferred"
+	if tlsConfig != nil {
+		err := mysql.RegisterTLSConfig("custom", tlsConfig)
+		// If ExtraParams{"tls": ".."} is set, that takes precedent over mysqlConfig.TLSConfig
+		// so we need to make sure we're setting our tls config to be used instead if it exists
+		if _, ok := mysqlConfig.Params["tls"]; ok {
+			mysqlConfig.Params["tls"] = "custom"
+		}
+		// Just to be safe, we also set it here, fallback from mysqlConfig.Params["tls"] not being set
+		mysqlConfig.TLSConfig = "custom"
+		if err != nil {
+			return false, err
+		}
+	}
+
+	db, err := sql.Open("mysql", mysqlConfig.FormatDSN())
 	if err != nil {
-		return false
+		return false, err
 	}
 	defer db.Close()
 
 	testStatement := "SELECT 1;"
 	_, err = db.QueryContext(ctx, testStatement)
-	return err == nil
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func (r *DSPAReconciler) isDatabaseAccessible(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,
@@ -72,16 +171,50 @@ func (r *DSPAReconciler) isDatabaseAccessible(ctx context.Context, dsp *dspav1al
 	}
 
 	decodePass, _ := b64.StdEncoding.DecodeString(params.DBConnection.Password)
-	dbHealthCheckPassed := ConnectAndQueryDatabase(params.DBConnection.Host,
+
+	var extraParamsJson map[string]string
+	err := json.Unmarshal([]byte(params.DBConnection.ExtraParams), &extraParamsJson)
+	if err != nil {
+		log.Info(fmt.Sprintf("Could not parse tls config in ExtraParams, if setting CustomExtraParams, ensure the JSON string is well-formed. Error: %v", err))
+		return false
+	}
+
+	// tls can be true, false, skip-verify, preferred
+	// we default to true if it's an externalDB, false otherwise
+	// (if not specified via CustomExtraParams)
+	tls := "false"
+	if usingExternalDB {
+		tls = "true"
+	}
+
+	// Override tls with the value in ExtraParams, if specified
+	// If users have specified a CustomExtraParams field, have to
+	// check for "tls" existence because users may choose to  leave
+	// out the "tls" param
+	if val, ok := extraParamsJson["tls"]; ok {
+		tls = val
+	}
+
+	dbHealthCheckPassed, err := ConnectAndQueryDatabase(
+		params.DBConnection.Host,
+		log,
 		params.DBConnection.Port,
 		params.DBConnection.Username,
 		string(decodePass),
-		params.DBConnection.DBName)
+		params.DBConnection.DBName,
+		tls,
+		params.APICustomPemCerts,
+		extraParamsJson,
+	)
+	if err != nil {
+		log.Info(fmt.Sprintf("Unable to connect to Database: %v", err))
+		return false
+	}
+
 	if dbHealthCheckPassed {
 		log.Info("Database Health Check Successful")
-	} else {
-		log.Info("Unable to connect to Database")
 	}
+
 	return dbHealthCheckPassed
 }
 

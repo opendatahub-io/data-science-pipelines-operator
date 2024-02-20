@@ -155,6 +155,9 @@ spec:
             {{ end }}
           {{ if or .APIServer.EnableSamplePipeline .APIServer.CABundle }}
           volumeMounts:
+            - name: server-config
+              mountPath: /config/config.json
+              subPath: config.json
             {{ if .APIServer.EnableSamplePipeline }}
             - name: sample-config
               mountPath: /config/sample_config.json
@@ -220,6 +223,9 @@ spec:
         - name: proxy-tls
           secret:
             secretName: ds-pipelines-proxy-tls-{{.Name}}
+        - name: server-config
+          configMap:
+            name: pipeline-server-config-{{.Name}}
         {{ if .APIServer.CABundle }}
         - name: ca-bundle
           configMap:

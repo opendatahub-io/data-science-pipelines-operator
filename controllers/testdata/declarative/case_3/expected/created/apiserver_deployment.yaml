@@ -187,4 +187,8 @@ spec:
           secret:
             secretName: ds-pipelines-proxy-tls-testdsp3
             defaultMode: 420
+        - name: server-config
+          configMap:
+            name: pipeline-server-config-testdsp3
+            defaultMode: 420
       serviceAccountName: ds-pipeline-testdsp3

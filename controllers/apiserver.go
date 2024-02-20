@@ -28,6 +28,7 @@ const apiServerDefaultResourceNamePrefix = "ds-pipeline-"
 
 var apiServerTemplates = []string{
 	"apiserver/artifact_script.yaml.tmpl",
+	"apiserver/server-config.yaml.tmpl",
 	"apiserver/role_ds-pipeline.yaml.tmpl",
 	"apiserver/role_pipeline-runner.yaml.tmpl",
 	"apiserver/role_ds-pipeline-user-access.yaml.tmpl",

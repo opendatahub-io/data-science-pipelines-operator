@@ -41,8 +41,9 @@ const (
 	ArtifactScriptConfigMapKey        = "artifact_script"
 	DSPServicePrefix                  = "ds-pipeline"
 
-	DBSecretNamePrefix = "ds-pipeline-db-"
-	DBSecretKey        = "password"
+	DBSecretNamePrefix   = "ds-pipeline-db-"
+	DBSecretKey          = "password"
+	DBDefaultExtraParams = "{\"tls\":\"%t\"}"
 
 	MariaDBName        = "mlpipeline"
 	MariaDBHostPrefix  = "mariadb"

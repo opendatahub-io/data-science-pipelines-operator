@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"k8s.io/apimachinery/pkg/util/json"
 	"math/rand"
 	"time"
 
@@ -65,6 +66,7 @@ type DBConnection struct {
 	DBName            string
 	CredentialsSecret *dspa.SecretKeyValue
 	Password          string
+	ExtraParams       string
 }
 
 type ObjectStorageConnection struct {
@@ -87,7 +89,7 @@ func (p *DSPAParams) UsingExternalDB(dsp *dspa.DataSciencePipelinesApplication) 
 	return false
 }
 
-// StorageHealthCheckDisabled will return the value if the Database has disableHealthCheck specified in the CR, otherwise false.
+// DatabaseHealthCheckDisabled will return the value if the Database has disableHealthCheck specified in the CR, otherwise false.
 func (p *DSPAParams) DatabaseHealthCheckDisabled(dsp *dspa.DataSciencePipelinesApplication) bool {
 	if dsp.Spec.Database != nil {
 		return dsp.Spec.Database.DisableHealthCheck
@@ -149,6 +151,9 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 		p.DBConnection.Port = dsp.Spec.Database.ExternalDB.Port
 		p.DBConnection.Username = dsp.Spec.Database.ExternalDB.Username
 		p.DBConnection.DBName = dsp.Spec.Database.ExternalDB.DBName
+		// Assume default external connection is tls enabled
+		// user can override this via CustomExtraParams field
+		p.DBConnection.ExtraParams = fmt.Sprintf(config.DBDefaultExtraParams, true)
 		customCreds = dsp.Spec.Database.ExternalDB.PasswordSecret
 	} else {
 		// If no externalDB or mariaDB is specified, DSPO assumes
@@ -180,9 +185,23 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 		p.DBConnection.Port = config.MariaDBHostPort
 		p.DBConnection.Username = p.MariaDB.Username
 		p.DBConnection.DBName = p.MariaDB.DBName
+		// By Default OOB mariadb is not tls enabled
+		p.DBConnection.ExtraParams = fmt.Sprintf(config.DBDefaultExtraParams, false)
 		if p.MariaDB.PasswordSecret != nil {
 			customCreds = p.MariaDB.PasswordSecret
 		}
+	}
+
+	// User specified custom Extra parameters will always take precedence
+	if dsp.Spec.Database.CustomExtraParams != nil {
+		// Validate CustomExtraParams is a valid params json
+		var validParamsJson map[string]string
+		err := json.Unmarshal([]byte(*dsp.Spec.Database.CustomExtraParams), &validParamsJson)
+		if err != nil {
+			log.Info(fmt.Sprintf("Encountered error when validationg CustomExtraParams field in DSPA, please ensure the params are well-formed: Error: %v", err))
+			return err
+		}
+		p.DBConnection.ExtraParams = *dsp.Spec.Database.CustomExtraParams
 	}
 
 	// Secret where DB credentials reside on cluster
