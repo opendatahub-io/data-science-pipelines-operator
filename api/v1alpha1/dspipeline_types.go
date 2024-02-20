@@ -117,6 +117,10 @@ type APIServer struct {
 	// provide a PEM formatted CA bundle to be injected into the DSP
 	// server pod to trust this connection. CA Bundle should be provided
 	// as values within configmaps, mapped to keys.
+	//
+	// Note that if a global cert via ODH or the User is provided in this DSPA's
+	// namespace with the name "odh-trusted-ca-bundle", then that configmap
+	// is automatically used instead, and "caBundle" is ignored.
 	CABundle *CABundle `json:"cABundle,omitempty"`
 }
 

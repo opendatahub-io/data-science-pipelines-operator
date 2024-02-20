@@ -548,16 +548,39 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 			}
 		}
 
-		// If a Custom CA Bundle is specified for injection into DSP API Server Pod
-		// then retrieve the bundle to utilize during storage health check
-		if p.APIServer.CABundle != nil {
-			cfgKey, cfgName := p.APIServer.CABundle.ConfigMapKey, p.APIServer.CABundle.ConfigMapName
-			err, val := util.GetConfigMapValue(ctx, cfgKey, cfgName, p.Namespace, client, log)
-			if err != nil {
-				log.Error(err, "Encountered error when attempting to retrieve CABundle from configmap")
-				return err
+		// Check for Global certs
+		// If it exists, we use this cert
+		// If no global cert provided, check if a custom bundle is provided via the DSPA
+		globalCABundleCFGMapKey, globalCABundleCFGMapName := config.GlobalCaBundleConfigMapKey, config.GlobalCaBundleConfigMapName
+		err, globalCerVal := util.GetConfigMapValue(ctx, globalCABundleCFGMapKey, globalCABundleCFGMapName, p.Namespace, client, log)
+		if err != nil && apierrs.IsNotFound(err) {
+			// If the global cert configmap is not available, that is OK
+			// proceed to check if the user has provided their
+			// own configmap via DSPA config
+			if p.APIServer.CABundle != nil {
+				dspaCaBundleCfgKey, dspaCaBundleCfgName := p.APIServer.CABundle.ConfigMapKey, p.APIServer.CABundle.ConfigMapName
+				dspaCACfgErr, dspaProvidedCABundle := util.GetConfigMapValue(ctx, dspaCaBundleCfgKey, dspaCaBundleCfgName, p.Namespace, client, log)
+				if dspaCACfgErr != nil && apierrs.IsNotFound(dspaCACfgErr) {
+					log.Info(fmt.Sprintf("ConfigMap [%s] was not found in namespace [%s]", dspaCaBundleCfgKey, p.Namespace))
+					return dspaCACfgErr
+				} else if dspaCACfgErr != nil {
+					log.Info(fmt.Sprintf("Encountered error when attempting to fetch ConfigMap: [%s], Error: %v", dspaCaBundleCfgName, dspaCACfgErr))
+					return dspaCACfgErr
+				}
+				p.APICustomPemCerts = []byte(dspaProvidedCABundle)
 			}
-			p.APICustomPemCerts = []byte(val)
+		} else if err != nil {
+			log.Info(fmt.Sprintf("Encountered error when attempting to fetch ConfigMap: [%s], Error: %v", globalCABundleCFGMapKey, err))
+			return err
+		} else {
+			// Found a global cert, consume this cert, takes precedence over "cABundle" provided via DSPA
+			log.Info(fmt.Sprintf("Found global CA Bundle %s present in this namespace %s, this cert will be "+
+				"included to verify external tls connections in this DSPA.", config.GlobalCaBundleConfigMapName, p.Namespace))
+			p.APICustomPemCerts = []byte(globalCerVal)
+			p.APIServer.CABundle = &dspa.CABundle{
+				ConfigMapName: config.GlobalCaBundleConfigMapName,
+				ConfigMapKey:  config.GlobalCaBundleConfigMapKey,
+			}
 		}
 	}
 
