@@ -497,7 +497,7 @@ func setResourcesDefault(defaultValue dspa.ResourceRequirements, value **dspa.Re
 	}
 }
 
-func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, log logr.Logger) error {
+func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, loggr logr.Logger) error {
 	p.Name = dsp.Name
 	p.Namespace = dsp.Namespace
 	p.DSPVersion = dsp.Spec.DSPVersion
@@ -516,6 +516,8 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.MLMD = dsp.Spec.MLMD.DeepCopy()
 	p.APIServerPiplinesCABundleMountPath = config.APIServerPiplinesCABundleMountPath
 	p.PiplinesCABundleMountPath = config.PiplinesCABundleMountPath
+
+	log := loggr.WithValues("namespace", p.Namespace).WithValues("dspa_name", p.Name)
 
 	if p.APIServer != nil {
 		APIServerImagePath := p.GetImageForComponent(dsp, config.APIServerImagePath, config.APIServerImagePathV2Argo, config.APIServerImagePathV2Tekton)
