@@ -23,7 +23,6 @@ import (
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
-	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"net/url"
@@ -72,16 +71,12 @@ func GetConfigMapValue(ctx context.Context, cfgKey, cfgName, ns string, client c
 		Namespace: ns,
 	}
 	err := client.Get(ctx, namespacedName, cfgMap)
-	if err != nil && apierrs.IsNotFound(err) {
-		log.Error(err, fmt.Sprintf("ConfigMap [%s] was not found in namespace [%s]", cfgName, ns))
-		return err, ""
-	} else if err != nil {
-		log.Error(err, fmt.Sprintf("Encountered error when attempting to fetch ConfigMap. [%s]..", cfgName))
+	if err != nil {
 		return err, ""
 	}
 	if val, ok := cfgMap.Data[cfgKey]; ok {
 		return nil, val
 	} else {
-		return fmt.Errorf("ConfigMap %s sdoes not contain specified key %s", cfgName, cfgKey), ""
+		return fmt.Errorf("ConfigMap %s sdoes not contain expected key %s", cfgName, cfgKey), ""
 	}
 }

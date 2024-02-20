@@ -27,10 +27,19 @@ const (
 	DefaultImageValue                  = "MustSetInConfig"
 	APIServerPiplinesCABundleMountPath = "/etc/pki/tls/certs"
 	PiplinesCABundleMountPath          = "/etc/pki/tls/certs"
-	MLPipelineUIConfigMapPrefix        = "ds-pipeline-ui-configmap-"
-	ArtifactScriptConfigMapNamePrefix  = "ds-pipeline-artifact-script-"
-	ArtifactScriptConfigMapKey         = "artifact_script"
-	DSPServicePrefix                   = "ds-pipeline"
+
+	// GlobalCaBundleConfigMapName key and label values  are a contract with
+	// ODH Platform https://github.com/opendatahub-io/architecture-decision-records/pull/28
+	GlobalCaBundleConfigMapName = "odh-trusted-ca-bundle"
+
+	// GlobalCaBundleConfigMapKey is the key provided by the configmap created via OCP Cluster Network Operator
+	// https://docs.openshift.com/container-platform/4.14/networking/configuring-a-custom-pki.html#certificate-injection-using-operators_configuring-a-custom-pki
+	GlobalCaBundleConfigMapKey = "ca-bundle.crt"
+
+	MLPipelineUIConfigMapPrefix       = "ds-pipeline-ui-configmap-"
+	ArtifactScriptConfigMapNamePrefix = "ds-pipeline-artifact-script-"
+	ArtifactScriptConfigMapKey        = "artifact_script"
+	DSPServicePrefix                  = "ds-pipeline"
 
 	DBSecretNamePrefix = "ds-pipeline-db-"
 	DBSecretKey        = "password"
