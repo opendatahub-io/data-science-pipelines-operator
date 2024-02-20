@@ -130,10 +130,10 @@ var ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoin
 		}
 
 		if util.IsX509UnknownAuthorityError(err) {
-			log.Error(err, "Encountered x509 UnknownAuthorityError when connecting to ObjectStore. "+
+			log.Info(fmt.Sprintf("Encountered x509 UnknownAuthorityError when connecting to ObjectStore. "+
 				"If using an tls S3 connection with  self-signed certs, you may specify a custom CABundle "+
 				"to mount on the DSP API Server via the DSPA cr under the spec.cABundle field. If you have already "+
-				"provided a CABundle, verify the validity of the provided CABundle.")
+				"provided a CABundle, verify the validity of the provided CABundle. Error: %v", err))
 			return false
 		}
 
