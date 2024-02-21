@@ -9,6 +9,9 @@ resources:
   - ../prometheus
   - ../configmaps
 
+generatorOptions:
+  disableNameSuffixHash: true
+
 configMapGenerator:
   - name: dspo-parameters
     envs:

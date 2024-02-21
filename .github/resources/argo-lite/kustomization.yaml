@@ -2,6 +2,6 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: opendatahub
 resources:
-  - ../../../config/argo
+  - ../../../config/overlays/make-argodeploy
 patchesStrategicMerge:
   - patch/argo_server_deployment.yaml
