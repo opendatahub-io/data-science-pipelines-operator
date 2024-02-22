@@ -183,7 +183,7 @@ type Database struct {
 	// the user can provide a string: {"tls":"true"}
 	//
 	// If updating post DSPA deployment, then a manual restart of the pipeline server pod will be required
-	// so the new configmap maybe consumed.
+	// so the new configmap may be consumed.
 	CustomExtraParams *string `json:"customExtraParams,omitempty"`
 
 	// Default: false

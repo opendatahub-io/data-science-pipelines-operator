@@ -189,7 +189,7 @@ spec:
                       for Pipeline Server DB connection the user can provide a string:
                       {\"tls\":\"true\"} \n If updating post DSPA deployment, then
                       a manual restart of the pipeline server pod will be required
-                      so the new configmap maybe consumed."
+                      so the new configmap may be consumed."
                     type: string
                   disableHealthCheck:
                     default: false
