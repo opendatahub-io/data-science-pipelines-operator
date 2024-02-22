@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"k8s.io/apimachinery/pkg/util/json"
 	"math/rand"
 	"time"
 
@@ -65,6 +66,7 @@ type DBConnection struct {
 	DBName            string
 	CredentialsSecret *dspa.SecretKeyValue
 	Password          string
+	ExtraParams       string
 }
 
 type ObjectStorageConnection struct {
@@ -87,7 +89,7 @@ func (p *DSPAParams) UsingExternalDB(dsp *dspa.DataSciencePipelinesApplication) 
 	return false
 }
 
-// StorageHealthCheckDisabled will return the value if the Database has disableHealthCheck specified in the CR, otherwise false.
+// DatabaseHealthCheckDisabled will return the value if the Database has disableHealthCheck specified in the CR, otherwise false.
 func (p *DSPAParams) DatabaseHealthCheckDisabled(dsp *dspa.DataSciencePipelinesApplication) bool {
 	if dsp.Spec.Database != nil {
 		return dsp.Spec.Database.DisableHealthCheck
@@ -149,6 +151,9 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 		p.DBConnection.Port = dsp.Spec.Database.ExternalDB.Port
 		p.DBConnection.Username = dsp.Spec.Database.ExternalDB.Username
 		p.DBConnection.DBName = dsp.Spec.Database.ExternalDB.DBName
+		// Assume default external connection is tls enabled
+		// user can override this via CustomExtraParams field
+		p.DBConnection.ExtraParams = fmt.Sprintf(config.DBDefaultExtraParams, true)
 		customCreds = dsp.Spec.Database.ExternalDB.PasswordSecret
 	} else {
 		// If no externalDB or mariaDB is specified, DSPO assumes
@@ -180,9 +185,23 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 		p.DBConnection.Port = config.MariaDBHostPort
 		p.DBConnection.Username = p.MariaDB.Username
 		p.DBConnection.DBName = p.MariaDB.DBName
+		// By Default OOB mariadb is not tls enabled
+		p.DBConnection.ExtraParams = fmt.Sprintf(config.DBDefaultExtraParams, false)
 		if p.MariaDB.PasswordSecret != nil {
 			customCreds = p.MariaDB.PasswordSecret
 		}
+	}
+
+	// User specified custom Extra parameters will always take precedence
+	if dsp.Spec.Database.CustomExtraParams != nil {
+		// Validate CustomExtraParams is a valid params json
+		var validParamsJson map[string]string
+		err := json.Unmarshal([]byte(*dsp.Spec.Database.CustomExtraParams), &validParamsJson)
+		if err != nil {
+			log.Info(fmt.Sprintf("Encountered error when validationg CustomExtraParams field in DSPA, please ensure the params are well-formed: Error: %v", err))
+			return err
+		}
+		p.DBConnection.ExtraParams = *dsp.Spec.Database.CustomExtraParams
 	}
 
 	// Secret where DB credentials reside on cluster
@@ -428,7 +447,7 @@ func setResourcesDefault(defaultValue dspa.ResourceRequirements, value **dspa.Re
 	}
 }
 
-func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, log logr.Logger) error {
+func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, loggr logr.Logger) error {
 	p.Name = dsp.Name
 	p.Namespace = dsp.Namespace
 	p.Owner = dsp
@@ -446,6 +465,8 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.MLMD = dsp.Spec.MLMD.DeepCopy()
 	p.APIServerPiplinesCABundleMountPath = config.APIServerPiplinesCABundleMountPath
 	p.PiplinesCABundleMountPath = config.PiplinesCABundleMountPath
+
+	log := loggr.WithValues("namespace", p.Namespace).WithValues("dspa_name", p.Name)
 
 	if p.APIServer != nil {
 
@@ -468,16 +489,39 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 			}
 		}
 
-		// If a Custom CA Bundle is specified for injection into DSP API Server Pod
-		// then retrieve the bundle to utilize during storage health check
-		if p.APIServer.CABundle != nil {
-			cfgKey, cfgName := p.APIServer.CABundle.ConfigMapKey, p.APIServer.CABundle.ConfigMapName
-			err, val := util.GetConfigMapValue(ctx, cfgKey, cfgName, p.Namespace, client, log)
-			if err != nil {
-				log.Error(err, "Encountered error when attempting to retrieve CABundle from configmap")
-				return err
+		// Check for Global certs
+		// If it exists, we use this cert
+		// If no global cert provided, check if a custom bundle is provided via the DSPA
+		globalCABundleCFGMapKey, globalCABundleCFGMapName := config.GlobalCaBundleConfigMapKey, config.GlobalCaBundleConfigMapName
+		err, globalCerVal := util.GetConfigMapValue(ctx, globalCABundleCFGMapKey, globalCABundleCFGMapName, p.Namespace, client, log)
+		if err != nil && apierrs.IsNotFound(err) {
+			// If the global cert configmap is not available, that is OK
+			// proceed to check if the user has provided their
+			// own configmap via DSPA config
+			if p.APIServer.CABundle != nil {
+				dspaCaBundleCfgKey, dspaCaBundleCfgName := p.APIServer.CABundle.ConfigMapKey, p.APIServer.CABundle.ConfigMapName
+				dspaCACfgErr, dspaProvidedCABundle := util.GetConfigMapValue(ctx, dspaCaBundleCfgKey, dspaCaBundleCfgName, p.Namespace, client, log)
+				if dspaCACfgErr != nil && apierrs.IsNotFound(dspaCACfgErr) {
+					log.Info(fmt.Sprintf("ConfigMap [%s] was not found in namespace [%s]", dspaCaBundleCfgKey, p.Namespace))
+					return dspaCACfgErr
+				} else if dspaCACfgErr != nil {
+					log.Info(fmt.Sprintf("Encountered error when attempting to fetch ConfigMap: [%s], Error: %v", dspaCaBundleCfgName, dspaCACfgErr))
+					return dspaCACfgErr
+				}
+				p.APICustomPemCerts = []byte(dspaProvidedCABundle)
 			}
-			p.APICustomPemCerts = []byte(val)
+		} else if err != nil {
+			log.Info(fmt.Sprintf("Encountered error when attempting to fetch ConfigMap: [%s], Error: %v", globalCABundleCFGMapKey, err))
+			return err
+		} else {
+			// Found a global cert, consume this cert, takes precedence over "cABundle" provided via DSPA
+			log.Info(fmt.Sprintf("Found global CA Bundle %s present in this namespace %s, this cert will be "+
+				"included to verify external tls connections in this DSPA.", config.GlobalCaBundleConfigMapName, p.Namespace))
+			p.APICustomPemCerts = []byte(globalCerVal)
+			p.APIServer.CABundle = &dspa.CABundle{
+				ConfigMapName: config.GlobalCaBundleConfigMapName,
+				ConfigMapKey:  config.GlobalCaBundleConfigMapKey,
+			}
 		}
 	}
 
