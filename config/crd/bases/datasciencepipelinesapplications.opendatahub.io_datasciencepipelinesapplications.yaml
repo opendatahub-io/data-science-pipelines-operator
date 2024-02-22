@@ -541,7 +541,6 @@ spec:
                           secretKey:
                             type: string
                           secretName:
-                            description: 'Note: In V2 this value needs to be mlpipeline-minio-artifact'
                             type: string
                         required:
                         - accessKey
@@ -636,7 +635,6 @@ spec:
                           secretKey:
                             type: string
                           secretName:
-                            description: 'Note: In V2 this value needs to be mlpipeline-minio-artifact'
                             type: string
                         required:
                         - accessKey

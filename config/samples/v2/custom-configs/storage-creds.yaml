@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: mlpipeline-minio-artifact
+  name: teststoragesecret
   labels:
     opendatahub.io/dashboard: 'true'
     opendatahub.io/managed: 'true'

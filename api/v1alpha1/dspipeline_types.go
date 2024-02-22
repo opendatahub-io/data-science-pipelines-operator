@@ -330,7 +330,6 @@ type ExternalStorage struct {
 
 type S3CredentialSecret struct {
 	// +kubebuilder:validation:Required
-	// Note: In V2 this value needs to be mlpipeline-minio-artifact
 	SecretName string `json:"secretName"`
 	// The "Keys" in the k8sSecret key/value pairs. Not to be confused with the values.
 	AccessKey string `json:"accessKey"`
