@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"k8s.io/apimachinery/pkg/util/json"
 	"math/rand"
 	"time"
 
@@ -69,6 +70,7 @@ type DBConnection struct {
 	DBName            string
 	CredentialsSecret *dspa.SecretKeyValue
 	Password          string
+	ExtraParams       string
 }
 
 type ObjectStorageConnection struct {
@@ -123,7 +125,7 @@ func (p *DSPAParams) UsingExternalDB(dsp *dspa.DataSciencePipelinesApplication) 
 	return false
 }
 
-// StorageHealthCheckDisabled will return the value if the Database has disableHealthCheck specified in the CR, otherwise false.
+// DatabaseHealthCheckDisabled will return the value if the Database has disableHealthCheck specified in the CR, otherwise false.
 func (p *DSPAParams) DatabaseHealthCheckDisabled(dsp *dspa.DataSciencePipelinesApplication) bool {
 	if dsp.Spec.Database != nil {
 		return dsp.Spec.Database.DisableHealthCheck
@@ -239,6 +241,10 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 		p.DBConnection.DBName = dsp.Spec.Database.ExternalDB.DBName
 		p.DBConnection.CredentialsSecret = dsp.Spec.Database.ExternalDB.PasswordSecret
 
+		// Assume default external connection is tls enabled
+		// user can override this via CustomExtraParams field
+		p.DBConnection.ExtraParams = fmt.Sprintf(config.DBDefaultExtraParams, true)
+
 		// Retreive DB Password from specified secret.  Ignore error if the secret simply doesn't exist (will be created later)
 		password, err := p.RetrieveSecret(ctx, client, p.DBConnection.CredentialsSecret.Name, p.DBConnection.CredentialsSecret.Key, log)
 		if err != nil && !apierrs.IsNotFound(err) {
@@ -277,6 +283,8 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 		p.DBConnection.Port = config.MariaDBHostPort
 		p.DBConnection.Username = p.MariaDB.Username
 		p.DBConnection.DBName = p.MariaDB.DBName
+		// By Default OOB mariadb is not tls enabled
+		p.DBConnection.ExtraParams = fmt.Sprintf(config.DBDefaultExtraParams, false)
 
 		// If custom DB Secret provided, use its values.  Otherwise generate a default
 		if p.MariaDB.PasswordSecret != nil {
@@ -293,6 +301,19 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 		}
 		p.DBConnection.Password = dbPassword
 	}
+
+	// User specified custom Extra parameters will always take precedence
+	if dsp.Spec.Database.CustomExtraParams != nil {
+		// Validate CustomExtraParams is a valid params json
+		var validParamsJson map[string]string
+		err := json.Unmarshal([]byte(*dsp.Spec.Database.CustomExtraParams), &validParamsJson)
+		if err != nil {
+			log.Info(fmt.Sprintf("Encountered error when validationg CustomExtraParams field in DSPA, please ensure the params are well-formed: Error: %v", err))
+			return err
+		}
+		p.DBConnection.ExtraParams = *dsp.Spec.Database.CustomExtraParams
+	}
+
 	if p.DBConnection.Password == "" {
 		return fmt.Errorf(fmt.Sprintf("DB Password from secret [%s] for key [%s] was not successfully retrieved, "+
 			"ensure that the secret with this key exist.", p.DBConnection.CredentialsSecret.Name, p.DBConnection.CredentialsSecret.Key))

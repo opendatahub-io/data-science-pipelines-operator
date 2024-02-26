@@ -244,7 +244,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	// Get Prereq Status (DB and ObjStore Ready)
 	dbAvailableErrorMsg, objStoreAvailableErrorMsg := "", ""
-	dbAvailable, err := r.isDatabaseAccessible(ctx, dspa, params)
+	dbAvailable, err := r.isDatabaseAccessible(dspa, params)
 
 	if err != nil {
 		dbAvailableErrorMsg = err.Error()

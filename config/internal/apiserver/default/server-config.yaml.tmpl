@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: pipeline-server-config-{{.Name}}
+    namespace: {{.Namespace}}
+    labels:
+        app: {{.APIServerDefaultResourceName}}
+        component: data-science-pipelines
+data:
+    config.json: |
+      {
+        "DBConfig": {
+          "MySQLConfig": {
+            "Params": {{ .DBConnection.ExtraParams }}
+          },
+          "PostgreSQLConfig": {},
+          "ConMaxLifeTime": "120s"
+        },
+        "DBDriverName": "mysql",
+        "InitConnectionTimeout": "6m"
+      }

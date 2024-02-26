@@ -158,6 +158,9 @@ spec:
               cpu: 500m
               memory: 1Gi
           volumeMounts:
+            - name: server-config
+              mountPath: /config/config.json
+              subPath: config.json
             - name: ca-bundle
               mountPath: /etc/pki/tls/certs
         - name: oauth-proxy
@@ -211,6 +214,10 @@ spec:
         - name: proxy-tls
           secret:
             secretName: ds-pipelines-proxy-tls-testdsp6
+            defaultMode: 420
+        - name: server-config
+          configMap:
+            name: pipeline-server-config-testdsp6
             defaultMode: 420
         - name: ca-bundle
           configMap:

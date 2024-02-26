@@ -44,6 +44,7 @@ const (
 
 	DefaultDBSecretNamePrefix = "ds-pipeline-db-"
 	DefaultDBSecretKey        = "password"
+	DBDefaultExtraParams      = "{\"tls\":\"%t\"}"
 	GeneratedDBPasswordLength = 12
 
 	MariaDBName        = "mlpipeline"

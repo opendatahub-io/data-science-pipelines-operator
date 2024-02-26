@@ -95,6 +95,6 @@ func GetConfigMapValue(ctx context.Context, cfgKey, cfgName, ns string, client c
 	if val, ok := cfgMap.Data[cfgKey]; ok {
 		return nil, val
 	} else {
-		return fmt.Errorf("ConfigMap %s sdoes not contain expected key %s", cfgName, cfgKey), ""
+		return fmt.Errorf("ConfigMap %s does not contain expected key %s", cfgName, cfgKey), ""
 	}
 }
