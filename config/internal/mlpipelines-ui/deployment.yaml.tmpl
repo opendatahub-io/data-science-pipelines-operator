@@ -73,30 +73,22 @@ spec:
           image: {{.MlPipelineUI.Image}}
           imagePullPolicy: IfNotPresent
           livenessProbe:
-            exec:
-              command:
-                - wget
-                - -q
-                - -S
-                - -O
-                - '-'
-                - http://localhost:3000/apis/v1beta1/healthz
-            initialDelaySeconds: 3
+            httpGet:
+              port: 3000
+              path: /apis/v1beta1/healthz
+              scheme: HTTP
+            initialDelaySeconds: 30
             periodSeconds: 5
             timeoutSeconds: 2
           name: ds-pipeline-ui
           ports:
             - containerPort: 3000
           readinessProbe:
-            exec:
-              command:
-                - wget
-                - -q
-                - -S
-                - -O
-                - '-'
-                - http://localhost:3000/apis/v1beta1/healthz
-            initialDelaySeconds: 3
+            httpGet:
+              port: 3000
+              path: /apis/v1beta1/healthz
+              scheme: HTTP
+            initialDelaySeconds: 30
             periodSeconds: 5
             timeoutSeconds: 2
           resources:
