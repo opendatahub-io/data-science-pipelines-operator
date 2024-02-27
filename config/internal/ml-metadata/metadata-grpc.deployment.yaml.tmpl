@@ -30,6 +30,9 @@ spec:
             - --mysql_config_user=$(DBCONFIG_USER)
             - --mysql_config_password=$(DBCONFIG_PASSWORD)
             - --enable_database_upgrade=true
+            {{ if .APIServer.CABundle}}
+            - --mysql_config_sslcapath={{ .APIServerPiplinesCABundleMountPath  }}
+            {{ end }}
           command:
             - /bin/metadata_store_server
           env:
@@ -82,4 +85,18 @@ spec:
               memory: {{.MLMD.GRPC.Resources.Limits.Memory}}
               {{ end }}
             {{ end }}
+          volumeMounts:
+            {{ if .APIServer.CABundle }}
+            - mountPath: {{ .APIServerPiplinesCABundleMountPath  }}
+              name: ca-bundle
+            {{ end }}
       serviceAccountName: ds-pipeline-metadata-grpc-{{.Name}}
+      volumes:
+        {{ if .APIServer.CABundle }}
+        - name: ca-bundle
+          configMap:
+            name: {{ .APIServer.CABundle.ConfigMapName }}
+            items:
+              - key: {{ .APIServer.CABundle.ConfigMapKey }}
+                path: {{ .APIServer.CABundle.ConfigMapKey }}
+        {{ end }}

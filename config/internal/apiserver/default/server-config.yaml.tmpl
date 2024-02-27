@@ -11,8 +11,9 @@ data:
       {
         "DBConfig": {
           "MySQLConfig": {
-            "Params": {{ .DBConnection.ExtraParams }}
-          },
+            "ExtraParams": {{ .DBConnection.ExtraParams }},
+            "GroupConcatMaxLen": "4194304"
+           },
           "PostgreSQLConfig": {},
           "ConMaxLifeTime": "120s"
         },
