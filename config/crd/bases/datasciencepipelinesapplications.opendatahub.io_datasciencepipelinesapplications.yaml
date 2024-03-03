@@ -62,15 +62,11 @@ spec:
                     description: 'Default: true'
                     type: boolean
                   cABundle:
-                    description: "If the Object store/DB is behind a TLS secured connection
+                    description: If the Object store/DB is behind a TLS secured connection
                       that is unrecognized by the host OpenShift/K8s cluster, then
                       you can provide a PEM formatted CA bundle to be injected into
                       the DSP server pod to trust this connection. CA Bundle should
-                      be provided as values within configmaps, mapped to keys. \n
-                      Note that if a global cert via ODH or the User is provided in
-                      this DSPA's namespace with the name \"odh-trusted-ca-bundle\",
-                      then that configmap is automatically used instead, and \"caBundle\"
-                      is ignored."
+                      be provided as values within configmaps, mapped to keys.
                     properties:
                       configMapKey:
                         description: Key should map to a CA bundle. The key is also

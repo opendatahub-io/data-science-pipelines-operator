@@ -51,11 +51,11 @@ spec:
             - name: ARCHIVE_LOGS
               value: "false"
             - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_NAME
-              value: testcabundleconfigmap6
+              value: dsp-trusted-ca-testdsp6
             - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_KEY
-              value: testcabundleconfigmapkey6.crt
+              value: dsp-ca.crt
             - name: ARTIFACT_COPY_STEP_CABUNDLE_MOUNTPATH
-              value: /etc/pki/tls/certs
+              value: /dsp-custom-certs
             - name: TRACK_ARTIFACTS
               value: "true"
             - name: STRIP_EOF
@@ -100,6 +100,8 @@ spec:
               value: "ubi-minimal:test6"
             - name: MOVERESULTS_IMAGE
               value: "busybox:test6"
+            - name: SSL_CERT_DIR
+              value: "/dsp-custom-certs:/etc/ssl/certs:/etc/pki/tls/certs"
           image: api-server:test6
           imagePullPolicy: Always
           name: ds-pipeline-api-server
@@ -146,7 +148,7 @@ spec:
               mountPath: /config/config.json
               subPath: config.json
             - name: ca-bundle
-              mountPath: /etc/pki/tls/certs
+              mountPath: /dsp-custom-certs
         - name: oauth-proxy
           args:
             - --https-address=:8443
@@ -205,9 +207,6 @@ spec:
             defaultMode: 420
         - name: ca-bundle
           configMap:
-            name: testcabundleconfigmap6
-            items:
-              - key: testcabundleconfigmapkey6.crt
-                path: testcabundleconfigmapkey6.crt
+            name: dsp-trusted-ca-testdsp6
             defaultMode: 420
       serviceAccountName: ds-pipeline-testdsp6

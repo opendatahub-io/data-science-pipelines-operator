@@ -80,3 +80,21 @@ func GetConfigMapValue(ctx context.Context, cfgKey, cfgName, ns string, client c
 		return fmt.Errorf("ConfigMap %s does not contain expected key %s", cfgName, cfgKey), ""
 	}
 }
+
+// GetConfigMapValues fetches the value for the provided configmap mapped to a given key
+func GetConfigMapValues(ctx context.Context, cfgName, ns string, client client.Client) (error, []string) {
+	cfgMap := &v1.ConfigMap{}
+	namespacedName := types.NamespacedName{
+		Name:      cfgName,
+		Namespace: ns,
+	}
+	err := client.Get(ctx, namespacedName, cfgMap)
+	if err != nil {
+		return err, []string{}
+	}
+	var values []string
+	for _, val := range cfgMap.Data {
+		values = append(values, val)
+	}
+	return nil, values
+}

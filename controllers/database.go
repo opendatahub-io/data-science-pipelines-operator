@@ -41,7 +41,7 @@ var dbTemplates = []string{
 	dbSecret,
 }
 
-func tLSClientConfig(pem []byte) (*cryptoTls.Config, error) {
+func tLSClientConfig(pems [][]byte) (*cryptoTls.Config, error) {
 	rootCertPool := x509.NewCertPool()
 
 	if f := os.Getenv("SSL_CERT_FILE"); f != "" {
@@ -51,8 +51,10 @@ func tLSClientConfig(pem []byte) (*cryptoTls.Config, error) {
 		}
 	}
 
-	if ok := rootCertPool.AppendCertsFromPEM(pem); !ok {
-		return nil, fmt.Errorf("error parsing CA Certificate, ensure provided certs are in valid PEM format")
+	for _, pem := range pems {
+		if ok := rootCertPool.AppendCertsFromPEM(pem); !ok {
+			return nil, fmt.Errorf("error parsing CA Certificate, ensure provided certs are in valid PEM format")
+		}
 	}
 	tlsConfig := &cryptoTls.Config{
 		RootCAs: rootCertPool,
@@ -88,7 +90,7 @@ var ConnectAndQueryDatabase = func(
 	host string,
 	log logr.Logger,
 	port, username, password, dbname, tls string,
-	pemCerts []byte,
+	pemCerts [][]byte,
 	extraParams map[string]string) (bool, error) {
 
 	mysqlConfig := createMySQLConfig(

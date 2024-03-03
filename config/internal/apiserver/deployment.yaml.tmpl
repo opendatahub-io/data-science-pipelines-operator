@@ -50,13 +50,13 @@ spec:
               value: "{{.APIServer.ArtifactImage}}"
             - name: ARCHIVE_LOGS
               value: "{{.APIServer.ArchiveLogs}}"
-            {{ if .APIServer.CABundle }}
+            {{ if .CustomCABundle }}
             - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_NAME
-              value: "{{.APIServer.CABundle.ConfigMapName}}"
+              value: "{{.CustomCABundle.ConfigMapName}}"
             - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_KEY
-              value: "{{.APIServer.CABundle.ConfigMapKey}}"
+              value: "{{.CustomCABundle.ConfigMapKey}}"
             - name: ARTIFACT_COPY_STEP_CABUNDLE_MOUNTPATH
-              value: {{ .PiplinesCABundleMountPath }}
+              value: {{ .CustomCABundleRootMountPath }}
             {{ end }}
             - name: TRACK_ARTIFACTS
               value: "{{.APIServer.TrackArtifacts}}"
@@ -102,6 +102,10 @@ spec:
               value: "{{.APIServer.CacheImage}}"
             - name: MOVERESULTS_IMAGE
               value: "{{.APIServer.MoveResultsImage}}"
+            {{ if .CustomSSLCertDir }}
+            - name: SSL_CERT_DIR
+              value: {{.CustomSSLCertDir}}
+            {{ end }}
           image: {{.APIServer.Image}}
           imagePullPolicy: Always
           name: ds-pipeline-api-server
@@ -153,7 +157,7 @@ spec:
               memory: {{.APIServer.Resources.Limits.Memory}}
               {{ end }}
             {{ end }}
-          {{ if or .APIServer.EnableSamplePipeline .APIServer.CABundle }}
+          {{ if or .APIServer.EnableSamplePipeline .CustomCABundle }}
           volumeMounts:
             - name: server-config
               mountPath: /config/config.json
@@ -165,8 +169,8 @@ spec:
             - name: sample-pipeline
               mountPath: /samples/
             {{ end }}
-            {{ if .APIServer.CABundle }}
-            - mountPath: {{ .APIServerPiplinesCABundleMountPath  }}
+            {{ if .CustomCABundle }}
+            - mountPath: {{ .CustomCABundleRootMountPath  }}
               name: ca-bundle
             {{ end }}
           {{ end }}
@@ -226,13 +230,10 @@ spec:
         - name: server-config
           configMap:
             name: pipeline-server-config-{{.Name}}
-        {{ if .APIServer.CABundle }}
+        {{ if .CustomCABundle }}
         - name: ca-bundle
           configMap:
-            name: {{ .APIServer.CABundle.ConfigMapName }}
-            items:
-              - key: {{ .APIServer.CABundle.ConfigMapKey }}
-                path: {{ .APIServer.CABundle.ConfigMapKey }}
+            name: {{ .CustomCABundle.ConfigMapName }}
         {{ end }}
         {{ if .APIServer.EnableSamplePipeline }}
         - name: sample-config
