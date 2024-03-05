@@ -1,0 +1,12 @@
+# When a minimal DSPA is deployed
+Images:
+  ApiServer: api-server:test7
+  Artifact: artifact-manager:test7
+  PersistentAgent: persistenceagent:test7
+  ScheduledWorkflow: scheduledworkflow:test7
+  Cache: ubi-minimal:test7
+  MoveResultsImage: busybox:test7
+  MlPipelineUI: frontend:test7
+  MariaDB: mariadb:test7
+  Minio: minio:test7
+  OAuthProxy: oauth-proxy:test7
