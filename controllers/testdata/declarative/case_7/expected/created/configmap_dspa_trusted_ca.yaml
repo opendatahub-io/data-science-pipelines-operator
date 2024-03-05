@@ -1,9 +1,9 @@
 kind: ConfigMap
 apiVersion: v1
 metadata:
-  name: testcabundleconfigmap6
+  name: dsp-trusted-ca-testdsp7
 data:
-  testcabundleconfigmapkey6.crt: |
+  dsp-ca.crt: |
     -----BEGIN CERTIFICATE-----
     MIIFlTCCA32gAwIBAgIUQTPwwkR17jDrdIe4VqhzNQ6OY0swDQYJKoZIhvcNAQEL
     BQAwJjELMAkGA1UEBhMCWFgxFzAVBgNVBAMMDnJoLWRzcC1kZXZzLmlvMB4XDTI0

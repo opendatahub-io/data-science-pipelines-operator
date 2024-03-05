@@ -189,7 +189,7 @@ func TestDefaultDeployBehaviorStorage(t *testing.T) {
 
 func TestIsDatabaseAccessibleTrue(t *testing.T) {
 	// Override the live connection function with a mock version
-	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte) bool {
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts [][]byte) bool {
 		return true
 	}
 
@@ -227,7 +227,7 @@ func TestIsDatabaseAccessibleTrue(t *testing.T) {
 
 func TestIsDatabaseNotAccessibleFalse(t *testing.T) {
 	// Override the live connection function with a mock version
-	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte) bool {
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts [][]byte) bool {
 		return false
 	}
 
@@ -265,7 +265,7 @@ func TestIsDatabaseNotAccessibleFalse(t *testing.T) {
 
 func TestDisabledHealthCheckReturnsTrue(t *testing.T) {
 	// Override the live connection function with a mock version that would always return false if called
-	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte) bool {
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts [][]byte) bool {
 		return false
 	}
 
@@ -305,7 +305,7 @@ func TestDisabledHealthCheckReturnsTrue(t *testing.T) {
 
 func TestIsDatabaseAccessibleBadAccessKey(t *testing.T) {
 	// Override the live connection function with a mock version
-	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte) bool {
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts [][]byte) bool {
 		return true
 	}
 
@@ -343,7 +343,7 @@ func TestIsDatabaseAccessibleBadAccessKey(t *testing.T) {
 
 func TestIsDatabaseAccessibleBadSecretKey(t *testing.T) {
 	// Override the live connection function with a mock version
-	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte) bool {
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts [][]byte) bool {
 		return true
 	}
 
@@ -467,12 +467,14 @@ S9IA40yOaVHMI51Fr1i1EIWvP8oJY8rAPWq45JnfFen3tOqKfw==
 `
 	_, _, reconciler := CreateNewTestObjects()
 
-	transport, err := getHttpsTransportWithCACert(reconciler.Log, []byte(validCert))
+	validCerts := [][]byte{[]byte(validCert)}
+	transport, err := getHttpsTransportWithCACert(reconciler.Log, validCerts)
 	assert.Nil(t, err)
 	assert.NotNil(t, transport)
 
 	invalidCert := "invalidCert"
-	transport, err = getHttpsTransportWithCACert(reconciler.Log, []byte(invalidCert))
+	invalidCerts := [][]byte{[]byte(invalidCert)}
+	transport, err = getHttpsTransportWithCACert(reconciler.Log, invalidCerts)
 	assert.NotNil(t, err)
 	assert.Nil(t, transport)
 }

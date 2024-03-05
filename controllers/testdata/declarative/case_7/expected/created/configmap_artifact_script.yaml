@@ -8,11 +8,9 @@ data:
         artifact_name=$(basename $2)
 
         aws_cp() {
-{{ if .CustomCABundle }}
-          aws s3 --endpoint {{.ObjectStorageConnection.Endpoint}} --ca-bundle {{ .PiplinesCABundleMountPath }} cp $1.tgz s3://{{.ObjectStorageConnection.Bucket}}/artifacts/$PIPELINERUN/$PIPELINETASK/$1.tgz
-{{ else }}
-          aws s3 --endpoint {{.ObjectStorageConnection.Endpoint}} cp $1.tgz s3://{{.ObjectStorageConnection.Bucket}}/artifacts/$PIPELINERUN/$PIPELINETASK/$1.tgz
-{{ end }}
+
+          aws s3 --endpoint http://minio-testdsp7.default.svc.cluster.local:9000 --ca-bundle /dsp-custom-certs/dsp-ca.crt cp $1.tgz s3://mlpipeline/artifacts/$PIPELINERUN/$PIPELINETASK/$1.tgz
+
         }
 
         if [ -f "$workspace_dest/$artifact_name" ]; then
@@ -37,8 +35,8 @@ data:
     }
 kind: ConfigMap
 metadata:
-  name: ds-pipeline-artifact-script-{{ .Name }}
-  namespace: {{.Namespace}}
+  name: ds-pipeline-artifact-script-testdsp7
+  namespace: default
   labels:
-    app: ds-pipeline-{{.Name}}
+    app: ds-pipeline-testdsp5
     component: data-science-pipelines

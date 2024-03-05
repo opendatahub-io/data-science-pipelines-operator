@@ -69,10 +69,10 @@ func createCredentialProvidersChain(accessKey, secretKey string) *credentials.Cr
 	return credentials.New(&credentials.Chain{Providers: providers})
 }
 
-func getHttpsTransportWithCACert(log logr.Logger, pemCerts []byte) (*http.Transport, error) {
+func getHttpsTransportWithCACert(log logr.Logger, pemCerts [][]byte) (*http.Transport, error) {
 	transport, err := minio.DefaultTransport(true)
 	if err != nil {
-		return nil, fmt.Errorf("Error creating default transport : %s", err)
+		return nil, fmt.Errorf("error creating default transport : %s", err)
 	}
 
 	if transport.TLSClientConfig.RootCAs == nil {
@@ -85,13 +85,21 @@ func getHttpsTransportWithCACert(log logr.Logger, pemCerts []byte) (*http.Transp
 		}
 	}
 
-	if ok := transport.TLSClientConfig.RootCAs.AppendCertsFromPEM(pemCerts); !ok {
-		return nil, fmt.Errorf("error parsing CA Certificate, ensure provided certs are in valid PEM format")
+	for _, pem := range pemCerts {
+		if ok := transport.TLSClientConfig.RootCAs.AppendCertsFromPEM(pem); !ok {
+			return nil, fmt.Errorf("error parsing CA Certificate, ensure provided certs are in valid PEM format")
+		}
 	}
 	return transport, nil
 }
 
-var ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts []byte) bool {
+var ConnectAndQueryObjStore = func(
+	ctx context.Context,
+	log logr.Logger,
+	endpoint, bucket string,
+	accesskey, secretkey []byte,
+	secure bool,
+	pemCerts [][]byte) bool {
 	cred := createCredentialProvidersChain(string(accesskey), string(secretkey))
 
 	opts := &minio.Options{
