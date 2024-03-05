@@ -520,7 +520,10 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 			log.Info(fmt.Sprintf("Found global CA Bundle %s present in this namespace %s, this bundle will be included in external tls connections.", config.GlobalODHCaBundleConfigMapName, p.Namespace))
 			// "odh-trusted-ca-bundle" can have fields: "odh-ca-bundle.crt" and "ca-bundle.crt", we need to utilize both
 			for _, val := range globalCerts {
-				p.APICustomPemCerts = append(p.APICustomPemCerts, []byte(val))
+				// If the ca-bundle field is empty, ignore it
+				if val != "" {
+					p.APICustomPemCerts = append(p.APICustomPemCerts, []byte(val))
+				}
 			}
 		}
 
@@ -535,7 +538,11 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 				log.Info(fmt.Sprintf("Encountered error when attempting to fetch ConfigMap: [%s], Error: %v", dspaCaBundleCfgName, dspaCACfgErr))
 				return dspaCACfgErr
 			}
-			p.APICustomPemCerts = append(p.APICustomPemCerts, []byte(dspaProvidedCABundle))
+
+			// If the ca-bundle field is empty, ignore it
+			if dspaProvidedCABundle != "" {
+				p.APICustomPemCerts = append(p.APICustomPemCerts, []byte(dspaProvidedCABundle))
+			}
 		}
 
 		// There are situations where global & user provided certs, or a provided ca trust configmap(s) have various trust bundles
