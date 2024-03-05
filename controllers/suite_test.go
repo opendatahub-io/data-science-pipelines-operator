@@ -79,7 +79,7 @@ var _ = BeforeEach(func() {
 		log logr.Logger,
 		port, username, password, dbname, tls string,
 		dbConnectionTimeout time.Duration,
-		pemCerts []byte,
+		pemCerts [][]byte,
 		extraParams map[string]string) (bool, error) {
 		return true, nil
 	}
@@ -89,7 +89,7 @@ var _ = BeforeEach(func() {
 		endpoint, bucket string,
 		accesskey, secretkey []byte,
 		secure bool,
-		pemCerts []byte,
+		pemCerts [][]byte,
 		objStoreConnectionTimeout time.Duration) (bool, error) {
 		return true, nil
 	}

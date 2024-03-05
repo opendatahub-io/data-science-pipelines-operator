@@ -45,7 +45,7 @@ var mariadbTemplates = []string{
 	"mariadb/default/mariadb-sa.yaml.tmpl",
 }
 
-func tLSClientConfig(pem []byte) (*cryptoTls.Config, error) {
+func tLSClientConfig(pems [][]byte) (*cryptoTls.Config, error) {
 	rootCertPool := x509.NewCertPool()
 
 	if f := os.Getenv("SSL_CERT_FILE"); f != "" {
@@ -55,7 +55,7 @@ func tLSClientConfig(pem []byte) (*cryptoTls.Config, error) {
 		}
 	}
 
-	if len(pem) != 0 {
+	for _, pem := range pems {
 		if ok := rootCertPool.AppendCertsFromPEM(pem); !ok {
 			return nil, fmt.Errorf("error parsing CA Certificate, ensure provided certs are in valid PEM format")
 		}
@@ -96,7 +96,7 @@ var ConnectAndQueryDatabase = func(
 	log logr.Logger,
 	port, username, password, dbname, tls string,
 	dbConnectionTimeout time.Duration,
-	pemCerts []byte,
+	pemCerts [][]byte,
 	extraParams map[string]string) (bool, error) {
 
 	mysqlConfig := createMySQLConfig(

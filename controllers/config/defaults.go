@@ -17,6 +17,7 @@ limitations under the License.
 package config
 
 import (
+	"fmt"
 	"time"
 
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
@@ -25,17 +26,16 @@ import (
 )
 
 const (
-	DefaultImageValue                  = "MustSetInConfig"
-	APIServerPiplinesCABundleMountPath = "/etc/pki/tls/certs"
-	PiplinesCABundleMountPath          = "/etc/pki/tls/certs"
+	DefaultImageValue = "MustSetInConfig"
 
-	// GlobalCaBundleConfigMapName key and label values  are a contract with
+	CustomCABundleRootMountPath = "/dsp-custom-certs"
+
+	// GlobalODHCaBundleConfigMapName key and label values  are a contract with
 	// ODH Platform https://github.com/opendatahub-io/architecture-decision-records/pull/28
-	GlobalCaBundleConfigMapName = "odh-trusted-ca-bundle"
+	GlobalODHCaBundleConfigMapName = "odh-trusted-ca-bundle"
 
-	// GlobalCaBundleConfigMapKey is the key provided by the configmap created via OCP Cluster Network Operator
-	// https://docs.openshift.com/container-platform/4.14/networking/configuring-a-custom-pki.html#certificate-injection-using-operators_configuring-a-custom-pki
-	GlobalCaBundleConfigMapKey = "ca-bundle.crt"
+	CustomDSPTrustedCAConfigMapNamePrefix = "dsp-trusted-ca"
+	CustomDSPTrustedCAConfigMapKey        = "dsp-ca.crt"
 
 	MLPipelineUIConfigMapPrefix       = "ds-pipeline-ui-configmap-"
 	ArtifactScriptConfigMapNamePrefix = "ds-pipeline-artifact-script-"
@@ -204,4 +204,13 @@ func GetDurationConfigWithDefault(configName string, value time.Duration) time.D
 		return value
 	}
 	return viper.GetDuration(configName)
+}
+
+// GetCABundleFileMountPath provides the location in pipeline step-copy-artifact step where the
+// ca bundle is mounted for aws cli to connect to s3 store.
+// Since pipeline step-copy-artifact step uses aws cli, and there are issues surrounding
+// passing a path to aws cli (see: https://github.com/aws/aws-cli/issues/3425#issuecomment-402289636)
+// as such for pipelines, we concatenate the certs into a single cert bundle and use a separate configmap for this
+func GetCABundleFileMountPath() string {
+	return fmt.Sprintf("%s/%s", CustomCABundleRootMountPath, CustomDSPTrustedCAConfigMapKey)
 }

@@ -38,11 +38,13 @@ spec:
             - name: DBCONFIG_PORT
               value: "3306"
             - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_NAME
-              value: testcabundleconfigmap6
+              value: dsp-trusted-ca-testdsp6
             - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_KEY
-              value: testcabundleconfigmapkey6.crt
+              value: dsp-ca.crt
             - name: ARTIFACT_COPY_STEP_CABUNDLE_MOUNTPATH
-              value: /etc/pki/tls/certs
+              value: /dsp-custom-certs
+            - name: SSL_CERT_DIR
+              value: "/dsp-custom-certs:/etc/ssl/certs:/etc/pki/tls/certs"
             - name: AUTO_UPDATE_PIPELINE_DEFAULT_VERSION
               value: "true"
             - name: DBCONFIG_CONMAXLIFETIMESEC
@@ -162,7 +164,7 @@ spec:
               mountPath: /config/config.json
               subPath: config.json
             - name: ca-bundle
-              mountPath: /etc/pki/tls/certs
+              mountPath: /dsp-custom-certs
         - name: oauth-proxy
           args:
             - --https-address=:8443
@@ -221,9 +223,6 @@ spec:
             defaultMode: 420
         - name: ca-bundle
           configMap:
-            name: testcabundleconfigmap6
-            items:
-              - key: testcabundleconfigmapkey6.crt
-                path: testcabundleconfigmapkey6.crt
+            name: dsp-trusted-ca-testdsp6
             defaultMode: 420
       serviceAccountName: ds-pipeline-testdsp6

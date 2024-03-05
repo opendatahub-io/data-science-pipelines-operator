@@ -8,8 +8,8 @@ data:
         artifact_name=$(basename $2)
 
         aws_cp() {
-{{ if .APIServer.CABundle }}
-          aws s3 --endpoint {{.ObjectStorageConnection.Endpoint}} --ca-bundle {{ .PiplinesCABundleMountPath }}/{{ .APIServer.CABundle.ConfigMapKey }} cp $1.tgz s3://{{.ObjectStorageConnection.Bucket}}/artifacts/$PIPELINERUN/$PIPELINETASK/$1.tgz
+{{ if .CustomCABundle }}
+          aws s3 --endpoint {{.ObjectStorageConnection.Endpoint}} --ca-bundle {{ .PiplinesCABundleMountPath }} cp $1.tgz s3://{{.ObjectStorageConnection.Bucket}}/artifacts/$PIPELINERUN/$PIPELINETASK/$1.tgz
 {{ else }}
           aws s3 --endpoint {{.ObjectStorageConnection.Endpoint}} cp $1.tgz s3://{{.ObjectStorageConnection.Bucket}}/artifacts/$PIPELINERUN/$PIPELINETASK/$1.tgz
 {{ end }}

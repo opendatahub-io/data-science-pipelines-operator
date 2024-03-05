@@ -17,11 +17,14 @@ limitations under the License.
 package controllers
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/json"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -43,11 +46,8 @@ type DSPAParams struct {
 	Owner                                mf.Owner
 	DSPVersion                           string
 	APIServer                            *dspa.APIServer
-	APIServerPiplinesCABundleMountPath   string
-	PiplinesCABundleMountPath            string
 	APIServerDefaultResourceName         string
 	APIServerServiceName                 string
-	APICustomPemCerts                    []byte
 	OAuthProxy                           string
 	ScheduledWorkflow                    *dspa.ScheduledWorkflow
 	ScheduledWorkflowDefaultResourceName string
@@ -61,6 +61,23 @@ type DSPAParams struct {
 	WorkflowController                   *dspa.WorkflowController
 	DBConnection
 	ObjectStorageConnection
+
+	// TLS
+	// The CA bundle path used by API server
+	CustomCABundleRootMountPath string
+	// This path is used by API server to also look
+	// for CustomCABundleRootMountPath when
+	// verifying certs
+	CustomSSLCertDir *string
+	// The CA bundle path found in the pipeline pods
+	PiplinesCABundleMountPath string
+	// Collects all certs from user & global certs
+	APICustomPemCerts [][]byte
+	// Source of truth for the DSP cert configmap details
+	// If this is defined, then we assume we have additional certs
+	// we need to leverage for tls connections within dsp apiserver
+	// pipeline pods
+	CustomCABundle *dspa.CABundle
 }
 
 type DBConnection struct {
@@ -535,8 +552,8 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.Minio = dsp.Spec.ObjectStorage.Minio.DeepCopy()
 	p.OAuthProxy = config.GetStringConfigWithDefault(config.OAuthProxyImagePath, config.DefaultImageValue)
 	p.MLMD = dsp.Spec.MLMD.DeepCopy()
-	p.APIServerPiplinesCABundleMountPath = config.APIServerPiplinesCABundleMountPath
-	p.PiplinesCABundleMountPath = config.PiplinesCABundleMountPath
+	p.CustomCABundleRootMountPath = config.CustomCABundleRootMountPath
+	p.PiplinesCABundleMountPath = config.GetCABundleFileMountPath()
 
 	log := loggr.WithValues("namespace", p.Namespace).WithValues("dspa_name", p.Name)
 
@@ -561,7 +578,6 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		setStringDefault(moveResultsImageFromConfig, &p.APIServer.MoveResultsImage)
 		setStringDefault(argoLauncherImageFromConfig, &p.APIServer.ArgoLauncherImage)
 		setStringDefault(argoDriverImageFromConfig, &p.APIServer.ArgoDriverImage)
-
 		setResourcesDefault(config.APIServerResourceRequirements, &p.APIServer.Resources)
 
 		if p.APIServer.ArtifactScriptConfigMap == nil {
@@ -572,38 +588,102 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		}
 
 		// Check for Global certs
-		// If it exists, we use this cert
-		// If no global cert provided, check if a custom bundle is provided via the DSPA
-		globalCABundleCFGMapKey, globalCABundleCFGMapName := config.GlobalCaBundleConfigMapKey, config.GlobalCaBundleConfigMapName
-		err, globalCerVal := util.GetConfigMapValue(ctx, globalCABundleCFGMapKey, globalCABundleCFGMapName, p.Namespace, client, log)
-		if err != nil && apierrs.IsNotFound(err) {
+		// If it exists, include this cert for tls verifications
+		globalCABundleCFGMapName := config.GlobalODHCaBundleConfigMapName
+		err, globalCerts := util.GetConfigMapValues(ctx, globalCABundleCFGMapName, p.Namespace, client)
+		if err != nil {
 			// If the global cert configmap is not available, that is OK
-			// proceed to check if the user has provided their
-			// own configmap via DSPA config
-			if p.APIServer.CABundle != nil {
-				dspaCaBundleCfgKey, dspaCaBundleCfgName := p.APIServer.CABundle.ConfigMapKey, p.APIServer.CABundle.ConfigMapName
-				dspaCACfgErr, dspaProvidedCABundle := util.GetConfigMapValue(ctx, dspaCaBundleCfgKey, dspaCaBundleCfgName, p.Namespace, client, log)
-				if dspaCACfgErr != nil && apierrs.IsNotFound(dspaCACfgErr) {
-					log.Info(fmt.Sprintf("ConfigMap [%s] was not found in namespace [%s]", dspaCaBundleCfgKey, p.Namespace))
-					return dspaCACfgErr
-				} else if dspaCACfgErr != nil {
-					log.Info(fmt.Sprintf("Encountered error when attempting to fetch ConfigMap: [%s], Error: %v", dspaCaBundleCfgName, dspaCACfgErr))
-					return dspaCACfgErr
-				}
-				p.APICustomPemCerts = []byte(dspaProvidedCABundle)
+			if !apierrs.IsNotFound(err) {
+				log.Info(fmt.Sprintf("Encountered error when attempting to fetch ConfigMap: [%s], Error: %v", globalCABundleCFGMapName, err))
+				return err
 			}
-		} else if err != nil {
-			log.Info(fmt.Sprintf("Encountered error when attempting to fetch ConfigMap: [%s], Error: %v", globalCABundleCFGMapKey, err))
-			return err
 		} else {
 			// Found a global cert, consume this cert, takes precedence over "cABundle" provided via DSPA
-			log.Info(fmt.Sprintf("Found global CA Bundle %s present in this namespace %s, this cert will be "+
-				"included to verify external tls connections in this DSPA.", config.GlobalCaBundleConfigMapName, p.Namespace))
-			p.APICustomPemCerts = []byte(globalCerVal)
-			p.APIServer.CABundle = &dspa.CABundle{
-				ConfigMapName: config.GlobalCaBundleConfigMapName,
-				ConfigMapKey:  config.GlobalCaBundleConfigMapKey,
+			log.Info(fmt.Sprintf("Found global CA Bundle %s present in this namespace %s, this bundle will be included in external tls connections.", config.GlobalODHCaBundleConfigMapName, p.Namespace))
+			// "odh-trusted-ca-bundle" can have fields: "odh-ca-bundle.crt" and "ca-bundle.crt", we need to utilize both
+			for _, val := range globalCerts {
+				// If the ca-bundle field is empty, ignore it
+				if val != "" {
+					p.APICustomPemCerts = append(p.APICustomPemCerts, []byte(val))
+				}
 			}
+		}
+
+		// If user provided a CA bundle, include this in tls verification
+		if p.APIServer.CABundle != nil {
+			dspaCaBundleCfgKey, dspaCaBundleCfgName := p.APIServer.CABundle.ConfigMapKey, p.APIServer.CABundle.ConfigMapName
+			dspaCACfgErr, dspaProvidedCABundle := util.GetConfigMapValue(ctx, dspaCaBundleCfgKey, dspaCaBundleCfgName, p.Namespace, client, log)
+			if dspaCACfgErr != nil && apierrs.IsNotFound(dspaCACfgErr) {
+				log.Info(fmt.Sprintf("ConfigMap [%s] was not found in namespace [%s]", dspaCaBundleCfgKey, p.Namespace))
+				return dspaCACfgErr
+			} else if dspaCACfgErr != nil {
+				log.Info(fmt.Sprintf("Encountered error when attempting to fetch ConfigMap: [%s], Error: %v", dspaCaBundleCfgName, dspaCACfgErr))
+				return dspaCACfgErr
+			}
+			// If the ca-bundle field is empty, ignore it
+			if dspaProvidedCABundle != "" {
+				p.APICustomPemCerts = append(p.APICustomPemCerts, []byte(dspaProvidedCABundle))
+			}
+		}
+
+		// There are situations where global & user provided certs, or a provided ca trust configmap(s) have various trust bundles
+		// (for example in the case of "odh-trusted-ca-bundle") there is "odh-ca-bundle.crt" and "ca-bundle.crt".
+		// We create a separate configmap and concatenate all the certs into a single bundle, because passing a
+		// full path into the pipeline doesn't seem to work with aws cli used for artifact passing
+		// Ref: https://github.com/aws/aws-cli/issues/3425#issuecomment-402289636
+
+		// If user or global CABundle has been provided
+		// 1) create the dsp-trusted-ca configmap
+		// 2) populate CustomCABundle SOT var for pipeline pods and artifact script to utilize during templating
+		// 3) set ssl_cert_dir for api server
+		if len(p.APICustomPemCerts) > 0 {
+			p.CustomCABundle = &dspa.CABundle{
+				ConfigMapKey:  config.CustomDSPTrustedCAConfigMapKey,
+				ConfigMapName: fmt.Sprintf("%s-%s", config.CustomDSPTrustedCAConfigMapNamePrefix, p.Name),
+			}
+
+			// Combine certs into a single configmap field
+			customCABundleCert := &v1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      p.CustomCABundle.ConfigMapName,
+					Namespace: p.Namespace,
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion:         dsp.APIVersion,
+							Kind:               dsp.Kind,
+							Name:               dsp.Name,
+							UID:                dsp.UID,
+							Controller:         util.BoolPointer(true),
+							BlockOwnerDeletion: util.BoolPointer(true),
+						},
+					},
+				},
+
+				Data: map[string]string{
+					p.CustomCABundle.ConfigMapKey: string(bytes.Join(p.APICustomPemCerts, []byte{})),
+				},
+			}
+
+			err := client.Create(ctx, customCABundleCert)
+			if apierrs.IsAlreadyExists(err) {
+				err := client.Update(ctx, customCABundleCert)
+				if err != nil {
+					return err
+				}
+			} else if err != nil {
+				return err
+			}
+
+			// We need to update the default SSL_CERT_DIR to include
+			// dsp custom cert path, used by DSP Api Server
+			var certDirectories = []string{
+				config.CustomCABundleRootMountPath,
+				"/etc/ssl/certs",     // SLES10/SLES11, https://golang.org/issue/12139
+				"/etc/pki/tls/certs", // Fedora/RHEL
+			}
+			// SSL_CERT_DIR accepts a colon separated list of directories
+			sslCertDir := strings.Join(certDirectories, ":")
+			p.CustomSSLCertDir = &sslCertDir
 		}
 	}
 
