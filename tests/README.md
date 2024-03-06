@@ -46,12 +46,12 @@ For the impatient developer, you can use the following flag to skip DSPA install
 changes to a live environment and run the tests against it: 
 
 ```bash
-go run github.com/onsi/ginkgo/v2/ginkgo --tags=test_integration -- \
+go test ./... --tags=test_integration -v \
   -kubeconfig=${KUBECONFIG_PATH} \
   -k8sApiServerHost=${TARGET_CLUSTER} \
-  -DSPANamespace=${TARGET_NAMESPACE} -DSPAPath=resources/dspa-lite.yaml \
-  -ginkgo.v
-  -skipDeploy=true
+  -DSPANamespace=${TARGET_NAMESPACE} \
+  -DSPAPath=resources/dspa-lite.yaml
+  -skipDeploy=true \
   -skipCleanup=true
 ```
 
