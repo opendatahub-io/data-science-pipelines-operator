@@ -4,11 +4,3 @@ resources:
 - ../../argo
 - ../../base
 namespace: opendatahub
-vars:
-  - name: IMAGES_ARGO_SERVER
-    objref:
-      kind: ConfigMap
-      name: dspo-parameters
-      apiVersion: v1
-    fieldref:
-      fieldpath: data.IMAGES_ARGO_SERVER
