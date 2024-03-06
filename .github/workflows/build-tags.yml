@@ -66,14 +66,10 @@ env:
   IMAGE_REPO_DSPO: data-science-pipelines-operator
   IMAGE_REPO_SERVER: ds-pipelines-api-server
   IMAGE_REPO_UI: ds-pipelines-frontend
-  IMAGE_REPO_CACHE: ds-pipelines-cacheserver
   IMAGE_REPO_PA: ds-pipelines-persistenceagent
   IMAGE_REPO_SWF: ds-pipelines-scheduledworkflow
-  IMAGE_REPO_VC: ds-pipelines-viewercontroller
-  IMAGE_REPO_ARTIFACT: ds-pipelines-artifact-manager
   IMAGE_REPO_LAUNCHER: ds-pipelines-launcher
   IMAGE_REPO_DRIVER: ds-pipelines-driver
-  IMAGE_REPO_MLMD_WRITER: ds-pipelines-metadata-writer
   IMAGE_REPO_MLMD_ENVOY: ds-pipelines-metadata-envoy
   IMAGE_REPO_MLMD_GRPC: ds-pipelines-metadata-grpc
   SOURCE_DSPO_BRANCH: ${{ inputs.src_dspo_branch }}
@@ -132,22 +128,6 @@ jobs:
           GH_REPO: ${{ inputs.dsp_org_repo }}
           OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
 
-  CACHE-build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v3
-      - uses: ./.github/actions/build
-        name: Build Image
-        env:
-          SOURCE_BRANCH: ${{ env.SOURCE_DSP_BRANCH }}
-        with:
-          IMAGE_REPO: ${{ env.IMAGE_REPO_CACHE }}
-          DOCKERFILE: backend/Dockerfile.cacheserver
-          GH_REPO: ${{ inputs.dsp_org_repo }}
-          OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
-
   PA-build:
     runs-on: ubuntu-latest
     permissions:
@@ -177,22 +157,6 @@ jobs:
         with:
           IMAGE_REPO: ${{ env.IMAGE_REPO_SWF }}
           DOCKERFILE: backend/Dockerfile.scheduledworkflow
-          GH_REPO: ${{ inputs.dsp_org_repo }}
-          OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
-
-  VC-build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v3
-      - uses: ./.github/actions/build
-        name: Build Image
-        env:
-          SOURCE_BRANCH: ${{ env.SOURCE_DSP_BRANCH }}
-        with:
-          IMAGE_REPO: ${{ env.IMAGE_REPO_VC }}
-          DOCKERFILE: backend/Dockerfile.viewercontroller
           GH_REPO: ${{ inputs.dsp_org_repo }}
           OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
 
