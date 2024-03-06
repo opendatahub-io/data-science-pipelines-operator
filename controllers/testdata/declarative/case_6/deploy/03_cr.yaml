@@ -1,0 +1,30 @@
+# Test:
+# When a user/odh provides a odh-trusted-ca-bundle, a configmap is created and mounted to mlmd grpc and apiserver
+# When a user provides a cABundle in the DSPA, it is also included in the concatenated dsp custom ca cert configmap
+# When external db is used the server config created for api server uses tls=true
+# MLMD grpc server mounts the dspa cert and passes it into grpc server
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: testdsp6
+spec:
+  dspVersion: v2
+  apiServer:
+    deploy: true
+    enableSamplePipeline: false
+    cABundle:
+      configMapKey: user-ca-bundle.crt
+      configMapName: user-ca-bundle
+  database:
+    externalDB:
+      host: testdbhost6
+      passwordSecret:
+        key: testpswkey6
+        name: testdbpswsecretname6
+      pipelineDBName: testdbname6
+      port: test6
+      username: testuser6
+  objectStorage:
+    minio:
+      deploy: false
+      image: minio:test6

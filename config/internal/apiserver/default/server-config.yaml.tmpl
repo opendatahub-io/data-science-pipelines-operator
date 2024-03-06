@@ -8,6 +8,7 @@ metadata:
         component: data-science-pipelines
 data:
     config.json: |
+{{ if eq .DSPVersion "v2" }}
       {
         "DBConfig": {
           "MySQLConfig": {
@@ -20,3 +21,13 @@ data:
         "DBDriverName": "mysql",
         "InitConnectionTimeout": "6m"
       }
+{{ else }}
+      {
+        "DBConfig": {
+          "DriverName": "mysql",
+          "ConMaxLifeTime": "120s",
+          "ExtraParams": {{ .DBConnection.ExtraParams }}
+        },
+        "InitConnectionTimeout": "6m"
+      }
+{{ end }}
