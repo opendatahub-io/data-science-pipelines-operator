@@ -154,13 +154,7 @@ oc new-project ${ODH_NS}
 
 Now we will navigate to the DSPO manifests then build and deploy them to this namespace.
 
-If you wish to deploy Argo Workflows, run the following commands:
-```bash
-cd ${WORKING_DIR}
-make argodeploy OPERATOR_NS=${ODH_NS}
-```
-
-If not, build DSPO manifests directly:
+Run the following to deploy the ful DSPO v2 stack.
 ```bash
 cd ${WORKING_DIR}
 make deploy OPERATOR_NS=${ODH_NS}

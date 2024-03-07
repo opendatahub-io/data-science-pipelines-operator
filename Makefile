@@ -169,6 +169,11 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 		&& $(KUSTOMIZE) edit set namespace ${OPERATOR_NS}
 	$(KUSTOMIZE) build config/overlays/make-deploy | kubectl apply -f -
 
+.PHONY: undeploy
+undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+	cd config/overlays/make-deploy && $(KUSTOMIZE) edit set namespace ${OPERATOR_NS}
+	$(KUSTOMIZE) build config/overlays/make-deploy | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+
 .PHONY: deploy-kind
 deploy-kind:
 	cd config/overlays/kind-tests \
@@ -176,39 +181,11 @@ deploy-kind:
 		&& kustomize edit set namespace ${OPERATOR_NS}
 	kustomize build config/overlays/kind-tests | kubectl apply -f -
 
-.PHONY: undeploy
-undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	cd config/overlays/make-deploy && $(KUSTOMIZE) edit set namespace ${OPERATOR_NS}
-	$(KUSTOMIZE) build config/overlays/make-deploy | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
-
-.PHONY: argodeploy
-argodeploy: manifests kustomize
-	cd config/overlays/make-argodeploy \
-		&& $(KUSTOMIZE) edit set namespace ${ARGO_NS}
-	$(KUSTOMIZE) build config/overlays/make-argodeploy | kubectl apply -f -
-
-.PHONY: argoundeploy
-argoundeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	cd config/overlays/make-argodeploy \
-	    && $(KUSTOMIZE) edit set namespace ${ARGO_NS}
-	$(KUSTOMIZE) build config/overlays/make-argodeploy | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
-
 .PHONY: undeploy-kind
 undeploy-kind: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	cd config/overlays/kind-tests \
 		&& kustomize edit set namespace ${OPERATOR_NS}
 	kustomize build config/overlays/kind-tests | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
-
-.PHONY: deployODH
-deployODH: manifests kustomize
-	cd config/overlays/make-deploy && $(KUSTOMIZE) edit set image controller=${IMG} && $(KUSTOMIZE) edit set namespace ${OPERATOR_NS}
-	$(KUSTOMIZE) build config/overlays/odh | kubectl apply -f -
-
-.PHONY: undeployODH
-undeployODH:
-	cd config/overlays/odh && $(KUSTOMIZE) edit set namespace ${OPERATOR_NS}
-	$(KUSTOMIZE) build config/overlays/odh | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
-
 
 ##@ Build Dependencies
 
