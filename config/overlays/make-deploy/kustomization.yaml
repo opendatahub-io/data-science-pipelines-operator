@@ -3,9 +3,3 @@ kind: Kustomization
 namespace: opendatahub
 resources:
 - ../../base
-patchesStrategicMerge:
-- img_patch.yaml
-images:
-- name: controller
-  newName: quay.io/opendatahub/data-science-pipelines-operator
-  newTag: main
