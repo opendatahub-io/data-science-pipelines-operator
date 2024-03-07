@@ -541,6 +541,8 @@ spec:
                           secretKey:
                             type: string
                           secretName:
+                            description: The name of the Secret where the AccessKey
+                              and SecretKey are defined.
                             type: string
                         required:
                         - accessKey
@@ -635,6 +637,8 @@ spec:
                           secretKey:
                             type: string
                           secretName:
+                            description: The name of the Secret where the AccessKey
+                              and SecretKey are defined.
                             type: string
                         required:
                         - accessKey
