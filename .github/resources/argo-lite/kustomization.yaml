@@ -3,5 +3,3 @@ kind: Kustomization
 namespace: opendatahub
 resources:
   - ../../../config/overlays/make-argodeploy
-patchesStrategicMerge:
-  - patch/argo_server_deployment.yaml
