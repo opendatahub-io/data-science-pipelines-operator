@@ -383,11 +383,6 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 			}
 		}
 
-		// TODO: Remove once v2launcher minio secret is parameterized during artifact passing
-		if p.UsingV2Pipelines(dsp) {
-			p.ObjectStorageConnection.CredentialsSecret.SecretName = "mlpipeline-minio-artifact"
-		}
-
 		accessKey, secretKey, err := p.RetrieveOrCreateObjectStoreSecret(ctx, client, p.ObjectStorageConnection.CredentialsSecret, log)
 		if err != nil {
 			return err

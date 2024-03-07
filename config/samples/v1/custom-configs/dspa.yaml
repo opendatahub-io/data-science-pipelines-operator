@@ -5,10 +5,8 @@ metadata:
 spec:
   apiServer:
     deploy: true
-    image: quay.io/modh/odh-ml-pipelines-api-server-container:v1.18.0-8
     applyTektonCustomResource: true
     archiveLogs: false
-    artifactImage: quay.io/modh/odh-ml-pipelines-artifact-manager-container:v1.18.0-8
     cacheImage: registry.access.redhat.com/ubi8/ubi-minimal
     moveResultsImage: busybox
     injectDefaultScript: true
@@ -30,7 +28,6 @@ spec:
         memory: 1Gi
   persistenceAgent:
     deploy: true
-    image: quay.io/modh/odh-ml-pipelines-persistenceagent-container:v1.18.0-8
     numWorkers: 2
     resources:
       requests:
@@ -41,7 +38,6 @@ spec:
         memory: 1Gi
   scheduledWorkflow:
     deploy: true
-    image: quay.io/modh/odh-ml-pipelines-scheduledworkflow-container:v1.18.0-8
     cronScheduleTimezone: UTC
     resources:
       requests:

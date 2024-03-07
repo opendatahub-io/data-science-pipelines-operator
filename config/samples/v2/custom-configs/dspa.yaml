@@ -6,7 +6,6 @@ spec:
   dspVersion: v2
   apiServer:
     deploy: true
-    image: gcr.io/ml-pipeline/api-server:2.0.2
     stripEOF: true
     terminateStatus: Cancelled
     trackArtifacts: true
@@ -22,7 +21,6 @@ spec:
         memory: 1Gi
   persistenceAgent:
     deploy: true
-    image: gcr.io/ml-pipeline/persistenceagent:2.0.2
     numWorkers: 2
     resources:
       requests:
@@ -33,7 +31,6 @@ spec:
         memory: 1Gi
   scheduledWorkflow:
     deploy: true
-    image: gcr.io/ml-pipeline/scheduledworkflow:2.0.2
     cronScheduleTimezone: UTC
     resources:
       requests:
@@ -44,7 +41,8 @@ spec:
         memory: 250Mi
   mlpipelineUI:
     deploy: true
-    image: gcr.io/ml-pipeline/frontend:2.0.2
+    # image is required
+    image: quay.io/opendatahub/ds-pipelines-frontend:latest
     resources:
       limits:
         cpu: 100m
@@ -84,6 +82,6 @@ spec:
           cpu: 250m
           memory: 1Gi
       s3CredentialsSecret:
-        secretName: mlpipeline-minio-artifact
+        secretName: teststoragesecret
         accessKey: AWS_ACCESS_KEY_ID
         secretKey: AWS_SECRET_ACCESS_KEY
