@@ -1,0 +1,16 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: minio
+spec:
+  ports:
+    - name: https
+      protocol: TCP
+      port: 9000
+      targetPort: 9000
+    - name: console
+      protocol: TCP
+      port: 9001
+      targetPort: 9001
+  selector:
+    app: minio
