@@ -117,6 +117,10 @@ spec:
           image: api-server:test5
           imagePullPolicy: Always
           name: ds-pipeline-api-server
+          command: ['/bin/apiserver']
+          args:
+            - --config=/config
+            - -logtostderr=true
           ports:
             - containerPort: 8888
               name: http
@@ -155,15 +159,6 @@ spec:
             limits:
               cpu: 500m
               memory: 1Gi
-          volumeMounts:
-            - name: server-config
-              mountPath: /config/config.json
-              subPath: config.json
-            - mountPath: /config/sample_config.json
-              name: sample-config
-              subPath: sample_config.json
-            - mountPath: /samples/
-              name: sample-pipeline
         - name: oauth-proxy
           args:
             - --https-address=:8443
@@ -220,13 +215,4 @@ spec:
             defaultMode: 420
             name: pipeline-server-config-testdsp5
           name: server-config
-        - configMap:
-            defaultMode: 420
-            name: sample-config-testdsp5
-          name: sample-config
-        - configMap:
-            defaultMode: 420
-            name: sample-pipeline-testdsp5
-          name: sample-pipeline
-
       serviceAccountName: ds-pipeline-testdsp5

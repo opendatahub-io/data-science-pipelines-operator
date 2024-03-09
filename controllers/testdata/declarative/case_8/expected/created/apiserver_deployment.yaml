@@ -111,6 +111,10 @@ spec:
           image: api-server:test8
           imagePullPolicy: Always
           name: ds-pipeline-api-server
+          command: ['/bin/apiserver']
+          args:
+            - --config=/config
+            - -logtostderr=true
           ports:
             - containerPort: 8888
               name: http
