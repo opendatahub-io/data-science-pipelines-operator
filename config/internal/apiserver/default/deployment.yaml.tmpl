@@ -37,13 +37,17 @@ spec:
               value: "{{.DBConnection.Host}}"
             - name: DBCONFIG_PORT
               value: "{{.DBConnection.Port}}"
-            {{ if .APIServer.CABundle }}
+            {{ if .CustomCABundle }}
             - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_NAME
-              value: "{{.APIServer.CABundle.ConfigMapName}}"
+              value: "{{.CustomCABundle.ConfigMapName}}"
             - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_KEY
-              value: "{{.APIServer.CABundle.ConfigMapKey}}"
+              value: "{{.CustomCABundle.ConfigMapKey}}"
             - name: ARTIFACT_COPY_STEP_CABUNDLE_MOUNTPATH
-              value: {{ .PiplinesCABundleMountPath }}
+              value: {{ .CustomCABundleRootMountPath }}
+            {{ end }}
+            {{ if .CustomSSLCertDir }}
+            - name: SSL_CERT_DIR
+              value: {{.CustomSSLCertDir}}
             {{ end }}
             - name: AUTO_UPDATE_PIPELINE_DEFAULT_VERSION
               value: "{{.APIServer.AutoUpdatePipelineDefaultVersion}}"
@@ -206,8 +210,11 @@ spec:
               memory: {{.APIServer.Resources.Limits.Memory}}
               {{ end }}
             {{ end }}
-          {{ if or .APIServer.EnableSamplePipeline .APIServer.CABundle }}
+          {{ if or .APIServer.EnableSamplePipeline .CustomCABundle }}
           volumeMounts:
+            - name: server-config
+              mountPath: /config/config.json
+              subPath: config.json
             {{ if .APIServer.EnableSamplePipeline }}
             - name: sample-config
               mountPath: /config/sample_config.json
@@ -215,8 +222,8 @@ spec:
             - name: sample-pipeline
               mountPath: /samples/
             {{ end }}
-            {{ if .APIServer.CABundle }}
-            - mountPath: {{ .APIServerPiplinesCABundleMountPath  }}
+            {{ if .CustomCABundle }}
+            - mountPath: {{ .CustomCABundleRootMountPath  }}
               name: ca-bundle
             {{ end }}
           {{ end }}
@@ -273,13 +280,13 @@ spec:
         - name: proxy-tls
           secret:
             secretName: ds-pipelines-proxy-tls-{{.Name}}
-        {{ if .APIServer.CABundle }}
+        - name: server-config
+          configMap:
+            name: pipeline-server-config-{{.Name}}
+        {{ if .CustomCABundle }}
         - name: ca-bundle
           configMap:
-            name: {{ .APIServer.CABundle.ConfigMapName }}
-            items:
-              - key: {{ .APIServer.CABundle.ConfigMapKey }}
-                path: {{ .APIServer.CABundle.ConfigMapKey }}
+            name: {{ .CustomCABundle.ConfigMapName }}
         {{ end }}
         {{ if .APIServer.EnableSamplePipeline }}
         - name: sample-config

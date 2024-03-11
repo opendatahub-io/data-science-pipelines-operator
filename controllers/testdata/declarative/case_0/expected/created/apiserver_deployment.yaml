@@ -152,6 +152,9 @@ spec:
               cpu: 500m
               memory: 1Gi
           volumeMounts:
+            - name: server-config
+              mountPath: /config/config.json
+              subPath: config.json
             - mountPath: /config/sample_config.json
               name: sample-config
               subPath: sample_config.json
@@ -209,6 +212,10 @@ spec:
           secret:
             secretName: ds-pipelines-proxy-tls-testdsp0
             defaultMode: 420
+        - name: server-config
+          configMap:
+            defaultMode: 420
+            name: pipeline-server-config-testdsp0
         - configMap:
             defaultMode: 420
             name: sample-config-testdsp0
@@ -217,5 +224,4 @@ spec:
             defaultMode: 420
             name: sample-pipeline-testdsp0
           name: sample-pipeline
-
       serviceAccountName: ds-pipeline-testdsp0

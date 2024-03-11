@@ -191,6 +191,16 @@ spec:
                   DS Pipelines metadata tracking. Specify either the default MariaDB
                   deployment, or configure your own External SQL DB.
                 properties:
+                  customExtraParams:
+                    description: "CustomExtraParams allow users to further customize
+                      the sql dsn parameters used by the Pipeline Server when opening
+                      a connection with the Database. ref: https://github.com/go-sql-driver/mysql?tab=readme-ov-file#dsn-data-source-name
+                      \n Value must be a JSON string. For example, to disable tls
+                      for Pipeline Server DB connection the user can provide a string:
+                      {\"tls\":\"true\"} \n If updating post DSPA deployment, then
+                      a manual restart of the pipeline server pod will be required
+                      so the new configmap may be consumed."
+                    type: string
                   disableHealthCheck:
                     default: false
                     description: 'Default: false'

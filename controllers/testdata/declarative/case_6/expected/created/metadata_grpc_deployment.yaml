@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ds-pipeline-metadata-grpc-testdsp6
+  namespace: default
+  labels:
+    app: ds-pipeline-metadata-grpc-testdsp6
+    component: data-science-pipelines
+    dspa: testdsp6
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ds-pipeline-metadata-grpc-testdsp6
+      component: data-science-pipelines
+      dspa: testdsp6
+  template:
+    metadata:
+      labels:
+        app: ds-pipeline-metadata-grpc-testdsp6
+        component: data-science-pipelines
+        dspa: testdsp6
+    spec:
+      containers:
+        - args:
+            - --grpc_port=8080
+            - --mysql_config_database=$(MYSQL_DATABASE)
+            - --mysql_config_host=$(MYSQL_HOST)
+            - --mysql_config_port=$(MYSQL_PORT)
+            - --mysql_config_user=$(DBCONFIG_USER)
+            - --mysql_config_password=$(DBCONFIG_PASSWORD)
+            - --enable_database_upgrade=true
+            - --mysql_config_sslrootcert=/dsp-custom-certs/dsp-ca.crt
+          command:
+            - /bin/metadata_store_server
+          env:
+            - name: DBCONFIG_USER
+              value: testuser6
+            - name: DBCONFIG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: testpswkey6
+                  name: testdbpswsecretname6
+            - name: MYSQL_DATABASE
+              value: testdbname6
+            - name: MYSQL_HOST
+              value: testdbhost6
+            - name: MYSQL_PORT
+              value: test6
+          image: quay.io/opendatahub/mlmd-grpc-server:testdsp6
+          name: container
+          ports:
+            - containerPort: 8080
+              name: grpc-api
+              protocol: TCP
+          livenessProbe:
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            tcpSocket:
+              port: grpc-api
+            timeoutSeconds: 2
+          readinessProbe:
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            tcpSocket:
+              port: grpc-api
+            timeoutSeconds: 2
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 100m
+              memory: 256Mi
+          volumeMounts:
+            - mountPath: /dsp-custom-certs
+              name: ca-bundle
+      serviceAccountName: ds-pipeline-metadata-grpc-testdsp6
+      volumes:
+        - name: ca-bundle
+          configMap:
+            defaultMode: 420
+            name: dsp-trusted-ca-testdsp6

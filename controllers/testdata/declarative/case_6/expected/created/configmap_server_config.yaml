@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pipeline-server-config-testdsp6
+  namespace: default
+  labels:
+    app: ds-pipeline-testdsp6
+    component: data-science-pipelines
+data:
+  config.json: |
+
+    {
+      "DBConfig": {
+        "MySQLConfig": {
+          "ExtraParams": {"tls":"true"},
+          "GroupConcatMaxLen": "4194304"
+         },
+        "PostgreSQLConfig": {},
+        "ConMaxLifeTime": "120s"
+      },
+      "DBDriverName": "mysql",
+      "InitConnectionTimeout": "6m"
+    }

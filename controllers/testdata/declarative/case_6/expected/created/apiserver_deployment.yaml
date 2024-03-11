@@ -25,24 +25,26 @@ spec:
             - name: POD_NAMESPACE
               value: "default"
             - name: DBCONFIG_USER
-              value: "mlpipeline"
+              value: "testuser6"
             - name: DBCONFIG_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  key: "password"
-                  name: "ds-pipeline-db-testdsp6"
+                  key: "testpswkey6"
+                  name: "testdbpswsecretname6"
             - name: DBCONFIG_DBNAME
-              value: "mlpipeline"
+              value: "testdbname6"
             - name: DBCONFIG_HOST
-              value: "mariadb-testdsp6.default.svc.cluster.local"
+              value: "testdbhost6"
             - name: DBCONFIG_PORT
-              value: "3306"
+              value: "test6"
             - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_NAME
-              value: testcabundleconfigmap6
+              value: dsp-trusted-ca-testdsp6
             - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_KEY
-              value: testcabundleconfigmapkey6.crt
+              value: dsp-ca.crt
             - name: ARTIFACT_COPY_STEP_CABUNDLE_MOUNTPATH
-              value: /etc/pki/tls/certs
+              value: /dsp-custom-certs
+            - name: SSL_CERT_DIR
+              value: "/dsp-custom-certs:/etc/ssl/certs:/etc/pki/tls/certs"
             - name: AUTO_UPDATE_PIPELINE_DEFAULT_VERSION
               value: "true"
             - name: DBCONFIG_CONMAXLIFETIMESEC
@@ -81,41 +83,31 @@ spec:
               value: "argolauncherimage:test6"
             - name: V2_DRIVER_IMAGE
               value: "argodriverimage:test6"
+            - name: METADATA_GRPC_SERVICE_SERVICE_HOST
+              value: "ds-pipeline-metadata-grpc-testdsp6.default.svc.cluster.local"
+            - name: METADATA_GRPC_SERVICE_SERVICE_PORT
+              value: "8080"
             - name: ML_PIPELINE_SERVICE_HOST
               value: ds-pipeline-testdsp6.default.svc.cluster.local
             - name: ML_PIPELINE_SERVICE_PORT_GRPC
               value: "8887"
             - name: EXECUTIONTYPE
-              value: PipelineRun
-            - name: CACHE_IMAGE
-              value: "ubi-minimal:test6"
-            - name: MOVERESULTS_IMAGE
-              value: "busybox:test6"
-            - name: ARTIFACT_IMAGE
-              value: "artifact-manager:test6"
-            - name: ARTIFACT_BUCKET
-              value: "mlpipeline"
-            - name: ARTIFACT_ENDPOINT
-              value: "http://minio-testdsp6.default.svc.cluster.local:9000"
-            - name: ARTIFACT_SCRIPT
+              value: Workflow
+            - name: DB_DRIVER_NAME
+              value: mysql
+            - name: DBCONFIG_MYSQLCONFIG_USER
+              value: testuser6
+            - name: DBCONFIG_MYSQLCONFIG_PASSWORD
               valueFrom:
-                configMapKeyRef:
-                  key: "artifact_script"
-                  name: "ds-pipeline-artifact-script-testdsp6"
-            - name: ARCHIVE_LOGS
-              value: "false"
-            - name: TRACK_ARTIFACTS
-              value: "true"
-            - name: STRIP_EOF
-              value: "true"
-            - name: PIPELINE_RUNTIME
-              value: "tekton"
-            - name: INJECT_DEFAULT_SCRIPT
-              value: "true"
-            - name: APPLY_TEKTON_CUSTOM_RESOURCE
-              value: "true"
-            - name: TERMINATE_STATUS
-              value: "Cancelled"
+                secretKeyRef:
+                  key: "testpswkey6"
+                  name: "testdbpswsecretname6"
+            - name: DBCONFIG_MYSQLCONFIG_DBNAME
+              value: "testdbname6"
+            - name: DBCONFIG_MYSQLCONFIG_HOST
+              value: "testdbhost6"
+            - name: DBCONFIG_MYSQLCONFIG_PORT
+              value: "test6"
           image: api-server:test6
           imagePullPolicy: Always
           name: ds-pipeline-api-server
@@ -158,8 +150,11 @@ spec:
               cpu: 500m
               memory: 1Gi
           volumeMounts:
+            - name: server-config
+              mountPath: /config/config.json
+              subPath: config.json
             - name: ca-bundle
-              mountPath: /etc/pki/tls/certs
+              mountPath: /dsp-custom-certs
         - name: oauth-proxy
           args:
             - --https-address=:8443
@@ -212,11 +207,12 @@ spec:
           secret:
             secretName: ds-pipelines-proxy-tls-testdsp6
             defaultMode: 420
+        - name: server-config
+          configMap:
+            name: pipeline-server-config-testdsp6
+            defaultMode: 420
         - name: ca-bundle
           configMap:
-            name: testcabundleconfigmap6
-            items:
-              - key: testcabundleconfigmapkey6.crt
-                path: testcabundleconfigmapkey6.crt
+            name: dsp-trusted-ca-testdsp6
             defaultMode: 420
       serviceAccountName: ds-pipeline-testdsp6

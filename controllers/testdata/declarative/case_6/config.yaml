@@ -10,3 +10,9 @@ Images:
   MariaDB: mariadb:test6
   Minio: minio:test6
   OAuthProxy: oauth-proxy:test6
+ImagesV2:
+  Argo:
+    ApiServer: api-server:test6
+    ArgoLauncherImage: argolauncherimage:test6
+    ArgoDriverImage: argodriverimage:test6
+    MlmdGRPC: quay.io/opendatahub/mlmd-grpc-server:testdsp6
