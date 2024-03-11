@@ -325,7 +325,7 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 		var validParamsJson map[string]string
 		err := json.Unmarshal([]byte(*dsp.Spec.Database.CustomExtraParams), &validParamsJson)
 		if err != nil {
-			log.Info(fmt.Sprintf("Encountered error when validationg CustomExtraParams field in DSPA, please ensure the params are well-formed: Error: %v", err))
+			log.Info(fmt.Sprintf("Encountered error when validating CustomExtraParams field in DSPA, please ensure the params are well-formed: Error: %v", err))
 			return err
 		}
 		p.DBConnection.ExtraParams = *dsp.Spec.Database.CustomExtraParams
@@ -587,7 +587,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 			}
 		}
 
-		// Check for Global certs
+		// Check for cert bundle provided by the platform instead of by the DSPA user
 		// If it exists, include this cert for tls verifications
 		globalCABundleCFGMapName := config.GlobalODHCaBundleConfigMapName
 		err, globalCerts := util.GetConfigMapValues(ctx, globalCABundleCFGMapName, p.Namespace, client)
@@ -598,7 +598,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 				return err
 			}
 		} else {
-			// Found a global cert, consume this cert, takes precedence over "cABundle" provided via DSPA
+			// Found a cert provided by odh-operator. Consume it
 			log.Info(fmt.Sprintf("Found global CA Bundle %s present in this namespace %s, this bundle will be included in external tls connections.", config.GlobalODHCaBundleConfigMapName, p.Namespace))
 			// "odh-trusted-ca-bundle" can have fields: "odh-ca-bundle.crt" and "ca-bundle.crt", we need to utilize both
 			for _, val := range globalCerts {
