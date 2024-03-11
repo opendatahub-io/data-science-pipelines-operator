@@ -100,7 +100,7 @@ type APIServer struct {
 	// +kubebuilder:validation:Optional
 	EnableRoute bool `json:"enableOauth"`
 	// Include sample pipelines with the deployment of this DSP API Server. Default: true
-	// +kubebuilder:default:=true
+	// +kubebuilder:default:=false
 	// +kubebuilder:validation:Optional
 	EnableSamplePipeline bool `json:"enableSamplePipeline"`
 	// Default: true

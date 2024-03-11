@@ -104,7 +104,7 @@ spec:
                       Default: true'
                     type: boolean
                   enableSamplePipeline:
-                    default: true
+                    default: false
                     description: 'Include sample pipelines with the deployment of
                       this DSP API Server. Default: true'
                     type: boolean
