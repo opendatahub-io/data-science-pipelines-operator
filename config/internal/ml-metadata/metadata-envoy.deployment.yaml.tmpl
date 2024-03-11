@@ -26,6 +26,11 @@ spec:
       containers:
         - image: {{.MLMD.Envoy.Image}}
           name: container
+          command: ["/usr/local/bin/envoy"]
+          args: [
+            "-c",
+            "/etc/envoy.yaml"
+          ]
           ports:
             - containerPort: 9090
               name: md-envoy
