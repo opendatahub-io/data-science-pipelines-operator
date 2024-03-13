@@ -57,6 +57,7 @@ rules:
   - workflows/finalizers
   - workflowtasksets
   - workflowtasksets/finalizers
+  - workflowartifactgctasks
   verbs:
   - get
   - list
@@ -74,13 +75,6 @@ rules:
   - get
   - list
   - watch
-- apiGroups:
-  - ""
-  resources:
-  - serviceaccounts
-  verbs:
-  - get
-  - list
 - apiGroups:
   - argoproj.io
   resources:
@@ -122,10 +116,11 @@ rules:
   - create
   - patch
 - apiGroups:
-  - policy
+  - "policy"
   resources:
   - poddisruptionbudgets
   verbs:
   - create
   - get
   - delete
+
