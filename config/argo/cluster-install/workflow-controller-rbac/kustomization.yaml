@@ -2,10 +2,8 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-- clusterrole.argo-aggregate-to-admin.yaml
-- clusterrole.argo-aggregate-to-edit.yaml
-- clusterrole.argo-aggregate-to-view.yaml
-- clusterrole.argo-cluster-role.yaml
-- clusterrolebinding.argo-binding.yaml
-- role.argo.yaml
-- rolebinding.argo-binding.yaml
+- workflow-aggregate-roles.yaml
+- workflow-controller-clusterrole.yaml
+- workflow-controller-clusterrolebinding.yaml
+- workflow-controller-role.yaml
+- workflow-controller-rolebinding.yaml
