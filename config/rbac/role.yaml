@@ -176,6 +176,13 @@ rules:
 - apiGroups:
   - networking.k8s.io
   resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - networking.k8s.io
+  resources:
   - networkpolicies
   verbs:
   - create
