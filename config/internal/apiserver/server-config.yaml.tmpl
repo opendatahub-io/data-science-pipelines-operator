@@ -14,5 +14,8 @@ data:
           "ConMaxLifeTime": "120s",
           "ExtraParams": {{ .DBConnection.ExtraParams }}
         },
+        "ObjectStoreConfig": {
+          "PipelinePath": "pipelines"
+        },
         "InitConnectionTimeout": "6m"
       }
