@@ -159,6 +159,10 @@ spec:
             limits:
               cpu: 500m
               memory: 1Gi
+          volumeMounts:
+            - name: server-config
+              mountPath: /config/config.json
+              subPath: config.json
         - name: oauth-proxy
           args:
             - --https-address=:8443

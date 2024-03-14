@@ -217,11 +217,11 @@ spec:
               memory: {{.APIServer.Resources.Limits.Memory}}
               {{ end }}
             {{ end }}
-          {{ if or .APIServer.EnableSamplePipeline .CustomCABundle }}
           volumeMounts:
             - name: server-config
               mountPath: /config/config.json
               subPath: config.json
+          {{ if or .APIServer.EnableSamplePipeline .CustomCABundle }}
             {{ if .APIServer.EnableSamplePipeline }}
             - name: sample-config
               mountPath: /config/sample_config.json

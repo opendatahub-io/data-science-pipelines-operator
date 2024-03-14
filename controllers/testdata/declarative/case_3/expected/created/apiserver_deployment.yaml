@@ -148,6 +148,10 @@ spec:
             initialDelaySeconds: 3
             periodSeconds: 5
             timeoutSeconds: 2
+          volumeMounts:
+            - name: server-config
+              mountPath: /config/config.json
+              subPath: config.json
           resources:
             requests:
               cpu: 250m
