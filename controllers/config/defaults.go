@@ -40,7 +40,10 @@ const (
 	MLPipelineUIConfigMapPrefix       = "ds-pipeline-ui-configmap-"
 	ArtifactScriptConfigMapNamePrefix = "ds-pipeline-artifact-script-"
 	ArtifactScriptConfigMapKey        = "artifact_script"
-	DSPServicePrefix                  = "ds-pipeline"
+
+	CustomServerConfigMapNamePrefix = "ds-pipeline-server-config-"
+	CustomServerConfigMapNameKey    = "config.json"
+	DSPServicePrefix                = "ds-pipeline"
 
 	DefaultDBSecretNamePrefix = "ds-pipeline-db-"
 	DefaultDBSecretKey        = "password"

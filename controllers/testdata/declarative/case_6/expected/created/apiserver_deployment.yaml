@@ -213,7 +213,7 @@ spec:
             defaultMode: 420
         - name: server-config
           configMap:
-            name: pipeline-server-config-testdsp6
+            name: ds-pipeline-server-config-testdsp6
             defaultMode: 420
         - name: ca-bundle
           configMap:

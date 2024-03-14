@@ -214,5 +214,5 @@ spec:
         - name: server-config
           configMap:
             defaultMode: 420
-            name: pipeline-server-config-testdsp4
+            name: ds-pipeline-server-config-testdsp4
       serviceAccountName: ds-pipeline-testdsp4
