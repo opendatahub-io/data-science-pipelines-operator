@@ -217,11 +217,11 @@ spec:
               memory: {{.APIServer.Resources.Limits.Memory}}
               {{ end }}
             {{ end }}
-          {{ if or .APIServer.EnableSamplePipeline .CustomCABundle }}
           volumeMounts:
             - name: server-config
               mountPath: /config/config.json
-              subPath: config.json
+              subPath: {{ .APIServer.CustomServerConfig.Key }}
+          {{ if or .APIServer.EnableSamplePipeline .CustomCABundle }}
             {{ if .APIServer.EnableSamplePipeline }}
             - name: sample-config
               mountPath: /config/sample_config.json
@@ -289,7 +289,7 @@ spec:
             secretName: ds-pipelines-proxy-tls-{{.Name}}
         - name: server-config
           configMap:
-            name: pipeline-server-config-{{.Name}}
+            name: {{ .APIServer.CustomServerConfig.Name }}
         {{ if .CustomCABundle }}
         - name: ca-bundle
           configMap:

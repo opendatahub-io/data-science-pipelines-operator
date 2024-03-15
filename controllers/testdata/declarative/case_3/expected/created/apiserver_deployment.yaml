@@ -148,6 +148,10 @@ spec:
             initialDelaySeconds: 3
             periodSeconds: 5
             timeoutSeconds: 2
+          volumeMounts:
+            - name: server-config
+              mountPath: /config/config.json
+              subPath: config.json
           resources:
             requests:
               cpu: 250m
@@ -209,6 +213,6 @@ spec:
             defaultMode: 420
         - name: server-config
           configMap:
-            name: pipeline-server-config-testdsp3
+            name: ds-pipeline-server-config-testdsp3
             defaultMode: 420
       serviceAccountName: ds-pipeline-testdsp3

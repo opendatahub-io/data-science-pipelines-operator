@@ -210,7 +210,7 @@ spec:
         - name: server-config
           configMap:
             defaultMode: 420
-            name: pipeline-server-config-testdsp7
+            name: ds-pipeline-server-config-testdsp7
         - configMap:
             defaultMode: 420
             name: sample-config-testdsp7

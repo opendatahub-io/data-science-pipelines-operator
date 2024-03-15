@@ -159,6 +159,10 @@ spec:
             limits:
               cpu: 500m
               memory: 1Gi
+          volumeMounts:
+            - name: server-config
+              mountPath: /config/config.json
+              subPath: config.json
         - name: oauth-proxy
           args:
             - --https-address=:8443
@@ -213,6 +217,6 @@ spec:
             defaultMode: 420
         - configMap:
             defaultMode: 420
-            name: pipeline-server-config-testdsp5
+            name: ds-pipeline-server-config-testdsp5
           name: server-config
       serviceAccountName: ds-pipeline-testdsp5

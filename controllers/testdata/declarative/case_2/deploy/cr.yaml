@@ -1,3 +1,5 @@
+# Test:
+# Various DSPA fields, resources, apiserver fields, custom script
 apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
 kind: DataSciencePipelinesApplication
 metadata:
@@ -22,6 +24,9 @@ spec:
     dbConfigConMaxLifetimeSec: 125
     collectMetrics: true
     autoUpdatePipelineDefaultVersion: true
+    customServerConfigMap:
+      name: testserverconfigmapdspa2
+      key: testserverconfigmapkeydspa2
     resources:
       requests:
         cpu: "1231m"

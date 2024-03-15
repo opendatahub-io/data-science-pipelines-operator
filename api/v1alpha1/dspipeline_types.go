@@ -70,8 +70,8 @@ type APIServer struct {
 	ArtifactImage string `json:"artifactImage,omitempty"`
 	CacheImage    string `json:"cacheImage,omitempty"`
 	// Image used for internal artifact passing handling within Tekton taskruns. This field specifies the image used in the 'move-all-results-to-tekton-home' step.
-	MoveResultsImage         string `json:"moveResultsImage,omitempty"`
-	*ArtifactScriptConfigMap `json:"artifactScriptConfigMap,omitempty"`
+	MoveResultsImage        string           `json:"moveResultsImage,omitempty"`
+	ArtifactScriptConfigMap *ScriptConfigMap `json:"artifactScriptConfigMap,omitempty"`
 	// Inject the archive step script. Default: true
 	// +kubebuilder:default:=true
 	// +kubebuilder:validation:Optional
@@ -118,6 +118,10 @@ type APIServer struct {
 	// server pod to trust this connection. CA Bundle should be provided
 	// as values within configmaps, mapped to keys.
 	CABundle *CABundle `json:"cABundle,omitempty"`
+
+	// CustomServerConfig is a custom config file that you can provide
+	// for the api server to use instead.
+	CustomServerConfig *ScriptConfigMap `json:"customServerConfigMap,omitempty"`
 }
 
 type CABundle struct {
@@ -129,7 +133,7 @@ type CABundle struct {
 	ConfigMapKey string `json:"configMapKey"`
 }
 
-type ArtifactScriptConfigMap struct {
+type ScriptConfigMap struct {
 	Name string `json:"name,omitempty"`
 	Key  string `json:"key,omitempty"`
 }

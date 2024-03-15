@@ -159,7 +159,7 @@ spec:
           volumeMounts:
             - name: server-config
               mountPath: /config/config.json
-              subPath: config.json
+              subPath: testserverconfigmapkeydspa2
             - mountPath: /config/sample_config.json
               name: sample-config
               subPath: sample_config.json
@@ -220,7 +220,7 @@ spec:
         - name: server-config
           configMap:
             defaultMode: 420
-            name: pipeline-server-config-testdsp2
+            name: testserverconfigmapdspa2
         - configMap:
             defaultMode: 420
             name: sample-config-testdsp2

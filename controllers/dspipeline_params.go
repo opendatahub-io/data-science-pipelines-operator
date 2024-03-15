@@ -581,9 +581,16 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		setResourcesDefault(config.APIServerResourceRequirements, &p.APIServer.Resources)
 
 		if p.APIServer.ArtifactScriptConfigMap == nil {
-			p.APIServer.ArtifactScriptConfigMap = &dspa.ArtifactScriptConfigMap{
+			p.APIServer.ArtifactScriptConfigMap = &dspa.ScriptConfigMap{
 				Name: config.ArtifactScriptConfigMapNamePrefix + dsp.Name,
 				Key:  config.ArtifactScriptConfigMapKey,
+			}
+		}
+
+		if p.APIServer.CustomServerConfig == nil {
+			p.APIServer.CustomServerConfig = &dspa.ScriptConfigMap{
+				Name: config.CustomServerConfigMapNamePrefix + dsp.Name,
+				Key:  config.CustomServerConfigMapNameKey,
 			}
 		}
 

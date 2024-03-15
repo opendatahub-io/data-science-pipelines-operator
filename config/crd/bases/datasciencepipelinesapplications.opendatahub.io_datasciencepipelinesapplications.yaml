@@ -88,6 +88,15 @@ spec:
                     default: true
                     description: 'Default: true'
                     type: boolean
+                  customServerConfigMap:
+                    description: CustomServerConfig is a custom config file that you
+                      can provide for the api server to use instead.
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        type: string
+                    type: object
                   dbConfigConMaxLifetimeSec:
                     default: 120
                     description: 'Default: 120'
