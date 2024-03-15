@@ -15,5 +15,8 @@ data:
           "ConMaxLifeTime": "120s",
           "ExtraParams": {"tls":"false"}
         },
+        "ObjectStoreConfig": {
+          "PipelinePath": "pipelines"
+        },
         "InitConnectionTimeout": "6m"
       }
