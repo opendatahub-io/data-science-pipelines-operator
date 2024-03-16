@@ -40,7 +40,7 @@ spec:
             - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_NAME
               value: dsp-trusted-ca-testdsp8
             - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_KEY
-              value: dsp-ca.crt
+              value: testcabundleconfigmapkey8.crt
             - name: ARTIFACT_COPY_STEP_CABUNDLE_MOUNTPATH
               value: /dsp-custom-certs
             - name: SSL_CERT_DIR

@@ -133,6 +133,10 @@ type APIServer struct {
 	// +kubebuilder:default:=true
 	// +kubebuilder:validation:Optional
 	AutoUpdatePipelineDefaultVersion bool `json:"autoUpdatePipelineDefaultVersion"`
+	// This is the path where the ca bundle will be mounted in the
+	// pipeline server and user executor pods
+	// +kubebuilder:validation:Optional
+	CABundleFileMountPath string `json:"caBundleFileMountPath"`
 }
 
 type CABundle struct {

@@ -40,11 +40,11 @@ spec:
             - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_NAME
               value: dsp-trusted-ca-testdsp6
             - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_KEY
-              value: dsp-ca.crt
+              value: user-ca-bundle.crt
             - name: ARTIFACT_COPY_STEP_CABUNDLE_MOUNTPATH
-              value: /dsp-custom-certs
+              value: /dspa/custom-certs
             - name: SSL_CERT_DIR
-              value: "/dsp-custom-certs:/etc/ssl/certs:/etc/pki/tls/certs"
+              value: "/dspa/custom-certs:/etc/ssl/certs:/etc/pki/tls/certs"
             - name: AUTO_UPDATE_PIPELINE_DEFAULT_VERSION
               value: "true"
             - name: DBCONFIG_CONMAXLIFETIMESEC
@@ -158,7 +158,7 @@ spec:
               mountPath: /config/config.json
               subPath: config.json
             - name: ca-bundle
-              mountPath: /dsp-custom-certs
+              mountPath: /dspa/custom-certs
         - name: oauth-proxy
           args:
             - --https-address=:8443
