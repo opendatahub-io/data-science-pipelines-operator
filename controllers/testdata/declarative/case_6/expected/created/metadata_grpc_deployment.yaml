@@ -30,7 +30,7 @@ spec:
             - --mysql_config_user=$(DBCONFIG_USER)
             - --mysql_config_password=$(DBCONFIG_PASSWORD)
             - --enable_database_upgrade=true
-            - --mysql_config_sslrootcert=/dsp-custom-certs/dsp-ca.crt
+            - --mysql_config_sslrootcert=/dspa/custom-certs/user-ca-bundle.crt
           command:
             - /bin/metadata_store_server
           env:
@@ -73,7 +73,7 @@ spec:
               cpu: 100m
               memory: 256Mi
           volumeMounts:
-            - mountPath: /dsp-custom-certs
+            - mountPath: /dspa/custom-certs
               name: ca-bundle
       serviceAccountName: ds-pipeline-metadata-grpc-testdsp6
       volumes:
