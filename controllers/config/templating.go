@@ -19,6 +19,7 @@ package config
 import (
 	"bytes"
 	"io"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"os"
 	"text/template"
 
@@ -30,12 +31,18 @@ import (
 var PathPrefix string
 
 // PathTemplateSource A templating source read from a file
-func PathTemplateSource(path string, context interface{}) mf.Source {
+func PathTemplateSource(path string, context interface{}) (mf.Source, error) {
 	f, err := os.Open(prefixedPath(path))
 	if err != nil {
-		panic(err)
+		return mf.Slice([]unstructured.Unstructured{}), err
 	}
-	return templateSource(f, context)
+
+	tmplSrc, err := templateSource(f, context)
+	if err != nil {
+		return mf.Slice([]unstructured.Unstructured{}), err
+	}
+
+	return tmplSrc, nil
 }
 
 func prefixedPath(p string) string {
@@ -46,19 +53,19 @@ func prefixedPath(p string) string {
 }
 
 // A templating manifest source
-func templateSource(r io.Reader, context interface{}) mf.Source {
+func templateSource(r io.Reader, context interface{}) (mf.Source, error) {
 	b, err := io.ReadAll(r)
 	if err != nil {
-		panic(err)
+		return mf.Slice([]unstructured.Unstructured{}), err
 	}
 	t, err := template.New("manifestTemplateDSP").Parse(string(b))
 	if err != nil {
-		panic(err)
+		return mf.Slice([]unstructured.Unstructured{}), err
 	}
 	var b2 bytes.Buffer
 	err = t.Execute(&b2, context)
 	if err != nil {
-		panic(err)
+		return mf.Slice([]unstructured.Unstructured{}), err
 	}
-	return mf.Reader(&b2)
+	return mf.Reader(&b2), nil
 }

@@ -23,7 +23,12 @@ import (
 )
 
 func Manifest(cl client.Client, templatePath string, context interface{}) (mf.Manifest, error) {
-	m, err := mf.ManifestFrom(PathTemplateSource(templatePath, context))
+	pathTmplSrc, err := PathTemplateSource(templatePath, context)
+	if err != nil {
+		return mf.Manifest{}, err
+	}
+
+	m, err := mf.ManifestFrom(pathTmplSrc)
 	if err != nil {
 		return mf.Manifest{}, err
 	}
