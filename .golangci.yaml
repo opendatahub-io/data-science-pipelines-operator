@@ -10,6 +10,12 @@ linters:
     - typecheck
     - unused
     - revive
+issues:
+  exclude-rules:
+    - linters:
+        - staticcheck
+      path: controllers/dspipeline_params.go
+      text: SA1019  # exclude failures for deprecated warnings
 linters-settings:
   revive:
     rules:

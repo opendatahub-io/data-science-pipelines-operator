@@ -35,12 +35,7 @@ func TestDeployMLMD(t *testing.T) {
 	// Construct DSPA Spec with MLMD Enabled
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
 		Spec: dspav1alpha1.DSPASpec{
-			APIServer: &dspav1alpha1.APIServer{
-				// TODO: This appears to be required which is out-of-spec (.Spec.APIServer should be fully defaultable),
-				// but test throws an nil pointer panic if it isn't provided.
-				// possibly due to test setup - Investigate.
-				ArchiveLogs: true,
-			},
+			APIServer: &dspav1alpha1.APIServer{},
 			MLMD: &dspav1alpha1.MLMD{
 				Deploy: true,
 			},
@@ -120,12 +115,7 @@ func TestDontDeployMLMD(t *testing.T) {
 	// Construct DSPA Spec with MLMD Not Enabled
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
 		Spec: dspav1alpha1.DSPASpec{
-			APIServer: &dspav1alpha1.APIServer{
-				// TODO: This appears to be required which is out-of-spec (.Spec.APIServer should be fully defaultable),
-				// but test throws an nil pointer panic if it isn't provided.
-				// possibly due to test setup - Investigate.
-				ArchiveLogs: true,
-			},
+			APIServer: &dspav1alpha1.APIServer{},
 			MLMD: &dspav1alpha1.MLMD{
 				Deploy: false,
 			},
@@ -205,12 +195,7 @@ func TestDefaultDeployBehaviorMLMD(t *testing.T) {
 	// Construct DSPA Spec with MLMD Spec not defined
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
 		Spec: dspav1alpha1.DSPASpec{
-			APIServer: &dspav1alpha1.APIServer{
-				// TODO: This appears to be required which is out-of-spec (.Spec.APIServer should be fully defaultable),
-				// but test throws an nil pointer panic if it isn't provided.
-				// possibly due to test setup - Investigate.
-				ArchiveLogs: true,
-			},
+			APIServer: &dspav1alpha1.APIServer{},
 			MLMD: &dspav1alpha1.MLMD{
 				Deploy: true,
 			},

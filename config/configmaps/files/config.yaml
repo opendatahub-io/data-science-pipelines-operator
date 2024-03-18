@@ -10,7 +10,6 @@ Images:
   MlmdEnvoy: $(IMAGES_MLMDENVOY)
   MlmdGRPC: $(IMAGES_MLMDGRPC)
   MlmdWriter: $(IMAGES_MLMDWRITER)
-  CRDViewer: $(IMAGES_CRDVIEWER)
 ImagesV2:
   Argo:
     ApiServer: $(IMAGESV2_ARGO_APISERVER)

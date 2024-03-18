@@ -42,9 +42,6 @@ type DSPASpec struct {
 	*ObjectStorage `json:"objectStorage"`
 	*MLMD          `json:"mlmd,omitempty"`
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:={deploy: false}
-	*CRDViewer `json:"crdviewer"`
-	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="v1"
 	DSPVersion string `json:"dspVersion,omitempty"`
 	// WorkflowController is an argo-specific component that manages a DSPA's Workflow objects and handles the orchestration of them with the central Argo server
@@ -59,42 +56,6 @@ type APIServer struct {
 	Deploy bool `json:"deploy"`
 	// Specify a custom image for DSP API Server.
 	Image string `json:"image,omitempty"`
-	// Default: true
-	// +kubebuilder:default:=true
-	// +kubebuilder:validation:Optional
-	ApplyTektonCustomResource bool `json:"applyTektonCustomResource"`
-	// Default: false
-	// +kubebuilder:default:=false
-	// +kubebuilder:validation:Optional
-	ArchiveLogs   bool   `json:"archiveLogs"`
-	ArtifactImage string `json:"artifactImage,omitempty"`
-	CacheImage    string `json:"cacheImage,omitempty"`
-	// Image used for internal artifact passing handling within Tekton taskruns. This field specifies the image used in the 'move-all-results-to-tekton-home' step.
-	MoveResultsImage        string           `json:"moveResultsImage,omitempty"`
-	ArtifactScriptConfigMap *ScriptConfigMap `json:"artifactScriptConfigMap,omitempty"`
-	// Inject the archive step script. Default: true
-	// +kubebuilder:default:=true
-	// +kubebuilder:validation:Optional
-	InjectDefaultScript bool `json:"injectDefaultScript"`
-	// Default: true
-	// +kubebuilder:default:=true
-	// +kubebuilder:validation:Optional
-	StripEOF bool `json:"stripEOF"`
-	// Default: "Cancelled" - Allowed Values: "Cancelled", "StoppedRunFinally", "CancelledRunFinally"
-	// +kubebuilder:validation:Enum=Cancelled;StoppedRunFinally;CancelledRunFinally
-	// +kubebuilder:default:=Cancelled
-	TerminateStatus string `json:"terminateStatus,omitempty"`
-	// Default: true
-	// +kubebuilder:default:=true
-	// +kubebuilder:validation:Optional
-	TrackArtifacts bool `json:"trackArtifacts"`
-	// Default: 120
-	// +kubebuilder:default:=120
-	DBConfigConMaxLifetimeSec int `json:"dbConfigConMaxLifetimeSec,omitempty"`
-	// Default: true
-	// +kubebuilder:default:=true
-	// +kubebuilder:validation:Optional
-	CollectMetrics bool `json:"collectMetrics"`
 	// Create an Openshift Route for this DSP API Server. Default: true
 	// +kubebuilder:default:=true
 	// +kubebuilder:validation:Optional
@@ -102,13 +63,9 @@ type APIServer struct {
 	// Include sample pipelines with the deployment of this DSP API Server. Default: true
 	// +kubebuilder:default:=false
 	// +kubebuilder:validation:Optional
-	EnableSamplePipeline bool `json:"enableSamplePipeline"`
-	// Default: true
-	// +kubebuilder:default:=true
-	// +kubebuilder:validation:Optional
-	AutoUpdatePipelineDefaultVersion bool   `json:"autoUpdatePipelineDefaultVersion"`
-	ArgoLauncherImage                string `json:"argoLauncherImage,omitempty"`
-	ArgoDriverImage                  string `json:"argoDriverImage,omitempty"`
+	EnableSamplePipeline bool   `json:"enableSamplePipeline"`
+	ArgoLauncherImage    string `json:"argoLauncherImage,omitempty"`
+	ArgoDriverImage      string `json:"argoDriverImage,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
 
@@ -122,6 +79,60 @@ type APIServer struct {
 	// CustomServerConfig is a custom config file that you can provide
 	// for the api server to use instead.
 	CustomServerConfig *ScriptConfigMap `json:"customServerConfigMap,omitempty"`
+
+	// Default: true
+	// Deprecated: DSP V1 only, will be removed in the future.
+	// +kubebuilder:default:=true
+	// +kubebuilder:validation:Optional
+	ApplyTektonCustomResource bool `json:"applyTektonCustomResource"`
+	// Default: false
+	// Deprecated: DSP V1 only, will be removed in the future.
+	// +kubebuilder:default:=false
+	// +kubebuilder:validation:Optional
+	ArchiveLogs bool `json:"archiveLogs"`
+	// Deprecated: DSP V1 only, will be removed in the future.
+	ArtifactImage string `json:"artifactImage,omitempty"`
+	// Deprecated: DSP V1 only, will be removed in the future.
+	CacheImage string `json:"cacheImage,omitempty"`
+	// Image used for internal artifact passing handling within Tekton taskruns. This field specifies the image used in the 'move-all-results-to-tekton-home' step.
+	// Deprecated: DSP V1 only, will be removed in the future.
+	MoveResultsImage string `json:"moveResultsImage,omitempty"`
+	// Deprecated: DSP V1 only, will be removed in the future.
+	ArtifactScriptConfigMap *ScriptConfigMap `json:"artifactScriptConfigMap,omitempty"`
+	// Inject the archive step script. Default: true
+	// Deprecated: DSP V1 only, will be removed in the future.
+	// +kubebuilder:default:=true
+	// +kubebuilder:validation:Optional
+	InjectDefaultScript bool `json:"injectDefaultScript"`
+	// Default: true
+	// Deprecated: DSP V1 only, will be removed in the future.
+	// +kubebuilder:default:=true
+	// +kubebuilder:validation:Optional
+	StripEOF bool `json:"stripEOF"`
+	// Default: "Cancelled" - Allowed Values: "Cancelled", "StoppedRunFinally", "CancelledRunFinally"
+	// Deprecated: DSP V1 only, will be removed in the future.
+	// +kubebuilder:validation:Enum=Cancelled;StoppedRunFinally;CancelledRunFinally
+	// +kubebuilder:default:=Cancelled
+	TerminateStatus string `json:"terminateStatus,omitempty"`
+	// Default: true
+	// Deprecated: DSP V1 only, will be removed in the future.
+	// +kubebuilder:default:=true
+	// +kubebuilder:validation:Optional
+	TrackArtifacts bool `json:"trackArtifacts"`
+	// Default: 120
+	// Deprecated: DSP V1 only, will be removed in the future.
+	// +kubebuilder:default:=120
+	DBConfigConMaxLifetimeSec int `json:"dbConfigConMaxLifetimeSec,omitempty"`
+	// Default: true
+	// Deprecated: DSP V1 only, will be removed in the future.
+	// +kubebuilder:default:=true
+	// +kubebuilder:validation:Optional
+	CollectMetrics bool `json:"collectMetrics"`
+	// Default: true
+	// Deprecated: DSP V1 only, will be removed in the future.
+	// +kubebuilder:default:=true
+	// +kubebuilder:validation:Optional
+	AutoUpdatePipelineDefaultVersion bool `json:"autoUpdatePipelineDefaultVersion"`
 }
 
 type CABundle struct {
@@ -277,9 +288,10 @@ type MLMD struct {
 	// Enable DS Pipelines Operator management of MLMD. Setting Deploy to false disables operator reconciliation. Default: true
 	// +kubebuilder:default:=false
 	// +kubebuilder:validation:Optional
-	Deploy  bool `json:"deploy"`
-	*Envoy  `json:"envoy,omitempty"`
-	*GRPC   `json:"grpc,omitempty"`
+	Deploy bool `json:"deploy"`
+	*Envoy `json:"envoy,omitempty"`
+	*GRPC  `json:"grpc,omitempty"`
+	// Deprecated: DSP V1 only, will be removed in the future.
 	*Writer `json:"writer,omitempty"`
 }
 
@@ -299,13 +311,6 @@ type Writer struct {
 	Resources *ResourceRequirements `json:"resources,omitempty"`
 	// +kubebuilder:validation:Required
 	Image string `json:"image"`
-}
-
-type CRDViewer struct {
-	// +kubebuilder:default:=true
-	// +kubebuilder:validation:Optional
-	Deploy bool   `json:"deploy"`
-	Image  string `json:"image,omitempty"`
 }
 
 type WorkflowController struct {
@@ -336,6 +341,7 @@ type ExternalStorage struct {
 	Scheme string `json:"scheme"`
 	// +kubebuilder:validation:Optional
 	Region string `json:"region"`
+	// Subpath where objects should be stored for this DSPA
 	// +kubebuilder:validation:Optional
 	BasePath            string `json:"basePath"`
 	*S3CredentialSecret `json:"s3CredentialsSecret"`

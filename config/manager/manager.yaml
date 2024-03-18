@@ -59,8 +59,6 @@ spec:
             value: $(IMAGES_MLMDGRPC)
           - name: IMAGES_MLMDWRITER
             value: $(IMAGES_MLMDWRITER)
-          - name: IMAGES_CRDVIEWER
-            value: $(IMAGES_CRDVIEWER)
           - name: IMAGESV2_ARGO_APISERVER
             value: $(IMAGESV2_ARGO_APISERVER)
           - name: IMAGESV2_ARGO_PERSISTENCEAGENT
