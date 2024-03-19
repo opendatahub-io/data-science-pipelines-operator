@@ -33,11 +33,7 @@ def normalize_dataset(
     input_iris_dataset: Input[Dataset],
     normalized_iris_dataset: Output[Dataset],
     standard_scaler: bool,
-    min_max_scaler: bool,
 ):
-    if standard_scaler is min_max_scaler:
-        raise ValueError(
-            'Exactly one of standard_scaler or min_max_scaler must be True.')
 
     import pandas as pd
     from sklearn.preprocessing import MinMaxScaler
@@ -47,10 +43,7 @@ def normalize_dataset(
         df = pd.read_csv(f)
     labels = df.pop('Labels')
 
-    if standard_scaler:
-        scaler = StandardScaler()
-    if min_max_scaler:
-        scaler = MinMaxScaler()
+    scaler = StandardScaler() if standard_scaler else MinMaxScaler()
 
     df = pd.DataFrame(scaler.fit_transform(df))
     df['Labels'] = labels
@@ -92,16 +85,14 @@ def train_model(
 
 @dsl.pipeline(name='iris-training-pipeline')
 def my_pipeline(
-    standard_scaler: bool,
-    min_max_scaler: bool,
-    neighbors: int,
+    standard_scaler: bool = True,
+    neighbors: int = 3
 ):
     create_dataset_task = create_dataset()
 
     normalize_dataset_task = normalize_dataset(
         input_iris_dataset=create_dataset_task.outputs['iris_dataset'],
-        standard_scaler=True,
-        min_max_scaler=False)
+        standard_scaler=True)
 
     train_model(
         normalized_iris_dataset=normalize_dataset_task

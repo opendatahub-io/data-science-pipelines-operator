@@ -1,9 +1,8 @@
 # PIPELINE DEFINITION
 # Name: iris-training-pipeline
 # Inputs:
-#    min_max_scaler: bool
-#    neighbors: int
-#    standard_scaler: bool
+#    neighbors: int [Default: 3.0]
+#    standard_scaler: bool [Default: True]
 components:
   comp-create-dataset:
     executorLabel: exec-create-dataset
@@ -22,8 +21,6 @@ components:
             schemaTitle: system.Dataset
             schemaVersion: 0.0.1
       parameters:
-        min_max_scaler:
-          parameterType: BOOLEAN
         standard_scaler:
           parameterType: BOOLEAN
     outputDefinitions:
@@ -113,17 +110,13 @@ deploymentSpec:
         - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
           \ *\n\ndef normalize_dataset(\n    input_iris_dataset: Input[Dataset],\n\
           \    normalized_iris_dataset: Output[Dataset],\n    standard_scaler: bool,\n\
-          \    min_max_scaler: bool,\n):\n    if standard_scaler is min_max_scaler:\n\
-          \        raise ValueError(\n            'Exactly one of standard_scaler\
-          \ or min_max_scaler must be True.')\n\n    import pandas as pd\n    from\
-          \ sklearn.preprocessing import MinMaxScaler\n    from sklearn.preprocessing\
-          \ import StandardScaler\n\n    with open(input_iris_dataset.path) as f:\n\
-          \        df = pd.read_csv(f)\n    labels = df.pop('Labels')\n\n    if standard_scaler:\n\
-          \        scaler = StandardScaler()\n    if min_max_scaler:\n        scaler\
-          \ = MinMaxScaler()\n\n    df = pd.DataFrame(scaler.fit_transform(df))\n\
-          \    df['Labels'] = labels\n    normalized_iris_dataset.metadata['state']\
-          \ = \"Normalized\"\n    with open(normalized_iris_dataset.path, 'w') as\
-          \ f:\n        df.to_csv(f)\n\n"
+          ):\n\n    import pandas as pd\n    from sklearn.preprocessing import MinMaxScaler\n\
+          \    from sklearn.preprocessing import StandardScaler\n\n    with open(input_iris_dataset.path)\
+          \ as f:\n        df = pd.read_csv(f)\n    labels = df.pop('Labels')\n\n\
+          \    scaler = StandardScaler() if standard_scaler else MinMaxScaler()\n\n\
+          \    df = pd.DataFrame(scaler.fit_transform(df))\n    df['Labels'] = labels\n\
+          \    normalized_iris_dataset.metadata['state'] = \"Normalized\"\n    with\
+          \ open(normalized_iris_dataset.path, 'w') as f:\n        df.to_csv(f)\n\n"
         image: quay.io/opendatahub/ds-pipelines-sample-base:v1.0
     exec-train-model:
       container:
@@ -161,7 +154,6 @@ deploymentSpec:
           \ random_state=0)\n\n    clf = KNeighborsClassifier(n_neighbors=n_neighbors)\n\
           \    clf.fit(X_train, y_train)\n\n    model.metadata['framework'] = 'scikit-learn'\n\
           \    with open(model.path, 'wb') as f:\n        pickle.dump(clf, f)\n\n"
-
         image: quay.io/opendatahub/ds-pipelines-sample-base:v1.0
 pipelineInfo:
   name: iris-training-pipeline
@@ -189,9 +181,6 @@ root:
                 outputArtifactKey: iris_dataset
                 producerTask: create-dataset
           parameters:
-            min_max_scaler:
-              runtimeValue:
-                constant: false
             standard_scaler:
               runtimeValue:
                 constant: true
@@ -217,11 +206,13 @@ root:
           name: train-model
   inputDefinitions:
     parameters:
-      min_max_scaler:
-        parameterType: BOOLEAN
       neighbors:
+        defaultValue: 3.0
+        isOptional: true
         parameterType: NUMBER_INTEGER
       standard_scaler:
+        defaultValue: true
+        isOptional: true
         parameterType: BOOLEAN
 schemaVersion: 2.1.0
 sdkVersion: kfp-2.7.0
