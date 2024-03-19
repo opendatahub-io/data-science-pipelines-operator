@@ -7,6 +7,7 @@ from kfp.dsl import Dataset
 from kfp.dsl import Input
 from kfp.dsl import Model
 from kfp.dsl import Output
+from kfp.dsl import ClassificationMetrics
 
 
 @dsl.component(
@@ -59,6 +60,7 @@ def normalize_dataset(
 def train_model(
     normalized_iris_dataset: Input[Dataset],
     model: Output[Model],
+    metrics: Output[ClassificationMetrics],
     n_neighbors: int,
 ):
     import pickle
@@ -66,6 +68,11 @@ def train_model(
     import pandas as pd
     from sklearn.model_selection import train_test_split
     from sklearn.neighbors import KNeighborsClassifier
+
+    from sklearn.metrics import roc_curve
+    from sklearn.model_selection import train_test_split, cross_val_predict
+    from sklearn.metrics import confusion_matrix
+
 
     with open(normalized_iris_dataset.path) as f:
         df = pd.read_csv(f)
@@ -78,6 +85,15 @@ def train_model(
     clf = KNeighborsClassifier(n_neighbors=n_neighbors)
     clf.fit(X_train, y_train)
 
+    predictions = cross_val_predict(
+        clf, X_train, y_train, cv=3)
+    metrics.log_confusion_matrix(
+        ['Iris-Setosa', 'Iris-Versicolour', 'Iris-Virginica'],
+        confusion_matrix(
+            y_train,
+            predictions).tolist()  # .tolist() to convert np array to list.
+    )
+
     model.metadata['framework'] = 'scikit-learn'
     with open(model.path, 'wb') as f:
         pickle.dump(clf, f)
@@ -86,7 +102,7 @@ def train_model(
 @dsl.pipeline(name='iris-training-pipeline')
 def my_pipeline(
     standard_scaler: bool = True,
-    neighbors: int = 3
+    neighbors: int = 3,
 ):
     create_dataset_task = create_dataset()
 
