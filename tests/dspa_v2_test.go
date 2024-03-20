@@ -20,42 +20,40 @@ package integration
 
 import (
 	"fmt"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	systemsTesttUtil "github.com/opendatahub-io/data-science-pipelines-operator/tests/util"
+	"testing"
+
+	testUtil "github.com/opendatahub-io/data-science-pipelines-operator/tests/util"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("A successfully deployed DSPA", func() {
-
+func (suite *IntegrationTestSuite) TestDSPADeployment() {
 	podCount := 8
-
-	Context("with default MariaDB and Minio", func() {
-		It(fmt.Sprintf("should have %d pods", podCount), func() {
+	suite.T().Run("with default MariaDB and Minio", func(t *testing.T) {
+		t.Run(fmt.Sprintf("should have %d pods", podCount), func(t *testing.T) {
 			podList := &corev1.PodList{}
 			listOpts := []client.ListOption{
-				client.InNamespace(DSPANamespace),
+				client.InNamespace(suite.DSPANamespace),
 			}
-			err := clientmgr.k8sClient.List(ctx, podList, listOpts...)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(len(podList.Items)).Should(Equal(podCount))
+			err := suite.Clientmgr.k8sClient.List(suite.Ctx, podList, listOpts...)
+			require.NoError(t, err)
+			assert.Equal(t, podCount, len(podList.Items))
 		})
 
-		It(fmt.Sprintf("should have a ready %s deployment", "DSP API Server"), func() {
-			systemsTesttUtil.TestForSuccessfulDeployment(ctx, DSPANamespace, fmt.Sprintf("ds-pipeline-%s", DSPA.Name), clientmgr.k8sClient)
-		})
-		It(fmt.Sprintf("should have a ready %s deployment", "Persistence Agent"), func() {
-			systemsTesttUtil.TestForSuccessfulDeployment(ctx, DSPANamespace, fmt.Sprintf("ds-pipeline-persistenceagent-%s", DSPA.Name), clientmgr.k8sClient)
-		})
-		It(fmt.Sprintf("should have a ready %s deployment", "Scheduled Workflow"), func() {
-			systemsTesttUtil.TestForSuccessfulDeployment(ctx, DSPANamespace, fmt.Sprintf("ds-pipeline-scheduledworkflow-%s", DSPA.Name), clientmgr.k8sClient)
-		})
-		It(fmt.Sprintf("should have a ready %s deployment", "MariaDB"), func() {
-			systemsTesttUtil.TestForSuccessfulDeployment(ctx, DSPANamespace, fmt.Sprintf("mariadb-%s", DSPA.Name), clientmgr.k8sClient)
-		})
-		It(fmt.Sprintf("should have a ready %s deployment", "Minio"), func() {
-			systemsTesttUtil.TestForSuccessfulDeployment(ctx, DSPANamespace, fmt.Sprintf("minio-%s", DSPA.Name), clientmgr.k8sClient)
-		})
+		deployments := []string{
+			fmt.Sprintf("ds-pipeline-%s", suite.DSPA.Name),
+			fmt.Sprintf("ds-pipeline-persistenceagent-%s", suite.DSPA.Name),
+			fmt.Sprintf("ds-pipeline-scheduledworkflow-%s", suite.DSPA.Name),
+			fmt.Sprintf("mariadb-%s", suite.DSPA.Name),
+			fmt.Sprintf("minio-%s", suite.DSPA.Name),
+		}
+
+		for _, deployment := range deployments {
+			t.Run(fmt.Sprintf("should have a ready %s deployment", deployment), func(t *testing.T) {
+				testUtil.TestForSuccessfulDeployment(t, suite.Ctx, suite.DSPANamespace, deployment, suite.Clientmgr.k8sClient)
+			})
+		}
 	})
-})
+}

@@ -128,7 +128,7 @@ functest: manifests generate fmt vet envtest ## Run tests.
 .PHONY: integrationtest
 integrationtest: ## Run integration tests
 	cd tests && \
-	go run github.com/onsi/ginkgo/v2/ginkgo --tags=test_integration -- -kubeconfig=${KUBECONFIGPATH} -k8sApiServerHost=${K8SAPISERVERHOST} -DSPANamespace=${DSPANAMESPACE} -DSPAPath=${DSPAPATH} -ginkgo.v
+	go test ./... --tags=test_integration -v -kubeconfig=${KUBECONFIGPATH} -k8sApiServerHost=${K8SAPISERVERHOST} -DSPANamespace=${DSPANAMESPACE} -DSPAPath=${DSPAPATH}
 
 ##@ Build
 

@@ -20,21 +20,23 @@ package integration
 
 import (
 	"fmt"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	"io/ioutil"
 	"net/http"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-var _ = Describe("A successfully deployed DSPA", func() {
-	It("Should successfully fetch experiments.", func() {
+func (suite *IntegrationTestSuite) TestFetchExperiments() {
+	suite.T().Run("Should successfully fetch experiments", func(t *testing.T) {
 		response, err := http.Get(fmt.Sprintf("%s/apis/v2beta1/experiments", APIServerURL))
-		Expect(err).ToNot(HaveOccurred())
+		require.NoError(t, err, "Error fetching experiments")
+
 		responseData, err := ioutil.ReadAll(response.Body)
+		defer response.Body.Close()
+		require.NoError(t, err, "Error reading response body")
+
+		suite.Assert().Equal(200, response.StatusCode, "Expected HTTP status code 200 for fetching experiments")
 		loggr.Info(string(responseData))
-
-		Expect(err).ToNot(HaveOccurred())
-		Expect(response.StatusCode).To(Equal(200))
-
 	})
-})
+}
