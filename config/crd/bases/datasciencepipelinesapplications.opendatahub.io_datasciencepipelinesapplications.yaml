@@ -42,19 +42,25 @@ spec:
                 properties:
                   applyTektonCustomResource:
                     default: true
-                    description: 'Default: true'
+                    description: 'Default: true Deprecated: DSP V1 only, will be removed
+                      in the future.'
                     type: boolean
                   archiveLogs:
                     default: false
-                    description: 'Default: false'
+                    description: 'Default: false Deprecated: DSP V1 only, will be
+                      removed in the future.'
                     type: boolean
                   argoDriverImage:
                     type: string
                   argoLauncherImage:
                     type: string
                   artifactImage:
+                    description: 'Deprecated: DSP V1 only, will be removed in the
+                      future.'
                     type: string
                   artifactScriptConfigMap:
+                    description: 'Deprecated: DSP V1 only, will be removed in the
+                      future.'
                     properties:
                       key:
                         type: string
@@ -63,7 +69,8 @@ spec:
                     type: object
                   autoUpdatePipelineDefaultVersion:
                     default: true
-                    description: 'Default: true'
+                    description: 'Default: true Deprecated: DSP V1 only, will be removed
+                      in the future.'
                     type: boolean
                   cABundle:
                     description: If the Object store/DB is behind a TLS secured connection
@@ -83,10 +90,13 @@ spec:
                     - configMapName
                     type: object
                   cacheImage:
+                    description: 'Deprecated: DSP V1 only, will be removed in the
+                      future.'
                     type: string
                   collectMetrics:
                     default: true
-                    description: 'Default: true'
+                    description: 'Default: true Deprecated: DSP V1 only, will be removed
+                      in the future.'
                     type: boolean
                   customServerConfigMap:
                     description: CustomServerConfig is a custom config file that you
@@ -99,7 +109,8 @@ spec:
                     type: object
                   dbConfigConMaxLifetimeSec:
                     default: 120
-                    description: 'Default: 120'
+                    description: 'Default: 120 Deprecated: DSP V1 only, will be removed
+                      in the future.'
                     type: integer
                   deploy:
                     default: true
@@ -122,12 +133,14 @@ spec:
                     type: string
                   injectDefaultScript:
                     default: true
-                    description: 'Inject the archive step script. Default: true'
+                    description: 'Inject the archive step script. Default: true Deprecated:
+                      DSP V1 only, will be removed in the future.'
                     type: boolean
                   moveResultsImage:
-                    description: Image used for internal artifact passing handling
+                    description: 'Image used for internal artifact passing handling
                       within Tekton taskruns. This field specifies the image used
-                      in the 'move-all-results-to-tekton-home' step.
+                      in the ''move-all-results-to-tekton-home'' step. Deprecated:
+                      DSP V1 only, will be removed in the future.'
                     type: string
                   resources:
                     description: Specify custom Pod resource requirements for this
@@ -166,12 +179,14 @@ spec:
                     type: object
                   stripEOF:
                     default: true
-                    description: 'Default: true'
+                    description: 'Default: true Deprecated: DSP V1 only, will be removed
+                      in the future.'
                     type: boolean
                   terminateStatus:
                     default: Cancelled
                     description: 'Default: "Cancelled" - Allowed Values: "Cancelled",
-                      "StoppedRunFinally", "CancelledRunFinally"'
+                      "StoppedRunFinally", "CancelledRunFinally" Deprecated: DSP V1
+                      only, will be removed in the future.'
                     enum:
                     - Cancelled
                     - StoppedRunFinally
@@ -179,18 +194,9 @@ spec:
                     type: string
                   trackArtifacts:
                     default: true
-                    description: 'Default: true'
+                    description: 'Default: true Deprecated: DSP V1 only, will be removed
+                      in the future.'
                     type: boolean
-                type: object
-              crdviewer:
-                default:
-                  deploy: false
-                properties:
-                  deploy:
-                    default: true
-                    type: boolean
-                  image:
-                    type: string
                 type: object
               database:
                 default:
@@ -424,6 +430,8 @@ spec:
                         type: object
                     type: object
                   writer:
+                    description: 'Deprecated: DSP V1 only, will be removed in the
+                      future.'
                     properties:
                       image:
                         type: string
@@ -542,6 +550,8 @@ spec:
                   externalStorage:
                     properties:
                       basePath:
+                        description: Subpath where objects should be stored for this
+                          DSPA
                         type: string
                       bucket:
                         type: string

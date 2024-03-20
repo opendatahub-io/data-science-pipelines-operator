@@ -33,9 +33,7 @@ func TestDeployWorkflowController(t *testing.T) {
 	// Construct DSPASpec with deployed WorkflowController
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
 		Spec: dspav1alpha1.DSPASpec{
-			APIServer: &dspav1alpha1.APIServer{
-				ArchiveLogs: true,
-			},
+			APIServer: &dspav1alpha1.APIServer{},
 			WorkflowController: &dspav1alpha1.WorkflowController{
 				Deploy: true,
 			},
