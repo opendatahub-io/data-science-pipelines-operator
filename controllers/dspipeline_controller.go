@@ -561,22 +561,23 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// Watch for global ca bundle, if one is added to this namespace
 		// we need to reconcile on all the dspa's in this namespace
 		// so they may mount this cert in the appropriate containers
-		Watches(&source.Kind{Type: &corev1.ConfigMap{}},
-			handler.EnqueueRequestsFromMapFunc(func(o client.Object) []reconcile.Request {
-				thisNamespace := o.GetNamespace()
+
+		WatchesRawSource(source.Kind(mgr.GetCache(), &corev1.ConfigMap{}),
+			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, o client.Object) []reconcile.Request {
+				cm := o.(*corev1.ConfigMap)
+				thisNamespace := cm.Namespace
 				log := r.Log.WithValues("namespace", thisNamespace)
 
-				if o.GetName() != "odh-trusted-ca-bundle" {
-					return []reconcile.Request{}
+				if cm.Name != "odh-trusted-ca-bundle" {
+					return nil
 				}
 
-				log.V(1).Info(fmt.Sprintf("Reconcile event triggered by change in event on Global CA Bundle: %s", o.GetName()))
+				log.V(1).Info(fmt.Sprintf("Reconcile event triggered by change in event on Global CA Bundle: %s", cm.Name))
 
 				var dspaList dspav1alpha1.DataSciencePipelinesApplicationList
-				ctx := context.Background()
 				if err := r.List(ctx, &dspaList, client.InNamespace(thisNamespace)); err != nil {
 					log.Error(err, "unable to list DSPA's when attempting to handle Global CA Bundle event.")
-					return []reconcile.Request{}
+					return nil
 				}
 
 				var reconcileRequests []reconcile.Request
@@ -589,35 +590,34 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				}
 
 				return reconcileRequests
-			})).
-		// Watch for Pods belonging to DSPA
-		Watches(&source.Kind{Type: &corev1.Pod{}},
-			handler.EnqueueRequestsFromMapFunc(func(o client.Object) []reconcile.Request {
-				log := r.Log.WithValues("namespace", o.GetNamespace())
+			}),
+		).
+		WatchesRawSource(source.Kind(mgr.GetCache(), &corev1.Pod{}),
+			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, o client.Object) []reconcile.Request {
+				pod := o.(*corev1.Pod)
+				log := r.Log.WithValues("namespace", pod.Namespace)
 
-				component, hasComponentLabel := o.GetLabels()["component"]
-
-				if !hasComponentLabel || (component != "data-science-pipelines") {
-					return []reconcile.Request{}
+				component, hasComponentLabel := pod.Labels["component"]
+				if !hasComponentLabel || component != "data-science-pipelines" {
+					return nil
 				}
 
-				dspaName, hasDSPALabel := o.GetLabels()["dspa"]
+				dspaName, hasDSPALabel := pod.Labels["dspa"]
 				if !hasDSPALabel {
 					msg := fmt.Sprintf("Pod with data-science-pipelines label encountered, but is missing dspa "+
-						"label, could not reconcile on [Pod: %s] ", o.GetName())
+						"label, could not reconcile on [Pod: %s] ", pod.Name)
 					log.V(1).Info(msg)
-					return []reconcile.Request{}
+					return nil
 				}
 
-				log.V(1).Info(fmt.Sprintf("Reconcile event triggered by [Pod: %s] ", o.GetName()))
+				log.V(1).Info(fmt.Sprintf("Reconcile event triggered by [Pod: %s] ", pod.Name))
 				namespacedName := types.NamespacedName{
 					Name:      dspaName,
-					Namespace: o.GetNamespace(),
+					Namespace: pod.Namespace,
 				}
-				reconcileRequests := append([]reconcile.Request{}, reconcile.Request{NamespacedName: namespacedName})
-				return reconcileRequests
-			})).
-		// TODO: Add watcher for ui cluster rbac since it has no owner
+				return []reconcile.Request{{NamespacedName: namespacedName}}
+			}),
+		).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: r.MaxConcurrentReconciles,
 		}).
