@@ -1,0 +1,54 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: minio
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: minio
+      containers:
+        - resources:
+            limits:
+              cpu: 20m
+              memory: 500Mi
+            requests:
+              cpu: 20m
+              memory: 100m
+          name: minio
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: minio
+                  key: accesskey
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minio
+                  key: secretkey
+          ports:
+            - containerPort: 9000
+              protocol: TCP
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: data
+              mountPath: /data
+              subPath: minio
+          image: 'quay.io/minio/minio:RELEASE.2023-10-16T04-13-43Z'
+          args:
+            - server
+            - /data
+            - --console-address
+            - ":9001"
+  strategy:
+    type: Recreate

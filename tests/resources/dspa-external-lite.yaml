@@ -1,0 +1,77 @@
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: test-dspa-external
+spec:
+  dspVersion: v2
+  apiServer:
+    deploy: true
+    enableOauth: false
+    enableSamplePipeline: true
+    cABundle:
+      configMapName: kube-root-ca.crt
+      configMapKey: ca.crt
+    resources:
+      limits:
+        cpu: 20m
+        memory: 500Mi
+      requests:
+        cpu: 20m
+        memory: 100m
+  scheduledWorkflow:
+    deploy: true
+    resources:
+      limits:
+        cpu: 20m
+        memory: 500Mi
+      requests:
+        cpu: 20m
+        memory: 100m
+  persistenceAgent:
+    deploy: true
+    resources:
+      limits:
+        cpu: 20m
+        memory: 500Mi
+      requests:
+        cpu: 20m
+        memory: 100Mi
+  mlmd:
+    deploy: true
+    envoy:
+      resources:
+        limits:
+          cpu: 20m
+          memory: 500Mi
+        requests:
+          cpu: 20m
+          memory: 100Mi
+    grpc:
+      resources:
+        limits:
+          cpu: 20m
+          memory: 500Mi
+        requests:
+          cpu: 20m
+          memory: 100Mi
+  database:
+    customExtraParams: '{"tls":"false"}'
+    externalDB:
+      host: mariadb.test-mariadb.svc.cluster.local
+      port: "3306"
+      username: mlpipeline
+      pipelineDBName: mlpipeline
+      passwordSecret:
+        name: ds-pipeline-db-test
+        key: password
+  objectStorage:
+    externalStorage:
+      bucket: mlpipeline
+      host: minio.test-minio.svc.cluster.local
+      port: "9000"
+      region: us-east-2
+      s3CredentialsSecret:
+        accessKey: accesskey
+        secretKey: secretkey
+        secretName: minio
+      scheme: http
