@@ -33,9 +33,15 @@ const (
 	// GlobalODHCaBundleConfigMapName key and label values  are a contract with
 	// ODH Platform https://github.com/opendatahub-io/architecture-decision-records/pull/28
 	GlobalODHCaBundleConfigMapName = "odh-trusted-ca-bundle"
+	// GlobalODHCaBundleConfigMapSystemBundleKey is the key that is added by network operator
+	// https://docs.openshift.com/container-platform/4.15/networking/configuring-a-custom-pki.html#certificate-injection-using-operators_configuring-a-custom-pki
+	GlobalODHCaBundleConfigMapSystemBundleKey = "ca-bundle.crt"
 
 	CustomDSPTrustedCAConfigMapNamePrefix = "dsp-trusted-ca"
 	CustomDSPTrustedCAConfigMapKey        = "dsp-ca.crt"
+
+	DefaultSystemSSLCertFile     = "SSL_CERT_FILE"
+	DefaultSystemSSLCertFilePath = "/etc/pki/tls/certs/ca-bundle.crt" // Fedora/RHEL 6
 
 	MLPipelineUIConfigMapPrefix       = "ds-pipeline-ui-configmap-"
 	ArtifactScriptConfigMapNamePrefix = "ds-pipeline-artifact-script-"
