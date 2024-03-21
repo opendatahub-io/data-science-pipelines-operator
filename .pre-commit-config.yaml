@@ -6,6 +6,7 @@ repos:
         exclude: README.md
       - id: check-merge-conflict
       - id: end-of-file-fixer
+        exclude: controllers/testdata/tls/ca-bundle.crt
       - id: check-added-large-files
       - id: check-case-conflict
       - id: check-json
@@ -18,7 +19,7 @@ repos:
       - id: yamllint
         files: \.(yaml|yml)$
         types: [file, yaml]
-        entry: yamllint --strict
+        entry: yamllint --strict -c .yamllint.yaml
 
   - repo: https://github.com/dnephin/pre-commit-golang
     rev: c17f835cf9
