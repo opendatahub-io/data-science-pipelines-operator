@@ -6,7 +6,7 @@ repos:
         exclude: README.md
       - id: check-merge-conflict
       - id: end-of-file-fixer
-        exclude: controllers/testdata/tls/ca-bundle.crt
+        exclude: controllers/testdata/tls
       - id: check-added-large-files
       - id: check-case-conflict
       - id: check-json

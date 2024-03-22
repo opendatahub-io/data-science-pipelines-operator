@@ -19,7 +19,7 @@ package testutil
 import (
 	"context"
 	"fmt"
-
+	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"os"
 	"time"
 
@@ -209,4 +209,43 @@ func GenerateDeclarativeTestCases() []Case {
 	}
 
 	return testcases
+}
+
+func CreateEmptyDSPA() *dspav1alpha1.DataSciencePipelinesApplication {
+	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
+		Spec: dspav1alpha1.DSPASpec{
+			APIServer:         &dspav1alpha1.APIServer{Deploy: false},
+			MLMD:              &dspav1alpha1.MLMD{Deploy: false},
+			PersistenceAgent:  &dspav1alpha1.PersistenceAgent{Deploy: false},
+			ScheduledWorkflow: &dspav1alpha1.ScheduledWorkflow{Deploy: false},
+			MlPipelineUI: &dspav1alpha1.MlPipelineUI{
+				Deploy: false,
+				Image:  "testimage-MlPipelineUI:test",
+			},
+			WorkflowController: &dspav1alpha1.WorkflowController{Deploy: false},
+			Database:           &dspav1alpha1.Database{DisableHealthCheck: false, MariaDB: &dspav1alpha1.MariaDB{Deploy: false}},
+			ObjectStorage: &dspav1alpha1.ObjectStorage{
+				DisableHealthCheck: false,
+				Minio: &dspav1alpha1.Minio{
+					Deploy: false,
+					Image:  "testimage-Minio:test",
+				},
+			},
+		},
+	}
+	dspa.Name = "testdspa"
+	dspa.Namespace = "testnamespace"
+	return dspa
+}
+
+func CreateDSPAWithAPIServerCABundle(key string, cfgmapName string) *dspav1alpha1.DataSciencePipelinesApplication {
+	dspa := CreateEmptyDSPA()
+	dspa.Spec.APIServer = &dspav1alpha1.APIServer{
+		Deploy: true,
+		CABundle: &dspav1alpha1.CABundle{
+			ConfigMapKey:  key,
+			ConfigMapName: cfgmapName,
+		},
+	}
+	return dspa
 }
