@@ -15,6 +15,7 @@ spec:
     deploy: true
     enableSamplePipeline: false
     caBundleFileMountPath: /dspa/custom-certs
+    caBundleFileName: user-ca-bundle.crt
     cABundle:
       configMapKey: user-ca-bundle.crt
       configMapName: user-ca-bundle

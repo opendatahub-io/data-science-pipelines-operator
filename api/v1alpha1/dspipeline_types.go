@@ -137,6 +137,10 @@ type APIServer struct {
 	// pipeline server and user executor pods
 	// +kubebuilder:validation:Optional
 	CABundleFileMountPath string `json:"caBundleFileMountPath"`
+	// This is the folder where the ca bundle will be created in the
+	// pipeline server and user executor pods
+	// +kubebuilder:validation:Optional
+	CABundleFileName string `json:"caBundleFileName"`
 }
 
 type CABundle struct {

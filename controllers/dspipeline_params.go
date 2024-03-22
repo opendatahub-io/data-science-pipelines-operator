@@ -651,8 +651,8 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		if p.APIServer.CABundleFileMountPath != "" {
 			p.CustomCABundleRootMountPath = p.APIServer.CABundleFileMountPath
 		}
-		if p.APIServer.CABundle != nil && p.APIServer.CABundle.ConfigMapKey != "" {
-			dspTrustedCAConfigMapKey = p.APIServer.CABundle.ConfigMapKey
+		if p.APIServer.CABundleFileName != "" {
+			dspTrustedCAConfigMapKey = p.APIServer.CABundleFileName
 		}
 		p.PiplinesCABundleMountPath = fmt.Sprintf("%s/%s", p.CustomCABundleRootMountPath, dspTrustedCAConfigMapKey)
 

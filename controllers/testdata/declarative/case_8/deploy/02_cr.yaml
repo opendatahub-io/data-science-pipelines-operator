@@ -15,6 +15,7 @@ spec:
   apiServer:
     deploy: true
     enableSamplePipeline: false
+    caBundleFileName: testcabundleconfigmapkey8.crt
     cABundle:
       configMapName: testcabundleconfigmap8
       configMapKey: testcabundleconfigmapkey8.crt

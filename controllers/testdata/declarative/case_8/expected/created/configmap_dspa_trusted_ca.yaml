@@ -3,7 +3,7 @@ apiVersion: v1
 metadata:
   name: dsp-trusted-ca-testdsp8
 data:
-  dsp-ca.crt: |-
+  testcabundleconfigmapkey8.crt: |-
     -----BEGIN CERTIFICATE-----
     MIIFLTCCAxWgAwIBAgIUIvY4jV0212P/ddjuCZhcUyJfoocwDQYJKoZIhvcNAQEL
     BQAwJjELMAkGA1UEBhMCWFgxFzAVBgNVBAMMDnJoLWRzcC1kZXZzLmlvMB4XDTI0
