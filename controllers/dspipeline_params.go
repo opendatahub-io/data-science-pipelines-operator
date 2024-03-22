@@ -468,7 +468,7 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 
 }
 
-func (p *DSPAParams) SetupMLMD(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, log logr.Logger) error {
+func (p *DSPAParams) SetupMLMD(dsp *dspa.DataSciencePipelinesApplication, log logr.Logger) error {
 	if p.UsingV2Pipelines(dsp) {
 		if p.MLMD == nil {
 			log.Info("MLMD not specified, but is a required component for V2 Pipelines. Including MLMD with default specs.")
@@ -666,7 +666,10 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 				if sysCertsErr != nil {
 					return sysCertsErr
 				}
-				p.APICustomPemCerts = append(p.APICustomPemCerts, certs)
+
+				if len(certs) != 0 {
+					p.APICustomPemCerts = append(p.APICustomPemCerts, certs)
+				}
 			}
 
 			p.CustomCABundle = &dspa.CABundle{
@@ -758,7 +761,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		setStringDefault(argoExecImageFromConfig, &p.WorkflowController.ArgoExecImage)
 	}
 
-	err := p.SetupMLMD(ctx, dsp, client, log)
+	err := p.SetupMLMD(dsp, log)
 	if err != nil {
 		return err
 	}
