@@ -1,0 +1,16 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: mariadb
+  namespace: test-mariadb
+  labels:
+    app: mariadb
+    component: data-science-pipelines
+spec:
+  ports:
+    - port: 3306
+      protocol: TCP
+      targetPort: 3306
+  selector:
+    app: mariadb
+    component: data-science-pipelines

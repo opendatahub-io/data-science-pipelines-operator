@@ -31,6 +31,24 @@ import (
 
 func (suite *IntegrationTestSuite) TestDSPADeployment() {
 	podCount := 8
+	if suite.DSPA.Spec.ObjectStorage.ExternalStorage != nil {
+		podCount = podCount - 1
+	}
+	if suite.DSPA.Spec.Database.ExternalDB != nil {
+		podCount = podCount - 1
+	}
+	deployments := []string{
+		fmt.Sprintf("ds-pipeline-%s", suite.DSPA.Name),
+		fmt.Sprintf("ds-pipeline-persistenceagent-%s", suite.DSPA.Name),
+		fmt.Sprintf("ds-pipeline-scheduledworkflow-%s", suite.DSPA.Name),
+	}
+
+	if suite.DSPA.Spec.ObjectStorage.ExternalStorage == nil && suite.DSPA.Spec.Database.ExternalDB == nil {
+		deployments = append(deployments,
+			fmt.Sprintf("mariadb-%s", suite.DSPA.Name),
+			fmt.Sprintf("minio-%s", suite.DSPA.Name),
+		)
+	}
 	suite.T().Run("with default MariaDB and Minio", func(t *testing.T) {
 		t.Run(fmt.Sprintf("should have %d pods", podCount), func(t *testing.T) {
 			podList := &corev1.PodList{}
@@ -41,15 +59,6 @@ func (suite *IntegrationTestSuite) TestDSPADeployment() {
 			require.NoError(t, err)
 			assert.Equal(t, podCount, len(podList.Items))
 		})
-
-		deployments := []string{
-			fmt.Sprintf("ds-pipeline-%s", suite.DSPA.Name),
-			fmt.Sprintf("ds-pipeline-persistenceagent-%s", suite.DSPA.Name),
-			fmt.Sprintf("ds-pipeline-scheduledworkflow-%s", suite.DSPA.Name),
-			fmt.Sprintf("mariadb-%s", suite.DSPA.Name),
-			fmt.Sprintf("minio-%s", suite.DSPA.Name),
-		}
-
 		for _, deployment := range deployments {
 			t.Run(fmt.Sprintf("should have a ready %s deployment", deployment), func(t *testing.T) {
 				testUtil.TestForSuccessfulDeployment(t, suite.Ctx, suite.DSPANamespace, deployment, suite.Clientmgr.k8sClient)
