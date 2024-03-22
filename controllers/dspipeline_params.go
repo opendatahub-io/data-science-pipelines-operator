@@ -593,10 +593,16 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 			}
 		}
 
+		// Track whether the "ca-bundle.crt" configmap key from odh-trusted-ca bundle
+		// was found, this will be used to decide whether we need to account for this
+		// ourselves later or not.
+		odhTrustedCABundleAdded := false
+
 		// Check for cert bundle provided by the platform instead of by the DSPA user
 		// If it exists, include this cert for tls verifications
 		globalCABundleCFGMapName := config.GlobalODHCaBundleConfigMapName
-		err, globalCerts := util.GetConfigMapValues(ctx, globalCABundleCFGMapName, p.Namespace, client)
+
+		odhTrustedCABundleConfigMap, err := util.GetConfigMap(ctx, globalCABundleCFGMapName, p.Namespace, client)
 		if err != nil {
 			// If the global cert configmap is not available, that is OK
 			if !apierrs.IsNotFound(err) {
@@ -604,7 +610,8 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 				return err
 			}
 		} else {
-			// Found a cert provided by odh-operator. Consume it
+			// Found a cert provided by odh-operator. Consume it.
+			globalCerts := util.GetConfigMapValues(odhTrustedCABundleConfigMap)
 			log.Info(fmt.Sprintf("Found global CA Bundle %s present in this namespace %s, this bundle will be included in external tls connections.", config.GlobalODHCaBundleConfigMapName, p.Namespace))
 			// "odh-trusted-ca-bundle" can have fields: "odh-ca-bundle.crt" and "ca-bundle.crt", we need to utilize both
 			for _, val := range globalCerts {
@@ -613,19 +620,26 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 					p.APICustomPemCerts = append(p.APICustomPemCerts, []byte(val))
 				}
 			}
+			// If odh-trusted-ca-bundle is created via network operator then this is always going to be present
+			// however if a user creates this, they may accidentally leave this out, so we need to account for this
+			_, ok := odhTrustedCABundleConfigMap.Data[config.GlobalODHCaBundleConfigMapSystemBundleKey]
+			if ok {
+				odhTrustedCABundleAdded = true
+			}
 		}
 
 		// If user provided a CA bundle, include this in tls verification
 		if p.APIServer.CABundle != nil {
 			dspaCaBundleCfgKey, dspaCaBundleCfgName := p.APIServer.CABundle.ConfigMapKey, p.APIServer.CABundle.ConfigMapName
-			dspaCACfgErr, dspaProvidedCABundle := util.GetConfigMapValue(ctx, dspaCaBundleCfgKey, dspaCaBundleCfgName, p.Namespace, client, log)
+			dspaCAConfigMap, dspaCACfgErr := util.GetConfigMap(ctx, dspaCaBundleCfgName, p.Namespace, client)
 			if dspaCACfgErr != nil && apierrs.IsNotFound(dspaCACfgErr) {
-				log.Info(fmt.Sprintf("ConfigMap [%s] was not found in namespace [%s]", dspaCaBundleCfgKey, p.Namespace))
+				log.Info(fmt.Sprintf("ConfigMap [%s] was not found in namespace [%s]", dspaCAConfigMap.Name, p.Namespace))
 				return dspaCACfgErr
 			} else if dspaCACfgErr != nil {
 				log.Info(fmt.Sprintf("Encountered error when attempting to fetch ConfigMap: [%s], Error: %v", dspaCaBundleCfgName, dspaCACfgErr))
 				return dspaCACfgErr
 			}
+			dspaProvidedCABundle := util.GetConfigMapValue(dspaCaBundleCfgKey, dspaCAConfigMap)
 			// If the ca-bundle field is empty, ignore it
 			if dspaProvidedCABundle != "" {
 				p.APICustomPemCerts = append(p.APICustomPemCerts, []byte(dspaProvidedCABundle))
@@ -643,6 +657,18 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		// 2) populate CustomCABundle SOT var for pipeline pods and artifact script to utilize during templating
 		// 3) set ssl_cert_dir for api server
 		if len(p.APICustomPemCerts) > 0 {
+
+			// We need to ensure system certs are always part of this new configmap
+			// We can either source this from odh-trusted-ca-bundle cfgmap if provided,
+			// or fetch one from "config-trusted-cabundle" configmap, which is always present in an ocp ns
+			if !odhTrustedCABundleAdded {
+				certs, sysCertsErr := util.GetSystemCerts()
+				if sysCertsErr != nil {
+					return sysCertsErr
+				}
+				p.APICustomPemCerts = append(p.APICustomPemCerts, certs)
+			}
+
 			p.CustomCABundle = &dspa.CABundle{
 				ConfigMapKey:  config.CustomDSPTrustedCAConfigMapKey,
 				ConfigMapName: fmt.Sprintf("%s-%s", config.CustomDSPTrustedCAConfigMapNamePrefix, p.Name),
