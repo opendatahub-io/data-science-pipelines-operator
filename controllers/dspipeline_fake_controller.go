@@ -42,9 +42,9 @@ func NewFakeController() *DSPAReconciler {
 	// Create Scheme
 	FakeScheme := scheme.Scheme
 	utilruntime.Must(clientgoscheme.AddToScheme(FakeScheme))
-	utilruntime.Must(buildv1.AddToScheme(FakeScheme))
-	utilruntime.Must(imagev1.AddToScheme(FakeScheme))
-	utilruntime.Must(routev1.AddToScheme(FakeScheme))
+	utilruntime.Must(buildv1.Install(FakeScheme))
+	utilruntime.Must(imagev1.Install(FakeScheme))
+	utilruntime.Must(routev1.Install(FakeScheme))
 	utilruntime.Must(dspav1alpha1.AddToScheme(FakeScheme))
 	FakeBuilder.WithScheme(FakeScheme)
 
