@@ -89,6 +89,14 @@ spec:
                     - configMapKey
                     - configMapName
                     type: object
+                  caBundleFileMountPath:
+                    description: This is the path where the ca bundle will be mounted
+                      in the pipeline server and user executor pods
+                    type: string
+                  caBundleFileName:
+                    description: This is the folder where the ca bundle will be created
+                      in the pipeline server and user executor pods
+                    type: string
                   cacheImage:
                     description: 'Deprecated: DSP V1 only, will be removed in the
                       future.'
