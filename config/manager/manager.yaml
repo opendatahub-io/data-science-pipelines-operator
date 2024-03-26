@@ -81,8 +81,8 @@ spec:
             value: $(ZAP_LOG_LEVEL)
           - name: MAX_CONCURRENT_RECONCILES
             value: $(MAX_CONCURRENT_RECONCILES)
-          - name: REQUEUE_TIME
-            value: $(REQUEUE_TIME)
+          - name: DSPO_REQUEUE_TIME
+            value: $(DSPO_REQUEUE_TIME)
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
