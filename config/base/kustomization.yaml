@@ -136,13 +136,6 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.DSPO_HEALTHCHECK_OBJECTSTORE_CONNECTIONTIMEOUT
-  - name: REQUEUE_TIME
-    objref:
-      kind: ConfigMap
-      name: dspo-parameters
-      apiVersion: v1
-    fieldref:
-      fieldpath: data.DSPO_REQUEUE_TIME
   - name: IMAGESV2_ARGO_APISERVER
     objref:
       kind: ConfigMap
