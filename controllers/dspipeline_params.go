@@ -20,12 +20,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/json"
 	"math/rand"
 	"strings"
 	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
 	mf "github.com/manifestival/manifestival"
@@ -87,6 +88,10 @@ type DBConnection struct {
 	CredentialsSecret *dspa.SecretKeyValue
 	Password          string
 	ExtraParams       string
+}
+
+type DBExtraParams struct {
+	TLS string `json:"tls"`
 }
 
 type ObjectStorageConnection struct {
@@ -243,6 +248,19 @@ func (p *DSPAParams) RetrieveOrCreateObjectStoreSecret(ctx context.Context, clie
 	return accessKey, secretKey, nil
 }
 
+func getDBExtraParams(tls string, log logr.Logger) (string, error) {
+
+	extraParams := DBExtraParams{
+		TLS: tls,
+	}
+	extraParamsJson, err := json.Marshal(extraParams)
+	if err != nil {
+		log.Info(fmt.Sprintf("Error marshaling TLS configuration to JSON: %v", err))
+		return "", err
+	}
+	return string(extraParamsJson), nil
+}
+
 // SetupDBParams Populates the DB connection Parameters.
 // If an external secret is specified, SetupDBParams will retrieve DB credentials from it.
 // If DSPO is managing a dynamically created secret, then SetupDBParams generates the creds.
@@ -259,7 +277,12 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 
 		// Assume default external connection is tls enabled
 		// user can override this via CustomExtraParams field
-		p.DBConnection.ExtraParams = fmt.Sprintf(config.DBDefaultExtraParams, true)
+		dbExtraParams, err := getDBExtraParams("true", log)
+		if err != nil {
+			log.Error(err, "Unexpected error encountered while retrieving DBExtraparams")
+			return err
+		}
+		p.DBConnection.ExtraParams = dbExtraParams
 
 		// Retreive DB Password from specified secret.  Ignore error if the secret simply doesn't exist (will be created later)
 		password, err := p.RetrieveSecret(ctx, client, p.DBConnection.CredentialsSecret.Name, p.DBConnection.CredentialsSecret.Key, log)
@@ -300,7 +323,12 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 		p.DBConnection.Username = p.MariaDB.Username
 		p.DBConnection.DBName = p.MariaDB.DBName
 		// By Default OOB mariadb is not tls enabled
-		p.DBConnection.ExtraParams = fmt.Sprintf(config.DBDefaultExtraParams, false)
+		dbExtraParams, err := getDBExtraParams("false", log)
+		if err != nil {
+			log.Error(err, "Unexpected error encountered while retrieving DBExtraparams")
+			return err
+		}
+		p.DBConnection.ExtraParams = dbExtraParams
 
 		// If custom DB Secret provided, use its values.  Otherwise generate a default
 		if p.MariaDB.PasswordSecret != nil {
