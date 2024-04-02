@@ -15,14 +15,31 @@ package testUtil
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
 	"io"
 	"mime/multipart"
+	"net/http"
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
+
+type PipelineRequest struct {
+	DisplayName              string `json:"display_name"`
+	PipelineVersionReference struct {
+		PipelineID string `json:"pipeline_id"`
+	} `json:"pipeline_version_reference"`
+}
+type Pipeline struct {
+	Pipelines []struct {
+		PipelineID  string `json:"pipeline_id"`
+		DisplayName string `json:"display_name"`
+	} `json:"pipelines"`
+}
 
 // FormFromFile creates a multipart form data from the provided form map where the values are paths to files.
 // It returns a buffer containing the encoded form data and the content type of the form.
@@ -51,4 +68,76 @@ func FormFromFile(t *testing.T, form map[string]string) (*bytes.Buffer, string) 
 	}
 
 	return body, mp.FormDataContentType()
+}
+
+func RetrievePipelineId(t *testing.T, APIServerURL string, PipelineDisplayName string) string {
+	response, err := http.Get(fmt.Sprintf("%s/apis/v2beta1/pipelines", APIServerURL))
+	require.NoError(t, err)
+	responseData, err := io.ReadAll(response.Body)
+	require.NoError(t, err)
+	var pipelineData Pipeline
+	var pipelineID string
+	err = json.Unmarshal(responseData, &pipelineData)
+	require.NoError(t, err)
+	for _, pipeline := range pipelineData.Pipelines {
+		if pipeline.DisplayName == PipelineDisplayName {
+			pipelineID = pipeline.PipelineID
+			break
+		}
+	}
+	return pipelineID
+}
+
+func FormatRequestBody(t *testing.T, pipelineID string, PipelineDisplayName string) []byte {
+	requestBody := PipelineRequest{
+		DisplayName: PipelineDisplayName,
+		PipelineVersionReference: struct {
+			PipelineID string `json:"pipeline_id"`
+		}{PipelineID: pipelineID},
+	}
+
+	body, err := json.Marshal(requestBody)
+	require.NoError(t, err)
+	return body
+}
+
+func WaitForPipelineRunCompletion(t *testing.T, APIServerURL string) error {
+	timeout := time.After(6 * time.Minute)
+	ticker := time.NewTicker(6 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-timeout:
+			return fmt.Errorf("timed out waiting for pipeline run completion")
+		case <-ticker.C:
+			// Check the status of the pipeline run
+			status, err := CheckPipelineRunStatus(t, APIServerURL)
+			require.NoError(t, err)
+			switch status {
+			case "SUCCEEDED":
+				return nil
+			case "SKIPPED", "FAILED", "CANCELING", "CANCELED", "PAUSED":
+				return fmt.Errorf("pipeline run status: %s", status)
+			}
+		}
+	}
+}
+
+func CheckPipelineRunStatus(t *testing.T, APIServerURL string) (string, error) {
+	response, err := http.Get(fmt.Sprintf("%s/apis/v2beta1/runs", APIServerURL))
+	require.NoError(t, err)
+	responseData, err := io.ReadAll(response.Body)
+	require.NoError(t, err)
+	var data map[string]interface{}
+	var state string
+	err = json.Unmarshal(responseData, &data)
+	require.NoError(t, err)
+
+	// Extracting the Run state
+	runs := data["runs"].([]interface{})
+	for _, run := range runs {
+		runData := run.(map[string]interface{})
+		state = runData["state"].(string)
+	}
+	return state, nil
 }
