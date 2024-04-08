@@ -10,3 +10,6 @@ Images:
   MariaDB: mariadb:test0
   Minio: minio:test0
   OAuthProxy: oauth-proxy:test0
+DSPO:
+  ApiServer:
+    IncludeOwnerReference: false

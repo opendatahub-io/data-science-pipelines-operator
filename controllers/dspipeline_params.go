@@ -42,7 +42,11 @@ import (
 )
 
 type DSPAParams struct {
+	IncludeOwnerReference                bool
+	UID                                  types.UID
 	Name                                 string
+	APIVersion                           string
+	Kind                                 string
 	Namespace                            string
 	Owner                                mf.Owner
 	DSPVersion                           string

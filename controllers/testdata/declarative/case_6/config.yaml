@@ -16,3 +16,6 @@ ImagesV2:
     ArgoLauncherImage: argolauncherimage:test6
     ArgoDriverImage: argodriverimage:test6
     MlmdGRPC: quay.io/opendatahub/mlmd-grpc-server:testdsp6
+DSPO:
+  ApiServer:
+    IncludeOwnerReference: false

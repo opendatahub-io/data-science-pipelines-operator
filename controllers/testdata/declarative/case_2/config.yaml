@@ -8,3 +8,6 @@ Images:
   MoveResultsImage: busybox:test2
   MariaDB: mariadb:test2
   OAuthProxy: oauth-proxy:test2
+DSPO:
+  ApiServer:
+    IncludeOwnerReference: false

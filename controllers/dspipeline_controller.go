@@ -258,6 +258,15 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	dspaPrereqsReady := dbAvailable && objStoreAvailable
 
 	if dspaPrereqsReady {
+		params.IncludeOwnerReference = config.GetBoolConfigWithDefault(config.ApiServerIncludeOwnerReferenceConfigName, config.DefaultApiServerIncludeOwnerReferenceConfigName)
+
+		if params.IncludeOwnerReference {
+			params.UID = dspa.UID
+			params.Name = dspa.Name
+			params.APIVersion = dspa.APIVersion
+			params.Kind = dspa.Kind
+		}
+
 		// Manage Common Manifests
 		err = r.ReconcileCommon(dspa, params)
 		if err != nil {

@@ -22,6 +22,16 @@ spec:
     spec:
       containers:
         - env:
+            {{ if .IncludeOwnerReference }}
+            - name: DSPA_UID
+              value: "{{.UID}}"
+            - name: DSPA_NAME
+              value: "{{.Name}}"
+            - name: DSPA_API_VERSION
+              value: "{{.APIVersion}}"
+            - name: DSPA_KIND
+              value: "{{.Kind}}"
+            {{ end }}
             - name: POD_NAMESPACE
               value: "{{.Namespace}}"
             - name: DBCONFIG_USER
