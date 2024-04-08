@@ -21,11 +21,12 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/json"
 	"math/rand"
 	"strings"
 	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/json"
 
 	"github.com/go-logr/logr"
 	mf "github.com/manifestival/manifestival"
@@ -553,6 +554,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.MLMD = dsp.Spec.MLMD.DeepCopy()
 	p.CustomCABundleRootMountPath = config.CustomCABundleRootMountPath
 	p.PiplinesCABundleMountPath = config.GetCABundleFileMountPath()
+	dspTrustedCAConfigMapKey := config.CustomDSPTrustedCAConfigMapKey
 
 	log := loggr.WithValues("namespace", p.Namespace).WithValues("dspa_name", p.Name)
 
@@ -646,6 +648,14 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 			}
 		}
 
+		if p.APIServer.CABundleFileMountPath != "" {
+			p.CustomCABundleRootMountPath = p.APIServer.CABundleFileMountPath
+		}
+		if p.APIServer.CABundleFileName != "" {
+			dspTrustedCAConfigMapKey = p.APIServer.CABundleFileName
+		}
+		p.PiplinesCABundleMountPath = fmt.Sprintf("%s/%s", p.CustomCABundleRootMountPath, dspTrustedCAConfigMapKey)
+
 		// There are situations where global & user provided certs, or a provided ca trust configmap(s) have various trust bundles
 		// (for example in the case of "odh-trusted-ca-bundle") there is "odh-ca-bundle.crt" and "ca-bundle.crt".
 		// We create a separate configmap and concatenate all the certs into a single bundle, because passing a
@@ -673,7 +683,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 			}
 
 			p.CustomCABundle = &dspa.CABundle{
-				ConfigMapKey:  config.CustomDSPTrustedCAConfigMapKey,
+				ConfigMapKey:  dspTrustedCAConfigMapKey,
 				ConfigMapName: fmt.Sprintf("%s-%s", config.CustomDSPTrustedCAConfigMapNamePrefix, p.Name),
 			}
 
@@ -712,7 +722,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 			// We need to update the default SSL_CERT_DIR to include
 			// dsp custom cert path, used by DSP Api Server
 			var certDirectories = []string{
-				config.CustomCABundleRootMountPath,
+				p.CustomCABundleRootMountPath,
 				"/etc/ssl/certs",     // SLES10/SLES11, https://golang.org/issue/12139
 				"/etc/pki/tls/certs", // Fedora/RHEL
 			}

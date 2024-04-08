@@ -9,7 +9,7 @@ data:
 
         aws_cp() {
 
-          aws s3 --endpoint http://minio-testdsp8.default.svc.cluster.local:9000 --ca-bundle /dsp-custom-certs/dsp-ca.crt cp $1.tgz s3://mlpipeline/artifacts/$PIPELINERUN/$PIPELINETASK/$1.tgz
+          aws s3 --endpoint http://minio-testdsp8.default.svc.cluster.local:9000 --ca-bundle /dsp-custom-certs/testcabundleconfigmapkey8.crt cp $1.tgz s3://mlpipeline/artifacts/$PIPELINERUN/$PIPELINETASK/$1.tgz
 
         }
 
