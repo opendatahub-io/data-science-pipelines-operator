@@ -71,7 +71,58 @@ spec:
             - mountPath: /etc/envoy.yaml
               name: envoy-config
               subPath: envoy.yaml
+        - name: oauth-proxy
+          args:
+            - --https-address=:8443
+            - --provider=openshift
+            - --openshift-service-account=ds-pipeline-metadata-envoy-{{.Name}}
+            - --upstream=http://localhost:9090
+            - --tls-cert=/etc/tls/private/tls.crt
+            - --tls-key=/etc/tls/private/tls.key
+            - --cookie-secret=SECRET
+            - '--openshift-delegate-urls={"/": {"group":"route.openshift.io","resource":"routes","verb":"get","name":"ds-pipeline-metadata-envoy-{{.Name}}","namespace":"{{.Namespace}}"}}'
+            - '--openshift-sar={"namespace":"{{.Namespace}}","resource":"routes","resourceName":"ds-pipeline-metadata-envoy-{{.Name}}","verb":"get","resourceAPIGroup":"route.openshift.io"}'
+            - --skip-auth-regex='(^/metrics|^/apis/v1beta1/healthz)'
+          image: {{.OAuthProxy}}
+          ports:
+            - containerPort: 8443
+              name: oauth2-proxy
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /oauth/healthz
+              port: oauth2-proxy
+              scheme: HTTPS
+            initialDelaySeconds: 30
+            timeoutSeconds: 1
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /oauth/healthz
+              port: oauth2-proxy
+              scheme: HTTPS
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          resources:
+            limits:
+              cpu: 100m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          volumeMounts:
+            - mountPath: /etc/tls/private
+              name: proxy-tls
+      serviceAccountName: ds-pipeline-metadata-envoy-{{.Name}}
       volumes:
         - name: envoy-config
           configMap:
             name: ds-pipeline-metadata-envoy-config-{{.Name}}
+        - name: proxy-tls
+          secret:
+            secretName: ds-pipelines-envoy-proxy-tls-{{.Name}}

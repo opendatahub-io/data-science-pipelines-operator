@@ -11,12 +11,11 @@ spec:
   ingress:
     - ports:
         - protocol: TCP
+          port: 8443
+    - ports:
+        - protocol: TCP
           port: 9090
       from:
-        - podSelector:
-            matchLabels:
-              app: odh-dashboard
-          namespaceSelector: {}
         - podSelector:
             matchLabels:
               component: data-science-pipelines
