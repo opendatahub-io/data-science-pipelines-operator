@@ -20,13 +20,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/json"
 
 	"github.com/go-logr/logr"
 	mf "github.com/manifestival/manifestival"
@@ -89,7 +89,6 @@ type DBConnection struct {
 	Password          string
 	ExtraParams       string
 }
-
 type ObjectStorageConnection struct {
 	Bucket            string
 	CredentialsSecret *dspa.S3CredentialSecret
@@ -260,7 +259,15 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 
 		// Assume default external connection is tls enabled
 		// user can override this via CustomExtraParams field
-		p.DBConnection.ExtraParams = fmt.Sprintf(config.DBDefaultExtraParams, true)
+		tlsParams := config.DBExtraParams{
+			"tls": "true",
+		}
+		dbExtraParams, err := config.GetDefaultDBExtraParams(tlsParams, log)
+		if err != nil {
+			log.Error(err, "Unexpected error encountered while retrieving DBExtraparams")
+			return err
+		}
+		p.DBConnection.ExtraParams = dbExtraParams
 
 		// Retreive DB Password from specified secret.  Ignore error if the secret simply doesn't exist (will be created later)
 		password, err := p.RetrieveSecret(ctx, client, p.DBConnection.CredentialsSecret.Name, p.DBConnection.CredentialsSecret.Key, log)
@@ -301,7 +308,15 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 		p.DBConnection.Username = p.MariaDB.Username
 		p.DBConnection.DBName = p.MariaDB.DBName
 		// By Default OOB mariadb is not tls enabled
-		p.DBConnection.ExtraParams = fmt.Sprintf(config.DBDefaultExtraParams, false)
+		tlsParams := config.DBExtraParams{
+			"tls": "false",
+		}
+		dbExtraParams, err := config.GetDefaultDBExtraParams(tlsParams, log)
+		if err != nil {
+			log.Error(err, "Unexpected error encountered while retrieving DBExtraparams")
+			return err
+		}
+		p.DBConnection.ExtraParams = dbExtraParams
 
 		// If custom DB Secret provided, use its values.  Otherwise generate a default
 		if p.MariaDB.PasswordSecret != nil {

@@ -17,9 +17,11 @@ limitations under the License.
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/spf13/viper"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -53,7 +55,6 @@ const (
 
 	DefaultDBSecretNamePrefix = "ds-pipeline-db-"
 	DefaultDBSecretKey        = "password"
-	DBDefaultExtraParams      = "{\"tls\":\"%t\"}"
 	GeneratedDBPasswordLength = 12
 
 	MariaDBName        = "mlpipeline"
@@ -188,6 +189,8 @@ var (
 	MlmdWriterResourceRequirements        = createResourceRequirement(resource.MustParse("100m"), resource.MustParse("256Mi"), resource.MustParse("100m"), resource.MustParse("256Mi"))
 )
 
+type DBExtraParams map[string]string
+
 func createResourceRequirement(RequestsCPU resource.Quantity, RequestsMemory resource.Quantity, LimitsCPU resource.Quantity, LimitsMemory resource.Quantity) dspav1alpha1.ResourceRequirements {
 	return dspav1alpha1.ResourceRequirements{
 		Requests: &dspav1alpha1.Resources{
@@ -222,4 +225,13 @@ func GetDurationConfigWithDefault(configName string, value time.Duration) time.D
 // as such for pipelines, we concatenate the certs into a single cert bundle and use a separate configmap for this
 func GetCABundleFileMountPath() string {
 	return fmt.Sprintf("%s/%s", CustomCABundleRootMountPath, CustomDSPTrustedCAConfigMapKey)
+}
+
+func GetDefaultDBExtraParams(params DBExtraParams, log logr.Logger) (string, error) {
+	extraParamsJson, err := json.Marshal(params)
+	if err != nil {
+		log.Info(fmt.Sprintf("Error marshaling TLS configuration to JSON: %v", err))
+		return "", err
+	}
+	return string(extraParamsJson), nil
 }
