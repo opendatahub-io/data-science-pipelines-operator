@@ -542,6 +542,17 @@ func (p *DSPAParams) SetupMLMD(dsp *dspa.DataSciencePipelinesApplication, log lo
 	return nil
 }
 
+func (p *DSPAParams) SetupOwner(dsp *dspa.DataSciencePipelinesApplication) {
+	p.IncludeOwnerReference = config.GetBoolConfigWithDefault(config.ApiServerIncludeOwnerReferenceConfigName, config.DefaultApiServerIncludeOwnerReferenceConfigName)
+
+	if p.IncludeOwnerReference {
+		p.UID = dsp.UID
+		p.Name = dsp.Name
+		p.APIVersion = dsp.APIVersion
+		p.Kind = dsp.Kind
+	}
+}
+
 func setStringDefault(defaultValue string, value *string) {
 	if *value == "" {
 		*value = defaultValue
