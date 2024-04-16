@@ -23,13 +23,13 @@ spec:
       containers:
         - env:
             {{ if .IncludeOwnerReference }}
-            - name: DSPA_UID
+            - name: OWNER_UID
               value: "{{.UID}}"
-            - name: DSPA_NAME
+            - name: OWNER_NAME
               value: "{{.Name}}"
-            - name: DSPA_API_VERSION
+            - name: OWNER_API_VERSION
               value: "{{.APIVersion}}"
-            - name: DSPA_KIND
+            - name: OWNER_KIND
               value: "{{.Kind}}"
             {{ end }}
             - name: POD_NAMESPACE
