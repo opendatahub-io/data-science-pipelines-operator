@@ -45,7 +45,7 @@ deploymentSpec:
           - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
           \ *\n\ndef say_hello(name: str) -> str:\n    hello_text = f'Hello, {name}!'\n\
           \    print(hello_text)\n    return hello_text\n\n"
-        image: quay.io/opendatahub/ds-pipelines-ci-executor-image:v1.0
+        image: quay.io/opendatahub/ds-pipelines-ci-executor-image:v1.1
 pipelineInfo:
   name: hello-pipeline
 root:

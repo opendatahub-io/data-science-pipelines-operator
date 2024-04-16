@@ -1,7 +1,7 @@
 from kfp import dsl, compiler
 
 
-@dsl.component(base_image="quay.io/opendatahub/ds-pipelines-ci-executor-image:v1.0")
+@dsl.component(base_image="quay.io/opendatahub/ds-pipelines-ci-executor-image:v1.1")
 def say_hello(name: str) -> str:
     hello_text = f'Hello, {name}!'
     print(hello_text)
