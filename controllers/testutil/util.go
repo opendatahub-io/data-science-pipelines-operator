@@ -20,11 +20,12 @@ import (
 	"context"
 	"fmt"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	"github.com/stretchr/testify/assert"
 	"os"
+	"testing"
 	"time"
 
 	mf "github.com/manifestival/manifestival"
-	. "github.com/onsi/gomega"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -57,67 +58,57 @@ type Expectation struct {
 
 // ResourceDoesNotExists will check against the client provided
 // by uc.Opts whether resource at path exists.
-func ResourceDoesNotExists(uc UtilContext, path string) {
+func ResourceDoesNotExists(uc UtilContext, path string, t *testing.T) {
 	manifest, err := mf.NewManifest(path, uc.Opts)
-	Expect(err).NotTo(HaveOccurred())
+	assert.NoError(t, err)
 	manifest, err = manifest.Transform(mf.InjectNamespace(uc.Ns))
-	Expect(err).NotTo(HaveOccurred())
+	assert.NoError(t, err)
 	u := manifest.Resources()[0]
 
-	Eventually(func() error {
+	assert.Eventually(t, func() bool {
 		_, err := manifest.Client.Get(&u)
 		if err != nil {
-			if apierrs.IsNotFound(err) {
-				return nil
-			}
-			return err
+			return apierrs.IsNotFound(err)
 		}
-		return fmt.Errorf("resource still exists on cluster")
-
-	}, timeout, interval).ShouldNot(HaveOccurred())
-
+		return false
+	}, timeout, interval)
 }
 
 // DeployResource will deploy resource found in path by requesting
 // a generic apply request to the client provided via uc.Opts
-func DeployResource(uc UtilContext, path string) {
+func DeployResource(uc UtilContext, path string, t *testing.T) {
 	manifest, err := mf.NewManifest(path, uc.Opts)
-	Expect(err).NotTo(HaveOccurred())
+	assert.NoError(t, err)
 	manifest, err = manifest.Transform(mf.InjectNamespace(uc.Ns))
-	Expect(err).NotTo(HaveOccurred())
+	assert.NoError(t, err)
 	err = manifest.Apply()
-	Expect(err).NotTo(HaveOccurred())
+	assert.NoError(t, err)
 	u := manifest.Resources()[0]
-	Eventually(func() error {
+	assert.Eventually(t, func() bool {
 		_, err := manifest.Client.Get(&u)
-		return err
-	}, timeout, interval).ShouldNot(HaveOccurred())
+		return err == nil
+	}, timeout, interval)
 }
 
 // DeleteResource will delete resource found in path by requesting
 // a generic delete request to the client provided via uc.Opts
-func DeleteResource(uc UtilContext, path string) {
+func DeleteResource(uc UtilContext, path string, t *testing.T) {
 
 	manifest, err := mf.NewManifest(path, uc.Opts)
-	Expect(err).NotTo(HaveOccurred())
+	assert.NoError(t, err)
 	manifest, err = manifest.Transform(mf.InjectNamespace(uc.Ns))
-	Expect(err).NotTo(HaveOccurred())
+	assert.NoError(t, err)
 	err = manifest.Delete()
-	Expect(err).NotTo(HaveOccurred())
+	assert.NoError(t, err)
 	u := manifest.Resources()[0]
 
-	Eventually(func() error {
+	assert.Eventually(t, func() bool {
 		_, err := manifest.Client.Get(&u)
 		if err != nil {
-			if apierrs.IsNotFound(err) {
-				return nil
-			}
-			return err
+			return apierrs.IsNotFound(err)
 		}
-		return fmt.Errorf("resource still exists on cluster")
-
-	}, timeout, interval).ShouldNot(HaveOccurred())
-
+		return false
+	}, timeout, interval)
 }
 
 // CompareResources compares expected resource found locally
@@ -128,24 +119,24 @@ func DeleteResource(uc UtilContext, path string) {
 // in path musth ave a supporting comparison procedure implemented.
 //
 // See testutil.CompareResourceProcs for supported procedures.
-func CompareResources(uc UtilContext, path string) {
+func CompareResources(uc UtilContext, path string, t *testing.T) {
 	manifest, err := mf.NewManifest(path, uc.Opts)
-	Expect(err).NotTo(HaveOccurred())
+	assert.NoError(t, err)
 	manifest, err = manifest.Transform(mf.InjectNamespace(uc.Ns))
-	Expect(err).NotTo(HaveOccurred())
+	assert.NoError(t, err)
 	expected := &manifest.Resources()[0]
 	var actual *unstructured.Unstructured
 
-	Eventually(func() error {
+	assert.Eventually(t, func() bool {
 		var err error
 		actual, err = manifest.Client.Get(expected)
-		return err
-	}, timeout, interval).ShouldNot(HaveOccurred())
+		return err == nil
+	}, timeout, interval)
 
 	rest := expected.Object["kind"].(string)
 	result, err := CompareResourceProcs[rest](expected, actual)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(result).Should(BeTrue())
+	assert.NoError(t, err)
+	assert.True(t, result)
 }
 
 // DirExists checks whether dir at path exists
@@ -163,28 +154,28 @@ func DirExists(path string) (bool, error) {
 // GenerateDeclarativeTestCases dynamically generate
 // testcases based on resources located in the testdata
 // directory.
-func GenerateDeclarativeTestCases() []Case {
+func GenerateDeclarativeTestCases(t *testing.T) []Case {
 	var testcases []Case
 
 	cases, err := os.ReadDir(CasesDir)
-	Expect(err).ToNot(HaveOccurred(), "Failed to fetch cases in case dir.")
+	assert.NoError(t, err, "Failed to fetch cases in case dir.")
 	for _, testcase := range cases {
 		caseName := testcase.Name()
 		caseDir := fmt.Sprintf("%s/%s", CasesDir, caseName)
 		newCase := Case{}
 		caseDeployDir := fmt.Sprintf("%s/deploy", caseDir)
 		deploys, err := os.ReadDir(caseDeployDir)
-		Expect(err).ToNot(HaveOccurred(), "Failed to read case.")
+		assert.NoError(t, err, "Failed to read case.")
 		for _, f := range deploys {
 			newCase.Deploy = append(newCase.Deploy, fmt.Sprintf("%s/%s", caseDeployDir, f.Name()))
 		}
 
 		caseCreateDir := fmt.Sprintf("%s/expected/created", caseDir)
 		caseCreationsFound, err := DirExists(caseCreateDir)
-		Expect(err).ToNot(HaveOccurred(), "Failed to read 'create' dir.")
+		assert.NoError(t, err, "Failed to read 'create' dir.")
 		if caseCreationsFound {
 			toCreate, err := os.ReadDir(caseCreateDir)
-			Expect(err).ToNot(HaveOccurred(), "Failed to read 'create' dir.")
+			assert.NoError(t, err, "Failed to read 'create' dir.")
 			for _, f := range toCreate {
 				newCase.Expected.Created = append(newCase.Expected.Created, fmt.Sprintf("%s/%s", caseCreateDir, f.Name()))
 			}
@@ -192,10 +183,10 @@ func GenerateDeclarativeTestCases() []Case {
 
 		caseNotCreateDir := fmt.Sprintf("%s/expected/not_created", caseDir)
 		caseNoCreationsFound, err := DirExists(caseNotCreateDir)
-		Expect(err).ToNot(HaveOccurred(), "Failed to read 'not_create' dir.")
+		assert.NotEqual(t, err, "Failed to read 'not_create' dir.")
 		if caseNoCreationsFound {
 			toNotCreate, err := os.ReadDir(caseNotCreateDir)
-			Expect(err).ToNot(HaveOccurred(), "Failed to read 'not_create' dir.")
+			assert.NotEqual(t, err, "Failed to read 'not_create' dir.")
 			for _, f := range toNotCreate {
 				newCase.Expected.NotCreated = append(newCase.Expected.NotCreated, fmt.Sprintf("%s/%s", caseNotCreateDir, f.Name()))
 			}

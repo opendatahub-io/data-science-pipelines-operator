@@ -20,36 +20,34 @@ package controllers
 
 import (
 	"context"
-	"path/filepath"
-	"testing"
-	"time"
-
+	"github.com/go-logr/logr"
+	"github.com/onsi/gomega/format"
+	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	buildv1 "github.com/openshift/api/build/v1"
 	imagev1 "github.com/openshift/api/image/v1"
 	routev1 "github.com/openshift/api/route/v1"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap/zapcore"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/format"
-
-	"github.com/go-logr/logr"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"os"
+	"path/filepath"
+	ctrl "sigs.k8s.io/controller-runtime"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"testing"
+	"time"
+
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	//+kubebuilder:scaffold:imports
 )
 
-// These tests use Ginkgo (BDD-style Go testing framework). Refer to
-// http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
+// These tests use Testify (A toolkit with common assertions and mocks). Refer to
+// https://github.com/stretchr/testify to learn more about Testify.
 
 var (
 	cfg       *rest.Config
@@ -66,14 +64,17 @@ const (
 	interval         = time.Millisecond * 2
 )
 
-func TestAPIs(t *testing.T) {
-	RegisterFailHandler(Fail)
-
-	RunSpecs(t, "Controller Suite")
+type ControllerSuite struct {
+	suite.Suite
 }
 
-var _ = BeforeEach(func() {
-	By("Overriding the Database and Object Store live connection functions with trivial stubs")
+func TestAPIs(t *testing.T) {
+	testingSuite := new(ControllerSuite)
+	suite.Run(t, testingSuite)
+}
+
+func (s *ControllerSuite) SetupTest() {
+	logf.Log.Info("Overriding the Database and Object Store live connection functions with trivial stubs")
 	ConnectAndQueryDatabase = func(
 		host string,
 		log logr.Logger,
@@ -93,9 +94,9 @@ var _ = BeforeEach(func() {
 		objStoreConnectionTimeout time.Duration) (bool, error) {
 		return true, nil
 	}
-})
+}
 
-var _ = BeforeSuite(func() {
+func (s *ControllerSuite) SetupSuite() {
 	ctx, cancel = context.WithCancel(context.TODO())
 
 	format.MaxLength = 0
@@ -105,7 +106,7 @@ var _ = BeforeSuite(func() {
 		Development: true,
 		TimeEncoder: zapcore.TimeEncoderOfLayout(time.RFC3339),
 	}
-	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseFlagOptions(&opts)))
+	logf.SetLogger(zap.New(zap.WriteTo(os.Stdout), zap.UseFlagOptions(&opts)))
 
 	// Register API objects
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme.Scheme))
@@ -116,7 +117,7 @@ var _ = BeforeSuite(func() {
 
 	//+kubebuilder:scaffold:scheme
 
-	By("bootstrapping test environment")
+	logf.Log.Info("bootstrapping test environment")
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases"), filepath.Join("..", "config", "crd", "external")},
 		ErrorIfCRDPathMissing: true,
@@ -125,13 +126,13 @@ var _ = BeforeSuite(func() {
 	var err error
 	// cfg is defined in this file globally.
 	cfg, err = testEnv.Start()
-	Expect(err).NotTo(HaveOccurred())
-	Expect(cfg).NotTo(BeNil())
+	assert.NoError(s.T(), err)
+	assert.NotNil(s.T(), cfg)
 
 	// Initialize Kubernetes client
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
-	Expect(err).NotTo(HaveOccurred())
-	Expect(k8sClient).NotTo(BeNil())
+	assert.NoError(s.T(), err)
+	assert.NotNil(s.T(), k8sClient)
 
 	// Setup controller manager
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
@@ -139,7 +140,7 @@ var _ = BeforeSuite(func() {
 		LeaderElection:     false,
 		MetricsBindAddress: "0",
 	})
-	Expect(err).NotTo(HaveOccurred())
+	assert.NoError(s.T(), err)
 
 	err = (&DSPAReconciler{
 		Client:        k8sClient,
@@ -147,23 +148,21 @@ var _ = BeforeSuite(func() {
 		Scheme:        scheme.Scheme,
 		TemplatesPath: "../config/internal/",
 	}).SetupWithManager(mgr)
-	Expect(err).ToNot(HaveOccurred())
+	assert.NoError(s.T(), err)
 
 	// Start the manager
 	go func() {
-		defer GinkgoRecover()
 		err = mgr.Start(ctx)
-		Expect(err).ToNot(HaveOccurred(), "Failed to run manager")
+		assert.NoError(s.T(), err, "Failed to run manager")
 	}()
+}
 
-})
-
-var _ = AfterSuite(func() {
+func (s *ControllerSuite) TearDownSuite() {
 	// Give some time to allow workers to gracefully shutdown
 	time.Sleep(5 * time.Second)
 	cancel()
-	By("tearing down the test environment")
+	logf.Log.Info("tearing down the test environment")
 	time.Sleep(1 * time.Second)
 	err := testEnv.Stop()
-	Expect(err).NotTo(HaveOccurred())
-})
+	assert.NoError(s.T(), err)
+}
