@@ -1,20 +1,22 @@
-ARG CI_BASE=registry.access.redhat.com/ubi8
+ARG CI_BASE=registry.access.redhat.com/ubi8/go-toolset:1.20
 
 FROM ${CI_BASE} as stage1
 
-ARG GOLANGCI_LINT_VERSION=1.51.1
+ARG GOLANGCI_LINT_VERSION=1.54.2
 ARG REVIVE_VERSION=v1.2.5
 ARG STATICCHECK_VERSION=v0.3.3
 ARG INEFFASSIGN_VERSION=13ace05
 ARG ERRCHECK_VERSION=v1.6.3
 ARG GHCLI_VERSION=2.23.0
-ARG SETUP_ENVTEST=latest
+ARG SETUP_ENVTEST=release-0.16
 
 ENV GOPATH=/build \
   GO111MODULE=on \
     PATH=/build/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 WORKDIR /build/src
+
+USER root
 
 RUN dnf -y install \
     golang \
@@ -50,6 +52,8 @@ LABEL summary="$SUMMARY" \
     io.openshift.tags="pre-commit"
 
 COPY --from=stage1 /build/bin /build/bin
+
+USER root
 
 RUN dnf -y install \
     python39 \
