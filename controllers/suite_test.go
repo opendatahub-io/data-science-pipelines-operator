@@ -21,7 +21,6 @@ package controllers
 import (
 	"context"
 	"github.com/go-logr/logr"
-	"github.com/onsi/gomega/format"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	buildv1 "github.com/openshift/api/build/v1"
 	imagev1 "github.com/openshift/api/image/v1"
@@ -59,9 +58,6 @@ var (
 
 const (
 	WorkingNamespace = "default"
-	DSPCRName        = "testdsp"
-	timeout          = time.Second * 6
-	interval         = time.Millisecond * 2
 )
 
 type ControllerSuite struct {
@@ -98,8 +94,6 @@ func (s *ControllerSuite) SetupTest() {
 
 func (s *ControllerSuite) SetupSuite() {
 	ctx, cancel = context.WithCancel(context.TODO())
-
-	format.MaxLength = 0
 
 	// Initialize logger
 	opts := zap.Options{
