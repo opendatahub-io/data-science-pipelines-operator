@@ -86,6 +86,8 @@ type DSPAParams struct {
 	// pipeline pods
 	CustomCABundle *dspa.CABundle
 	DSPONamespace  string
+	// Collects all values for kfp-launcher
+	DataValue [][]byte
 }
 
 type DBConnection struct {
@@ -627,6 +629,59 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 			p.APIServer.CustomServerConfig = &dspa.ScriptConfigMap{
 				Name: config.CustomServerConfigMapNamePrefix + dsp.Name,
 				Key:  config.CustomServerConfigMapNameKey,
+			}
+		}
+
+		if cfg := p.APIServer.CustomKfpLauncherConfig; cfg != nil {
+			if cfg.Name != "" && cfg.Key != "" {
+				if cm, err := util.GetConfigMap(ctx, cfg.Name, p.Namespace, client); err != nil {
+					// If the custom kfp-launcher configmap is not available, that is OK
+					if !apierrs.IsNotFound(err) {
+						log.Error(err, fmt.Sprintf("Encountered error when attempting to fetch ConfigMap: [%s], Error: %v", cfg.Name, err))
+						return err
+					}
+				} else {
+					// Consume all the required information.
+					configMapName := config.CustomKfpLauncherConfigMapName
+					dataValues := util.GetConfigMapValues(cm)
+
+					for _, val := range dataValues {
+						if val != "" {
+							p.DataValue = append(p.DataValue, []byte(val))
+						}
+					}
+
+					customConfigMap := &v1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      configMapName,
+							Namespace: p.Namespace,
+							OwnerReferences: []metav1.OwnerReference{
+								{
+									APIVersion:         dsp.APIVersion,
+									Kind:               dsp.Kind,
+									Name:               dsp.Name,
+									UID:                dsp.UID,
+									Controller:         util.BoolPointer(true),
+									BlockOwnerDeletion: util.BoolPointer(true),
+								},
+							},
+						},
+
+						Data: map[string]string{
+							p.APIServer.CustomKfpLauncherConfig.Key: string(bytes.Join(p.DataValue, []byte{})),
+						},
+					}
+
+					err := client.Create(ctx, customConfigMap)
+					if apierrs.IsAlreadyExists(err) {
+						err := client.Update(ctx, customConfigMap)
+						if err != nil {
+							return err
+						}
+					}
+				}
+			} else {
+				return fmt.Errorf("KFP launcher custom ConfigMap provided but the Name or Key fields are blank")
 			}
 		}
 

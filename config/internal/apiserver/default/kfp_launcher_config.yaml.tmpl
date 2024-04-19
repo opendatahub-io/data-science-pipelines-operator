@@ -1,3 +1,4 @@
+{{ if not .APIServer.CustomKfpLauncherConfig }}
 apiVersion: v1
 data:
   {{ if .ObjectStorageConnection.BasePath }}
@@ -20,3 +21,4 @@ metadata:
   labels:
     app: ds-pipeline-{{.Name}}
     component: data-science-pipelines
+{{ end }}
