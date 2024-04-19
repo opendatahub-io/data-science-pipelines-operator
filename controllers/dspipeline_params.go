@@ -68,6 +68,7 @@ type DSPAParams struct {
 	WorkflowController                   *dspa.WorkflowController
 	DBConnection
 	ObjectStorageConnection
+	CustomKfpLauncherConfigMap
 
 	// TLS
 	// The CA bundle path used by API server
@@ -90,6 +91,10 @@ type DSPAParams struct {
 	PodToPodTLS bool
 
 	APIServerServiceDNSName string
+}
+
+type CustomKfpLauncherConfigMap struct {
+	Data string
 }
 
 type DBConnection struct {
@@ -646,6 +651,19 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 			}
 		}
 
+		if cfg := p.APIServer.CustomKfpLauncherConfig; cfg != "" {
+			if cm, err := util.GetConfigMap(ctx, cfg, p.Namespace, client); err != nil {
+				// If the custom kfp-launcher configmap is not available, that is OK
+				if !apierrs.IsNotFound(err) {
+					log.Error(err, fmt.Sprintf("Encountered error when attempting to fetch ConfigMap: [%s], Error: %v", cfg, err))
+					return err
+				}
+			} else {
+				// Consume all the required information.
+				dataValues := util.GetConfigMapValues(cm)
+				p.CustomKfpLauncherConfigMap.Data = strings.Join(dataValues, " ")
+			}
+		}
 		// Track whether the "ca-bundle.crt" configmap key from odh-trusted-ca bundle
 		// was found, this will be used to decide whether we need to account for this
 		// ourselves later or not.

@@ -112,6 +112,11 @@ spec:
                     description: 'Default: true Deprecated: DSP V1 only, will be removed
                       in the future.'
                     type: boolean
+                  customKfpLauncherConfigMap:
+                    description: CustomKfpLauncherConfig is a custom config file that
+                      you can provide for the api server to use instead of the one
+                      provided with DSPO.
+                    type: string
                   customServerConfigMap:
                     description: CustomServerConfig is a custom config file that you
                       can provide for the api server to use instead.
