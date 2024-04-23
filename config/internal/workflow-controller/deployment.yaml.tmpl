@@ -26,7 +26,11 @@ spec:
       containers:
       - args:
         - --configmap
+        {{ if .WorkflowController.CustomConfig }}
+        - {{ .WorkflowController.CustomConfig }}
+        {{ else }}
         - ds-pipeline-workflow-controller-{{.Name}}
+        {{ end }}
         - --executor-image
         - {{ .WorkflowController.ArgoExecImage }}
         - --namespaced

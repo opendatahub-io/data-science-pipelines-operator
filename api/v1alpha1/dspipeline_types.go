@@ -327,6 +327,7 @@ type WorkflowController struct {
 	Deploy        bool   `json:"deploy"`
 	Image         string `json:"image,omitempty"`
 	ArgoExecImage string `json:"argoExecImage,omitempty"`
+	CustomConfig  string `json:"customConfig,omitempty"`
 }
 
 // ResourceRequirements structures compute resource requirements.

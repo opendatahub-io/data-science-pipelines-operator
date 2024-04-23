@@ -808,6 +808,8 @@ spec:
                 properties:
                   argoExecImage:
                     type: string
+                  customConfig:
+                    type: string
                   deploy:
                     default: true
                     type: boolean
