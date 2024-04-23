@@ -816,5 +816,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		return err
 	}
 
+	p.SetupOwner(dsp)
+
 	return nil
 }

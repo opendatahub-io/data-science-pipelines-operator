@@ -258,8 +258,6 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	dspaPrereqsReady := dbAvailable && objStoreAvailable
 
 	if dspaPrereqsReady {
-		params.SetupOwner(dspa)
-
 		// Manage Common Manifests
 		err = r.ReconcileCommon(dspa, params)
 		if err != nil {
