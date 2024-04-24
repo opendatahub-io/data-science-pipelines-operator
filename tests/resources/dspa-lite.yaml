@@ -8,6 +8,9 @@ spec:
     deploy: true
     enableOauth: false
     enableSamplePipeline: true
+    cABundle:
+      configMapName: nginx-tls-config
+      configMapKey: rootCA.crt
     resources:
       limits:
         cpu: 20m

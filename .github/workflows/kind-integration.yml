@@ -27,6 +27,7 @@ env:
   DSPA_EXTERNAL_NAMESPACE: dspa-ext
   MINIO_NAMESPACE: test-minio
   MARIADB_NAMESPACE: test-mariadb
+  PYPISERVER_NAMESPACE: test-pypiserver
   DSPA_NAME: test-dspa
   DSPA_EXTERNAL_NAME: dspa-ext
   DSPA_DEPLOY_WAIT_TIMEOUT: 300
@@ -101,11 +102,26 @@ jobs:
         run: |
           kustomize build . |  oc -n ${{ env.MARIADB_NAMESPACE }} apply -f -
 
-      - name: Wait for Dependencies (DSPO, Minio, Mariadb)
+      - name: Create Pypiserver Namespace
+        run: |
+          kubectl create namespace ${{ env.PYPISERVER_NAMESPACE }}
+
+      - name: Deploy pypi-server
+        working-directory: ${{ github.workspace }}/.github/resources/pypiserver/base
+        run: |
+          kustomize build . | oc -n ${{ env.PYPISERVER_NAMESPACE }} apply -f -
+
+      - name: Wait for Dependencies (DSPO, Minio, Mariadb, Pypi server)
         run: |
           kubectl wait -n opendatahub --timeout=60s --for=condition=Available=true deployment data-science-pipelines-operator-controller-manager
           kubectl wait -n ${{ env.MARIADB_NAMESPACE }} --timeout=60s --for=condition=Available=true deployment mariadb
           kubectl wait -n ${{ env.MINIO_NAMESPACE }} --timeout=60s --for=condition=Available=true deployment minio
+          kubectl wait -n ${{ env.PYPISERVER_NAMESPACE }} --timeout=60s --for=condition=Available=true deployment pypi-server
+
+      - name: Upload Python Packages to pypi-server
+        working-directory: ${{ github.workspace }}/.github/scripts/python_package_upload
+        run: |
+          sh package_upload.sh
 
       - name: Create DSPA Namespace
         run: |
@@ -119,6 +135,12 @@ jobs:
         working-directory: ${{ github.workspace }}/.github/resources/external-pre-reqs
         run: |
           kustomize build . |  oc -n ${{ env.DSPA_EXTERNAL_NAMESPACE }} apply -f -
+
+      - name: Apply PIP Server ConfigMap
+        env:
+          RESOURCES_DIR: ${{ github.workspace }}/.github/resources/pypiserver/base
+        run: |
+          kubectl apply -f $RESOURCES_DIR/nginx-tls-config.yaml -n ${{ env.DSPA_NAMESPACE }}
 
       - name: Run tests
         working-directory: ${{ github.workspace }}
