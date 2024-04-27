@@ -1,7 +1,7 @@
 apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
 kind: DataSciencePipelinesApplication
 metadata:
-  name: test-dspa-external
+  name: dspa-ext
 spec:
   dspVersion: v2
   apiServer:
@@ -9,8 +9,8 @@ spec:
     enableOauth: false
     enableSamplePipeline: true
     cABundle:
-      configMapName: kube-root-ca.crt
-      configMapKey: ca.crt
+      configMapName: root-ca
+      configMapKey: public.crt
     resources:
       limits:
         cpu: 20m
@@ -55,7 +55,7 @@ spec:
           cpu: 20m
           memory: 100Mi
   database:
-    customExtraParams: '{"tls":"false"}'
+    customExtraParams: '{"tls":"true"}'
     externalDB:
       host: mariadb.test-mariadb.svc.cluster.local
       port: "3306"
@@ -74,4 +74,4 @@ spec:
         accessKey: accesskey
         secretKey: secretkey
         secretName: minio
-      scheme: http
+      scheme: https

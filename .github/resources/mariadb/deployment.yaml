@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: mariadb
-          image: quay.io/centos7/mariadb-103-centos7:ea07c0dade9571d78a272b453fd2dea92077dc7f
+          image: quay.io/centos7/mariadb-105-centos7:centos7
           ports:
             - containerPort: 3306
           readinessProbe:
@@ -31,8 +31,7 @@ spec:
                 - "-i"
                 - "-c"
                 - >-
-                  MYSQL_PWD=$MYSQL_PASSWORD mysql -h 127.0.0.1 -u $MYSQL_USER -D
-                  $MYSQL_DATABASE -e 'SELECT 1'
+                  MYSQL_PWD=$MYSQL_PASSWORD mysql -u $MYSQL_USER -e 'SELECT 1'
             failureThreshold: 3
             initialDelaySeconds: 5
             periodSeconds: 10
@@ -68,7 +67,34 @@ spec:
           volumeMounts:
             - name: mariadb-persistent-storage
               mountPath: /var/lib/mysql
+            - name: mariadb-certs
+              mountPath: /.mariadb/certs
+            - name: tls-config
+              mountPath: /etc/my.cnf.d/z-custom-my.cnf
+              subPath: z-custom-my.cnf
+            - name: ca-bundle
+              mountPath: /.mariadb/certs/CAs
       volumes:
+        - name: mariadb-certs
+          secret:
+            secretName: mariadb-certs
+            items:
+              - key: public.crt
+                path: public.crt
+              - key: private.key
+                path: private.key
+            defaultMode: 420
         - name: mariadb-persistent-storage
           persistentVolumeClaim:
             claimName: mariadb-test
+        - name: tls-config
+          configMap:
+            name: tls-config
+            defaultMode: 420
+        - name: ca-bundle
+          configMap:
+            name: self-signed-ca
+            items:
+              - key: public.crt
+                path: public.crt
+            defaultMode: 420

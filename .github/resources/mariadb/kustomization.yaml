@@ -6,3 +6,6 @@ resources:
   - pvc.yaml
   - secret.yaml
   - service.yaml
+  - certs-secret.yaml
+  - self-signed-ca-configmap.yaml
+  - tls-config-configmap.yaml
