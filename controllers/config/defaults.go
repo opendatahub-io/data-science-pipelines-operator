@@ -80,20 +80,21 @@ const (
 
 // DSPO Config File Paths
 const (
-	APIServerImagePath                  = "Images.ApiServer"
-	APIServerArtifactImagePath          = "Images.Artifact"
-	PersistenceAgentImagePath           = "Images.PersistentAgent"
-	ScheduledWorkflowImagePath          = "Images.ScheduledWorkflow"
-	APIServerCacheImagePath             = "Images.Cache"
-	APIServerMoveResultsImagePath       = "Images.MoveResultsImage"
-	MariaDBImagePath                    = "Images.MariaDB"
-	OAuthProxyImagePath                 = "Images.OAuthProxy"
-	MlmdEnvoyImagePath                  = "Images.MlmdEnvoy"
-	MlmdGRPCImagePath                   = "Images.MlmdGRPC"
-	MlmdWriterImagePath                 = "Images.MlmdWriter"
-	ObjStoreConnectionTimeoutConfigName = "DSPO.HealthCheck.ObjectStore.ConnectionTimeout"
-	DBConnectionTimeoutConfigName       = "DSPO.HealthCheck.Database.ConnectionTimeout"
-	RequeueTimeConfigName               = "DSPO.RequeueTime"
+	APIServerImagePath                       = "Images.ApiServer"
+	APIServerArtifactImagePath               = "Images.Artifact"
+	PersistenceAgentImagePath                = "Images.PersistentAgent"
+	ScheduledWorkflowImagePath               = "Images.ScheduledWorkflow"
+	APIServerCacheImagePath                  = "Images.Cache"
+	APIServerMoveResultsImagePath            = "Images.MoveResultsImage"
+	MariaDBImagePath                         = "Images.MariaDB"
+	OAuthProxyImagePath                      = "Images.OAuthProxy"
+	MlmdEnvoyImagePath                       = "Images.MlmdEnvoy"
+	MlmdGRPCImagePath                        = "Images.MlmdGRPC"
+	MlmdWriterImagePath                      = "Images.MlmdWriter"
+	ObjStoreConnectionTimeoutConfigName      = "DSPO.HealthCheck.ObjectStore.ConnectionTimeout"
+	DBConnectionTimeoutConfigName            = "DSPO.HealthCheck.Database.ConnectionTimeout"
+	RequeueTimeConfigName                    = "DSPO.RequeueTime"
+	ApiServerIncludeOwnerReferenceConfigName = "DSPO.ApiServer.IncludeOwnerReference"
 )
 
 // DSPV2-Argo Image Paths
@@ -172,6 +173,8 @@ const DefaultMaxConcurrentReconciles = 10
 
 const DefaultRequeueTime = time.Second * 20
 
+const DefaultApiServerIncludeOwnerReferenceConfigName = true
+
 func GetConfigRequiredFields() []string {
 	return requiredFields
 }
@@ -216,6 +219,13 @@ func GetDurationConfigWithDefault(configName string, value time.Duration) time.D
 		return value
 	}
 	return viper.GetDuration(configName)
+}
+
+func GetBoolConfigWithDefault(configName string, value bool) bool {
+	if !viper.IsSet(configName) {
+		return value
+	}
+	return viper.GetBool(configName)
 }
 
 // GetCABundleFileMountPath provides the location in pipeline step-copy-artifact step where the

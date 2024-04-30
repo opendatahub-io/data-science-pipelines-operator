@@ -22,6 +22,16 @@ spec:
     spec:
       containers:
         - env:
+            {{ if .IncludeOwnerReference }}
+            - name: OWNER_UID
+              value: "{{.UID}}"
+            - name: OWNER_NAME
+              value: "{{.Name}}"
+            - name: OWNER_API_VERSION
+              value: "{{.APIVersion}}"
+            - name: OWNER_KIND
+              value: "{{.Kind}}"
+            {{ end }}
             - name: POD_NAMESPACE
               value: "{{.Namespace}}"
             - name: DBCONFIG_USER

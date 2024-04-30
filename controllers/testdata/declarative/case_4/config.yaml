@@ -8,3 +8,6 @@ Images:
   MoveResultsImage: this-busybox-image-from-config-should-not-be-used:test4
   MariaDB: this-mariadb-image-from-config-should-not-be-used:test4
   OAuthProxy: oauth-proxy:test4
+DSPO:
+  ApiServer:
+    IncludeOwnerReference: false

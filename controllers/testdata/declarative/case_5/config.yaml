@@ -13,3 +13,6 @@ Images:
   MlmdEnvoy: metadata-envoy:changeme
   MlmdGrpc: metadata-grpc:changeme
   MlmdWriter: metadata-grpc:changeme
+DSPO:
+  ApiServer:
+    IncludeOwnerReference: false

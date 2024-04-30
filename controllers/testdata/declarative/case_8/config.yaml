@@ -15,3 +15,6 @@ ImagesV2:
     ApiServer: api-server:test8
     ArgoLauncherImage: argolauncherimage:test8
     ArgoDriverImage: argodriverimage:test8
+DSPO:
+  ApiServer:
+    IncludeOwnerReference: false
