@@ -63,6 +63,30 @@ func (r *DSPAReconciler) ApplyDir(owner mf.Owner, params *DSPAParams, directory 
 	return r.ApplyAll(owner, params, templates)
 }
 
+func (r *DSPAReconciler) ApplyDirExcept(owner mf.Owner, params *DSPAParams, directory string, templatesToNotApply []string) error {
+	templates, err := util.GetTemplatesInDir(r.TemplatesPath, directory)
+	if err != nil {
+		return err
+	}
+	for _, template := range templates {
+		found := false
+		for _, templateToNotApply := range templatesToNotApply {
+			if templateToNotApply == template {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			err := r.Apply(owner, params, template)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func (r *DSPAReconciler) ApplyAll(owner mf.Owner, params *DSPAParams, templates []string, fns ...mf.Transformer) error {
 	for _, template := range templates {
 		err := r.Apply(owner, params, template)

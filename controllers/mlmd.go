@@ -33,15 +33,36 @@ func (r *DSPAReconciler) ReconcileMLMD(dsp *dspav1alpha1.DataSciencePipelinesApp
 
 	log.Info("Applying ML-Metadata (MLMD) Resources")
 
-	err := r.ApplyDir(dsp, params, mlmdTemplatesDir)
-	if err != nil {
-		return err
-	}
-
 	if params.UsingV1Pipelines(dsp) {
-		err = r.ApplyDir(dsp, params, mlmdTemplatesDir+"/v1")
+		if dsp.Spec.MLMD != nil {
+			if dsp.Spec.MLMD.Envoy == nil || dsp.Spec.MLMD.Envoy.DeployRoute {
+				err := r.ApplyDir(dsp, params, mlmdTemplatesDir)
+				if err != nil {
+					return err
+				}
+			} else {
+				err := r.ApplyDirExcept(dsp, params, mlmdTemplatesDir, []string{mlmdTemplatesDir + "/metadata-envoy.route.yaml.tmpl"})
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		err := r.ApplyDir(dsp, params, mlmdTemplatesDir+"/v1")
 		if err != nil {
 			return err
+		}
+	} else {
+		if dsp.Spec.MLMD == nil || dsp.Spec.MLMD.Envoy == nil || dsp.Spec.MLMD.Envoy.DeployRoute {
+			err := r.ApplyDir(dsp, params, mlmdTemplatesDir)
+			if err != nil {
+				return err
+			}
+		} else {
+			err := r.ApplyDirExcept(dsp, params, mlmdTemplatesDir, []string{mlmdTemplatesDir + "/metadata-envoy.route.yaml.tmpl"})
+			if err != nil {
+				return err
+			}
 		}
 	}
 
