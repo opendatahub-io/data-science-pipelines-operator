@@ -20,67 +20,68 @@ package controllers
 
 import (
 	"fmt"
-
 	mfc "github.com/manifestival/controller-runtime-client"
 	mf "github.com/manifestival/manifestival"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	util "github.com/opendatahub-io/data-science-pipelines-operator/controllers/testutil"
 	"github.com/spf13/viper"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
-var _ = Describe("The DS Pipeline Controller", Ordered, func() {
-	uc := util.UtilContext{}
-	BeforeAll(func() {
-		client := mfc.NewClient(k8sClient)
-		opts := mf.UseClient(client)
-		uc = util.UtilContext{
-			Ctx:    ctx,
-			Ns:     WorkingNamespace,
-			Opts:   opts,
-			Client: k8sClient,
-		}
-	})
+var uc = util.UtilContext{}
 
-	testcases := util.GenerateDeclarativeTestCases()
+func setup() {
+	client := mfc.NewClient(k8sClient)
+	opts := mf.UseClient(client)
+	uc = util.UtilContext{
+		Ctx:    ctx,
+		Ns:     WorkingNamespace,
+		Opts:   opts,
+		Client: k8sClient,
+	}
+}
+
+func (s *ControllerSuite) TestDSPipelineController() {
+	setup()
+
+	testcases := util.GenerateDeclarativeTestCases(s.T())
 
 	for caseCount, tc := range testcases {
 		// We assign local copies of all looping variables, as they are mutating
 		// we want the correct variables captured in each `It` closure, we do this
 		// by creating local variables
-		// https://onsi.github.io/ginkgo/#dynamically-generating-specs
 		testcase := tc
 		description := testcase.Description
-		Context(description, func() {
-			paths := testcase.Deploy
-			It(fmt.Sprintf("[case %x] Should successfully deploy the Custom Resource (and additional resources)", caseCount), func() {
+		paths := testcase.Deploy
+		s.T().Run(fmt.Sprintf("Case %d: %s", caseCount, description), func(t *testing.T) {
+			t.Run(fmt.Sprintf("[case %x] Should successfully deploy the Custom Resource (and additional resources)", caseCount), func(t *testing.T) {
 				viper.New()
 				viper.SetConfigFile(testcase.Config)
 				err := viper.ReadInConfig()
-				Expect(err).ToNot(HaveOccurred(), "Failed to read config file")
+				assert.NoError(t, err)
 				for _, path := range paths {
-					util.DeployResource(uc, path)
+					util.DeployResource(uc, path, t)
 				}
 			})
 
-			It(fmt.Sprintf("[case %x] Should create expected resources", caseCount), func() {
+			t.Run(fmt.Sprintf("[case %x] Should create expected resources", caseCount), func(t *testing.T) {
 				for _, resourcesCreated := range testcase.Expected.Created {
-					util.CompareResources(uc, resourcesCreated)
+					util.CompareResources(uc, resourcesCreated, t)
 				}
 			})
 
-			It(fmt.Sprintf("[case %x] Should expect NOT to create some resources", caseCount), func() {
+			t.Run(fmt.Sprintf("[case %x] Should expect NOT to create some resources", caseCount), func(t *testing.T) {
 				for _, resourcesNotCreated := range testcase.Expected.NotCreated {
-					util.ResourceDoesNotExists(uc, resourcesNotCreated)
+					util.ResourceDoesNotExists(uc, resourcesNotCreated, t)
 				}
 			})
 
-			It(fmt.Sprintf("[case %x] Should successfully delete the Custom Resource (and additional resources)", testcase), func() {
+			t.Run(fmt.Sprintf("[case %x] Should successfully delete the Custom Resource (and additional resources)", caseCount), func(t *testing.T) {
 				for _, path := range testcase.Deploy {
 					p := path
-					util.DeleteResource(uc, p)
+					util.DeleteResource(uc, p, t)
 				}
 			})
 		})
 	}
-})
+}
