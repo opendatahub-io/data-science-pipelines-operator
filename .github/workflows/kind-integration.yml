@@ -23,11 +23,11 @@ concurrency:
 env:
   IMAGE_REPO_DSPO: data-science-pipelines-operator
   DSPA_NAMESPACE: test-dspa
-  DSPA_EXTERNAL_NAMESPACE: test-dspa-external
+  DSPA_EXTERNAL_NAMESPACE: dspa-ext
   MINIO_NAMESPACE: test-minio
   MARIADB_NAMESPACE: test-mariadb
   DSPA_NAME: test-dspa
-  DSPA_EXTERNAL_NAME: test-dspa-external
+  DSPA_EXTERNAL_NAME: dspa-ext
   DSPA_DEPLOY_WAIT_TIMEOUT: 300
   INTEGRATION_TESTS_DIR: ${{ github.workspace }}/tests
   DSPA_PATH: ${{ github.workspace }}/tests/resources/dspa-lite.yaml
@@ -122,6 +122,12 @@ jobs:
         run: |
           password=$(kubectl get secret ds-pipeline-db-test -n test-mariadb -o jsonpath="{.data.password}" | base64 --decode)
           kubectl create secret generic ds-pipeline-db-test --from-literal=password="$password" -n ${{ env.DSPA_EXTERNAL_NAMESPACE }}
+
+      - name: Apply rootCA ConfigMap
+        env:
+          RESOURCES_DIR: ${{ github.workspace }}/.github/resources
+        run: |
+          kubectl apply -f ${{ env.RESOURCES_DIR }}/tls/root-ca-configmap.yaml -n ${{ env.DSPA_EXTERNAL_NAMESPACE }}
 
       - name: Run tests
         working-directory: ${{ github.workspace }}

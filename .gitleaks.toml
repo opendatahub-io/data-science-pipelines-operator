@@ -1,0 +1,10 @@
+[allowlist]
+  description = "Allowlist for files and paths"
+  files = [
+    ".github/resources/mariadb/certs-secret.yaml",
+    ".github/resources/mariadb/self-signed-ca-configmap.yaml",
+    ".github/resources/mariadb/tls-config-configmap.yaml",
+    ".github/resources/minio/certs-secret.yaml",
+    ".github/resources/minio/cabundle-configmap.yaml",
+    ".github/resources/tls/root-ca-configmap.yaml"
+  ]

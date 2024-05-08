@@ -6,3 +6,5 @@ resources:
   - service.yaml
   - pvc.yaml
   - secret.yaml
+  - certs-secret.yaml
+  - cabundle-configmap.yaml
