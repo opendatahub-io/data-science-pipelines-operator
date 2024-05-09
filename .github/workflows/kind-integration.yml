@@ -10,6 +10,7 @@ on:
       - api/**
       - config/**
       - tests/**
+      - .github/resources/**
     types:
       - opened
       - reopened
@@ -114,20 +115,10 @@ jobs:
         run: |
           kubectl create namespace ${{ env.DSPA_EXTERNAL_NAMESPACE }}
 
-      - name: Create Minio Secrets
+      - name: Apply MariaDB and Minio Secrets and Configmaps in the External Namespace
+        working-directory: ${{ github.workspace }}/.github/resources/external-pre-reqs
         run: |
-          kubectl create secret generic minio --from-literal=accesskey=accesskey --from-literal=secretkey=secretkey -n ${{ env.DSPA_EXTERNAL_NAMESPACE }}
-
-      - name: Create MariaDB Secrets
-        run: |
-          password=$(kubectl get secret ds-pipeline-db-test -n test-mariadb -o jsonpath="{.data.password}" | base64 --decode)
-          kubectl create secret generic ds-pipeline-db-test --from-literal=password="$password" -n ${{ env.DSPA_EXTERNAL_NAMESPACE }}
-
-      - name: Apply rootCA ConfigMap
-        env:
-          RESOURCES_DIR: ${{ github.workspace }}/.github/resources
-        run: |
-          kubectl apply -f ${{ env.RESOURCES_DIR }}/tls/root-ca-configmap.yaml -n ${{ env.DSPA_EXTERNAL_NAMESPACE }}
+          kustomize build . |  oc -n ${{ env.DSPA_EXTERNAL_NAMESPACE }} apply -f -
 
       - name: Run tests
         working-directory: ${{ github.workspace }}
