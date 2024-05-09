@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 
@@ -82,6 +83,7 @@ type DSPAParams struct {
 	// we need to leverage for tls connections within dsp apiserver
 	// pipeline pods
 	CustomCABundle *dspa.CABundle
+	DSPONamespace  string
 }
 
 type DBConnection struct {
@@ -568,6 +570,7 @@ func setResourcesDefault(defaultValue dspa.ResourceRequirements, value **dspa.Re
 func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, loggr logr.Logger) error {
 	p.Name = dsp.Name
 	p.Namespace = dsp.Namespace
+	p.DSPONamespace = os.Getenv("DSPO_NAMESPACE")
 	p.DSPVersion = dsp.Spec.DSPVersion
 	p.Owner = dsp
 	p.APIServer = dsp.Spec.APIServer.DeepCopy()
