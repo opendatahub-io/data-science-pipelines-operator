@@ -4,7 +4,7 @@ set -ex
 
 echo "::notice:: Performing Release PR Validation for: ${PR_NUMBER}"
 
-# Retrive PR Author:
+# Retrieve PR Author:
 PR_AUTHOR=$(gh pr view ${PR_NUMBER} --json author -q .author.login)
 
 echo "Current OWNERS:"

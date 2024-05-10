@@ -70,8 +70,6 @@ env:
   IMAGE_REPO_SWF: ds-pipelines-scheduledworkflow
   IMAGE_REPO_LAUNCHER: ds-pipelines-launcher
   IMAGE_REPO_DRIVER: ds-pipelines-driver
-  IMAGE_REPO_MLMD_ENVOY: ds-pipelines-metadata-envoy
-  IMAGE_REPO_MLMD_GRPC: ds-pipelines-metadata-grpc
   SOURCE_DSPO_BRANCH: ${{ inputs.src_dspo_branch }}
   SOURCE_DSP_BRANCH: ${{ inputs.src_dsp_branch }}
   QUAY_ORG: ${{ inputs.quay_org }}
@@ -189,37 +187,5 @@ jobs:
         with:
           IMAGE_REPO: ${{ env.IMAGE_REPO_LAUNCHER }}
           DOCKERFILE: backend/Dockerfile.launcher
-          GH_REPO: ${{ inputs.dsp_org_repo }}
-          OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
-
-  MLMD_GRPC-build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v3
-      - uses: ./.github/actions/build
-        name: Build Image
-        env:
-          SOURCE_BRANCH: ${{ env.SOURCE_DSP_BRANCH }}
-        with:
-          IMAGE_REPO: ${{ env.IMAGE_REPO_MLMD_GRPC }}
-          DOCKERFILE: third_party/ml-metadata/Dockerfile
-          GH_REPO: ${{ inputs.dsp_org_repo }}
-          OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
-
-  MLMD_ENVOY-build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v3
-      - uses: ./.github/actions/build
-        name: Build Image
-        env:
-          SOURCE_BRANCH: ${{ env.SOURCE_DSP_BRANCH }}
-        with:
-          IMAGE_REPO: ${{ env.IMAGE_REPO_MLMD_ENVOY }}
-          DOCKERFILE: third_party/metadata_envoy/Dockerfile
           GH_REPO: ${{ inputs.dsp_org_repo }}
           OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
