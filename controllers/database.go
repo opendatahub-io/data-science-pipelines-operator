@@ -43,6 +43,7 @@ var mariadbTemplates = []string{
 	"mariadb/default/pvc.yaml.tmpl",
 	"mariadb/default/service.yaml.tmpl",
 	"mariadb/default/mariadb-sa.yaml.tmpl",
+	"mariadb/default/networkpolicy.yaml.tmpl",
 }
 
 func tLSClientConfig(pems [][]byte) (*cryptoTls.Config, error) {
