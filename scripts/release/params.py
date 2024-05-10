@@ -104,14 +104,15 @@ def generate_params(args):
 
     # Structure: { "ENV_VAR": "IMG_DIGEST",...}
     overrides = {}
-    for override in args.overrides:
-        entry = override.split('=')
-        if len(entry) != 2:
-            print("--override values must be of the form var=digest,\n"
-                  "e.g: IMAGES_OAUTHPROXY=registry.redhat.io/openshift4/ose-oauth-proxy"
-                  "@sha256:ab112105ac37352a2a4916a39d6736f5db6ab4c29bad4467de8d613e80e9bb33", file=sys.stderr)
-            exit(1)
-        overrides[entry[0]] = entry[1]
+    if args.overrides:
+        for override in args.overrides:
+            entry = override.split('=')
+            if len(entry) != 2:
+                print("--override values must be of the form var=digest,\n"
+                      "e.g: IMAGES_OAUTHPROXY=registry.redhat.io/openshift4/ose-oauth-proxy"
+                      "@sha256:ab112105ac37352a2a4916a39d6736f5db6ab4c29bad4467de8d613e80e9bb33", file=sys.stderr)
+                exit(1)
+            overrides[entry[0]] = entry[1]
 
     env_var_lines = []
 
