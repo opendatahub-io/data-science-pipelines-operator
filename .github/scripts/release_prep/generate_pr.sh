@@ -21,8 +21,7 @@ git checkout -B ${BRANCH_NAME}
 
 echo "Created branch: ${BRANCH_NAME}"
 
-python ./scripts/release/release.py params --quay_org ${QUAY_ORG} --tag ${MINOR_RELEASE_TAG} --out_file ./config/base/params.env \
-  --override="IMAGES_OAUTHPROXY=registry.redhat.io/openshift4/ose-oauth-proxy@sha256:ab112105ac37352a2a4916a39d6736f5db6ab4c29bad4467de8d613e80e9bb33"
+python ./scripts/release/release.py params --quay_org ${QUAY_ORG} --tag ${MINOR_RELEASE_TAG} --out_file ./config/base/params.env
 
 git add .
 git commit -m "Generate params for ${TARGET_RELEASE}"
