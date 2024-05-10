@@ -87,6 +87,10 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
+          # DSPO_APISERVER_INCLUDE_OWNERREFERENCE is intended to be used only for tests.
+          # It must always be enabled in production
+          - name: DSPO_APISERVER_INCLUDE_OWNERREFERENCE
+            value: $(DSPO_APISERVER_INCLUDE_OWNERREFERENCE)
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

@@ -199,5 +199,12 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.V2_DRIVER_IMAGE
+  - name: DSPO_APISERVER_INCLUDE_OWNERREFERENCE
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.DSPO_APISERVER_INCLUDE_OWNERREFERENCE
 configurations:
   - params.yaml
