@@ -62,7 +62,7 @@ jobs:
           GH_USER_NAME: ${{ env.GH_USER_NAME }}
           GH_USER_EMAIL: ${{ env.GH_USER_EMAIL }}
           TARGET_RELEASE: ${{ env.TARGET_RELEASE }}
-          MINOR_RELEASE_WILDCARD: ${{ env.MINOR_RELEASE_WILDCARD }}
+          MINOR_RELEASE_WILDCARD: ${{ inputs.target_release }}
           MINOR_RELEASE_BRANCH: ${{ env.MINOR_RELEASE_BRANCH }}
           DSPO_REPOSITORY_FULL: ${{ env.DSPO_REPOSITORY_FULL }}
           DSPO_REPOSITORY: ${{ env.DSPO_REPOSITORY }}
