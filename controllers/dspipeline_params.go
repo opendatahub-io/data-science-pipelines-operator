@@ -86,6 +86,10 @@ type DSPAParams struct {
 	// pipeline pods
 	CustomCABundle *dspa.CABundle
 	DSPONamespace  string
+	// Use to enable tls communication between component pods.
+	InterPodTLS string
+
+	APIServerServiceDNSName string
 }
 
 type DBConnection struct {
@@ -574,10 +578,12 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.Namespace = dsp.Namespace
 	p.DSPONamespace = os.Getenv("DSPO_NAMESPACE")
 	p.DSPVersion = dsp.Spec.DSPVersion
+	p.InterPodTLS = dsp.Spec.InterPodTLS
 	p.Owner = dsp
 	p.APIServer = dsp.Spec.APIServer.DeepCopy()
 	p.APIServerDefaultResourceName = apiServerDefaultResourceNamePrefix + dsp.Name
 	p.APIServerServiceName = fmt.Sprintf("%s-%s", config.DSPServicePrefix, p.Name)
+	p.APIServerServiceDNSName = fmt.Sprintf("%s.%s.svc.cluster.local", p.APIServerServiceName, p.Namespace)
 	p.ScheduledWorkflow = dsp.Spec.ScheduledWorkflow.DeepCopy()
 	p.ScheduledWorkflowDefaultResourceName = scheduledWorkflowDefaultResourceNamePrefix + dsp.Name
 	p.PersistenceAgent = dsp.Spec.PersistenceAgent.DeepCopy()
