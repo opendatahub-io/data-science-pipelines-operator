@@ -1,0 +1,22 @@
+# Test:
+# podToPodTLS = false, should disable any tls configs for apiserver, pa, and kfp ui
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: testdsp9
+spec:
+  dspVersion: v2
+  podToPodTLS: false
+  objectStorage:
+    minio:
+      image: minio:test9
+  database:
+    mariaDB:
+      deploy: true
+  mlpipelineUI:
+    deploy: true
+    image: frontend:test9
+  apiServer:
+    deploy: true
+    enableOauth: true
+    enableSamplePipeline: false

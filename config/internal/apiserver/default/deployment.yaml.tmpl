@@ -118,6 +118,10 @@ spec:
               value: "8887"
             - name: SIGNED_URL_EXPIRY_TIME_SECONDS
               value: "{{.APIServer.ArtifactSignedURLExpirySeconds}}"
+            {{ if .PodToPodTLS }}
+            - name: ML_PIPELINE_TLS_ENABLED
+              value: "true"
+            {{ end }}
             {{ if (eq .DSPVersion "v2") }}
             ## Argo-Specific Env Vars ##
             - name: EXECUTIONTYPE
@@ -181,32 +185,32 @@ spec:
             {{ if .APIServer.EnableSamplePipeline }}
             - --sampleconfig=/config/sample_config.json
             {{ end }}
+            {{ if .PodToPodTLS }}
+            - --tlsCertPath=/etc/tls/private/tls.crt
+            - --tlsCertKeyPath=/etc/tls/private/tls.key
+            {{ end }}
           ports:
             - containerPort: 8888
               name: http
             - containerPort: 8887
               name: grpc
           livenessProbe:
-            exec:
-              command:
-                - wget
-                - -q
-                - -S
-                - -O
-                - '-'
-                - http://localhost:8888/apis/v1beta1/healthz
+            httpGet:
+              path: /apis/v1beta1/healthz
+              port: http
+              {{ if .PodToPodTLS }}
+              scheme: HTTPS
+              {{ end }}
             initialDelaySeconds: 3
             periodSeconds: 5
             timeoutSeconds: 2
           readinessProbe:
-            exec:
-              command:
-                - wget
-                - -q
-                - -S
-                - -O
-                - '-'
-                - http://localhost:8888/apis/v1beta1/healthz
+            httpGet:
+              path: /apis/v1beta1/healthz
+              port: http
+              {{ if .PodToPodTLS }}
+              scheme: HTTPS
+              {{ end }}
             initialDelaySeconds: 3
             periodSeconds: 5
             timeoutSeconds: 2
@@ -233,6 +237,10 @@ spec:
             - name: server-config
               mountPath: /config/config.json
               subPath: {{ .APIServer.CustomServerConfig.Key }}
+          {{ if .PodToPodTLS }}
+            - mountPath: /etc/tls/private
+              name: proxy-tls
+          {{ end }}
           {{ if or .APIServer.EnableSamplePipeline .CustomCABundle }}
             {{ if .APIServer.EnableSamplePipeline }}
             - name: sample-config
@@ -252,7 +260,14 @@ spec:
             - --https-address=:8443
             - --provider=openshift
             - --openshift-service-account={{.APIServerDefaultResourceName}}
+            {{ if .PodToPodTLS }}
+            # because we use certs signed by openshift, these certs are not valid for
+            # localhost, thus we have to use the service name
+            - --upstream=https://{{.APIServerServiceDNSName}}:8888
+            - --upstream-ca=/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
+            {{ else }}
             - --upstream=http://localhost:8888
+            {{ end }}
             - --tls-cert=/etc/tls/private/tls.crt
             - --tls-key=/etc/tls/private/tls.key
             - --cookie-secret=SECRET

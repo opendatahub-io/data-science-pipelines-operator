@@ -86,6 +86,10 @@ type DSPAParams struct {
 	// pipeline pods
 	CustomCABundle *dspa.CABundle
 	DSPONamespace  string
+	// Use to enable tls communication between component pods.
+	PodToPodTLS bool
+
+	APIServerServiceDNSName string
 }
 
 type DBConnection struct {
@@ -578,6 +582,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.APIServer = dsp.Spec.APIServer.DeepCopy()
 	p.APIServerDefaultResourceName = apiServerDefaultResourceNamePrefix + dsp.Name
 	p.APIServerServiceName = fmt.Sprintf("%s-%s", config.DSPServicePrefix, p.Name)
+	p.APIServerServiceDNSName = fmt.Sprintf("%s.%s.svc.cluster.local", p.APIServerServiceName, p.Namespace)
 	p.ScheduledWorkflow = dsp.Spec.ScheduledWorkflow.DeepCopy()
 	p.ScheduledWorkflowDefaultResourceName = scheduledWorkflowDefaultResourceNamePrefix + dsp.Name
 	p.PersistenceAgent = dsp.Spec.PersistenceAgent.DeepCopy()
@@ -589,7 +594,18 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.MLMD = dsp.Spec.MLMD.DeepCopy()
 	p.CustomCABundleRootMountPath = config.CustomCABundleRootMountPath
 	p.PiplinesCABundleMountPath = config.GetCABundleFileMountPath()
+	p.PodToPodTLS = false
 	dspTrustedCAConfigMapKey := config.CustomDSPTrustedCAConfigMapKey
+
+	// PodToPodTLS is only used in v2 dsp
+	if p.UsingV2Pipelines(dsp) {
+		// by default it's enabled when omitted
+		if dsp.Spec.PodToPodTLS == nil {
+			p.PodToPodTLS = true
+		} else {
+			p.PodToPodTLS = *dsp.Spec.PodToPodTLS
+		}
+	}
 
 	log := loggr.WithValues("namespace", p.Namespace).WithValues("dspa_name", p.Name)
 

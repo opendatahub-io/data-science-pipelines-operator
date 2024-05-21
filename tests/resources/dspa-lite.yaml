@@ -4,6 +4,7 @@ metadata:
   name: test-dspa
 spec:
   dspVersion: v2
+  podToPodTLS: false
   apiServer:
     deploy: true
     enableOauth: false

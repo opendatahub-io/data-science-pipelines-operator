@@ -40,6 +40,10 @@ spec:
               {{ else }}
               value: PipelineRun
               {{ end }}
+            {{ if .PodToPodTLS }}
+            - name: SSL_CERT_DIR
+              value: "/etc/pki/tls/certs:/var/run/secrets/kubernetes.io/serviceaccount/"
+            {{ end }}
           image: "{{.PersistenceAgent.Image}}"
           imagePullPolicy: IfNotPresent
           name: ds-pipeline-persistenceagent
@@ -48,7 +52,10 @@ spec:
             - "--logtostderr=true"
             - "--ttlSecondsAfterWorkflowFinish=86400"
             - "--numWorker={{.PersistenceAgent.NumWorkers}}"
-            - "--mlPipelineAPIServerName={{.APIServerServiceName}}"
+            - "--mlPipelineAPIServerName={{.APIServerServiceDNSName}}"
+            {{ if .PodToPodTLS }}
+            - "--mlPipelineServiceTLSEnabled=true"
+            {{ end }}
             - "--namespace={{.Namespace}}"
             - "--mlPipelineServiceHttpPort=8888"
             - "--mlPipelineServiceGRPCPort=8887"

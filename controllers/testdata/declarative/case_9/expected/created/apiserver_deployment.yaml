@@ -1,50 +1,42 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ds-pipeline-testdsp6
+  name: ds-pipeline-testdsp9
   namespace: default
   labels:
-    app: ds-pipeline-testdsp6
+    app: ds-pipeline-testdsp9
     component: data-science-pipelines
-    dspa: testdsp6
+    dspa: testdsp9
 spec:
   selector:
     matchLabels:
-      app: ds-pipeline-testdsp6
+      app: ds-pipeline-testdsp9
       component: data-science-pipelines
-      dspa: testdsp6
+      dspa: testdsp9
   template:
     metadata:
       labels:
-        app: ds-pipeline-testdsp6
+        app: ds-pipeline-testdsp9
         component: data-science-pipelines
-        dspa: testdsp6
+        dspa: testdsp9
     spec:
       containers:
         - env:
             - name: POD_NAMESPACE
               value: "default"
             - name: DBCONFIG_USER
-              value: "testuser6"
+              value: "mlpipeline"
             - name: DBCONFIG_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  key: "testpswkey6"
-                  name: "testdbpswsecretname6"
+                  key: "password"
+                  name: "ds-pipeline-db-testdsp9"
             - name: DBCONFIG_DBNAME
-              value: "testdbname6"
+              value: "mlpipeline"
             - name: DBCONFIG_HOST
-              value: "testdbhost6"
+              value: "mariadb-testdsp9.default.svc.cluster.local"
             - name: DBCONFIG_PORT
-              value: "test6"
-            - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_NAME
-              value: dsp-trusted-ca-testdsp6
-            - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_KEY
-              value: user-ca-bundle.crt
-            - name: ARTIFACT_COPY_STEP_CABUNDLE_MOUNTPATH
-              value: /dspa/custom-certs
-            - name: SSL_CERT_DIR
-              value: "/dspa/custom-certs:/etc/ssl/certs:/etc/pki/tls/certs"
+              value: "3306"
             - name: AUTO_UPDATE_PIPELINE_DEFAULT_VERSION
               value: "true"
             - name: DBCONFIG_CONMAXLIFETIMESEC
@@ -54,73 +46,67 @@ spec:
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
               value: "8888"
             - name: OBJECTSTORECONFIG_CREDENTIALSSECRET
-              value: "ds-pipeline-s3-testdsp6"
+              value: "ds-pipeline-s3-testdsp9"
             - name: OBJECTSTORECONFIG_CREDENTIALSACCESSKEYKEY
               value: "accesskey"
             - name: OBJECTSTORECONFIG_CREDENTIALSSECRETKEYKEY
               value: "secretkey"
             - name: DEFAULTPIPELINERUNNERSERVICEACCOUNT
-              value: "pipeline-runner-testdsp6"
+              value: "pipeline-runner-testdsp9"
             - name: OBJECTSTORECONFIG_BUCKETNAME
               value: "mlpipeline"
             - name: OBJECTSTORECONFIG_ACCESSKEY
               valueFrom:
                 secretKeyRef:
                   key: "accesskey"
-                  name: "ds-pipeline-s3-testdsp6"
+                  name: "ds-pipeline-s3-testdsp9"
             - name: OBJECTSTORECONFIG_SECRETACCESSKEY
               valueFrom:
                 secretKeyRef:
                   key: "secretkey"
-                  name: "ds-pipeline-s3-testdsp6"
+                  name: "ds-pipeline-s3-testdsp9"
             - name: OBJECTSTORECONFIG_SECURE
               value: "false"
             - name: MINIO_SERVICE_SERVICE_HOST
-              value: "minio-testdsp6.default.svc.cluster.local"
+              value: "minio-testdsp9.default.svc.cluster.local"
             - name: MINIO_SERVICE_SERVICE_PORT
               value: "9000"
             - name: V2_LAUNCHER_IMAGE
-              value: "argolauncherimage:test6"
+              value: "argolauncherimage:test9"
             - name: V2_DRIVER_IMAGE
-              value: "argodriverimage:test6"
+              value: "argodriverimage:test9"
             - name: METADATA_GRPC_SERVICE_SERVICE_HOST
-              value: "ds-pipeline-metadata-grpc-testdsp6.default.svc.cluster.local"
+              value: "ds-pipeline-metadata-grpc-testdsp9.default.svc.cluster.local"
             - name: METADATA_GRPC_SERVICE_SERVICE_PORT
               value: "8080"
             - name: ML_PIPELINE_SERVICE_HOST
-              value: ds-pipeline-testdsp6.default.svc.cluster.local
+              value: ds-pipeline-testdsp9.default.svc.cluster.local
             - name: ML_PIPELINE_SERVICE_PORT_GRPC
               value: "8887"
-            - name: SIGNED_URL_EXPIRY_TIME_SECONDS
-              value: "20"
-            - name: ML_PIPELINE_TLS_ENABLED
-              value: "true"
             - name: EXECUTIONTYPE
               value: Workflow
             - name: DB_DRIVER_NAME
               value: mysql
             - name: DBCONFIG_MYSQLCONFIG_USER
-              value: testuser6
+              value: mlpipeline
             - name: DBCONFIG_MYSQLCONFIG_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  key: "testpswkey6"
-                  name: "testdbpswsecretname6"
+                  key: "password"
+                  name: "ds-pipeline-db-testdsp9"
             - name: DBCONFIG_MYSQLCONFIG_DBNAME
-              value: "testdbname6"
+              value: "mlpipeline"
             - name: DBCONFIG_MYSQLCONFIG_HOST
-              value: "testdbhost6"
+              value: "mariadb-testdsp9.default.svc.cluster.local"
             - name: DBCONFIG_MYSQLCONFIG_PORT
-              value: "test6"
-          image: api-server:test6
+              value: "3306"
+          image: api-server:test9
           imagePullPolicy: Always
           name: ds-pipeline-api-server
           command: ['/bin/apiserver']
           args:
             - --config=/config
             - -logtostderr=true
-            - --tlsCertPath=/etc/tls/private/tls.crt
-            - --tlsCertKeyPath=/etc/tls/private/tls.key
           ports:
             - containerPort: 8888
               name: http
@@ -149,24 +135,19 @@ spec:
             - name: server-config
               mountPath: /config/config.json
               subPath: config.json
-            - mountPath: /etc/tls/private
-              name: proxy-tls
-            - name: ca-bundle
-              mountPath: /dspa/custom-certs
         - name: oauth-proxy
           args:
             - --https-address=:8443
             - --provider=openshift
-            - --openshift-service-account=ds-pipeline-testdsp6
-            - --upstream=https://ds-pipeline-testdsp6.default.svc.cluster.local:8888
-            - --upstream-ca=/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
+            - --openshift-service-account=ds-pipeline-testdsp9
+            - --upstream=http://localhost:8888
             - --tls-cert=/etc/tls/private/tls.crt
             - --tls-key=/etc/tls/private/tls.key
             - --cookie-secret=SECRET
-            - '--openshift-delegate-urls={"/": {"group":"route.openshift.io","resource":"routes","verb":"get","name":"ds-pipeline-testdsp6","namespace":"default"}}'
-            - '--openshift-sar={"namespace":"default","resource":"routes","resourceName":"ds-pipeline-testdsp6","verb":"get","resourceAPIGroup":"route.openshift.io"}'
+            - '--openshift-delegate-urls={"/": {"group":"route.openshift.io","resource":"routes","verb":"get","name":"ds-pipeline-testdsp9","namespace":"default"}}'
+            - '--openshift-sar={"namespace":"default","resource":"routes","resourceName":"ds-pipeline-testdsp9","verb":"get","resourceAPIGroup":"route.openshift.io"}'
             - --skip-auth-regex='(^/metrics|^/apis/v1beta1/healthz)'
-          image: oauth-proxy:test6
+          image: oauth-proxy:test9
           ports:
             - containerPort: 8443
               name: oauth
@@ -204,14 +185,10 @@ spec:
       volumes:
         - name: proxy-tls
           secret:
-            secretName: ds-pipelines-proxy-tls-testdsp6
+            secretName: ds-pipelines-proxy-tls-testdsp9
             defaultMode: 420
         - name: server-config
           configMap:
-            name: ds-pipeline-server-config-testdsp6
+            name: ds-pipeline-server-config-testdsp9
             defaultMode: 420
-        - name: ca-bundle
-          configMap:
-            name: dsp-trusted-ca-testdsp6
-            defaultMode: 420
-      serviceAccountName: ds-pipeline-testdsp6
+      serviceAccountName: ds-pipeline-testdsp9

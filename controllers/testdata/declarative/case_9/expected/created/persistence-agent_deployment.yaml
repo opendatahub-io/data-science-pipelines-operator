@@ -1,26 +1,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ds-pipeline-persistenceagent-testdsp7
+  name: ds-pipeline-persistenceagent-testdsp9
   namespace: default
   labels:
-    app: ds-pipeline-persistenceagent-testdsp7
+    app: ds-pipeline-persistenceagent-testdsp9
     component: data-science-pipelines
-    dspa: testdsp7
+    dspa: testdsp9
 spec:
   selector:
     matchLabels:
-      app: ds-pipeline-persistenceagent-testdsp7
+      app: ds-pipeline-persistenceagent-testdsp9
       component: data-science-pipelines
-      dspa: testdsp7
+      dspa: testdsp9
   template:
     metadata:
       annotations:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
       labels:
-        app: ds-pipeline-persistenceagent-testdsp7
+        app: ds-pipeline-persistenceagent-testdsp9
         component: data-science-pipelines
-        dspa: testdsp7
+        dspa: testdsp9
     spec:
       containers:
         - env:
@@ -36,9 +36,7 @@ spec:
               value: ""
             - name: EXECUTIONTYPE
               value: Workflow
-            - name: SSL_CERT_DIR
-              value: "/etc/pki/tls/certs:/var/run/secrets/kubernetes.io/serviceaccount/"
-          image: persistenceagent:test7
+          image: persistenceagent:test9
           imagePullPolicy: IfNotPresent
           name: ds-pipeline-persistenceagent
           command:
@@ -46,8 +44,8 @@ spec:
             - "--logtostderr=true"
             - "--ttlSecondsAfterWorkflowFinish=86400"
             - "--numWorker=5"
-            - "--mlPipelineAPIServerName=ds-pipeline-testdsp7"
-            - "--namespace=testdsp7"
+            - "--mlPipelineAPIServerName=ds-pipeline-testdsp9"
+            - "--namespace=testdsp9"
             - "--mlPipelineServiceHttpPort=8888"
             - "--mlPipelineServiceGRPCPort=8887"
           livenessProbe:
@@ -70,16 +68,16 @@ spec:
             timeoutSeconds: 2
           resources:
             requests:
-              cpu: 1233m
-              memory: 1Gi
+              cpu: 120m
+              memory: 500Mi
             limits:
-              cpu: 2524m
-              memory: 5Gi
+              cpu: 250m
+              memory: 1Gi
           volumeMounts:
             - mountPath: /var/run/secrets/kubeflow/tokens/persistenceagent-sa-token
               name: persistenceagent-sa-token
-              subPath: ds-pipeline-persistenceagent-testdsp7-token
-      serviceAccountName: ds-pipeline-persistenceagent-testdsp7
+              subPath: ds-pipeline-persistenceagent-testdsp9-token
+      serviceAccountName: ds-pipeline-persistenceagent-testdsp9
       volumes:
         - name: persistenceagent-sa-token
           projected:
@@ -87,5 +85,5 @@ spec:
             - serviceAccountToken:
                 audience: pipelines.kubeflow.org
                 expirationSeconds: 3600
-                path: ds-pipeline-persistenceagent-testdsp7-token
+                path: ds-pipeline-persistenceagent-testdsp9-token
             defaultMode: 420
