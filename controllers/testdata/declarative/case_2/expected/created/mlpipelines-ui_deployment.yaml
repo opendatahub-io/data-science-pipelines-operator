@@ -50,7 +50,7 @@ spec:
             - name: ML_PIPELINE_SERVICE_PORT
               value: '8888'
             - name: METADATA_ENVOY_SERVICE_SERVICE_HOST
-              value: ds-pipeline-metadata-envoy-testdsp2
+              value: ds-pipeline-md-testdsp2
             - name: METADATA_ENVOY_SERVICE_SERVICE_PORT
               value: "9090"
             - name: AWS_ACCESS_KEY_ID
