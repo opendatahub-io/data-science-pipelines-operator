@@ -59,12 +59,12 @@ func (s *dspaStatus) SetDatabaseNotReady(err error, reason string) {
 }
 
 func (s *dspaStatus) SetDatabaseReady() {
-	condition := buildTrueCondition(config.DatabaseAvailable, "Database connectivity successfully verified")
+	condition := BuildTrueCondition(config.DatabaseAvailable, "Database connectivity successfully verified")
 	s.databaseAvailable = &condition
 }
 
 func (s *dspaStatus) SetObjStoreReady() {
-	condition := buildTrueCondition(config.ObjectStoreAvailable, "Object Store connectivity successfully verified")
+	condition := BuildTrueCondition(config.ObjectStoreAvailable, "Object Store connectivity successfully verified")
 	s.objStoreAvailable = &condition
 }
 
@@ -167,7 +167,7 @@ func (s *dspaStatus) getScheduledWorkflowReadyCondition() *metav1.Condition {
 	return s.scheduledWorkflowReady
 }
 
-func buildTrueCondition(conditionType string, message string) metav1.Condition {
+func BuildTrueCondition(conditionType string, message string) metav1.Condition {
 	condition := metav1.Condition{}
 	condition.Type = conditionType
 	condition.Status = metav1.ConditionTrue
