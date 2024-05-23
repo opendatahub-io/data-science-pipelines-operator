@@ -37,7 +37,8 @@ func TestDeployMLMDV1(t *testing.T) {
 	// Construct DSPA Spec with MLMD Enabled
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
 		Spec: dspav1alpha1.DSPASpec{
-			APIServer: &dspav1alpha1.APIServer{},
+			DSPVersion: "v1",
+			APIServer:  &dspav1alpha1.APIServer{},
 			MLMD: &dspav1alpha1.MLMD{
 				Deploy: true,
 			},
@@ -224,7 +225,8 @@ func TestDontDeployMLMDV1(t *testing.T) {
 	// Construct DSPA Spec with MLMD Not Enabled
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
 		Spec: dspav1alpha1.DSPASpec{
-			APIServer: &dspav1alpha1.APIServer{},
+			DSPVersion: "v1",
+			APIServer:  &dspav1alpha1.APIServer{},
 			MLMD: &dspav1alpha1.MLMD{
 				Deploy: false,
 			},
@@ -355,7 +357,8 @@ func TestDefaultDeployBehaviorMLMDV1(t *testing.T) {
 	// Construct DSPA Spec with MLMD Spec not defined
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
 		Spec: dspav1alpha1.DSPASpec{
-			APIServer: &dspav1alpha1.APIServer{},
+			DSPVersion: "v1",
+			APIServer:  &dspav1alpha1.APIServer{},
 			Database: &dspav1alpha1.Database{
 				DisableHealthCheck: false,
 				MariaDB: &dspav1alpha1.MariaDB{
@@ -534,7 +537,8 @@ func TestDeployEnvoyRouteV1(t *testing.T) {
 	// Construct DSPA Spec with MLMD Enabled
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
 		Spec: dspav1alpha1.DSPASpec{
-			APIServer: &dspav1alpha1.APIServer{},
+			DSPVersion: "v1",
+			APIServer:  &dspav1alpha1.APIServer{},
 			MLMD: &dspav1alpha1.MLMD{
 				Deploy: true,
 				Envoy: &dspav1alpha1.Envoy{
@@ -675,7 +679,8 @@ func TestDontDeployEnvoyRouteV1(t *testing.T) {
 	// Construct DSPA Spec with MLMD Enabled
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
 		Spec: dspav1alpha1.DSPASpec{
-			APIServer: &dspav1alpha1.APIServer{},
+			DSPVersion: "v1",
+			APIServer:  &dspav1alpha1.APIServer{},
 			MLMD: &dspav1alpha1.MLMD{
 				Deploy: true,
 				Envoy: &dspav1alpha1.Envoy{
