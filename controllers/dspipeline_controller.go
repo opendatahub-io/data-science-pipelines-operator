@@ -231,7 +231,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	err = r.ReconcileDatabase(ctx, dspa, params)
 	if err != nil {
-		dspaStatus.SetDatabaseNotReady(err)
+		dspaStatus.SetDatabaseNotReady(err, config.FailingToDeploy)
 		return ctrl.Result{}, err
 	} else {
 		dspaStatus.SetDatabaseReady()
@@ -239,7 +239,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	err = r.ReconcileStorage(ctx, dspa, params)
 	if err != nil {
-		dspaStatus.SetObjStoreNotReady(err)
+		dspaStatus.SetObjStoreNotReady(err, config.FailingToDeploy)
 		return ctrl.Result{}, err
 	} else {
 		dspaStatus.SetObjStoreReady()
@@ -249,14 +249,14 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	dbAvailable, err := r.isDatabaseAccessible(dspa, params)
 
 	if err != nil {
-		dspaStatus.SetDatabaseNotReady(err)
+		dspaStatus.SetDatabaseNotReady(err, config.FailingToDeploy)
 	} else {
 		dspaStatus.SetDatabaseReady()
 	}
 
 	objStoreAvailable, err := r.isObjectStorageAccessible(ctx, dspa, params)
 	if err != nil {
-		dspaStatus.SetObjStoreNotReady(err)
+		dspaStatus.SetObjStoreNotReady(err, config.FailingToDeploy)
 	} else {
 		dspaStatus.SetObjStoreReady()
 	}

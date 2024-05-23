@@ -9,10 +9,10 @@ import (
 
 type DSPAStatus interface {
 	SetDatabaseReady()
-	SetDatabaseNotReady(err error)
+	SetDatabaseNotReady(err error, reason string)
 
 	SetObjStoreReady()
-	SetObjStoreNotReady(err error)
+	SetObjStoreNotReady(err error, reason string)
 
 	SetApiServerStatus(apiServerReady metav1.Condition)
 
@@ -49,8 +49,12 @@ type dspaStatus struct {
 	scheduledWorkflowReady *metav1.Condition
 }
 
-func (s *dspaStatus) SetDatabaseNotReady(err error) {
-	condition := BuildFalseCondition(config.DatabaseAvailable, config.FailingToDeploy, err.Error())
+func (s *dspaStatus) SetDatabaseNotReady(err error, reason string) {
+	message := ""
+	if err != nil {
+		message = err.Error()
+	}
+	condition := BuildFalseCondition(config.DatabaseAvailable, reason, message)
 	s.databaseAvailable = &condition
 }
 
@@ -64,8 +68,13 @@ func (s *dspaStatus) SetObjStoreReady() {
 	s.objStoreAvailable = &condition
 }
 
-func (s *dspaStatus) SetObjStoreNotReady(err error) {
-	condition := BuildFalseCondition(config.ObjectStoreAvailable, config.FailingToDeploy, err.Error())
+func (s *dspaStatus) SetObjStoreNotReady(err error, reason string) {
+	message := ""
+	if err != nil {
+		message = err.Error()
+	}
+
+	condition := BuildFalseCondition(config.ObjectStoreAvailable, reason, message)
 	s.objStoreAvailable = &condition
 }
 
