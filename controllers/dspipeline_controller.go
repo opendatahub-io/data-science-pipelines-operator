@@ -275,7 +275,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			r.setStatusAsNotReady(config.APIServerReady, err, dspaStatus.SetApiServerStatus)
 			return ctrl.Result{}, err
 		} else {
-			r.setStatusAsReady(ctx, params.APIServerDefaultResourceName, config.APIServerReady, dspa,
+			r.setStatus(ctx, params.APIServerDefaultResourceName, config.APIServerReady, dspa,
 				dspaStatus.SetApiServerStatus, log)
 		}
 
@@ -284,7 +284,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			r.setStatusAsNotReady(config.PersistenceAgentReady, err, dspaStatus.SetPersistenceAgentStatus)
 			return ctrl.Result{}, err
 		} else {
-			r.setStatusAsReady(ctx, params.PersistentAgentDefaultResourceName, config.PersistenceAgentReady, dspa,
+			r.setStatus(ctx, params.PersistentAgentDefaultResourceName, config.PersistenceAgentReady, dspa,
 				dspaStatus.SetPersistenceAgentStatus, log)
 		}
 
@@ -293,7 +293,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			r.setStatusAsNotReady(config.ScheduledWorkflowReady, err, dspaStatus.SetScheduledWorkflowStatus)
 			return ctrl.Result{}, err
 		} else {
-			r.setStatusAsReady(ctx, params.ScheduledWorkflowDefaultResourceName, config.ScheduledWorkflowReady, dspa,
+			r.setStatus(ctx, params.ScheduledWorkflowDefaultResourceName, config.ScheduledWorkflowReady, dspa,
 				dspaStatus.SetScheduledWorkflowStatus, log)
 		}
 
@@ -342,10 +342,10 @@ func (r *DSPAReconciler) setStatusAsNotReady(conditionType string, err error, se
 	setStatus(condition)
 }
 
-func (r *DSPAReconciler) setStatusAsReady(ctx context.Context, resourceName string, conditionType string,
+func (r *DSPAReconciler) setStatus(ctx context.Context, resourceName string, conditionType string,
 	dspa *dspav1alpha1.DataSciencePipelinesApplication, setStatus func(metav1.Condition),
 	log logr.Logger) {
-	condition, err := r.handleReadyCondition(ctx, dspa, resourceName, conditionType)
+	condition, err := r.evaluateCondition(ctx, dspa, resourceName, conditionType)
 	setStatus(condition)
 	if err != nil {
 		log.Error(err, fmt.Sprintf("Encountered error when creating the %s readiness condition", conditionType))
@@ -362,20 +362,20 @@ func (r *DSPAReconciler) updateStatus(ctx context.Context, dspa *dspav1alpha1.Da
 	}
 }
 
-// handleReadyCondition evaluates if condition with "name" is in condition of type "conditionType".
+// evaluateCondition evaluates if condition with "name" is in condition of type "conditionType".
 // this procedure is valid only for conditions with bool status type, for conditions of non bool type
 // results are undefined.
-func (r *DSPAReconciler) handleReadyCondition(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication, component string, condition string) (metav1.Condition, error) {
-	readyCondition := dspastatus.BuildUnknownCondition(condition)
+func (r *DSPAReconciler) evaluateCondition(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication, component string, conditionType string) (metav1.Condition, error) {
+	condition := dspastatus.BuildUnknownCondition(conditionType)
 	deployment := &appsv1.Deployment{}
 
 	err := r.Get(ctx, types.NamespacedName{Name: component, Namespace: dspa.Namespace}, deployment)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			readyCondition.Reason = config.ComponentDeploymentNotFound
-			readyCondition.Status = metav1.ConditionFalse
-			readyCondition.Message = fmt.Sprintf("Deployment for component \"%s\" is missing - pre-requisite component may not yet be available.", component)
-			return readyCondition, nil
+			condition.Reason = config.ComponentDeploymentNotFound
+			condition.Status = metav1.ConditionFalse
+			condition.Message = fmt.Sprintf("Deployment for component \"%s\" is missing - pre-requisite component may not yet be available.", component)
+			return condition, nil
 		} else {
 			return metav1.Condition{}, err
 		}
@@ -383,10 +383,10 @@ func (r *DSPAReconciler) handleReadyCondition(ctx context.Context, dspa *dspav1a
 
 	// First check if deployment is scaled down, if it is, component is deemed not ready
 	if deployment.Spec.Replicas != nil && *deployment.Spec.Replicas == 0 {
-		readyCondition.Reason = config.MinimumReplicasAvailable
-		readyCondition.Status = metav1.ConditionFalse
-		readyCondition.Message = fmt.Sprintf("Deployment for component \"%s\" is scaled down.", component)
-		return readyCondition, nil
+		condition.Reason = config.MinimumReplicasAvailable
+		condition.Status = metav1.ConditionFalse
+		condition.Message = fmt.Sprintf("Deployment for component \"%s\" is scaled down.", component)
+		return condition, nil
 	}
 
 	// At this point component is not minimally available, possible scenarios:
@@ -400,10 +400,10 @@ func (r *DSPAReconciler) handleReadyCondition(ctx context.Context, dspa *dspav1a
 
 	if availableCond != nil && availableCond.Status == corev1.ConditionTrue {
 		// If this DSPA component is minimally available, we are done.
-		readyCondition.Reason = config.MinimumReplicasAvailable
-		readyCondition.Status = metav1.ConditionTrue
-		readyCondition.Message = fmt.Sprintf("Component [%s] is minimally available.", component)
-		return readyCondition, nil
+		condition.Reason = config.MinimumReplicasAvailable
+		condition.Status = metav1.ConditionTrue
+		condition.Message = fmt.Sprintf("Component [%s] is minimally available.", component)
+		return condition, nil
 	}
 
 	// There are two possible reasons for progress failing, deadline and replica create error:
@@ -411,19 +411,19 @@ func (r *DSPAReconciler) handleReadyCondition(ctx context.Context, dspa *dspav1a
 	// We check for both to investigate potential issues during deployment
 	if progressingCond != nil && progressingCond.Status == corev1.ConditionFalse &&
 		(progressingCond.Reason == "ProgressDeadlineExceeded" || progressingCond.Reason == "ReplicaSetCreateError") {
-		readyCondition.Reason = config.FailingToDeploy
-		readyCondition.Status = metav1.ConditionFalse
-		readyCondition.Message = fmt.Sprintf("Component [%s] has failed to progress. Reason: [%s]. "+
+		condition.Reason = config.FailingToDeploy
+		condition.Status = metav1.ConditionFalse
+		condition.Message = fmt.Sprintf("Component [%s] has failed to progress. Reason: [%s]. "+
 			"Message: [%s]", component, progressingCond.Reason, progressingCond.Message)
-		return readyCondition, nil
+		return condition, nil
 	}
 
 	if replicaFailureCond != nil && replicaFailureCond.Status == corev1.ConditionTrue {
-		readyCondition.Reason = config.FailingToDeploy
-		readyCondition.Status = metav1.ConditionFalse
-		readyCondition.Message = fmt.Sprintf("Component's replica [%s] has failed to create. Reason: [%s]. "+
+		condition.Reason = config.FailingToDeploy
+		condition.Status = metav1.ConditionFalse
+		condition.Message = fmt.Sprintf("Component's replica [%s] has failed to create. Reason: [%s]. "+
 			"Message: [%s]", component, replicaFailureCond.Reason, replicaFailureCond.Message)
-		return readyCondition, nil
+		return condition, nil
 	}
 
 	// Search through the pods associated with this deployment
@@ -452,29 +452,29 @@ func (r *DSPAReconciler) handleReadyCondition(ctx context.Context, dspa *dspav1a
 		// but an individual container may be failing due to runtime errors.
 		for _, c := range p.Status.ContainerStatuses {
 			if c.State.Waiting != nil && c.State.Waiting.Reason == "CrashLoopBackOff" {
-				readyCondition.Reason = config.FailingToDeploy
-				readyCondition.Status = metav1.ConditionFalse
+				condition.Reason = config.FailingToDeploy
+				condition.Status = metav1.ConditionFalse
 				// We concatenate messages from all failing containers.
-				readyCondition.Message = fmt.Sprintf("Component [%s] is in CrashLoopBackOff. "+
+				condition.Message = fmt.Sprintf("Component [%s] is in CrashLoopBackOff. "+
 					"Message from pod: [%s]", component, c.State.Waiting.Message)
-				return readyCondition, nil
+				return condition, nil
 			}
 		}
 	}
 
 	if hasPodFailures {
-		readyCondition.Status = metav1.ConditionFalse
-		readyCondition.Reason = config.FailingToDeploy
-		readyCondition.Message = podFailureMessage
-		return readyCondition, nil
+		condition.Status = metav1.ConditionFalse
+		condition.Reason = config.FailingToDeploy
+		condition.Message = podFailureMessage
+		return condition, nil
 	}
 
 	// No errors encountered, assume deployment is progressing successfully
 	// If this DSPA component is minimally available, we are done.
-	readyCondition.Reason = config.Deploying
-	readyCondition.Status = metav1.ConditionFalse
-	readyCondition.Message = fmt.Sprintf("Component [%s] is deploying.", component)
-	return readyCondition, nil
+	condition.Reason = config.Deploying
+	condition.Status = metav1.ConditionFalse
+	condition.Message = fmt.Sprintf("Component [%s] is deploying.", component)
+	return condition, nil
 
 }
 
