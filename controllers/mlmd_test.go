@@ -30,6 +30,7 @@ func TestDeployMLMDV1(t *testing.T) {
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
 	expectedMLMDEnvoyName := "ds-pipeline-metadata-envoy-testdspa"
+	expectedMLMDEnvoyRouteName := "ds-pipeline-md-testdspa"
 	expectedMLMDGRPCName := "ds-pipeline-metadata-grpc-testdspa"
 	expectedMLMDWriterName := "ds-pipeline-metadata-writer-testdspa"
 
@@ -73,7 +74,7 @@ func TestDeployMLMDV1(t *testing.T) {
 
 	// Ensure MLMD-Envoy route doesn't yet exist
 	route := &v1.Route{}
-	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyName, testNamespace)
+	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyRouteName, testNamespace)
 	assert.False(t, created)
 	assert.Nil(t, err)
 
@@ -101,7 +102,7 @@ func TestDeployMLMDV1(t *testing.T) {
 
 	// Ensure MLMD-Envoy route now exists
 	route = &v1.Route{}
-	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyName, testNamespace)
+	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyRouteName, testNamespace)
 	assert.True(t, created)
 	assert.Nil(t, err)
 
@@ -122,6 +123,7 @@ func TestDeployMLMDV2(t *testing.T) {
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
 	expectedMLMDEnvoyName := "ds-pipeline-metadata-envoy-testdspa"
+	expectedMLMDEnvoyRouteName := "ds-pipeline-md-testdspa"
 	expectedMLMDGRPCName := "ds-pipeline-metadata-grpc-testdspa"
 	expectedMLMDWriterName := "ds-pipeline-metadata-writer-testdspa"
 
@@ -166,7 +168,7 @@ func TestDeployMLMDV2(t *testing.T) {
 
 	// Ensure MLMD-Envoy route doesn't yet exist
 	route := &v1.Route{}
-	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyName, testNamespace)
+	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyRouteName, testNamespace)
 	assert.False(t, created)
 	assert.Nil(t, err)
 
@@ -194,7 +196,7 @@ func TestDeployMLMDV2(t *testing.T) {
 
 	// Ensure MLMD-Envoy route now exists
 	route = &v1.Route{}
-	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyName, testNamespace)
+	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyRouteName, testNamespace)
 	assert.True(t, created)
 	assert.Nil(t, err)
 
@@ -215,6 +217,7 @@ func TestDontDeployMLMDV1(t *testing.T) {
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
 	expectedMLMDEnvoyName := "ds-pipeline-metadata-envoy-testdspa"
+	expectedMLMDEnvoyRouteName := "ds-pipeline-md-testdspa"
 	expectedMLMDGRPCName := "ds-pipeline-metadata-grpc-testdspa"
 	expectedMLMDWriterName := "ds-pipeline-metadata-writer-testdspa"
 
@@ -258,7 +261,7 @@ func TestDontDeployMLMDV1(t *testing.T) {
 
 	// Ensure MLMD-Envoy route doesn't yet exist
 	route := &v1.Route{}
-	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyName, testNamespace)
+	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyRouteName, testNamespace)
 	assert.False(t, created)
 	assert.Nil(t, err)
 
@@ -286,7 +289,7 @@ func TestDontDeployMLMDV1(t *testing.T) {
 
 	// Ensure MLMD-Envoy route still doesn't exist
 	route = &v1.Route{}
-	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyName, testNamespace)
+	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyRouteName, testNamespace)
 	assert.False(t, created)
 	assert.Nil(t, err)
 
@@ -345,6 +348,7 @@ func TestDefaultDeployBehaviorMLMDV1(t *testing.T) {
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
 	expectedMLMDEnvoyName := "ds-pipeline-metadata-envoy-testdspa"
+	expectedMLMDEnvoyRouteName := "ds-pipeline-md-testdspa"
 	expectedMLMDGRPCName := "ds-pipeline-metadata-grpc-testdspa"
 	expectedMLMDWriterName := "ds-pipeline-metadata-writer-testdspa"
 
@@ -385,7 +389,7 @@ func TestDefaultDeployBehaviorMLMDV1(t *testing.T) {
 
 	// Ensure MLMD-Envoy route doesn't yet exist
 	route := &v1.Route{}
-	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyName, testNamespace)
+	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyRouteName, testNamespace)
 	assert.False(t, created)
 	assert.Nil(t, err)
 
@@ -413,7 +417,7 @@ func TestDefaultDeployBehaviorMLMDV1(t *testing.T) {
 
 	// Ensure MLMD-Envoy route still doesn't exist
 	route = &v1.Route{}
-	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyName, testNamespace)
+	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyRouteName, testNamespace)
 	assert.False(t, created)
 	assert.Nil(t, err)
 
@@ -434,6 +438,7 @@ func TestDefaultDeployBehaviorMLMDV2(t *testing.T) {
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
 	expectedMLMDEnvoyName := "ds-pipeline-metadata-envoy-testdspa"
+	expectedMLMDEnvoyRouteName := "ds-pipeline-md-testdspa"
 	expectedMLMDGRPCName := "ds-pipeline-metadata-grpc-testdspa"
 	expectedMLMDWriterName := "ds-pipeline-metadata-writer-testdspa"
 
@@ -475,7 +480,7 @@ func TestDefaultDeployBehaviorMLMDV2(t *testing.T) {
 
 	// Ensure MLMD-Envoy route doesn't yet exist
 	route := &v1.Route{}
-	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyName, testNamespace)
+	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyRouteName, testNamespace)
 	assert.False(t, created)
 	assert.Nil(t, err)
 
@@ -503,7 +508,7 @@ func TestDefaultDeployBehaviorMLMDV2(t *testing.T) {
 
 	// Ensure MLMD-Envoy route now exists
 	route = &v1.Route{}
-	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyName, testNamespace)
+	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyRouteName, testNamespace)
 	assert.True(t, created)
 	assert.Nil(t, err)
 
@@ -524,6 +529,7 @@ func TestDeployEnvoyRouteV1(t *testing.T) {
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
 	expectedMLMDEnvoyName := "ds-pipeline-metadata-envoy-testdspa"
+	expectedMLMDEnvoyRouteName := "ds-pipeline-md-testdspa"
 
 	// Construct DSPA Spec with MLMD Enabled
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
@@ -568,7 +574,7 @@ func TestDeployEnvoyRouteV1(t *testing.T) {
 
 	// Ensure MLMD-Envoy route doesn't yet exist
 	route := &v1.Route{}
-	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyName, testNamespace)
+	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyRouteName, testNamespace)
 	assert.False(t, created)
 	assert.Nil(t, err)
 
@@ -584,7 +590,7 @@ func TestDeployEnvoyRouteV1(t *testing.T) {
 
 	// Ensure MLMD-Envoy route now exists
 	route = &v1.Route{}
-	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyName, testNamespace)
+	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyRouteName, testNamespace)
 	assert.True(t, created)
 	assert.Nil(t, err)
 }
@@ -593,6 +599,7 @@ func TestDeployEnvoyRouteV2(t *testing.T) {
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
 	expectedMLMDEnvoyName := "ds-pipeline-metadata-envoy-testdspa"
+	expectedMLMDEnvoyRouteName := "ds-pipeline-md-testdspa"
 
 	// Construct DSPA Spec with MLMD Enabled
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
@@ -638,7 +645,7 @@ func TestDeployEnvoyRouteV2(t *testing.T) {
 
 	// Ensure MLMD-Envoy route doesn't yet exist
 	route := &v1.Route{}
-	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyName, testNamespace)
+	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyRouteName, testNamespace)
 	assert.False(t, created)
 	assert.Nil(t, err)
 
@@ -654,7 +661,7 @@ func TestDeployEnvoyRouteV2(t *testing.T) {
 
 	// Ensure MLMD-Envoy route now exists
 	route = &v1.Route{}
-	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyName, testNamespace)
+	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyRouteName, testNamespace)
 	assert.True(t, created)
 	assert.Nil(t, err)
 }
@@ -663,6 +670,7 @@ func TestDontDeployEnvoyRouteV1(t *testing.T) {
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
 	expectedMLMDEnvoyName := "ds-pipeline-metadata-envoy-testdspa"
+	expectedMLMDEnvoyRouteName := "ds-pipeline-md-testdspa"
 
 	// Construct DSPA Spec with MLMD Enabled
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
@@ -707,7 +715,7 @@ func TestDontDeployEnvoyRouteV1(t *testing.T) {
 
 	// Ensure MLMD-Envoy route doesn't yet exist
 	route := &v1.Route{}
-	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyName, testNamespace)
+	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyRouteName, testNamespace)
 	assert.False(t, created)
 	assert.Nil(t, err)
 
@@ -723,7 +731,7 @@ func TestDontDeployEnvoyRouteV1(t *testing.T) {
 
 	// Ensure MLMD-Envoy route still doesn't exist
 	route = &v1.Route{}
-	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyName, testNamespace)
+	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyRouteName, testNamespace)
 	assert.False(t, created)
 	assert.Nil(t, err)
 }
@@ -732,6 +740,7 @@ func TestDontDeployEnvoyRouteV2(t *testing.T) {
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
 	expectedMLMDEnvoyName := "ds-pipeline-metadata-envoy-testdspa"
+	expectedMLMDEnvoyRouteName := "ds-pipeline-md-testdspa"
 
 	// Construct DSPA Spec with MLMD Enabled
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
@@ -777,7 +786,7 @@ func TestDontDeployEnvoyRouteV2(t *testing.T) {
 
 	// Ensure MLMD-Envoy route doesn't yet exist
 	route := &v1.Route{}
-	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyName, testNamespace)
+	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyRouteName, testNamespace)
 	assert.False(t, created)
 	assert.Nil(t, err)
 
@@ -793,7 +802,7 @@ func TestDontDeployEnvoyRouteV2(t *testing.T) {
 
 	// Ensure MLMD-Envoy route still doesn't exist
 	route = &v1.Route{}
-	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyName, testNamespace)
+	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyRouteName, testNamespace)
 	assert.False(t, created)
 	assert.Nil(t, err)
 }
