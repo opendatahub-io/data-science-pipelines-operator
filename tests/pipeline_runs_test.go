@@ -49,7 +49,7 @@ func (suite *IntegrationTestSuite) TestPipelineSuccessfulRun() {
 		assert.Equal(t, 200, response.StatusCode)
 	})
 
-	suite.T().Run("Should successfully complete the Pipeleine Run", func(t *testing.T) {
+	suite.T().Run("Should successfully complete the Pipeline Run", func(t *testing.T) {
 		err := TestUtil.WaitForPipelineRunCompletion(t, APIServerURL)
 		require.NoError(t, err)
 	})
