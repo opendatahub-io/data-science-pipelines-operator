@@ -80,7 +80,7 @@ func TestDeployAPIServer(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Ensure readiness is handled
-	apiServerReady, err := reconciler.handleReadyCondition(ctx, dspa, params.APIServerDefaultResourceName, config.APIServerReady)
+	apiServerReady, err := reconciler.evaluateCondition(ctx, dspa, params.APIServerDefaultResourceName, config.APIServerReady)
 	assert.Equal(t, "Deploying", apiServerReady.Reason)
 	assert.Nil(t, err)
 }
