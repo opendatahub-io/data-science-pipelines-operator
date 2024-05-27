@@ -1,26 +1,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ds-pipeline-ui-testdsp4
+  name: ds-pipeline-ui-testdsp9
   namespace: default
   labels:
-    app: ds-pipeline-ui-testdsp4
+    app: ds-pipeline-ui-testdsp9
     component: data-science-pipelines
-    dspa: testdsp4
+    dspa: testdsp9
 spec:
   selector:
     matchLabels:
-      app: ds-pipeline-ui-testdsp4
+      app: ds-pipeline-ui-testdsp9
       component: data-science-pipelines
-      dspa: testdsp4
+      dspa: testdsp9
   template:
     metadata:
       annotations:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
       labels:
-        app: ds-pipeline-ui-testdsp4
+        app: ds-pipeline-ui-testdsp9
         component: data-science-pipelines
-        dspa: testdsp4
+        dspa: testdsp9
     spec:
       containers:
         - env:
@@ -35,43 +35,43 @@ spec:
               valueFrom:
                 secretKeyRef:
                   key: "accesskey"
-                  name: "ds-pipeline-s3-testdsp4"
+                  name: "ds-pipeline-s3-testdsp9"
             - name: MINIO_SECRET_KEY
               valueFrom:
                 secretKeyRef:
                   key: "secretkey"
-                  name: "ds-pipeline-s3-testdsp4"
+                  name: "ds-pipeline-s3-testdsp9"
             - name: ALLOW_CUSTOM_VISUALIZATIONS
               value: "true"
             - name: ARGO_ARCHIVE_LOGS
               value: "true"
             - name: ML_PIPELINE_SERVICE_HOST
-              value: ds-pipeline-testdsp4.default.svc.cluster.local
+              value: ds-pipeline-testdsp9.default.svc.cluster.local
             - name: ML_PIPELINE_SERVICE_PORT
               value: '8888'
             - name: METADATA_ENVOY_SERVICE_SERVICE_HOST
-              value: ds-pipeline-md-testdsp4
+              value: ds-pipeline-md-testdsp9
             - name: METADATA_ENVOY_SERVICE_SERVICE_PORT
               value: "9090"
             - name: AWS_ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:
                   key: "accesskey"
-                  name: "ds-pipeline-s3-testdsp4"
+                  name: "ds-pipeline-s3-testdsp9"
             - name: AWS_SECRET_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
                   key: "secretkey"
-                  name: "ds-pipeline-s3-testdsp4"
+                  name: "ds-pipeline-s3-testdsp9"
             - name: AWS_REGION
               value: "minio"
             - name: AWS_S3_ENDPOINT
-              value: "minio-testdsp4.default.svc.cluster.local"
+              value: "minio-testdsp9.default.svc.cluster.local"
             - name: AWS_SSL
               value: "false"
             - name: DISABLE_GKE_METADATA
               value: 'true'
-          image: this-frontend-image-from-cr-should-be-used:test4
+          image: frontend:test9
           imagePullPolicy: IfNotPresent
           livenessProbe:
             exec:
@@ -102,12 +102,12 @@ spec:
             periodSeconds: 5
             timeoutSeconds: 2
           resources:
-            requests:
-              cpu: 1239m
-              memory: 1Gi
             limits:
-              cpu: 2530m
-              memory: 5Gi
+              cpu: 100m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
           volumeMounts:
             - mountPath: /etc/config
               name: config-volume
@@ -116,15 +116,15 @@ spec:
           args:
             - --https-address=:8443
             - --provider=openshift
-            - --openshift-service-account=ds-pipeline-ui-testdsp4
+            - --openshift-service-account=ds-pipeline-ui-testdsp9
             - --upstream=http://localhost:3000
             - --tls-cert=/etc/tls/private/tls.crt
             - --tls-key=/etc/tls/private/tls.key
             - --cookie-secret=SECRET
-            - '--openshift-delegate-urls={"/": {"group":"route.openshift.io","resource":"routes","verb":"get","name":"ds-pipeline-ui-testdsp4","namespace":"default"}}'
-            - '--openshift-sar={"namespace":"default","resource":"routes","resourceName":"ds-pipeline-ui-testdsp4","verb":"get","resourceAPIGroup":"route.openshift.io"}'
+            - '--openshift-delegate-urls={"/": {"group":"route.openshift.io","resource":"routes","verb":"get","name":"ds-pipeline-ui-testdsp9","namespace":"default"}}'
+            - '--openshift-sar={"namespace":"default","resource":"routes","resourceName":"ds-pipeline-ui-testdsp9","verb":"get","resourceAPIGroup":"route.openshift.io"}'
             - --skip-auth-regex='(^/metrics|^/apis/v1beta1/healthz)'
-          image: oauth-proxy:test4
+          image: oauth-proxy:test9
           ports:
             - containerPort: 8443
               name: https
@@ -159,13 +159,13 @@ spec:
           volumeMounts:
             - mountPath: /etc/tls/private
               name: proxy-tls
-      serviceAccountName: ds-pipeline-ui-testdsp4
+      serviceAccountName: ds-pipeline-ui-testdsp9
       volumes:
         - configMap:
-            name: some-test-configmap
+            name: ds-pipeline-ui-configmap-testdsp9
             defaultMode: 420
           name: config-volume
         - name: proxy-tls
           secret:
-            secretName: ds-pipelines-ui-proxy-tls-testdsp4
+            secretName: ds-pipelines-ui-proxy-tls-testdsp9
             defaultMode: 420

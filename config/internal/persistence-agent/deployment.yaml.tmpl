@@ -40,8 +40,10 @@ spec:
               {{ else }}
               value: PipelineRun
               {{ end }}
+            {{ if .InterPodTLS }}
             - name: SSL_CERT_DIR
               value: "/etc/pki/tls/certs:/var/run/secrets/kubernetes.io/serviceaccount/"
+            {{ end }}
           image: "{{.PersistenceAgent.Image}}"
           imagePullPolicy: IfNotPresent
           name: ds-pipeline-persistenceagent

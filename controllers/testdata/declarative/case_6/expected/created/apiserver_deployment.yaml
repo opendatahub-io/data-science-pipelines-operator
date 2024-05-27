@@ -115,6 +115,8 @@ spec:
           args:
             - --config=/config
             - -logtostderr=true
+            - --tlsCertPath=/etc/tls/private/tls.crt
+            - --tlsCertKeyPath=/etc/tls/private/tls.key
           ports:
             - containerPort: 8888
               name: http
@@ -123,29 +125,15 @@ spec:
               name: grpc
               protocol: TCP
           livenessProbe:
-            exec:
-              command:
-                - wget
-                - -q
-                - -S
-                - -O
-                - '-'
-                - http://localhost:8888/apis/v1beta1/healthz
-            initialDelaySeconds: 3
-            periodSeconds: 5
-            timeoutSeconds: 2
+            httpGet:
+              path: /apis/v1beta1/healthz
+              port: http
+              scheme: HTTPS
           readinessProbe:
-            exec:
-              command:
-                - wget
-                - -q
-                - -S
-                - -O
-                - '-'
-                - http://localhost:8888/apis/v1beta1/healthz
-            initialDelaySeconds: 3
-            periodSeconds: 5
-            timeoutSeconds: 2
+            httpGet:
+              path: /apis/v1beta1/healthz
+              port: http
+              scheme: HTTPS
           resources:
             requests:
               cpu: 250m
@@ -157,6 +145,8 @@ spec:
             - name: server-config
               mountPath: /config/config.json
               subPath: config.json
+            - mountPath: /etc/tls/private
+              name: proxy-tls
             - name: ca-bundle
               mountPath: /dspa/custom-certs
         - name: oauth-proxy
@@ -164,7 +154,8 @@ spec:
             - --https-address=:8443
             - --provider=openshift
             - --openshift-service-account=ds-pipeline-testdsp6
-            - --upstream=http://localhost:8888
+            - --upstream=https://ds-pipeline-testdsp6.default.svc.cluster.local:8888
+            - --upstream-ca=/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
             - --tls-cert=/etc/tls/private/tls.crt
             - --tls-key=/etc/tls/private/tls.key
             - --cookie-secret=SECRET

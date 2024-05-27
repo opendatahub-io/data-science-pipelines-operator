@@ -4,6 +4,7 @@ metadata:
   name: dspa-ext
 spec:
   dspVersion: v2
+  interPodTLS: false
   apiServer:
     deploy: true
     enableOauth: false

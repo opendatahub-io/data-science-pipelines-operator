@@ -87,7 +87,7 @@ type DSPAParams struct {
 	CustomCABundle *dspa.CABundle
 	DSPONamespace  string
 	// Use to enable tls communication between component pods.
-	InterPodTLS string
+	InterPodTLS bool
 
 	APIServerServiceDNSName string
 }
@@ -578,7 +578,6 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.Namespace = dsp.Namespace
 	p.DSPONamespace = os.Getenv("DSPO_NAMESPACE")
 	p.DSPVersion = dsp.Spec.DSPVersion
-	p.InterPodTLS = dsp.Spec.InterPodTLS
 	p.Owner = dsp
 	p.APIServer = dsp.Spec.APIServer.DeepCopy()
 	p.APIServerDefaultResourceName = apiServerDefaultResourceNamePrefix + dsp.Name
@@ -595,7 +594,18 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.MLMD = dsp.Spec.MLMD.DeepCopy()
 	p.CustomCABundleRootMountPath = config.CustomCABundleRootMountPath
 	p.PiplinesCABundleMountPath = config.GetCABundleFileMountPath()
+	p.InterPodTLS = false
 	dspTrustedCAConfigMapKey := config.CustomDSPTrustedCAConfigMapKey
+
+	// InterPodTLS is only used in v2 dsp
+	if p.UsingV2Pipelines(dsp) {
+		// by default it's enabled when omitted
+		if dsp.Spec.InterPodTLS == nil {
+			p.InterPodTLS = true
+		} else {
+			p.InterPodTLS = *dsp.Spec.InterPodTLS
+		}
+	}
 
 	log := loggr.WithValues("namespace", p.Namespace).WithValues("dspa_name", p.Name)
 

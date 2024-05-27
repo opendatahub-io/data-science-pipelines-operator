@@ -35,12 +35,6 @@ spec:
             type: object
           spec:
             properties:
-              InterPodTLS:
-                default: enabled
-                description: InterPodTLS Set to "enable" or "disable" tls communication
-                  between DSPA components. Default to "enable". Only supported in
-                  OpenShift.
-                type: string
               apiServer:
                 default:
                   deploy: true
@@ -347,6 +341,12 @@ spec:
               dspVersion:
                 default: v1
                 type: string
+              interPodTLS:
+                default: true
+                description: InterPodTLS Set to "true" or "false" tls communication
+                  between DSPA components. Default to enable Inter-Pod tls by setting
+                  to "true". Only supported in DSP V2 and OpenShift.
+                type: boolean
               mlmd:
                 properties:
                   deploy:
