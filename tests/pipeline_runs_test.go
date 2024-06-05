@@ -47,11 +47,28 @@ func (suite *IntegrationTestSuite) TestPipelineSuccessfulRun() {
 		loggr.Info(responseString)
 		require.NoError(t, err)
 		assert.Equal(t, 200, response.StatusCode)
-	})
 
-	suite.T().Run("Should successfully complete the Pipeline Run", func(t *testing.T) {
-		err := TestUtil.WaitForPipelineRunCompletion(t, APIServerURL)
+		err = TestUtil.WaitForPipelineRunCompletion(t, APIServerURL)
 		require.NoError(t, err)
 	})
 
+	suite.T().Run("Should create a Pipeline Run using custom pip server", func(t *testing.T) {
+		// Retrieve Pipeline ID to create a new run
+		pipelineDisplayName := "Test pipeline run with custom pip server"
+		pipelineID := TestUtil.RetrievePipelineId(t, APIServerURL, pipelineDisplayName)
+		postUrl := fmt.Sprintf("%s/apis/v2beta1/runs", APIServerURL)
+		body := TestUtil.FormatRequestBody(t, pipelineID, pipelineDisplayName)
+		contentType := "application/json"
+		// Create a new run
+		response, err := http.Post(postUrl, contentType, bytes.NewReader(body))
+		require.NoError(t, err)
+		responseData, err := io.ReadAll(response.Body)
+		responseString := string(responseData)
+		loggr.Info(responseString)
+		require.NoError(t, err)
+		assert.Equal(t, 200, response.StatusCode)
+
+		err = TestUtil.WaitForPipelineRunCompletion(t, APIServerURL)
+		require.NoError(t, err)
+	})
 }

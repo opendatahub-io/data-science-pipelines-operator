@@ -1,0 +1,51 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: nginx-config
+data:
+  nginx.conf: |
+    user www-data;
+    worker_processes auto;
+    error_log /tmp/error.log;
+    pid /tmp/nginx.pid;
+
+
+    events {
+        worker_connections 1024;
+    }
+
+    http {
+        include /etc/nginx/conf.d/*.conf;
+
+        upstream pypi {
+            server pypi-server.test-pypiserver.svc.cluster.local:8080;
+        }
+
+        server {
+            listen 8081 default_server;
+            server_name localhost;
+
+            # Redirect HTTP traffic to HTTPS
+            return 301 https://$host$request_uri;
+        }
+
+        server {
+            listen 8443 ssl;
+            server_name localhost;
+
+            ssl_certificate /etc/nginx/ssl/server.crt;
+            ssl_certificate_key /etc/nginx/ssl/private.key;
+            ssl_protocols       TLSv1 TLSv1.1 TLSv1.2;
+            ssl_ciphers         HIGH:!aNULL:!MD5;
+
+
+            location / {
+            proxy_set_header  Host $host:$server_port;
+            proxy_set_header  X-Forwarded-Proto $scheme;
+            proxy_set_header  X-Real-IP $remote_addr;
+            proxy_temp_path   /tmp/proxy_temp;
+            proxy_set_header Connection "";
+            proxy_pass        http://pypi;
+          }
+        }
+    }
