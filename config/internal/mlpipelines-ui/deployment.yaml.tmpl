@@ -70,6 +70,8 @@ spec:
             - name: AWS_SSL
               value: "false"
             {{ end }}
+            - name: DISABLE_GKE_METADATA
+              value: 'true'
           image: {{.MlPipelineUI.Image}}
           imagePullPolicy: IfNotPresent
           livenessProbe:

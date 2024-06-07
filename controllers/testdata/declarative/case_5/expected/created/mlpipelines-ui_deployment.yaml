@@ -69,6 +69,8 @@ spec:
               value: "minio-testdsp5.default.svc.cluster.local"
             - name: AWS_SSL
               value: "false"
+            - name: DISABLE_GKE_METADATA
+              value: 'true'
           image: frontend:test5
           imagePullPolicy: IfNotPresent
           livenessProbe:
