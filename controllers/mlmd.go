@@ -19,7 +19,10 @@ import (
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 )
 
-var mlmdTemplatesDir = "ml-metadata"
+const (
+	mlmdTemplatesDir = "ml-metadata"
+	mlmdEnvoyRoute   = mlmdTemplatesDir + "/route/metadata-envoy.route.yaml.tmpl"
+)
 
 func (r *DSPAReconciler) ReconcileMLMD(dsp *dspav1alpha1.DataSciencePipelinesApplication,
 	params *DSPAParams) error {
@@ -33,15 +36,36 @@ func (r *DSPAReconciler) ReconcileMLMD(dsp *dspav1alpha1.DataSciencePipelinesApp
 
 	log.Info("Applying ML-Metadata (MLMD) Resources")
 
-	err := r.ApplyDir(dsp, params, mlmdTemplatesDir)
-	if err != nil {
-		return err
-	}
-
 	if params.UsingV1Pipelines(dsp) {
-		err = r.ApplyDir(dsp, params, mlmdTemplatesDir+"/v1")
+		if dsp.Spec.MLMD != nil {
+			err := r.ApplyDir(dsp, params, mlmdTemplatesDir)
+			if err != nil {
+				return err
+			}
+
+			if dsp.Spec.MLMD.Envoy == nil || dsp.Spec.MLMD.Envoy.DeployRoute {
+				err = r.Apply(dsp, params, mlmdEnvoyRoute)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		err := r.ApplyDir(dsp, params, mlmdTemplatesDir+"/v1")
 		if err != nil {
 			return err
+		}
+	} else {
+		err := r.ApplyDir(dsp, params, mlmdTemplatesDir)
+		if err != nil {
+			return err
+		}
+
+		if dsp.Spec.MLMD == nil || dsp.Spec.MLMD.Envoy == nil || dsp.Spec.MLMD.Envoy.DeployRoute {
+			err = r.Apply(dsp, params, mlmdEnvoyRoute)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

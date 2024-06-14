@@ -27,7 +27,7 @@ func (r *DSPAReconciler) ReconcileWorkflowController(dsp *dspav1alpha1.DataScien
 
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
 
-	if !dsp.Spec.WorkflowController.Deploy {
+	if dsp.Spec.WorkflowController == nil || !dsp.Spec.WorkflowController.Deploy {
 		log.Info("Skipping Application of WorkflowController Resources")
 		return nil
 	}

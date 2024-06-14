@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pypi-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pypi-server
+  template:
+    metadata:
+      labels:
+        app: pypi-server
+    spec:
+      containers:
+        - image: "quay.io/harshad16/pypi-server"
+          imagePullPolicy: IfNotPresent
+          name: pypi-server
+          command:
+            - pypi-server
+          args:
+            - run
+            - '--host'
+            - '0.0.0.0'
+            - '--port'
+            - '8080'
+            - '--disable-fallback'
+            - '--verbose'
+            - '/opt/app-root/packages'
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          resources:
+            requests:
+              cpu: "10m"
+              memory: 100Mi
+            limits:
+              cpu: "10m"
+              memory: 100Mi
+          volumeMounts:
+            - mountPath: /opt/app-root/packages
+              name: pypi-datastore
+            - name: ssl-certs
+              mountPath: /etc/ssl/certs
+        - image: "quay.io/jitesoft/nginx"
+          name: nginx
+          command:
+            - "/bin/sh"
+            - "-c"
+            - nginx -g "daemon off;"
+          ports:
+            - containerPort: 8081
+              protocol: TCP
+            - containerPort: 8443
+              protocol: TCP
+          resources:
+            requests:
+              cpu: "10m"
+              memory: 100Mi
+            limits:
+              cpu: "10m"
+              memory: 100Mi
+          volumeMounts:
+            - name: ssl-certs
+              mountPath: /etc/nginx/ssl
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+      volumes:
+        - name: pypi-datastore
+          persistentVolumeClaim:
+            claimName: pypi-datastore
+        - name: nginx-config
+          configMap:
+            name: nginx-config
+        - name: ssl-certs
+          secret:
+            secretName: nginx-certs

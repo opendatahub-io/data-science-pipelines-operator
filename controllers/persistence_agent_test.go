@@ -79,7 +79,7 @@ func TestDeployPersistenceAgent(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Ensure readiness is handled
-	persistenceAgentReady, err := reconciler.handleReadyCondition(ctx, dspa, params.PersistentAgentDefaultResourceName, config.PersistenceAgentReady)
+	persistenceAgentReady, err := reconciler.evaluateCondition(ctx, dspa, params.PersistentAgentDefaultResourceName, config.PersistenceAgentReady)
 	assert.Equal(t, "Deploying", persistenceAgentReady.Reason)
 	assert.Nil(t, err)
 }

@@ -9,4 +9,4 @@ spec:
       deploy: true
       image: 'quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance'
   mlpipelineUI:
-    image: quay.io/opendatahub/ds-pipelines-frontend:latest
+    image: quay.io/opendatahub/ds-pipelines-frontend:v2.3.0

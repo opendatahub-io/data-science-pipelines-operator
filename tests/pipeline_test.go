@@ -20,8 +20,9 @@ package integration
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"net/url"
 	"testing"
 
 	TestUtil "github.com/opendatahub-io/data-science-pipelines-operator/tests/util"
@@ -34,14 +35,16 @@ func (suite *IntegrationTestSuite) TestAPIServerDeployment() {
 		response, err := http.Get(fmt.Sprintf("%s/apis/v2beta1/pipelines", APIServerURL))
 		require.NoError(t, err)
 
-		responseData, err := ioutil.ReadAll(response.Body)
+		responseData, err := io.ReadAll(response.Body)
 		require.NoError(t, err)
 		assert.Equal(t, 200, response.StatusCode)
 		loggr.Info(string(responseData))
 	})
 
 	suite.T().Run("Should successfully upload a pipeline", func(t *testing.T) {
-		postUrl := fmt.Sprintf("%s/apis/v2beta1/pipelines/upload", APIServerURL)
+
+		name := "Test Pipeline Run"
+		postUrl := fmt.Sprintf("%s/apis/v2beta1/pipelines/upload?name=%s", APIServerURL, url.QueryEscape(name))
 		vals := map[string]string{
 			"uploadfile": "@resources/test-pipeline-run.yaml",
 		}
@@ -49,7 +52,25 @@ func (suite *IntegrationTestSuite) TestAPIServerDeployment() {
 
 		response, err := http.Post(postUrl, contentType, body)
 		require.NoError(t, err)
-		responseData, err := ioutil.ReadAll(response.Body)
+		responseData, err := io.ReadAll(response.Body)
+		responseString := string(responseData)
+		loggr.Info(responseString)
+		require.NoError(t, err)
+		assert.Equal(t, 200, response.StatusCode)
+	})
+
+	suite.T().Run("Should successfully upload a pipeline with custom pip server", func(t *testing.T) {
+
+		name := "Test pipeline run with custom pip server"
+		postUrl := fmt.Sprintf("%s/apis/v2beta1/pipelines/upload?name=%s", APIServerURL, url.QueryEscape(name))
+		vals := map[string]string{
+			"uploadfile": "@resources/test-pipeline-with-custom-pip-server-run.yaml",
+		}
+		body, contentType := TestUtil.FormFromFile(t, vals)
+
+		response, err := http.Post(postUrl, contentType, body)
+		require.NoError(t, err)
+		responseData, err := io.ReadAll(response.Body)
 		responseString := string(responseData)
 		loggr.Info(responseString)
 		require.NoError(t, err)

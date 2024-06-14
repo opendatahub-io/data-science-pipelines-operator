@@ -351,6 +351,9 @@ spec:
                     type: boolean
                   envoy:
                     properties:
+                      deployRoute:
+                        default: true
+                        type: boolean
                       image:
                         type: string
                       resources:

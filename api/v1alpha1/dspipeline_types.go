@@ -306,6 +306,9 @@ type MLMD struct {
 type Envoy struct {
 	Resources *ResourceRequirements `json:"resources,omitempty"`
 	Image     string                `json:"image,omitempty"`
+	// +kubebuilder:default:=true
+	// +kubebuilder:validation:Optional
+	DeployRoute bool `json:"deployRoute"`
 }
 
 type GRPC struct {

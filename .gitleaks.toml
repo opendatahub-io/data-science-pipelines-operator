@@ -6,5 +6,7 @@
     ".github/resources/mariadb/tls-config-configmap.yaml",
     ".github/resources/minio/certs-secret.yaml",
     ".github/resources/minio/cabundle-configmap.yaml",
-    ".github/resources/tls/root-ca-configmap.yaml"
+    ".github/resources/tls/root-ca-configmap.yaml",
+    ".github/resources/pypiserver/nginx-certs.yaml",
+    ".github/resources/pypiserver/nginx-tls-config.yaml"
   ]

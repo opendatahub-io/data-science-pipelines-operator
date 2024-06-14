@@ -79,7 +79,7 @@ func TestDeployScheduledWorkflow(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Ensure readiness is handled
-	scheduledWorkflowReady, err := reconciler.handleReadyCondition(ctx, dspa, params.ScheduledWorkflowDefaultResourceName, config.ScheduledWorkflowReady)
+	scheduledWorkflowReady, err := reconciler.evaluateCondition(ctx, dspa, params.ScheduledWorkflowDefaultResourceName, config.ScheduledWorkflowReady)
 	assert.Equal(t, "Deploying", scheduledWorkflowReady.Reason)
 	assert.Nil(t, err)
 }

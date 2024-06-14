@@ -118,7 +118,6 @@ jobs:
     needs:
       - validate_pr
       - fetch-data
-      - sync_manifests
       - create_dspo_tag_release
       - create_dsp_tag_release
     steps:
