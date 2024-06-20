@@ -18,16 +18,20 @@ DSPO and DSP versioning is tied together, and DSP `MAJOR` versions are tied to [
 > it is likely to quickly become incompatible with any specific tags/shas that are hardcoded.
 
 ## Pre-requisites
+
 Need GitHub repo admin permissions for DSPO and DSP repos.
 
 ## Release workflow
+
 Steps required for performing releases for `MAJOR`, `MINOR`, or `PATCH` vary depending on type.
 
 ### MAJOR Releases
+
 Given that `MAJOR` releases often contain large scale, api breaking, changes. It is likely the release process will vary
 between each `MAJOR` release. As such, each `MAJOR` release should have a specifically catered strategy.
 
 ### MINOR Releases
+
 Let `x.y.z` be the `latest` release that is highest DSPO/DSP version.
 
 Steps on how to release `x.y+1.z`
@@ -45,11 +49,8 @@ Steps on how to release `x.y+1.z`
 6. Create a tag release for `x.y+1.z` in DSPO and DSP (e.g. `v1.3.0`)
 7. Add any manifest changes to ODH manifests repo using the [ODH sync workflow]
 
-**Downstream Specifics**
-
-Downstream maintainers of DSP should forward any manifest changes to their odh-manifests downstream
-
 ### PATCH Releases
+
 DSP supports bug/security fixes for versions that are at most 1 `MINOR` versions behind the latest `MINOR` release.
 For example, if `v1.2` is the `latest` DSP release, DSP will backport bugs/security fixes to `v1.1` as `PATCH` (z) releases.
 
@@ -59,6 +60,7 @@ Let `x.y-1.a` be the highest version release that is one `MINOR` version behind 
 **Example**:
 If the latest release that is the highest version is `v1.2.0`\
 Then:
+
 ```txt
 x.y.z = v1.2.0
 x.y-1.a = v1.1.0
@@ -83,10 +85,10 @@ Then the commit `08eb98d` needs to trickle to `vx.y.z` and `vx.y-1.a` as `PATCH`
    * Using [release-tools] generate a params.env and submit a new pr to `vx.y.x` and `vx.y-1.x` branches
 4. Cut `vx.y.z+1` and `vx.y-1.a+1` in DSP and DSPO
 
-**Downstream Specifics**
+#### Downstream Specifics
 
 Downstream maintainers of DSP should:
-* forward any manifest changes to their odh-manifests downstream
+
 * ensure `odh-stable` branches in DSP/DSPO are upto date with bug/security fixes for the appropriate DSPO/DSP versions,
   and forward any changes from `odh-stable` to their downstream DSPO/DSP repos
 
