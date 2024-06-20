@@ -50,7 +50,7 @@ go test ./... --tags=test_integration -v \
   -kubeconfig=${KUBECONFIG_PATH} \
   -k8sApiServerHost=${TARGET_CLUSTER} \
   -DSPANamespace=${TARGET_NAMESPACE} \
-  -DSPAPath=resources/dspa-lite.yaml
+  -DSPAPath=resources/dspa-lite.yaml \
   -skipDeploy=true \
   -skipCleanup=true
 ```

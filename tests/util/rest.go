@@ -16,6 +16,7 @@ package testUtil
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -70,22 +71,27 @@ func FormFromFile(t *testing.T, form map[string]string) (*bytes.Buffer, string) 
 	return body, mp.FormDataContentType()
 }
 
-func RetrievePipelineId(t *testing.T, APIServerURL string, PipelineDisplayName string) string {
+func RetrievePipelineId(t *testing.T, APIServerURL string, PipelineDisplayName string) (string, error) {
 	response, err := http.Get(fmt.Sprintf("%s/apis/v2beta1/pipelines", APIServerURL))
 	require.NoError(t, err)
 	responseData, err := io.ReadAll(response.Body)
 	require.NoError(t, err)
 	var pipelineData Pipeline
-	var pipelineID string
+	var pipelineID *string
 	err = json.Unmarshal(responseData, &pipelineData)
 	require.NoError(t, err)
 	for _, pipeline := range pipelineData.Pipelines {
 		if pipeline.DisplayName == PipelineDisplayName {
-			pipelineID = pipeline.PipelineID
+			pipelineID = &pipeline.PipelineID
 			break
 		}
 	}
-	return pipelineID
+
+	if pipelineID != nil {
+		return *pipelineID, nil
+	} else {
+		return "", errors.New("pipeline not found")
+	}
 }
 
 func FormatRequestBody(t *testing.T, pipelineID string, PipelineDisplayName string) []byte {
@@ -132,6 +138,11 @@ func CheckPipelineRunStatus(t *testing.T, APIServerURL string) (string, error) {
 	var state string
 	err = json.Unmarshal(responseData, &data)
 	require.NoError(t, err)
+
+	if data["runs"] == nil {
+		// No runs found
+		return "", nil
+	}
 
 	// Extracting the Run state
 	runs := data["runs"].([]interface{})
