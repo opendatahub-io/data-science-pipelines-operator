@@ -1,0 +1,7 @@
+---
+# TODO(gfrasca): Remove?  Don't think we need this
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: workflow-controller-configmap
+  namespace: argo

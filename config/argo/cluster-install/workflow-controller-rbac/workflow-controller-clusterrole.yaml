@@ -1,4 +1,3 @@
----
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -63,13 +62,13 @@ rules:
   - list
   - watch
 - apiGroups:
-  - argoproj.io
+    - argoproj.io
   resources:
-  - workflowtaskresults
+    - workflowtaskresults
   verbs:
-  - list
-  - watch
-  - deletecollection
+    - list
+    - watch
+    - deletecollection
 - apiGroups:
   - ""
   resources:
@@ -97,10 +96,10 @@ rules:
   - create
   - patch
 - apiGroups:
-  - policy
+    - "policy"
   resources:
-  - poddisruptionbudgets
+    - poddisruptionbudgets
   verbs:
-  - create
-  - get
-  - delete
+    - create
+    - get
+    - delete
