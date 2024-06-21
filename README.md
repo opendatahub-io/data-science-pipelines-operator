@@ -1,32 +1,40 @@
 # Data Science Pipelines Operator
 
-The Data Science Pipelines Operator (DSPO) is an OpenShift Operator that is used to deploy single namespace scoped 
+The Data Science Pipelines Operator (DSPO) is an OpenShift Operator that is used to deploy single namespace scoped
 Data Science Pipeline stacks onto individual OCP namespaces.
 
-# Table of Contents
+## Table of Contents
 
-1. [Overview](#overview)
-2. [Quickstart](#quickstart)
-   1. [Pre-requisites](#pre-requisites)
-   2. [Deploy the Operator via ODH](#deploy-the-operator-via-odh)
-   3. [Deploy the Operator standalone](#deploy-the-operator-standalone)
-   4. [Deploy DSPA instance](#deploy-dsp-instance)
-      1. [Deploy another DSPA instance](#deploy-another-dsp-instance)
-      2. [Deploy a DSPA with custom credentials](#deploy-a-dsp-with-custom-credentials)
-      3. [Deploy a DSPA with External Object Storage](#deploy-a-dsp-with-external-object-storage)
-3. [DataSciencePipelinesApplication Component Overview](#datasciencepipelinesapplication-component-overview)
-4. [Using a DataSciencePipelinesApplication](#using-a-datasciencepipelinesapplication)
-   1. [Using the Graphical UI](#using-the-graphical-ui)
-   2. [Using the API](#using-the-api)
-5. [Cleanup](#cleanup)
-   1. [Cleanup ODH Installation](#cleanup-odh-installation)
-   2. [Cleanup Standalone Installation](#cleanup-standalone-installation)
-6. [Run tests](#run-tests)
-7. [Metrics](#metrics)
-8. [Configuring Log Levels for the Operator](#configuring-log-levels-for-the-operator)
-9. [Deployment and Testing Guidelines for Developers](#deployment-and-testing-guidelines-for-developers)
+- [Data Science Pipelines Operator](#data-science-pipelines-operator)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Quickstart](#quickstart)
+  - [Pre-requisites](#pre-requisites)
+  - [Deploy the Operator via ODH](#deploy-the-operator-via-odh)
+    - [Using a development image](#using-a-development-image)
+  - [Deploy the Operator standalone](#deploy-the-operator-standalone)
+  - [Deploy DSP instance](#deploy-dsp-instance)
+    - [Deploy another DSP instance](#deploy-another-dsp-instance)
+    - [Deploy a DSP with custom credentials](#deploy-a-dsp-with-custom-credentials)
+    - [Deploy a DSP with external Object Storage](#deploy-a-dsp-with-external-object-storage)
+  - [DataSciencePipelinesApplication Component Overview](#datasciencepipelinesapplication-component-overview)
+  - [Deploying Optional Components](#deploying-optional-components)
+    - [MariaDB](#mariadb)
+    - [Minio](#minio)
+    - [ML Pipelines UI](#ml-pipelines-ui)
+    - [ML Metadata](#ml-metadata)
+  - [Using a DataSciencePipelinesApplication](#using-a-datasciencepipelinesapplication)
+  - [Using the Graphical UI](#using-the-graphical-ui)
+  - [Using the API](#using-the-api)
+  - [Cleanup](#cleanup)
+  - [Cleanup ODH Installation](#cleanup-odh-installation)
+  - [Cleanup Standalone Installation](#cleanup-standalone-installation)
+  - [Run tests](#run-tests)
+  - [Metrics](#metrics)
+  - [Configuring Log Levels for the Operator](#configuring-log-levels-for-the-operator)
+  - [Deployment and Testing Guidelines for Developers](#deployment-and-testing-guidelines-for-developers)
 
-# Overview
+## Overview
 
 Data Science Pipelines (DSP) allows data scientists to track progress as they
 iterate over development of ML models. With DSP, a data scientist can create
@@ -46,11 +54,12 @@ or [Elyra](https://github.com/elyra-ai/elyra) to author their workflows, and
 interact with them in the
 [ODH dashbard](https://github.com/opendatahub-io/odh-dashboard).
 
-# Quickstart
+## Quickstart
 
 To get started you will first need to satisfy the following pre-requisites:
 
 ## Pre-requisites
+
 1. An OpenShift cluster that is 4.11 or higher.
 2. You will need to be logged into this cluster as [cluster admin] via [oc client].
 3. Based on which DSP version to install you will need to do the following:
@@ -91,7 +100,7 @@ EOF
 
 > ℹ️ **Note:**
 >
-> You can also deploy other ODH components using DataScienceCluster`. See https://github.com/opendatahub-io/opendatahub-operator#example-datasciencecluster for more information.
+> You can also deploy other ODH components using DataScienceCluster`. See <https://github.com/opendatahub-io/opendatahub-operator#example-datasciencecluster> for more information.
 
 Confirm the pods are successfully deployed and reach running state:
 
@@ -108,8 +117,8 @@ You can use custom manifests from a branch or tag to use a different Data Scienc
 
 Create a (or edit the existent) `DataSciencePipelines` adding `devFlags.manifests` with the URL of your branch or tag. For example, given the following repository and branch:
 
-* Repository: `https://github.com/a_user/data-science-pipelines-operator`
-* Branch: `my_branch`
+- Repository: `https://github.com/a_user/data-science-pipelines-operator`
+- Branch: `my_branch`
 
 The `DataSciencePipelines` YAML should look like:
 
@@ -134,15 +143,16 @@ spec:
 
 ## Deploy the Operator standalone
 
-First clone this repository: 
+First clone this repository:
 
 ```bash
 WORKING_DIR=$(mktemp -d)
 git clone https://github.com/opendatahub-io/data-science-pipelines-operator.git ${WORKING_DIR}
 ```
+
 If you already have the repository cloned, set `WORKING_DIR=` to its absolute location accordingly.
 
-DSPO can be installed in any namespace, we'll deploy it in the following namespace, you may update this environment 
+DSPO can be installed in any namespace, we'll deploy it in the following namespace, you may update this environment
 variable accordingly.
 
 ```bash
@@ -155,6 +165,7 @@ oc new-project ${ODH_NS}
 Now we will navigate to the DSPO manifests then build and deploy them to this namespace.
 
 Run the following to deploy the ful DSPO v2 stack.
+
 ```bash
 cd ${WORKING_DIR}
 make deploy OPERATOR_NS=${ODH_NS}
@@ -179,8 +190,8 @@ DSP_Namespace=test-ds-project-1
 oc new-project ${DSP_Namespace}
 ```
 
-DSPO introduces a new custom resource to your cluster called `DataSciencePipelinesApplication`. This resource is where you configure your DSP 
-components, your DB and Storage configurations, and so forth. For now, we'll use the sample one provided, feel free to 
+DSPO introduces a new custom resource to your cluster called `DataSciencePipelinesApplication`. This resource is where you configure your DSP
+components, your DB and Storage configurations, and so forth. For now, we'll use the sample one provided, feel free to
 inspect this sample resource to see other configurable options.
 
 ```bash
@@ -189,22 +200,21 @@ kustomize build . | oc -n ${DSP_Namespace} apply -f -
 ```
 
 > Note: the sample CR used here deploys a minio instance so DSP may work out of the box
-> this is unsupported in production environments and we recommend to provide your own 
+> this is unsupported in production environments and we recommend to provide your own
 > object storage connection details via spec.objectStorage.externalStorage
 > see ${WORKING_DIR}/config/samples/v2/external-object-storage/dspa.yaml for an example.
 
-Confirm all pods reach ready state by running: 
+Confirm all pods reach ready state by running:
 
-```
+```bash
 oc get pods -n ${DSP_Namespace}
 ```
 
 For instructions on how to use this DSP instance refer to these instructions: [here](#using-a-datasciencepipelinesapplication).
 
-### Deploy another DSP instance 
+### Deploy another DSP instance
 
-You can use the DSPO to deploy multiple `DataSciencePipelinesApplication` instances in different OpenShift namespaces, for example earlier 
-we deployed a `DataSciencePipelinesApplication` resource named `sample`. We can use this again and deploy it to a different namespace:
+You can use the DSPO to deploy multiple `DataSciencePipelinesApplication` instances in different OpenShift namespaces, for example earlier we deployed a `DataSciencePipelinesApplication` resource named `sample`. We can use this again and deploy it to a different namespace:
 
 ```bash
 DSP_Namespace_2=test-ds-project-2
@@ -215,9 +225,9 @@ kustomize build . | oc -n ${DSP_Namespace_2} apply -f -
 
 ### Deploy a DSP with custom credentials
 
-Using DSPO you can specify custom credentials for Database and Object storage. If specifying external connections, this 
-is required. You can also provide secrets for the built in MariaDB and Minio deployments. To see a sample configuration 
-you can simply investigate and deploy the following path: 
+Using DSPO you can specify custom credentials for Database and Object storage. If specifying external connections, this
+is required. You can also provide secrets for the built in MariaDB and Minio deployments. To see a sample configuration
+you can simply investigate and deploy the following path:
 
 ```bash
 DSP_Namespace_3=test-ds-project-3
@@ -226,18 +236,18 @@ cd ${WORKING_DIR}/config/samples/v2/custom-configs
 kustomize build . | oc -n ${DSP_Namespace_3} apply -f -
 ```
 
-Notice the introduction of 2 `secrets` `testdbsecret`, `teststoragesecret` and 2 `configmaps` `custom-ui-configmap` and 
-`custom-artifact-script`. The `secrets` allow you to provide your own credentials for the DB and MariaDB connections. 
+Notice the introduction of 2 `secrets` `testdbsecret`, `teststoragesecret` and 2 `configmaps` `custom-ui-configmap` and
+`custom-artifact-script`. The `secrets` allow you to provide your own credentials for the DB and MariaDB connections.
 
 These can be configured by the end user as needed.
 
 ### Deploy a DSP with external Object Storage
 
-To specify a custom Object Storage (example an AWS s3 bucket) you will need to provide DSPO with your S3 credentials in 
+To specify a custom Object Storage (example an AWS s3 bucket) you will need to provide DSPO with your S3 credentials in
 the form of a k8s `Secret`, see an example of such a secret here `config/samples/v2/external-object-storage/storage-creds.yaml`.
 
-DSPO can deploy a DSPA instance and use this S3 bucket for storing its metadata and pipeline artifacts. A sample 
-configuration for a DSPA that does this is found in `config/samples/v2/external-object-storage`, you can update this as 
+DSPO can deploy a DSPA instance and use this S3 bucket for storing its metadata and pipeline artifacts. A sample
+configuration for a DSPA that does this is found in `config/samples/v2/external-object-storage`, you can update this as
 needed, and deploy this DSPA by running the following:
 
 ```bash
@@ -247,28 +257,31 @@ cd ${WORKING_DIR}/config/samples/v2/external-object-storage
 kustomize build . | oc -n ${DSP_Namespace_3} apply -f -
 ```
 
-# DataSciencePipelinesApplication Component Overview
+## DataSciencePipelinesApplication Component Overview
 
-When a `DataSciencePipelinesApplication` is deployed, the following components are deployed in the target namespace: 
-* APIServer 
-* Persistence Agent
-* Scheduled Workflow controller
+When a `DataSciencePipelinesApplication` is deployed, the following components are deployed in the target namespace:
 
-If specified in the `DataSciencePipelinesApplication` resource, the following components may also be additionally deployed: 
-* MariaDB
-* Minio
-* MLPipelines UI
-* MLMD (ML Metadata)
+- APIServer
+- Persistence Agent
+- Scheduled Workflow controller
 
-To understand how these components interact with each other please refer to the upstream 
+If specified in the `DataSciencePipelinesApplication` resource, the following components may also be additionally deployed:
+
+- MariaDB
+- Minio
+- MLPipelines UI
+- MLMD (ML Metadata)
+
+To understand how these components interact with each other please refer to the upstream
 [Kubeflow Pipelines Architectural Overview] documentation.
 
 ## Deploying Optional Components
 
 ### MariaDB
+
 To deploy a standalone MariaDB metadata database (rather than providing your own database connection details), simply add a `mariaDB` item under the `spec.database` in your DSPA definition with an `deploy` key set to `true`.  All other fields are defaultable/optional, see [All Fields DSPA Example](config/samples/v2/dspa-all-fields/dspa_all_fields.yaml) for full details.  Note that this component is mutually exclusive with externally-provided databases (defined by `spec.database.externalDB`).
 
-```
+```yaml
 apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
 kind: DataSciencePipelinesApplication
 metadata:
@@ -282,9 +295,10 @@ spec:
 ```
 
 ### Minio
+
 To deploy a Minio Object Storage component (rather than providing your own object storage connection details), simply add a `minio` item under the `spec.objectStorage` in your DSPA definition with an `image` key set to a valid minio component container image.  All other fields are defaultable/optional, see [All Fields DSPA Example](config/samples/v2/dspa-all-fields/dspa_all_fields.yaml) for full details.  Note that this component is mutually exclusive with externally-provided object stores (defined by `spec.objectStorage.externalStorage`).
 
-```
+```yaml
 apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
 kind: DataSciencePipelinesApplication
 metadata:
@@ -299,9 +313,10 @@ spec:
 ```
 
 ### ML Pipelines UI
+
 To deploy the standalone DS Pipelines UI component, simply add a `spec.mlpipelineUI` item to your DSPA with an `image` key set to a valid ui component container image.  All other fields are defaultable/optional, see [All Fields DSPA Example](config/samples/v2/dspa-all-fields/dspa_all_fields.yaml) for full details.
 
-```
+```yaml
 apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
 kind: DataSciencePipelinesApplication
 metadata:
@@ -314,11 +329,11 @@ spec:
     image: 'quay.io/opendatahub/odh-ml-pipelines-frontend-container:beta-ui'
 ```
 
-
 ### ML Metadata
+
 To deploy the ML Metadata artifact linage/metadata component, simply add a `spec.mlmd` item to your DSPA with `deploy` set to `true`.  All other fields are defaultable/optional, see [All Fields DSPA Example](config/samples/v2/dspa-all-fields/dspa_all_fields.yaml) for full details.
 
-```
+```yaml
 apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
 kind: DataSciencePipelinesApplication
 metadata:
@@ -329,12 +344,11 @@ spec:
       deploy: true
 ```
 
-
-# Using a DataSciencePipelinesApplication
+## Using a DataSciencePipelinesApplication
 
 When a `DataSciencePipelinesApplication` is deployed, use the MLPipelines UI endpoint to interact with DSP, either via a GUI or via API calls.
 
-You can retrieve this route by running the following in your terminal: 
+You can retrieve this route by running the following in your terminal:
 
 ```bash
 DSP_CR_NAME=sample
@@ -344,55 +358,55 @@ echo https://$(oc get routes -n ${DSP_Namespace} ds-pipeline-ui-${DSP_CR_NAME} -
 
 ## Using the Graphical UI
 
-> Note the UI presented below is the upstream Kubeflow Pipelines UI, this is not supported in DSP and will be replaced 
-> with the ODH Dashboard UI. Until then, this UI can be deployed via DSPO for experimentation/development purposes. 
+> Note the UI presented below is the upstream Kubeflow Pipelines UI, this is not supported in DSP and will be replaced
+> with the ODH Dashboard UI. Until then, this UI can be deployed via DSPO for experimentation/development purposes.
 > Note however that this UI is not a supported feature of DSPO/ODH.
 
-Navigate to the route retrieved in the last step. You will be presented with the MLPipelines UI. In this walkthrough we 
+Navigate to the route retrieved in the last step. You will be presented with the MLPipelines UI. In this walkthrough we
 will upload a pipeline and start a run based off it.
 
 To start, click the "Upload Pipeline" button.
 
-![](docs/images/upload_pipeline.png)
+![pipeline](docs/images/upload_pipeline.png)
 
-Choose a file, you can use the [flipcoin example]. Download this example and select it for the first step. Then click 
+Choose a file, you can use the [flipcoin example]. Download this example and select it for the first step. Then click
 "Create" for the second step.
 
-![](docs/images/upload_flipcoin.png)
+![flipcoin](docs/images/upload_flipcoin.png)
 
 Once done, you can now use this `Pipeline` to create a `Run`, do this by pressing "+ Create Run".
 
-![](docs/images/create_run.png)
+![create](docs/images/create_run.png)
 
-On this page specify the `Pipeline` we just uploaded if it's not already auto selected. Similarly with the version, 
-with the example there will only be one version listed. Give this `Run` a name, or keep the default as is. Then click 
+On this page specify the `Pipeline` we just uploaded if it's not already auto selected. Similarly with the version,
+with the example there will only be one version listed. Give this `Run` a name, or keep the default as is. Then click
 "Start".
 
-![](docs/images/start_run.png)
+![start](docs/images/start_run.png)
 
-Once you click start you will be navigated to the `Runs` page where you can see your previous runs that are have been 
+Once you click start you will be navigated to the `Runs` page where you can see your previous runs that are have been
 executed, or currently executing. You can click the most recently started Run to view it's execution graph.
 
-![](docs/images/started_run.png)
+![started](docs/images/started_run.png)
 
 You should see something similar to the following once the `Run` completes.
 
-![](docs/images/executed_run.png)
+![executed](docs/images/executed_run.png)
 
-Click the first "flip-coin" step. This step produces an output message either "heads" or "tails", confirm that you can 
+Click the first "flip-coin" step. This step produces an output message either "heads" or "tails", confirm that you can
 see these logs after clicking this step and navigating to "Logs."
 
-![](docs/images/logs.png)
+![logs](docs/images/logs.png)
 
 ## Using the API
 
-> Note: By default we use kfp-tekton 1.5.x for this section so you will need [kfp-tekton v1.5.x sdk installed][kfp-tekton] 
+> Note: By default we use kfp-tekton 1.5.x for this section so you will need [kfp-tekton v1.5.x sdk installed][kfp-tekton]
 > in your environment
 
-In the previous step we submitted a generated `Pipeline` yaml via the GUI. We can also submit the `Pipeline` code 
+In the previous step we submitted a generated `Pipeline` yaml via the GUI. We can also submit the `Pipeline` code
 directly either locally or via a notebook.
 
-You can find the `Pipeline` code example [here][flipcoin code example]. We can submit this to the DSP API Server by 
+You can find the `Pipeline` code example [here][flipcoin code example]. We can submit this to the DSP API Server by
 including this code in the following Python script:
 
 ```bash
@@ -414,9 +428,9 @@ client = kfp_tekton.TektonClient(host=route, existing_token=token)
 client.create_run_from_pipeline_func(pipeline_func=flipcoin_pipeline, arguments={})
 ```
 
-> Note: If you are in an unsecured cluster, you may encounter `CERTIFICATE_VERIFY_FAILED` error, to work around this 
+> Note: If you are in an unsecured cluster, you may encounter `CERTIFICATE_VERIFY_FAILED` error, to work around this
 > you can pass in the self-signed certs to the kfp-tekton client. For instance, if running inside a notebook or pod
-> on the same cluster, you can do the following: 
+> on the same cluster, you can do the following:
 
 ```python
 ...
@@ -425,7 +439,7 @@ client = kfp_tekton.TektonClient(host=route, existing_token=token, ssl_ca_cert=c
 client.create_run_from_pipeline_func(pipeline_func=flipcoin_pipeline, arguments={})
 ```
 
-Retrieve your token and DSP route: 
+Retrieve your token and DSP route:
 
 ```bash
 # This is the namespace you deployed the DataSciencePipelinesApplication Custom Resource
@@ -436,18 +450,18 @@ export DSP_ROUTE="https://$(oc get routes -n ${DSP_Namespace} ds-pipeline-ui-${D
 export OCP_AUTH_TOKEN=$(oc whoami --show-token)
 ```
 
-And finally execute this script and submit the flip coin example: 
+And finally execute this script and submit the flip coin example:
 
 ```bash
 python execute_pipeline.py
 ```
 
-You can navigate to the UI again and find your newly created run there, or you could amend the script above and list 
+You can navigate to the UI again and find your newly created run there, or you could amend the script above and list
 the runs via `client.list_runs()`.
 
-# Cleanup
+## Cleanup
 
-To remove a `DataSciencePipelinesApplication` from your cluster, run: 
+To remove a `DataSciencePipelinesApplication` from your cluster, run:
 
 ```bash
 # Replace environment variables accordingly
@@ -456,7 +470,7 @@ oc delete ${YOUR_DSPIPELINE_NAME} -n ${YOUR_DSPIPELINES_NAMESPACE}
 
 The DSPO will clean up all manifests associated with each `DataSciencePipelinesApplication` instance.
 
-Or you can remove all `DataSciencePipelinesApplication` instances in your whole cluster by running the following: 
+Or you can remove all `DataSciencePipelinesApplication` instances in your whole cluster by running the following:
 
 ```bash
 oc delete DataSciencePipelinesApplication --all -A
@@ -485,11 +499,12 @@ make undeploy OPERATOR_NS=${ODH_NS}
 oc delete project ${ODH_NS}
 ```
 
-# Run tests 
+## Run tests
 
 Simply clone the directory and execute `make test`.
 
-To run it without `make` you can run the following: 
+To run it without `make` you can run the following:
+
 ```bash
 tmpFolder=$(mktemp -d)
 go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
@@ -500,47 +515,51 @@ go test ./... -coverprofile cover.out
 pre-commit run --all-files
 ```
 
-You can find a more permanent location to install `setup-envtest` into on your local filesystem and export 
-`KUBEBUILDER_ASSETS` into your `.bashrc` or equivalent. By doing this you can always run `pre-commit run --all-files` 
+You can find a more permanent location to install `setup-envtest` into on your local filesystem and export
+`KUBEBUILDER_ASSETS` into your `.bashrc` or equivalent. By doing this you can always run `pre-commit run --all-files`
 without having to repeat these steps.
 
-# Metrics
+## Metrics
 
 The Data Science Pipelines Operator exposes standard operator-sdk metrics for controller monitoring purposes.  
 In addition to these metrics, DSPO also exposes several custom metrics for monitoring the status of the DataSciencePipelinesApplications that it owns.
 
 They are as follows:
+
 - `data_science_pipelines_application_apiserver_ready` - Gauge that indicates if the DSPA's APIServer is in a Ready state (1 => Ready, 0 => Not Ready)
 - `data_science_pipelines_application_persistenceagent_ready` - Gauge that indicates if the DSPA's PersistenceAgent is in a Ready state (1 => Ready, 0 => Not Ready)
 - `data_science_pipelines_application_scheduledworkflow_ready` - Gauge that indicates if the DSPA's ScheduledWorkflow manager is in a Ready state (1 => Ready, 0 => Not Ready)
 - `data_science_pipelines_application_ready` - Gauge that indicates if the DSPA is in a fully Ready state (1 => Ready, 0 => Not Ready)
 
-# Configuring Log Levels for the Operator
+## Configuring Log Levels for the Operator
 
 By default, the operator's log messages are set to `info` severity.
 If you wish to adjust the log verbosity, you can do so by modifying the `ZAP_LOG_LEVEL` parameter in [params.env](config/base/params.env) file to your preferred severity level.
 
 For a comprehensive list of available values, please consult the [Zap documentation](https://pkg.go.dev/go.uber.org/zap#pkg-constants).
 
-# Deployment and Testing Guidelines for Developers
+## Deployment and Testing Guidelines for Developers
 
 **To build the DSPO locally :**
 
 Login oc using following command:
 
-```bash                                                    
+```bash
 oc login                                                   
-```                                                        
+```
+
 Install CRDs using the following command:
 
-```bash                                                    
+```bash
 kubectl apply -k config/crd                                
-```                                                        
+```
+
 Execute the following command:
 
-```bash                                                    
+```bash
 go build main.go                                           
-```    
+```
+
 **To run the DSPO locally :**
 
 Execute the following command:
@@ -548,7 +567,9 @@ Execute the following command:
 ```bash
 go run main.go --config=$config
 ```
+
 Below is the sample config file (the tags for the images can be edited as required):
+
 ```bash
 Images:
   ApiServer: quay.io/opendatahub/ds-pipelines-api-server:latest
@@ -563,6 +584,7 @@ Images:
   MlmdGRPC: quay.io/opendatahub/ds-pipelines-metadata-grpc:latest
   MlmdWriter: quay.io/opendatahub/ds-pipelines-metadata-writer:latest  
 ```
+
 **To build your own images :**
 
 All the component images are available [here][component-images] and for thirdparty images [here][thirdparty-images]. Build these images from root as shown in the below example:
@@ -570,6 +592,7 @@ All the component images are available [here][component-images] and for thirdpar
 ```bash
 podman build . -f backend/Dockerfile -t quay.io/your_repo/dsp-apiserver:sometag
 ```
+
 **To run the tests:**
 
 Execute `make test` or `make unittest` or `make functest` based on the level of testing as mentioned below:
@@ -609,6 +632,7 @@ After making your API changes, run the following command to regenerate code and 
 ```bash
 make generate
 ```
+
 Refer to kubebuilder docs [here][kubebuilder-docs] for more info.
 
 **How to run pre-commit tests:**
@@ -647,4 +671,4 @@ Refer to this [repo][kubeflow-pipelines-examples] to see examples of different p
 [kubebuilder-docs]: https://book.kubebuilder.io/
 [dspa-yaml]: https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/config/samples/v2/dspa-all-fields/dspa_all_fields.yaml#L77
 [sample-yaml]: https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/config/samples/v2/dspa-simple/dspa_simple.yaml
-[kubeflow-pipelines-examples]: https://github.com/rh-datascience-and-edge-practice/kubeflow-pipelines-examples 
+[kubeflow-pipelines-examples]: https://github.com/rh-datascience-and-edge-practice/kubeflow-pipelines-examples
