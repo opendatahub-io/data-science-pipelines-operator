@@ -33,6 +33,7 @@ Data Science Pipeline stacks onto individual OCP namespaces.
   - [Metrics](#metrics)
   - [Configuring Log Levels for the Operator](#configuring-log-levels-for-the-operator)
   - [Deployment and Testing Guidelines for Developers](#deployment-and-testing-guidelines-for-developers)
+    - [Releases](#releases)
 
 ## Overview
 
@@ -44,15 +45,13 @@ training data, model hyperparameters, model code, etc., and repeatably
 rerun these experiments.
 
 Data Science Pipelines is based on the upstream [Kubeflow Pipelines (KFP)][kfp]
-project. We leverage the [kfp-tekton][kfp] project to run pipelines backed
-by the Tekton (rather than Argo, which is the default choice in KFP). We
-currently distributed version 1.x of KFP, and are working to support v2.
+project.
 
 Data Scientists can use tools like the
-[kfp-tekton SDK](https://github.com/kubeflow/kfp-tekton/blob/master/sdk/README.md)
+[kfp SDK](https://github.com/kubeflow/pipelines/tree/master/sdk)
 or [Elyra](https://github.com/elyra-ai/elyra) to author their workflows, and
 interact with them in the
-[ODH dashbard](https://github.com/opendatahub-io/odh-dashboard).
+[ODH dashboard](https://github.com/opendatahub-io/odh-dashboard).
 
 ## Quickstart
 
@@ -672,3 +671,9 @@ Refer to this [repo][kubeflow-pipelines-examples] to see examples of different p
 [dspa-yaml]: https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/config/samples/v2/dspa-all-fields/dspa_all_fields.yaml#L77
 [sample-yaml]: https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/config/samples/v2/dspa-simple/dspa_simple.yaml
 [kubeflow-pipelines-examples]: https://github.com/rh-datascience-and-edge-practice/kubeflow-pipelines-examples
+
+### Releases
+
+Refer to [RELEASE.md] for details on the release process
+
+[RELEASE.md]: ./docs/release/RELEASE.md
