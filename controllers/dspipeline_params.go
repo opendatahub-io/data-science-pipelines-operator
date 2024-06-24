@@ -804,6 +804,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		argoExecImageFromConfig := config.GetStringConfigWithDefault(config.ArgoExecImagePath, config.DefaultImageValue)
 		setStringDefault(argoWorkflowImageFromConfig, &p.WorkflowController.Image)
 		setStringDefault(argoExecImageFromConfig, &p.WorkflowController.ArgoExecImage)
+		setResourcesDefault(config.WorkflowControllerResourceRequirements, &p.WorkflowController.Resources)
 	}
 
 	err := p.SetupMLMD(dsp, log)
