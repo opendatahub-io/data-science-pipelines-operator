@@ -57,9 +57,24 @@ spec:
           name: metrics
         - containerPort: 6060
         resources:
-          requests:
-            cpu: 100m
-            memory: 500Mi
+            {{ if .WorkflowController.Resources.Requests }}
+            requests:
+              {{ if .WorkflowController.Resources.Requests.CPU }}
+              cpu: {{.WorkflowController.Resources.Requests.CPU}}
+              {{ end }}
+              {{ if .WorkflowController.Resources.Requests.Memory }}
+              memory: {{.WorkflowController.Resources.Requests.Memory}}
+              {{ end }}
+            {{ end }}
+            {{ if .WorkflowController.Resources.Limits }}
+            limits:
+              {{ if .WorkflowController.Resources.Limits.CPU }}
+              cpu: {{.WorkflowController.Resources.Limits.CPU}}
+              {{ end }}
+              {{ if .WorkflowController.Resources.Limits.Memory }}
+              memory: {{.WorkflowController.Resources.Limits.Memory}}
+              {{ end }}
+            {{ end }}
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
