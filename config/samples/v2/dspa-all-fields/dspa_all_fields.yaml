@@ -11,6 +11,9 @@ metadata:
 spec:
   dspVersion: v2
   apiServer:
+    customKfpLauncherConfigMap:
+      name: configmapname
+      key: keyname
     deploy: true
     image: quay.io/opendatahub/ds-pipelines-api-server:latest
     argoLauncherImage: quay.io/org/kfp-launcher:latest

@@ -53,6 +53,8 @@ const (
 	CustomServerConfigMapNameKey    = "config.json"
 	DSPServicePrefix                = "ds-pipeline"
 
+	CustomKfpLauncherConfigMapName = "kfp-launcher"
+
 	DefaultDBSecretNamePrefix = "ds-pipeline-db-"
 	DefaultDBSecretKey        = "password"
 	GeneratedDBPasswordLength = 12
