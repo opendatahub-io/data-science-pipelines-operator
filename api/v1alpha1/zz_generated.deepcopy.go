@@ -114,6 +114,11 @@ func (in *DSPASpec) DeepCopyInto(out *DSPASpec) {
 		*out = new(MLMD)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.InterPodTLS != nil {
+		in, out := &in.InterPodTLS, &out.InterPodTLS
+		*out = new(bool)
+		**out = **in
+	}
 	if in.WorkflowController != nil {
 		in, out := &in.WorkflowController, &out.WorkflowController
 		*out = new(WorkflowController)

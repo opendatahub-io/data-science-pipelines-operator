@@ -1,26 +1,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ds-pipeline-ui-{{.Name}}
-  namespace: {{.Namespace}}
+  name: ds-pipeline-ui-testdsp9
+  namespace: default
   labels:
-    app: ds-pipeline-ui-{{.Name}}
+    app: ds-pipeline-ui-testdsp9
     component: data-science-pipelines
-    dspa: {{.Name}}
+    dspa: testdsp9
 spec:
   selector:
     matchLabels:
-      app: ds-pipeline-ui-{{.Name}}
+      app: ds-pipeline-ui-testdsp9
       component: data-science-pipelines
-      dspa: {{.Name}}
+      dspa: testdsp9
   template:
     metadata:
       annotations:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
       labels:
-        app: ds-pipeline-ui-{{.Name}}
+        app: ds-pipeline-ui-testdsp9
         component: data-science-pipelines
-        dspa: {{.Name}}
+        dspa: testdsp9
     spec:
       containers:
         - env:
@@ -29,95 +29,85 @@ spec:
             - name: MINIO_NAMESPACE
               valueFrom:
                 fieldRef:
+                  apiVersion: v1
                   fieldPath: metadata.namespace
             - name: MINIO_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
-                  key: "{{.ObjectStorageConnection.CredentialsSecret.AccessKey}}"
-                  name: "{{.ObjectStorageConnection.CredentialsSecret.SecretName}}"
+                  key: "accesskey"
+                  name: "ds-pipeline-s3-testdsp9"
             - name: MINIO_SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  key: "{{.ObjectStorageConnection.CredentialsSecret.SecretKey}}"
-                  name: "{{.ObjectStorageConnection.CredentialsSecret.SecretName}}"
+                  key: "secretkey"
+                  name: "ds-pipeline-s3-testdsp9"
             - name: ALLOW_CUSTOM_VISUALIZATIONS
               value: "true"
             - name: ARGO_ARCHIVE_LOGS
               value: "true"
             - name: ML_PIPELINE_SERVICE_HOST
-              value: {{.APIServerServiceDNSName}}
+              value: ds-pipeline-testdsp9.default.svc.cluster.local
             - name: ML_PIPELINE_SERVICE_PORT
               value: '8888'
-            {{ if .InterPodTLS }}
-            - name: ML_PIPELINE_SERVICE_SCHEME
-              value: 'https'
-            - name: NODE_EXTRA_CA_CERTS
-              value: '/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt'
-            {{ end }}
             - name: METADATA_ENVOY_SERVICE_SERVICE_HOST
-              value: ds-pipeline-md-{{.Name}}
+              value: ds-pipeline-md-testdsp9
             - name: METADATA_ENVOY_SERVICE_SERVICE_PORT
               value: "9090"
             - name: AWS_ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:
-                  name: {{.ObjectStorageConnection.CredentialsSecret.SecretName}}
-                  key: {{.ObjectStorageConnection.CredentialsSecret.AccessKey}}
+                  key: "accesskey"
+                  name: "ds-pipeline-s3-testdsp9"
             - name: AWS_SECRET_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{.ObjectStorageConnection.CredentialsSecret.SecretName}}
-                  key: {{.ObjectStorageConnection.CredentialsSecret.SecretKey}}
+                  key: "secretkey"
+                  name: "ds-pipeline-s3-testdsp9"
             - name: AWS_REGION
-              value: {{.ObjectStorageConnection.Region}}
+              value: "minio"
             - name: AWS_S3_ENDPOINT
-              value: {{.ObjectStorageConnection.Host}}
-            {{ if eq .ObjectStorageConnection.Scheme "http"}}
+              value: "minio-testdsp9.default.svc.cluster.local"
             - name: AWS_SSL
               value: "false"
-            {{ end }}
             - name: DISABLE_GKE_METADATA
               value: 'true'
-          image: {{.MlPipelineUI.Image}}
+          image: frontend:test9
           imagePullPolicy: IfNotPresent
           livenessProbe:
-            httpGet:
-              port: 3000
-              path: /apis/v1beta1/healthz
-              scheme: HTTP
-            initialDelaySeconds: 30
+            exec:
+              command:
+                - wget
+                - -q
+                - -S
+                - -O
+                - '-'
+                - http://localhost:3000/apis/v1beta1/healthz
+            initialDelaySeconds: 3
             periodSeconds: 5
             timeoutSeconds: 2
           name: ds-pipeline-ui
           ports:
             - containerPort: 3000
+              protocol: TCP
           readinessProbe:
-            httpGet:
-              port: 3000
-              path: /apis/v1beta1/healthz
-              scheme: HTTP
-            initialDelaySeconds: 30
+            exec:
+              command:
+                - wget
+                - -q
+                - -S
+                - -O
+                - '-'
+                - http://localhost:3000/apis/v1beta1/healthz
+            initialDelaySeconds: 3
             periodSeconds: 5
             timeoutSeconds: 2
           resources:
-            {{ if .MlPipelineUI.Resources.Requests }}
-            requests:
-              {{ if .MlPipelineUI.Resources.Requests.CPU }}
-              cpu: {{.MlPipelineUI.Resources.Requests.CPU}}
-              {{ end }}
-              {{ if .MlPipelineUI.Resources.Requests.Memory }}
-              memory: {{.MlPipelineUI.Resources.Requests.Memory}}
-              {{ end }}
-            {{ end }}
-            {{ if .MlPipelineUI.Resources.Limits }}
             limits:
-              {{ if .MlPipelineUI.Resources.Limits.CPU }}
-              cpu: {{.MlPipelineUI.Resources.Limits.CPU}}
-              {{ end }}
-              {{ if .MlPipelineUI.Resources.Limits.Memory }}
-              memory: {{.MlPipelineUI.Resources.Limits.Memory}}
-              {{ end }}
-            {{ end }}
+              cpu: 100m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
           volumeMounts:
             - mountPath: /etc/config
               name: config-volume
@@ -126,18 +116,19 @@ spec:
           args:
             - --https-address=:8443
             - --provider=openshift
-            - --openshift-service-account=ds-pipeline-ui-{{.Name}}
+            - --openshift-service-account=ds-pipeline-ui-testdsp9
             - --upstream=http://localhost:3000
             - --tls-cert=/etc/tls/private/tls.crt
             - --tls-key=/etc/tls/private/tls.key
             - --cookie-secret=SECRET
-            - '--openshift-delegate-urls={"/": {"group":"route.openshift.io","resource":"routes","verb":"get","name":"ds-pipeline-ui-{{.Name}}","namespace":"{{.Namespace}}"}}'
-            - '--openshift-sar={"namespace":"{{.Namespace}}","resource":"routes","resourceName":"ds-pipeline-ui-{{.Name}}","verb":"get","resourceAPIGroup":"route.openshift.io"}'
+            - '--openshift-delegate-urls={"/": {"group":"route.openshift.io","resource":"routes","verb":"get","name":"ds-pipeline-ui-testdsp9","namespace":"default"}}'
+            - '--openshift-sar={"namespace":"default","resource":"routes","resourceName":"ds-pipeline-ui-testdsp9","verb":"get","resourceAPIGroup":"route.openshift.io"}'
             - --skip-auth-regex='(^/metrics|^/apis/v1beta1/healthz)'
-          image: {{.OAuthProxy}}
+          image: oauth-proxy:test9
           ports:
             - containerPort: 8443
               name: https
+              protocol: TCP
           livenessProbe:
             httpGet:
               path: /oauth/healthz
@@ -168,11 +159,13 @@ spec:
           volumeMounts:
             - mountPath: /etc/tls/private
               name: proxy-tls
-      serviceAccountName: ds-pipeline-ui-{{.Name}}
+      serviceAccountName: ds-pipeline-ui-testdsp9
       volumes:
         - configMap:
-            name: {{.MlPipelineUI.ConfigMapName}}
+            name: ds-pipeline-ui-configmap-testdsp9
+            defaultMode: 420
           name: config-volume
         - name: proxy-tls
           secret:
-            secretName: ds-pipelines-ui-proxy-tls-{{.Name}}
+            secretName: ds-pipelines-ui-proxy-tls-testdsp9
+            defaultMode: 420

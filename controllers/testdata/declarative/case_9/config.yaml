@@ -1,0 +1,14 @@
+Images:
+  MlPipelineUI: frontend:test9
+  MariaDB: mariadb:test9
+  Minio: minio:test9
+  OAuthProxy: oauth-proxy:test9
+ImagesV2:
+  Argo:
+    ApiServer: api-server:test9
+    ArgoLauncherImage: argolauncherimage:test9
+    ArgoDriverImage: argodriverimage:test9
+    PersistentAgent: persistenceagent:test9
+DSPO:
+  ApiServer:
+    IncludeOwnerReference: false
