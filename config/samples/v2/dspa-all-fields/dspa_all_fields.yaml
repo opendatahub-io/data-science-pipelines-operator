@@ -12,6 +12,7 @@ spec:
   dspVersion: v2
   apiServer:
     deploy: true
+    enableSamplePipeline: true
     image: quay.io/opendatahub/ds-pipelines-api-server:latest
     argoLauncherImage: quay.io/org/kfp-launcher:latest
     argoDriverImage: quay.io/org/kfp-driver:latest

@@ -6,6 +6,7 @@ spec:
   dspVersion: v2
   apiServer:
     deploy: true
+    enableSamplePipeline: true
     stripEOF: true
     terminateStatus: Cancelled
     trackArtifacts: true

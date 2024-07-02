@@ -9,6 +9,8 @@ kind: DataSciencePipelinesApplication
 metadata:
   name: sample
 spec:
+  apiServer:
+    enableSamplePipeline: true
   database:
     disableHealthCheck: true
   objectStorage:

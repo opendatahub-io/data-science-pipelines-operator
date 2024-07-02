@@ -12,6 +12,7 @@ spec:
   apiServer:
     deploy: true
     image: quay.io/modh/odh-ml-pipelines-api-server-container:v1.18.0-8
+    enableSamplePipeline: true
     applyTektonCustomResource: true
     archiveLogs: false
     artifactImage: quay.io/modh/odh-ml-pipelines-artifact-manager-container:v1.18.0-8

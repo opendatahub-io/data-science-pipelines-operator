@@ -3,6 +3,8 @@ kind: DataSciencePipelinesApplication
 metadata:
   name: sample
 spec:
+  apiServer:
+    enableSamplePipeline: true
   objectStorage:
     externalStorage:
       bucket: rhods-dsp-dev
