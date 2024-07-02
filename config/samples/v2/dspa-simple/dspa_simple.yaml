@@ -4,6 +4,8 @@ metadata:
   name: sample
 spec:
   dspVersion: v2
+  apiServer:
+    enableSamplePipeline: true
   objectStorage:
     minio:
       deploy: true

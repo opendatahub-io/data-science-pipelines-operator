@@ -12,6 +12,7 @@ spec:
   dspVersion: v2
   apiServer:
     deploy: true
+    enableSamplePipeline: true
     image: gcr.io/ml-pipeline/api-server:2.0.2
   persistenceAgent:
     image: gcr.io/ml-pipeline/persistenceagent:2.0.2

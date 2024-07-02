@@ -5,6 +5,7 @@ metadata:
 spec:
   apiServer:
     deploy: true
+    enableSamplePipeline: true
     applyTektonCustomResource: true
     archiveLogs: false
     cacheImage: registry.access.redhat.com/ubi8/ubi-minimal
