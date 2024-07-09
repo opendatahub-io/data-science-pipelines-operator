@@ -79,6 +79,8 @@ spec:
               value: ds-pipeline-testdsp2.default.svc.cluster.local
             - name: ML_PIPELINE_SERVICE_PORT_GRPC
               value: "8887"
+            - name: SIGNED_URL_EXPIRY_TIME_SECONDS
+              value: "15"
             - name: EXECUTIONTYPE
               value: PipelineRun
             - name: CACHE_IMAGE

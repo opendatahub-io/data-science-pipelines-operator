@@ -765,6 +765,11 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 			sslCertDir := strings.Join(certDirectories, ":")
 			p.CustomSSLCertDir = &sslCertDir
 		}
+
+		if p.APIServer.ArtifactSignedURLExpirySeconds == nil {
+			expiry := config.DefaultSignedUrlExpiryTimeSeconds
+			p.APIServer.ArtifactSignedURLExpirySeconds = &expiry
+		}
 	}
 
 	if p.PersistenceAgent != nil {

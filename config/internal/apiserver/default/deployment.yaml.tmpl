@@ -116,6 +116,8 @@ spec:
               value: "ds-pipeline-{{.Name}}.{{.Namespace}}.svc.cluster.local"
             - name: ML_PIPELINE_SERVICE_PORT_GRPC
               value: "8887"
+            - name: SIGNED_URL_EXPIRY_TIME_SECONDS
+              value: "{{.APIServer.ArtifactSignedURLExpirySeconds}}"
             {{ if (eq .DSPVersion "v2") }}
             ## Argo-Specific Env Vars ##
             - name: EXECUTIONTYPE

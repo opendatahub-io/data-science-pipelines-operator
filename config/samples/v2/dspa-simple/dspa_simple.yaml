@@ -7,6 +7,9 @@ spec:
   apiServer:
     enableSamplePipeline: true
   objectStorage:
+    # Need to enable this for artifact download links to work
+    # i.e. for when requesting /apis/v2beta1/artifacts/{id}?share_url=true
+    enableExternalRoute: true
     minio:
       deploy: true
       image: 'quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance'
