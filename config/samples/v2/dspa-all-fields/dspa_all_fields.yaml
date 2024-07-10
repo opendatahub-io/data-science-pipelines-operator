@@ -184,6 +184,13 @@ spec:
         secretKey: somekey
 # example status fields
 status:
+  components:
+    envoy:
+      url: http://envoy.svc.cluster.local
+      externalUrl: https://envoy-dspa.example.com
+    apiServer:
+      url: http://envoy.svc.cluster.local
+      externalUrl: https://envoy-dspa.example.com
   conditions:
     - lastTransitionTime: '2024-03-14T22:04:25Z'
       message: Database connectivity successfully verified
@@ -215,6 +222,12 @@ status:
       reason: MinimumReplicasAvailable
       status: 'True'
       type: ScheduledWorkflowReady
+    - lastTransitionTime: '2024-03-14T22:04:30Z'
+      message: 'Component [ds-pipeline-metadata-envoy] is minimally available.'
+      observedGeneration: 3
+      reason: MinimumReplicasAvailable
+      status: 'True'
+      type: EnvoyReady
     - lastTransitionTime: '2024-03-14T22:06:37Z'
       message: All components are ready.
       observedGeneration: 3

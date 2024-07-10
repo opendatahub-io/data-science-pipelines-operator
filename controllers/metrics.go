@@ -73,6 +73,16 @@ var (
 			"dspa_namespace",
 		},
 	)
+	EnvoyReadyMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "data_science_pipelines_application_envoy_ready",
+			Help: "Data Science Pipelines Application - Envoy Ready Status",
+		},
+		[]string{
+			"dspa_name",
+			"dspa_namespace",
+		},
+	)
 	CrReadyMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "data_science_pipelines_application_ready",
@@ -92,5 +102,6 @@ func InitMetrics() {
 		APIServerReadyMetric,
 		PersistenceAgentReadyMetric,
 		ScheduledWorkflowReadyMetric,
+		EnvoyReadyMetric,
 		CrReadyMetric)
 }

@@ -407,7 +407,21 @@ type SecretKeyValue struct {
 }
 
 type DSPAStatus struct {
+	// +kubebuilder:validation:Optional
+	Components ComponentStatus    `json:"components,omitempty"`
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+}
+
+type ComponentStatus struct {
+	// +kubebuilder:validation:Optional
+	Envoy     ComponentDetailStatus `json:"envoy,omitempty"`
+	APIServer ComponentDetailStatus `json:"apiServer,omitempty"`
+}
+
+type ComponentDetailStatus struct {
+	// +kubebuilder:validation:Optional
+	Url         string `json:"url,omitempty"`
+	ExternalUrl string `json:"externalUrl,omitempty"`
 }
 
 //+kubebuilder:object:root=true

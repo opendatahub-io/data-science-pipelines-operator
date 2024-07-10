@@ -17,6 +17,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	v1 "github.com/openshift/api/route/v1"
@@ -85,4 +86,48 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1alph
 
 	log.Info("Finished applying APIServer Resources")
 	return nil
+}
+
+func (r *DSPAReconciler) GetAPIServerServiceHostname(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication) (string, error) {
+	service := &corev1.Service{}
+	namespacedNamed := types.NamespacedName{Name: "ds-pipeline-" + dsp.Name, Namespace: dsp.Namespace}
+	err := r.Get(ctx, namespacedNamed, service)
+	if err != nil {
+		return "", err
+	}
+
+	// Loop over all Service ports, if a secured port is found
+	// set port and scheme to its secured ones and skip the loop
+	serviceScheme := ""
+	servicePort := ""
+	for i := 0; i < len(service.Spec.Ports); i++ {
+		servicePort = fmt.Sprintf("%d", service.Spec.Ports[i].Port)
+		if servicePort == "8443" || servicePort == "443" {
+			// If a secured port is found, just set scheme to 'https://' and skip the loop
+			serviceScheme = "https://"
+			break
+		} else {
+			serviceScheme = "http://"
+		}
+	}
+
+	return serviceScheme + service.Name + "." + service.Namespace + ".svc.cluster.local:" + servicePort, nil
+}
+
+func (r *DSPAReconciler) GetAPIServerRouteHostname(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication) (string, error) {
+	route := &v1.Route{}
+	namespacedNamed := types.NamespacedName{Name: "ds-pipeline-" + dsp.Name, Namespace: dsp.Namespace}
+	err := r.Get(ctx, namespacedNamed, route)
+	if err != nil {
+		return "", err
+	}
+
+	serviceScheme := ""
+	if route.Spec.TLS != nil {
+		serviceScheme = "https://"
+	} else {
+		serviceScheme = "http://"
+	}
+
+	return serviceScheme + route.Spec.Host, nil
 }

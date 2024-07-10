@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/dspastatus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -305,7 +306,10 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 		err = r.ReconcileMLMD(dspa, params)
 		if err != nil {
+			r.setStatusAsNotReady(config.EnvoyReady, err, dspaStatus.SetEnvoyStatus)
 			return ctrl.Result{}, err
+		} else {
+			r.setStatus(ctx, "ds-pipeline-metadata-envoy-"+dspa.Name, config.EnvoyReady, dspa, dspaStatus.SetEnvoyStatus, log)
 		}
 
 		err = r.ReconcileWorkflowController(dspa, params)
@@ -325,6 +329,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		util.GetConditionByType(config.APIServerReady, conditions):         APIServerReadyMetric,
 		util.GetConditionByType(config.PersistenceAgentReady, conditions):  PersistenceAgentReadyMetric,
 		util.GetConditionByType(config.ScheduledWorkflowReady, conditions): ScheduledWorkflowReadyMetric,
+		util.GetConditionByType(config.EnvoyReady, conditions):             EnvoyReadyMetric,
 		util.GetConditionByType(config.CrReady, conditions):                CrReadyMetric,
 	}
 	r.PublishMetrics(dspa, metricsMap)
@@ -356,6 +361,7 @@ func (r *DSPAReconciler) setStatus(ctx context.Context, resourceName string, con
 func (r *DSPAReconciler) updateStatus(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication,
 	dspaStatus dspastatus.DSPAStatus, log logr.Logger, req ctrl.Request) {
 	r.refreshDspa(ctx, dspa, req, log)
+	dspa.Status.Components = r.GetComponents(ctx, dspa)
 	dspa.Status.Conditions = dspaStatus.GetConditions()
 	err := r.Status().Update(ctx, dspa)
 	if err != nil {
@@ -499,6 +505,46 @@ func (r *DSPAReconciler) PublishMetrics(dspa *dspav1alpha1.DataSciencePipelinesA
 		}
 		log.Info(condition.Type, " Status:", status)
 		metric.WithLabelValues(dspa.Name, dspa.Namespace).Set(float64(value))
+	}
+}
+
+func (r *DSPAReconciler) GetComponents(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication) dspav1alpha1.ComponentStatus {
+	log := r.Log.WithValues("namespace", dspa.Namespace).WithValues("dspa_name", dspa.Name)
+	log.Info("Updating components endpoints")
+
+	envoyUrl, err := r.GetEnvoyServiceHostname(ctx, dspa)
+	if err != nil {
+		log.Info(err.Error())
+	}
+
+	envoyExternalUrl, err := r.GetEnvoyRouteHostname(ctx, dspa)
+	if err != nil {
+		log.Info(err.Error())
+	}
+
+	envoyComponent := &dspav1alpha1.ComponentDetailStatus{
+		Url:         envoyUrl,
+		ExternalUrl: envoyExternalUrl,
+	}
+
+	apiServerUrl, err := r.GetAPIServerServiceHostname(ctx, dspa)
+	if err != nil {
+		log.Info(err.Error())
+	}
+
+	apiServerExternalUrl, err := r.GetAPIServerRouteHostname(ctx, dspa)
+	if err != nil {
+		log.Info(err.Error())
+	}
+
+	apiServerComponent := &dspav1alpha1.ComponentDetailStatus{
+		Url:         apiServerUrl,
+		ExternalUrl: apiServerExternalUrl,
+	}
+
+	return dspav1alpha1.ComponentStatus{
+		Envoy:     *envoyComponent,
+		APIServer: *apiServerComponent,
 	}
 }
 

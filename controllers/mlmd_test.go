@@ -18,8 +18,9 @@ limitations under the License.
 package controllers
 
 import (
-	v1 "github.com/openshift/api/route/v1"
 	"testing"
+
+	v1 "github.com/openshift/api/route/v1"
 
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/stretchr/testify/assert"
@@ -819,4 +820,76 @@ func TestDontDeployEnvoyRouteV2(t *testing.T) {
 
 func boolPtr(b bool) *bool {
 	return &b
+
+func TestGetEndpointsMLMDV2(t *testing.T) {
+	testNamespace := "testnamespace"
+	testDSPAName := "testdspa"
+	expectedMLMDEnvoyName := "ds-pipeline-metadata-envoy-testdspa"
+	expectedMLMDEnvoyRouteName := "ds-pipeline-md-testdspa"
+
+	// Construct DSPA Spec with MLMD Enabled
+	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
+		Spec: dspav1alpha1.DSPASpec{
+			DSPVersion: "v2",
+			APIServer:  &dspav1alpha1.APIServer{},
+			MLMD: &dspav1alpha1.MLMD{
+				Deploy: true,
+			},
+			Database: &dspav1alpha1.Database{
+				DisableHealthCheck: false,
+				MariaDB: &dspav1alpha1.MariaDB{
+					Deploy: true,
+				},
+			},
+			ObjectStorage: &dspav1alpha1.ObjectStorage{
+				DisableHealthCheck: false,
+				Minio: &dspav1alpha1.Minio{
+					Deploy: false,
+					Image:  "someimage",
+				},
+			},
+		},
+	}
+
+	// Enrich DSPA with name+namespace
+	dspa.Namespace = testNamespace
+	dspa.Name = testDSPAName
+
+	// Create Context, Fake Controller and Params
+	ctx, params, reconciler := CreateNewTestObjects()
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	assert.Nil(t, err)
+
+	// Ensure MLMD-Envoy resources doesn't yet exist
+	deployment := &appsv1.Deployment{}
+	created, err := reconciler.IsResourceCreated(ctx, deployment, expectedMLMDEnvoyName, testNamespace)
+	assert.False(t, created)
+	assert.Nil(t, err)
+
+	// Ensure MLMD-Envoy route doesn't yet exist
+	route := &v1.Route{}
+	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyRouteName, testNamespace)
+	assert.False(t, created)
+	assert.Nil(t, err)
+
+	// Run test reconciliation
+	err = reconciler.ReconcileMLMD(dspa, params)
+	assert.Nil(t, err)
+
+	// Ensure MLMD-Envoy resources now exists
+	deployment = &appsv1.Deployment{}
+	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedMLMDEnvoyName, testNamespace)
+	assert.True(t, created)
+	assert.Nil(t, err)
+
+	// Ensure MLMD-Envoy route now exists
+	route = &v1.Route{}
+	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyRouteName, testNamespace)
+	assert.True(t, created)
+	assert.Nil(t, err)
+
+	dspa_created := &dspav1alpha1.DataSciencePipelinesApplication{}
+	created, err = reconciler.IsResourceCreated(ctx, dspa, testDSPAName, testNamespace)
+	assert.NotNil(t, dspa_created.Status.Components.Envoy.Url)
+	assert.NotNil(t, dspa_created.Status.Components.Envoy.ExternalUrl)
 }

@@ -2,6 +2,7 @@ package dspastatus
 
 import (
 	"fmt"
+
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,6 +21,8 @@ type DSPAStatus interface {
 
 	SetScheduledWorkflowStatus(scheduledWorkflowReady metav1.Condition)
 
+	SetEnvoyStatus(envoyReady metav1.Condition)
+
 	GetConditions() []metav1.Condition
 }
 
@@ -29,6 +32,7 @@ func NewDSPAStatus(dspa *dspav1alpha1.DataSciencePipelinesApplication) DSPAStatu
 	apiServerCondition := BuildUnknownCondition(config.APIServerReady)
 	persistenceAgentCondition := BuildUnknownCondition(config.PersistenceAgentReady)
 	scheduledWorkflowReadyCondition := BuildUnknownCondition(config.ScheduledWorkflowReady)
+	envoyReadyCondition := BuildUnknownCondition(config.EnvoyReady)
 
 	return &dspaStatus{
 		dspa:                   dspa,
@@ -37,6 +41,7 @@ func NewDSPAStatus(dspa *dspav1alpha1.DataSciencePipelinesApplication) DSPAStatu
 		apiServerReady:         &apiServerCondition,
 		persistenceAgentReady:  &persistenceAgentCondition,
 		scheduledWorkflowReady: &scheduledWorkflowReadyCondition,
+		envoyReady:             &envoyReadyCondition,
 	}
 }
 
@@ -47,6 +52,7 @@ type dspaStatus struct {
 	apiServerReady         *metav1.Condition
 	persistenceAgentReady  *metav1.Condition
 	scheduledWorkflowReady *metav1.Condition
+	envoyReady             *metav1.Condition
 }
 
 func (s *dspaStatus) SetDatabaseNotReady(err error, reason string) {
@@ -90,6 +96,10 @@ func (s *dspaStatus) SetScheduledWorkflowStatus(scheduledWorkflowReady metav1.Co
 	s.scheduledWorkflowReady = &scheduledWorkflowReady
 }
 
+func (s *dspaStatus) SetEnvoyStatus(envoyReady metav1.Condition) {
+	s.envoyReady = &envoyReady
+}
+
 func (s *dspaStatus) GetConditions() []metav1.Condition {
 	componentConditions := []metav1.Condition{
 		*s.getDatabaseAvailableCondition(),
@@ -97,6 +107,7 @@ func (s *dspaStatus) GetConditions() []metav1.Condition {
 		*s.getApiServerReadyCondition(),
 		*s.getPersistenceAgentReadyCondition(),
 		*s.getScheduledWorkflowReadyCondition(),
+		*s.getEnvoyReadyCondition(),
 	}
 
 	allReady := true
@@ -134,6 +145,7 @@ func (s *dspaStatus) GetConditions() []metav1.Condition {
 		*s.apiServerReady,
 		*s.persistenceAgentReady,
 		*s.scheduledWorkflowReady,
+		*s.envoyReady,
 		crReady,
 	}
 
@@ -165,6 +177,10 @@ func (s *dspaStatus) getPersistenceAgentReadyCondition() *metav1.Condition {
 
 func (s *dspaStatus) getScheduledWorkflowReadyCondition() *metav1.Condition {
 	return s.scheduledWorkflowReady
+}
+
+func (s *dspaStatus) getEnvoyReadyCondition() *metav1.Condition {
+	return s.envoyReady
 }
 
 func BuildTrueCondition(conditionType string, message string) metav1.Condition {

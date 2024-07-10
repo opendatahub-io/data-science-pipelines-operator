@@ -886,6 +886,23 @@ spec:
             type: object
           status:
             properties:
+              components:
+                properties:
+                  apiServer:
+                    properties:
+                      externalUrl:
+                        type: string
+                      url:
+                        type: string
+                    type: object
+                  envoy:
+                    properties:
+                      externalUrl:
+                        type: string
+                      url:
+                        type: string
+                    type: object
+                type: object
               conditions:
                 items:
                   description: "Condition contains details for one aspect of the current
