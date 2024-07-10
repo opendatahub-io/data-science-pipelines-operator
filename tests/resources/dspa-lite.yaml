@@ -40,6 +40,7 @@ spec:
   mlmd:
     deploy: true
     envoy:
+      deployRoute: true
       resources:
         limits:
           cpu: 20m
