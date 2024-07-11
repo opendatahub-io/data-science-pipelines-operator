@@ -895,7 +895,7 @@ spec:
                       url:
                         type: string
                     type: object
-                  envoy:
+                  mlmdProxy:
                     properties:
                       externalUrl:
                         type: string

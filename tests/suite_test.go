@@ -32,12 +32,10 @@ import (
 	"github.com/go-logr/logr"
 	mfc "github.com/manifestival/controller-runtime-client"
 	mf "github.com/manifestival/manifestival"
-	"github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	testUtil "github.com/opendatahub-io/data-science-pipelines-operator/tests/util"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap/zapcore"
-	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -175,7 +173,7 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 	}
 
 	err = testUtil.WaitForDSPAReady(suite.T(), ctx, clientmgr.k8sClient, DSPA.Name, DSPANamespace, DeployTimeout, PollInterval)
-	require.NoError(suite.T(), err, fmt.Sprintf("Error Deploying DSPA:\n%s", printConditions(ctx, DSPA, DSPANamespace, clientmgr.k8sClient)))
+	require.NoError(suite.T(), err, fmt.Sprintf("Error Deploying DSPA:\n%s", testUtil.PrintConditions(ctx, DSPA, DSPANamespace, clientmgr.k8sClient)))
 	loggr.Info("DSPA Deployed.")
 
 	loggr.Info("Setting up Portforwarding service.")
@@ -195,22 +193,6 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 
 	APIServerURL = fmt.Sprintf("http://127.0.0.1:%d", PortforwardLocalPort)
 	loggr.Info("Portforwarding service Successfully set up.")
-}
-
-func printConditions(ctx context.Context, dspa *v1alpha1.DataSciencePipelinesApplication, namespace string, client client.Client) string {
-	nsn := types.NamespacedName{
-		Name:      dspa.Name,
-		Namespace: namespace,
-	}
-	err := client.Get(ctx, nsn, dspa)
-	if err != nil {
-		return "No conditions"
-	}
-	conditions := ""
-	for _, condition := range dspa.Status.Conditions {
-		conditions = conditions + fmt.Sprintf("Type: %s, Status: %s, Message: %s\n", condition.Type, condition.Status, condition.Message)
-	}
-	return conditions
 }
 
 func (suite *IntegrationTestSuite) TearDownSuite() {

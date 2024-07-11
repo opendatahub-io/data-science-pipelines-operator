@@ -21,7 +21,7 @@ type DSPAStatus interface {
 
 	SetScheduledWorkflowStatus(scheduledWorkflowReady metav1.Condition)
 
-	SetEnvoyStatus(envoyReady metav1.Condition)
+	SetMLMDProxyStatus(mlmdProxyReady metav1.Condition)
 
 	GetConditions() []metav1.Condition
 }
@@ -32,7 +32,7 @@ func NewDSPAStatus(dspa *dspav1alpha1.DataSciencePipelinesApplication) DSPAStatu
 	apiServerCondition := BuildUnknownCondition(config.APIServerReady)
 	persistenceAgentCondition := BuildUnknownCondition(config.PersistenceAgentReady)
 	scheduledWorkflowReadyCondition := BuildUnknownCondition(config.ScheduledWorkflowReady)
-	envoyReadyCondition := BuildUnknownCondition(config.EnvoyReady)
+	mlmdProxyReadyCondition := BuildUnknownCondition(config.MLMDProxyReady)
 
 	return &dspaStatus{
 		dspa:                   dspa,
@@ -41,7 +41,7 @@ func NewDSPAStatus(dspa *dspav1alpha1.DataSciencePipelinesApplication) DSPAStatu
 		apiServerReady:         &apiServerCondition,
 		persistenceAgentReady:  &persistenceAgentCondition,
 		scheduledWorkflowReady: &scheduledWorkflowReadyCondition,
-		envoyReady:             &envoyReadyCondition,
+		mlmdProxyReady:         &mlmdProxyReadyCondition,
 	}
 }
 
@@ -52,7 +52,7 @@ type dspaStatus struct {
 	apiServerReady         *metav1.Condition
 	persistenceAgentReady  *metav1.Condition
 	scheduledWorkflowReady *metav1.Condition
-	envoyReady             *metav1.Condition
+	mlmdProxyReady         *metav1.Condition
 }
 
 func (s *dspaStatus) SetDatabaseNotReady(err error, reason string) {
@@ -96,8 +96,8 @@ func (s *dspaStatus) SetScheduledWorkflowStatus(scheduledWorkflowReady metav1.Co
 	s.scheduledWorkflowReady = &scheduledWorkflowReady
 }
 
-func (s *dspaStatus) SetEnvoyStatus(envoyReady metav1.Condition) {
-	s.envoyReady = &envoyReady
+func (s *dspaStatus) SetMLMDProxyStatus(mlmdProxyReady metav1.Condition) {
+	s.mlmdProxyReady = &mlmdProxyReady
 }
 
 func (s *dspaStatus) GetConditions() []metav1.Condition {
@@ -107,7 +107,7 @@ func (s *dspaStatus) GetConditions() []metav1.Condition {
 		*s.getApiServerReadyCondition(),
 		*s.getPersistenceAgentReadyCondition(),
 		*s.getScheduledWorkflowReadyCondition(),
-		*s.getEnvoyReadyCondition(),
+		*s.getMLMDProxyReadyCondition(),
 	}
 
 	allReady := true
@@ -145,7 +145,7 @@ func (s *dspaStatus) GetConditions() []metav1.Condition {
 		*s.apiServerReady,
 		*s.persistenceAgentReady,
 		*s.scheduledWorkflowReady,
-		*s.envoyReady,
+		*s.mlmdProxyReady,
 		crReady,
 	}
 
@@ -179,8 +179,8 @@ func (s *dspaStatus) getScheduledWorkflowReadyCondition() *metav1.Condition {
 	return s.scheduledWorkflowReady
 }
 
-func (s *dspaStatus) getEnvoyReadyCondition() *metav1.Condition {
-	return s.envoyReady
+func (s *dspaStatus) getMLMDProxyReadyCondition() *metav1.Condition {
+	return s.mlmdProxyReady
 }
 
 func BuildTrueCondition(conditionType string, message string) metav1.Condition {
