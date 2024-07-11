@@ -419,8 +419,8 @@ type ComponentStatus struct {
 }
 
 type ComponentDetailStatus struct {
+	Url string `json:"url,omitempty"`
 	// +kubebuilder:validation:Optional
-	Url         string `json:"url,omitempty"`
 	ExternalUrl string `json:"externalUrl,omitempty"`
 }
 
