@@ -24,6 +24,7 @@ import (
 
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 )
 
@@ -820,6 +821,7 @@ func TestDontDeployEnvoyRouteV2(t *testing.T) {
 
 func boolPtr(b bool) *bool {
 	return &b
+}
 
 func TestGetEndpointsMLMDV2(t *testing.T) {
 	testNamespace := "testnamespace"
@@ -830,10 +832,15 @@ func TestGetEndpointsMLMDV2(t *testing.T) {
 	// Construct DSPA Spec with MLMD Enabled
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
 		Spec: dspav1alpha1.DSPASpec{
-			DSPVersion: "v2",
-			APIServer:  &dspav1alpha1.APIServer{},
+			DSPVersion:  "v2",
+			PodToPodTLS: boolPtr(false),
+			APIServer:   &dspav1alpha1.APIServer{},
 			MLMD: &dspav1alpha1.MLMD{
 				Deploy: true,
+				Envoy: &dspav1alpha1.Envoy{
+					Image:       "someimage",
+					DeployRoute: true,
+				},
 			},
 			Database: &dspav1alpha1.Database{
 				DisableHealthCheck: false,
@@ -858,38 +865,38 @@ func TestGetEndpointsMLMDV2(t *testing.T) {
 	// Create Context, Fake Controller and Params
 	ctx, params, reconciler := CreateNewTestObjects()
 	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
-	assert.Nil(t, err)
+	require.Nil(t, err)
 
 	// Ensure MLMD-Envoy resources doesn't yet exist
 	deployment := &appsv1.Deployment{}
 	created, err := reconciler.IsResourceCreated(ctx, deployment, expectedMLMDEnvoyName, testNamespace)
-	assert.False(t, created)
-	assert.Nil(t, err)
+	require.False(t, created)
+	require.Nil(t, err)
 
 	// Ensure MLMD-Envoy route doesn't yet exist
 	route := &v1.Route{}
 	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyRouteName, testNamespace)
-	assert.False(t, created)
-	assert.Nil(t, err)
+	require.False(t, created)
+	require.Nil(t, err)
 
 	// Run test reconciliation
 	err = reconciler.ReconcileMLMD(dspa, params)
-	assert.Nil(t, err)
+	require.Nil(t, err)
 
 	// Ensure MLMD-Envoy resources now exists
 	deployment = &appsv1.Deployment{}
 	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedMLMDEnvoyName, testNamespace)
-	assert.True(t, created)
-	assert.Nil(t, err)
+	require.True(t, created)
+	require.Nil(t, err)
 
 	// Ensure MLMD-Envoy route now exists
 	route = &v1.Route{}
 	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyRouteName, testNamespace)
-	assert.True(t, created)
-	assert.Nil(t, err)
+	require.True(t, created)
+	require.Nil(t, err)
 
 	dspa_created := &dspav1alpha1.DataSciencePipelinesApplication{}
 	created, err = reconciler.IsResourceCreated(ctx, dspa, testDSPAName, testNamespace)
-	assert.NotNil(t, dspa_created.Status.Components.Envoy.Url)
-	assert.NotNil(t, dspa_created.Status.Components.Envoy.ExternalUrl)
+	require.NotNil(t, dspa_created.Status.Components.MLMDProxy.Url)
+	require.NotNil(t, dspa_created.Status.Components.MLMDProxy.ExternalUrl)
 }

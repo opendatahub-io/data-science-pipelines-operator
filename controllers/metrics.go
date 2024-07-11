@@ -73,10 +73,10 @@ var (
 			"dspa_namespace",
 		},
 	)
-	EnvoyReadyMetric = prometheus.NewGaugeVec(
+	MLMDProxyReadyMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "data_science_pipelines_application_envoy_ready",
-			Help: "Data Science Pipelines Application - Envoy Ready Status",
+			Name: "data_science_pipelines_application_mlmdproxy_ready",
+			Help: "Data Science Pipelines Application - MLMD Proxy Ready Status",
 		},
 		[]string{
 			"dspa_name",
@@ -102,6 +102,6 @@ func InitMetrics() {
 		APIServerReadyMetric,
 		PersistenceAgentReadyMetric,
 		ScheduledWorkflowReadyMetric,
-		EnvoyReadyMetric,
+		MLMDProxyReadyMetric,
 		CrReadyMetric)
 }

@@ -414,7 +414,7 @@ type DSPAStatus struct {
 
 type ComponentStatus struct {
 	// +kubebuilder:validation:Optional
-	Envoy     ComponentDetailStatus `json:"envoy,omitempty"`
+	MLMDProxy ComponentDetailStatus `json:"mlmdProxy,omitempty"`
 	APIServer ComponentDetailStatus `json:"apiServer,omitempty"`
 }
 

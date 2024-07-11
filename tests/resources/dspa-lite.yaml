@@ -40,7 +40,7 @@ spec:
   mlmd:
     deploy: true
     envoy:
-      deployRoute: true
+      image: quay.io/maistra/proxyv2-ubi8:2.5.0
       resources:
         limits:
           cpu: 20m

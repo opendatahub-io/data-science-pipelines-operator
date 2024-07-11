@@ -17,17 +17,22 @@ limitations under the License.
 package util
 
 import (
-	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
+	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
+
 	"context"
 	"crypto/x509"
+	"net/url"
+
+	routev1 "github.com/openshift/api/route/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"net/url"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -121,4 +126,75 @@ func GetSystemCerts() ([]byte, error) {
 		return []byte{}, err
 	}
 	return data, err
+}
+
+func GetServiceHostname(ctx context.Context, svcName, ns string, client client.Client) (string, error) {
+	serviceHostname := ""
+	isAvailable, service, err := GetServiceIfAvailable(ctx, svcName, ns, client)
+	if err != nil {
+		return "", err
+	}
+
+	if isAvailable {
+		// Loop over all Service ports, if a secured port is found
+		// set port and scheme to its secured ones and exit the loop
+		servicePort := ""
+		scheme := "http"
+		for _, port := range service.Spec.Ports {
+			servicePort = fmt.Sprintf("%d", port.Port)
+			if servicePort == "8443" || servicePort == "443" {
+				// If a secured port is found, just set scheme to 'https://' and exit the loop
+				scheme = "https"
+				break
+			}
+		}
+		serviceHostname = scheme + "://" + service.Name + "." + service.Namespace + ".svc.cluster.local:" + servicePort
+	}
+	return serviceHostname, nil
+}
+
+func GetRouteHostname(ctx context.Context, routeName, ns string, client client.Client) (string, error) {
+	routeHostname := ""
+	isAvailable, route, err := GetRouteIfAvailable(ctx, routeName, ns, client)
+	if err != nil {
+		return "", err
+	}
+
+	if isAvailable {
+		scheme := "http"
+		if route.Spec.TLS != nil {
+			scheme = "https"
+		}
+
+		routeHostname = scheme + "://" + route.Spec.Host
+	}
+	return routeHostname, nil
+}
+
+func GetServiceIfAvailable(ctx context.Context, svcName, ns string, client client.Client) (bool, *v1.Service, error) {
+	service := &v1.Service{}
+	namespacedNamed := types.NamespacedName{Name: svcName, Namespace: ns}
+	err := client.Get(ctx, namespacedNamed, service)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return false, nil, nil
+		} else {
+			return false, nil, err
+		}
+	}
+	return true, service, nil
+}
+
+func GetRouteIfAvailable(ctx context.Context, routeName, ns string, client client.Client) (bool, *routev1.Route, error) {
+	route := &routev1.Route{}
+	namespacedNamed := types.NamespacedName{Name: routeName, Namespace: ns}
+	err := client.Get(ctx, namespacedNamed, route)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return false, nil, nil
+		} else {
+			return false, nil, err
+		}
+	}
+	return true, route, nil
 }
