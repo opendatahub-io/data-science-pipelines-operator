@@ -53,11 +53,11 @@ spec:
       pvcSize: 500Mi
       resources:
         limits:
-          cpu: 20m
+          cpu: 60m
           memory: 500Mi
         requests:
-          cpu: 20m
-          memory: 100m
+          cpu: 60m
+          memory: 500Mi
   objectStorage:
     minio:
       image: 'quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance'
