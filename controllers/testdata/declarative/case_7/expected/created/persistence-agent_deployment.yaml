@@ -36,8 +36,6 @@ spec:
               value: ""
             - name: EXECUTIONTYPE
               value: Workflow
-            - name: SSL_CERT_DIR
-              value: "/etc/pki/tls/certs:/var/run/secrets/kubernetes.io/serviceaccount/"
           image: persistenceagent:test7
           imagePullPolicy: IfNotPresent
           name: ds-pipeline-persistenceagent

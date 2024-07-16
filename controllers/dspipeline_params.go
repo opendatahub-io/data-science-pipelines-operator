@@ -649,7 +649,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		// Track whether the "ca-bundle.crt" configmap key from odh-trusted-ca bundle
 		// was found, this will be used to decide whether we need to account for this
 		// ourselves later or not.
-		odhTrustedCABundleAdded := false
+		wellKnownCABundleAdded := false
 
 		// Check for cert bundle provided by the platform instead of by the DSPA user
 		// If it exists, include this cert for tls verifications
@@ -677,7 +677,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 			// however if a user creates this, they may accidentally leave this out, so we need to account for this
 			_, ok := odhTrustedCABundleConfigMap.Data[config.GlobalODHCaBundleConfigMapSystemBundleKey]
 			if ok {
-				odhTrustedCABundleAdded = true
+				wellKnownCABundleAdded = true
 			}
 		}
 
@@ -697,6 +697,22 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 			if dspaProvidedCABundle != "" {
 				p.APICustomPemCerts = append(p.APICustomPemCerts, []byte(dspaProvidedCABundle))
 			}
+		}
+
+		// If PodToPodTLS is enabled, we need to include service-ca ca-bundles to recognize the certs
+		// that are signed by service-ca. These can be accessed via "openshift-service-ca.crt"
+		// configmap.
+		if p.PodToPodTLS {
+			serviceCA, serviceCACfgErr := util.GetConfigMap(ctx, config.OpenshiftServiceCAConfigMapName, p.Namespace, client)
+			if serviceCACfgErr != nil {
+				log.Info(fmt.Sprintf("Encountered error when attempting to fetch ConfigMap: [%s]. Error: %v", config.OpenshiftServiceCAConfigMapName, serviceCA))
+				return serviceCACfgErr
+			}
+			serviceCABundle := util.GetConfigMapValue(config.OpenshiftServiceCAConfigMapKey, serviceCA)
+			if serviceCABundle == "" {
+				return fmt.Errorf("expected key %s from configmap %s not found", config.OpenshiftServiceCAConfigMapKey, config.OpenshiftServiceCAConfigMapName)
+			}
+			p.APICustomPemCerts = append(p.APICustomPemCerts, []byte(serviceCABundle))
 		}
 
 		if p.APIServer.CABundleFileMountPath != "" {
@@ -722,7 +738,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 			// We need to ensure system certs are always part of this new configmap
 			// We can either source this from odh-trusted-ca-bundle cfgmap if provided,
 			// or fetch one from "config-trusted-cabundle" configmap, which is always present in an ocp ns
-			if !odhTrustedCABundleAdded {
+			if !wellKnownCABundleAdded {
 				certs, sysCertsErr := util.GetSystemCerts()
 				if sysCertsErr != nil {
 					return sysCertsErr

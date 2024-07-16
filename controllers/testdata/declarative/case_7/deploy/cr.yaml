@@ -4,6 +4,7 @@ metadata:
   name: testdsp7
 spec:
   dspVersion: v2
+  podToPodTLS: false
   apiServer:
     deploy: true
     image: api-server:test7
