@@ -5,6 +5,7 @@
 # MLMD grpc server mounts the dspa cert and passes it into grpc server
 # When a user provides a caBundleFileMountPath, it will be used to mount the ca bundle
 # When a user provides ca bundle configmapkey, it will be used instead of default one
+# When a user provides a ArtifactSignedURLExpirySeconds, it will be used instead of default
 apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
 kind: DataSciencePipelinesApplication
 metadata:
@@ -19,6 +20,7 @@ spec:
     cABundle:
       configMapKey: user-ca-bundle.crt
       configMapName: user-ca-bundle
+    artifactSignedURLExpirySeconds: 20
   database:
     externalDB:
       host: testdbhost6

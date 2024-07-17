@@ -67,6 +67,12 @@ spec:
                       name:
                         type: string
                     type: object
+                  artifactSignedURLExpirySeconds:
+                    default: 15
+                    description: 'The expiry time (seconds) for artifact download
+                      links when querying the dsp server via /apis/v2beta1/artifacts/{id}?share_url=true
+                      Default: 15'
+                    type: integer
                   autoUpdatePipelineDefaultVersion:
                     default: true
                     description: 'Default: true Deprecated: DSP V1 only, will be removed

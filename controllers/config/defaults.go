@@ -57,6 +57,8 @@ const (
 	DefaultDBSecretKey        = "password"
 	GeneratedDBPasswordLength = 12
 
+	DefaultSignedUrlExpiryTimeSeconds = 15
+
 	MariaDBName        = "mlpipeline"
 	MariaDBHostPrefix  = "mariadb"
 	MariaDBHostPort    = "3306"

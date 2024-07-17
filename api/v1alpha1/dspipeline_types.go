@@ -141,6 +141,13 @@ type APIServer struct {
 	// pipeline server and user executor pods
 	// +kubebuilder:validation:Optional
 	CABundleFileName string `json:"caBundleFileName"`
+
+	// The expiry time (seconds) for artifact download links when
+	// querying the dsp server via /apis/v2beta1/artifacts/{id}?share_url=true
+	// Default: 15
+	// +kubebuilder:default:=15
+	// +kubebuilder:validation:Optional
+	ArtifactSignedURLExpirySeconds *int `json:"artifactSignedURLExpirySeconds"`
 }
 
 type CABundle struct {
