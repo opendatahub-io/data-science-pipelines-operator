@@ -45,9 +45,15 @@ spec:
             - name: ARGO_ARCHIVE_LOGS
               value: "true"
             - name: ML_PIPELINE_SERVICE_HOST
-              value: ds-pipeline-{{.Name}}
+              value: {{.APIServerServiceDNSName}}
             - name: ML_PIPELINE_SERVICE_PORT
               value: '8888'
+            {{ if .PodToPodTLS }}
+            - name: ML_PIPELINE_SERVICE_SCHEME
+              value: 'https'
+            - name: NODE_EXTRA_CA_CERTS
+              value: '/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt'
+            {{ end }}
             - name: METADATA_ENVOY_SERVICE_SERVICE_HOST
               value: ds-pipeline-md-{{.Name}}
             - name: METADATA_ENVOY_SERVICE_SERVICE_PORT

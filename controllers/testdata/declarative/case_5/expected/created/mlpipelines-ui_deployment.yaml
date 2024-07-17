@@ -46,7 +46,7 @@ spec:
             - name: ARGO_ARCHIVE_LOGS
               value: "true"
             - name: ML_PIPELINE_SERVICE_HOST
-              value: ds-pipeline-testdsp5
+              value: ds-pipeline-testdsp5.default.svc.cluster.local
             - name: ML_PIPELINE_SERVICE_PORT
               value: '8888'
             - name: METADATA_ENVOY_SERVICE_SERVICE_HOST

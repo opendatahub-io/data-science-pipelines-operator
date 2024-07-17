@@ -44,6 +44,12 @@ type DSPASpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="v1"
 	DSPVersion string `json:"dspVersion,omitempty"`
+
+	// PodToPodTLS Set to "true" or "false" to enable or disable TLS communication between DSPA components (pods). Defaults to "true" to enable TLS between all pods. Only supported in DSP V2 on OpenShift.
+	// +kubebuilder:default:=true
+	// +kubebuilder:validation:Optional
+	PodToPodTLS *bool `json:"podToPodTLS"`
+
 	// WorkflowController is an argo-specific component that manages a DSPA's Workflow objects and handles the orchestration of them with the central Argo server
 	// +kubebuilder:validation:Optional
 	*WorkflowController `json:"workflowController,omitempty"`

@@ -118,29 +118,15 @@ spec:
               name: grpc
               protocol: TCP
           livenessProbe:
-            exec:
-              command:
-                - wget
-                - -q
-                - -S
-                - -O
-                - '-'
-                - http://localhost:8888/apis/v1beta1/healthz
-            initialDelaySeconds: 3
-            periodSeconds: 5
-            timeoutSeconds: 2
+            httpGet:
+              path: /apis/v1beta1/healthz
+              port: http
+              scheme: HTTPS
           readinessProbe:
-            exec:
-              command:
-                - wget
-                - -q
-                - -S
-                - -O
-                - '-'
-                - http://localhost:8888/apis/v1beta1/healthz
-            initialDelaySeconds: 3
-            periodSeconds: 5
-            timeoutSeconds: 2
+            httpGet:
+              path: /apis/v1beta1/healthz
+              port: http
+              scheme: HTTPS
           resources:
             requests:
               cpu: 1231m

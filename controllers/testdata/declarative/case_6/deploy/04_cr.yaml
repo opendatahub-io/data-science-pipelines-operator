@@ -12,6 +12,7 @@ metadata:
   name: testdsp6
 spec:
   dspVersion: v2
+  podToPodTLS: true
   apiServer:
     deploy: true
     enableSamplePipeline: false

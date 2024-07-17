@@ -173,6 +173,38 @@ func TestExtractParams_CABundle(t *testing.T) {
 			},
 			SSLCertFileEnv: "testdata/tls/dummy-ca-bundle.crt",
 		},
+
+		{
+			msg:                         "pod to pod tls enabled",
+			dsp:                         testutil.CreateDSPAWithAPIServerPodtoPodTlsEnabled(),
+			CustomCABundleRootMountPath: "/dsp-custom-certs",
+			CustomSSLCertDir:            strPtr("/dsp-custom-certs:/etc/ssl/certs:/etc/pki/tls/certs"),
+			PiplinesCABundleMountPath:   "/dsp-custom-certs/dsp-ca.crt",
+			APICustomPemCerts:           [][]byte{[]byte("service-ca-contents")},
+			CustomCABundle:              &dspav1alpha1.CABundle{ConfigMapKey: "dsp-ca.crt", ConfigMapName: "dsp-trusted-ca-testdspa"},
+			ConfigMapPreReq: []*v1.ConfigMap{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "openshift-service-ca.crt", Namespace: "testnamespace"},
+					Data:       map[string]string{"service-ca.crt": "service-ca-contents"},
+				},
+			},
+		},
+		{
+			msg:                         "pod to pod tls enabled with sys certs",
+			dsp:                         testutil.CreateDSPAWithAPIServerPodtoPodTlsEnabled(),
+			CustomCABundleRootMountPath: "/dsp-custom-certs",
+			CustomSSLCertDir:            strPtr("/dsp-custom-certs:/etc/ssl/certs:/etc/pki/tls/certs"),
+			PiplinesCABundleMountPath:   "/dsp-custom-certs/dsp-ca.crt",
+			APICustomPemCerts:           [][]byte{[]byte("service-ca-contents"), []byte("dummycontent")},
+			CustomCABundle:              &dspav1alpha1.CABundle{ConfigMapKey: "dsp-ca.crt", ConfigMapName: "dsp-trusted-ca-testdspa"},
+			ConfigMapPreReq: []*v1.ConfigMap{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "openshift-service-ca.crt", Namespace: "testnamespace"},
+					Data:       map[string]string{"service-ca.crt": "service-ca-contents"},
+				},
+			},
+			SSLCertFileEnv: "testdata/tls/dummy-ca-bundle.crt",
+		},
 	}
 
 	for _, test := range tt {
@@ -199,19 +231,19 @@ func TestExtractParams_CABundle(t *testing.T) {
 			}
 
 			actualCustomCABundleRootMountPath := actualParams.CustomCABundleRootMountPath
-			assert.Equal(t, actualCustomCABundleRootMountPath, test.CustomCABundleRootMountPath)
+			assert.Equal(t, test.CustomCABundleRootMountPath, actualCustomCABundleRootMountPath)
 
 			actualCustomSSLCertDir := actualParams.CustomSSLCertDir
-			assert.Equal(t, actualCustomSSLCertDir, test.CustomSSLCertDir)
+			assert.Equal(t, test.CustomSSLCertDir, actualCustomSSLCertDir)
 
 			actualPipelinesCABundleMountPath := actualParams.PiplinesCABundleMountPath
-			assert.Equal(t, actualPipelinesCABundleMountPath, test.PiplinesCABundleMountPath)
+			assert.Equal(t, test.PiplinesCABundleMountPath, actualPipelinesCABundleMountPath)
 
 			actualAPICustomPemCerts := actualParams.APICustomPemCerts
-			assert.Equal(t, actualAPICustomPemCerts, test.APICustomPemCerts)
+			assert.Equal(t, test.APICustomPemCerts, actualAPICustomPemCerts)
 
 			actualCustomCABundle := actualParams.CustomCABundle
-			assert.Equal(t, actualCustomCABundle, test.CustomCABundle)
+			assert.Equal(t, test.CustomCABundle, actualCustomCABundle)
 
 			if test.ConfigMapPreReq != nil && len(test.ConfigMapPreReq) > 0 {
 				for _, cfg := range test.ConfigMapPreReq {

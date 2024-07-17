@@ -5,6 +5,7 @@ kind: DataSciencePipelinesApplication
 metadata:
   name: testdsp8
 spec:
+  podToPodTLS: true
   dspVersion: v2
   objectStorage:
     minio:

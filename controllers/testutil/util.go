@@ -240,3 +240,19 @@ func CreateDSPAWithAPIServerCABundle(key string, cfgmapName string) *dspav1alpha
 	}
 	return dspa
 }
+
+func CreateDSPAWithAPIServerPodtoPodTlsEnabled() *dspav1alpha1.DataSciencePipelinesApplication {
+	dspa := CreateEmptyDSPA()
+	dspa.Spec.DSPVersion = "v2"
+	dspa.Spec.APIServer = &dspav1alpha1.APIServer{
+		Deploy: true,
+	}
+	dspa.Spec.MLMD.Deploy = true
+	dspa.Spec.PodToPodTLS = boolPtr(true)
+
+	return dspa
+}
+
+func boolPtr(b bool) *bool {
+	return &b
+}

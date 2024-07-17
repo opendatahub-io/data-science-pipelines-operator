@@ -131,8 +131,9 @@ func TestDeployMLMDV2(t *testing.T) {
 	// Construct DSPA Spec with MLMD Enabled
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
 		Spec: dspav1alpha1.DSPASpec{
-			DSPVersion: "v2",
-			APIServer:  &dspav1alpha1.APIServer{},
+			DSPVersion:  "v2",
+			PodToPodTLS: boolPtr(false),
+			APIServer:   &dspav1alpha1.APIServer{},
 			MLMD: &dspav1alpha1.MLMD{
 				Deploy: true,
 			},
@@ -315,8 +316,9 @@ func TestDontDeployMLMDV2(t *testing.T) {
 	// Construct DSPA Spec with MLMD Not Enabled
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
 		Spec: dspav1alpha1.DSPASpec{
-			DSPVersion: "v2",
-			APIServer:  &dspav1alpha1.APIServer{},
+			DSPVersion:  "v2",
+			PodToPodTLS: boolPtr(false),
+			APIServer:   &dspav1alpha1.APIServer{},
 			MLMD: &dspav1alpha1.MLMD{
 				Deploy: false,
 			},
@@ -448,8 +450,9 @@ func TestDefaultDeployBehaviorMLMDV2(t *testing.T) {
 	// Construct DSPA Spec with MLMD Spec not defined
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
 		Spec: dspav1alpha1.DSPASpec{
-			DSPVersion: "v2",
-			APIServer:  &dspav1alpha1.APIServer{},
+			DSPVersion:  "v2",
+			PodToPodTLS: boolPtr(false),
+			APIServer:   &dspav1alpha1.APIServer{},
 			Database: &dspav1alpha1.Database{
 				DisableHealthCheck: false,
 				MariaDB: &dspav1alpha1.MariaDB{
@@ -608,8 +611,9 @@ func TestDeployEnvoyRouteV2(t *testing.T) {
 	// Construct DSPA Spec with MLMD Enabled
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
 		Spec: dspav1alpha1.DSPASpec{
-			DSPVersion: "v2",
-			APIServer:  &dspav1alpha1.APIServer{},
+			DSPVersion:  "v2",
+			PodToPodTLS: boolPtr(false),
+			APIServer:   &dspav1alpha1.APIServer{},
 			MLMD: &dspav1alpha1.MLMD{
 				Deploy: true,
 				Envoy: &dspav1alpha1.Envoy{
@@ -750,8 +754,9 @@ func TestDontDeployEnvoyRouteV2(t *testing.T) {
 	// Construct DSPA Spec with MLMD Enabled
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
 		Spec: dspav1alpha1.DSPASpec{
-			DSPVersion: "v2",
-			APIServer:  &dspav1alpha1.APIServer{},
+			DSPVersion:  "v2",
+			PodToPodTLS: boolPtr(false),
+			APIServer:   &dspav1alpha1.APIServer{},
 			MLMD: &dspav1alpha1.MLMD{
 				Deploy: true,
 				Envoy: &dspav1alpha1.Envoy{
@@ -810,4 +815,8 @@ func TestDontDeployEnvoyRouteV2(t *testing.T) {
 	created, err = reconciler.IsResourceCreated(ctx, route, expectedMLMDEnvoyRouteName, testNamespace)
 	assert.False(t, created)
 	assert.Nil(t, err)
+}
+
+func boolPtr(b bool) *bool {
+	return &b
 }

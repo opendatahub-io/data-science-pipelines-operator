@@ -754,6 +754,12 @@ spec:
                         type: object
                     type: object
                 type: object
+              podToPodTLS:
+                default: true
+                description: PodToPodTLS Set to "true" or "false" to enable or disable
+                  TLS communication between DSPA components (pods). Defaults to "true"
+                  to enable TLS between all pods. Only supported in DSP V2 on OpenShift.
+                type: boolean
               scheduledWorkflow:
                 default:
                   deploy: true
