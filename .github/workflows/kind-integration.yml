@@ -11,6 +11,7 @@ on:
       - config/**
       - tests/**
       - .github/resources/**
+      - '.github/workflows/kind-integration.yml'
     types:
       - opened
       - reopened
@@ -22,18 +23,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  IMAGE_REPO_DSPO: data-science-pipelines-operator
-  DSPA_NAMESPACE: test-dspa
-  DSPA_EXTERNAL_NAMESPACE: dspa-ext
-  MINIO_NAMESPACE: test-minio
-  MARIADB_NAMESPACE: test-mariadb
-  PYPISERVER_NAMESPACE: test-pypiserver
-  DSPA_NAME: test-dspa
-  DSPA_EXTERNAL_NAME: dspa-ext
-  DSPA_DEPLOY_WAIT_TIMEOUT: 300
-  INTEGRATION_TESTS_DIR: ${{ github.workspace }}/tests
-  DSPA_PATH: ${{ github.workspace }}/tests/resources/dspa-lite.yaml
-  DSPA_EXTERNAL_PATH: ${{ github.workspace }}/tests/resources/dspa-external-lite.yaml
+  GIT_WORKSPACE: ${{ github.workspace }}
+
 jobs:
   dspo-tests:
     runs-on: ubuntu-20.04
@@ -53,113 +44,7 @@ jobs:
       - name: Setup and start KinD cluster
         uses: ./.github/actions/kind
 
-      # TODO: Consolidate testing CRDS (2 locations)
-      - name: Apply OCP CRDs
-        env:
-          RESOURCES_DIR: ${{ github.workspace }}/.github/resources
-          CONFIG_DIR: ${{ github.workspace }}/config
+      - name: Run test
+        working-directory: ${{ github.workspace }}/.github/scripts/tests
         run: |
-          kubectl apply -f ${{ env.RESOURCES_DIR }}/crds
-          kubectl apply -f ${{ env.CONFIG_DIR }}/crd/external/route.openshift.io_routes.yaml
-
-      - name: Build image
-        env:
-          DSPO_IMAGE: ${{env.REGISTRY_ADDRESS}}/data-science-pipelines-operator
-        run: |
-          make podman-build -e IMG="${DSPO_IMAGE}"
-
-      - name: Create opendatahub namespace
-        run: |
-          kubectl create namespace opendatahub
-
-      - name: Deploy Argo Lite
-        working-directory: ${{ github.workspace }}/.github/resources/argo-lite
-        run: |
-          kustomize build . | kubectl apply -f -
-
-      - name: Deploy DSPO
-        env:
-          DSPO_IMAGE: ${{env.REGISTRY_ADDRESS}}/data-science-pipelines-operator
-        run: |
-          make podman-push -e IMG="${DSPO_IMAGE}"
-          make deploy-kind -e IMG="${DSPO_IMAGE}"
-
-      - name: Create Minio Namespace
-        run: |
-          kubectl create namespace ${{ env.MINIO_NAMESPACE }}
-
-      - name: Deploy Minio
-        working-directory: ${{ github.workspace }}/.github/resources/minio
-        run: |
-          kustomize build . |  oc -n ${{ env.MINIO_NAMESPACE }} apply -f -
-
-      - name: Create MariaDB Namespace
-        run: |
-          kubectl create namespace ${{ env.MARIADB_NAMESPACE }}
-
-      - name: Deploy MariaDB
-        working-directory: ${{ github.workspace }}/.github/resources/mariadb
-        run: |
-          kustomize build . |  oc -n ${{ env.MARIADB_NAMESPACE }} apply -f -
-
-      - name: Create Pypiserver Namespace
-        run: |
-          kubectl create namespace ${{ env.PYPISERVER_NAMESPACE }}
-
-      - name: Deploy pypi-server
-        working-directory: ${{ github.workspace }}/.github/resources/pypiserver/base
-        run: |
-          kustomize build . | oc -n ${{ env.PYPISERVER_NAMESPACE }} apply -f -
-
-      - name: Wait for Dependencies (DSPO, Minio, Mariadb, Pypi server)
-        run: |
-          kubectl wait -n opendatahub --timeout=60s --for=condition=Available=true deployment data-science-pipelines-operator-controller-manager
-          kubectl wait -n ${{ env.MARIADB_NAMESPACE }} --timeout=60s --for=condition=Available=true deployment mariadb
-          kubectl wait -n ${{ env.MINIO_NAMESPACE }} --timeout=60s --for=condition=Available=true deployment minio
-          kubectl wait -n ${{ env.PYPISERVER_NAMESPACE }} --timeout=60s --for=condition=Available=true deployment pypi-server
-
-      - name: Upload Python Packages to pypi-server
-        working-directory: ${{ github.workspace }}/.github/scripts/python_package_upload
-        run: |
-          sh package_upload.sh
-
-      - name: Create DSPA Namespace
-        run: |
-          kubectl create namespace ${{ env.DSPA_NAMESPACE }}
-
-      - name: Create Namespace for DSPA with External connections
-        run: |
-          kubectl create namespace ${{ env.DSPA_EXTERNAL_NAMESPACE }}
-
-      - name: Apply MariaDB and Minio Secrets and Configmaps in the External Namespace
-        working-directory: ${{ github.workspace }}/.github/resources/external-pre-reqs
-        run: |
-          kustomize build . |  oc -n ${{ env.DSPA_EXTERNAL_NAMESPACE }} apply -f -
-
-      - name: Apply PIP Server ConfigMap
-        env:
-          RESOURCES_DIR: ${{ github.workspace }}/.github/resources/pypiserver/base
-        run: |
-          kubectl apply -f $RESOURCES_DIR/nginx-tls-config.yaml -n ${{ env.DSPA_NAMESPACE }}
-
-      - name: Run tests
-        working-directory: ${{ github.workspace }}
-        env:
-          NAMESPACE: ${{ env.DSPA_NAMESPACE }}
-          DSPA_NAME: ${{ env.DSPA_NAME }}
-          DSPA_PATH: ${{ env.DSPA_PATH }}
-        run: |
-            make integrationtest K8SAPISERVERHOST=$(oc whoami --show-server) DSPANAMESPACE=${NAMESPACE} DSPAPATH=${DSPA_PATH}
-
-      - name: Run tests for DSPA with External Connections
-        working-directory: ${{ github.workspace }}
-        env:
-          NAMESPACE: ${{ env.DSPA_EXTERNAL_NAMESPACE }}
-          DSPA_NAME: ${{ env.DSPA_EXTERNAL_NAME }}
-          DSPA_EXTERNAL_PATH: ${{ env.DSPA_EXTERNAL_PATH }}
-        run: |
-            make integrationtest K8SAPISERVERHOST=$(oc whoami --show-server) DSPANAMESPACE=${NAMESPACE} DSPAPATH=${DSPA_EXTERNAL_PATH}
-
-      - name: Clean up
-        run: |
-          make undeploy-kind
+          sh kind-integration.sh
