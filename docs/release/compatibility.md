@@ -6,6 +6,7 @@ Each row outlines the versions for individual subcomponents and images that are 
 
 | dsp | kfp | argo | ml-metadata | envoy | ocp-pipelines | oauth-proxy | mariadb-103 | ubi-minimal | ubi-micro | openshift |
 |-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|
+| 2.4 | 2.0.5 | 3.3.10 | 1.14.0 | 1.22.11 | N/A | v4.10 | 1 | N/A | N/A | 4.14,4.15,4.16 |
 | 2.3 | 2.0.5 | 3.3.10 | 1.14.0 | 1.22.11 | N/A | v4.10 | 1 | N/A | N/A | 4.13,4.14,4.15 |
 | 2.2 | 2.0.5 | 3.3.10 | 1.14.0 | 1.22.11 | N/A | v4.10 | 1 | N/A | N/A | 4.13,4.14,4.15 |
 | 2.1 | 2.0.5 | 3.3.10 | 1.14.0 | 1.22.11 | N/A | v4.10 | 1 | N/A | N/A | 4.13,4.14,4.15 |
