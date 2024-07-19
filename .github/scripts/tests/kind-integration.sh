@@ -29,67 +29,107 @@ OPENDATAHUB_NAMESPACE="opendatahub"
 RESOURCES_DIR_PYPI="${GIT_WORKSPACE}/.github/resources/pypiserver/base"
 
 # TODO: Consolidate testing CRDS (2 locations)
-# Apply OCP CRDs
+echo "---------------------------------"
+echo "# Apply OCP CRDs"
+echo "---------------------------------"
 kubectl apply -f ${RESOURCES_DIR_CRD}/crds
 kubectl apply -f "${CONFIG_DIR}/crd/external/route.openshift.io_routes.yaml"
 
-# Build image
+echo "---------------------------------"
+echo "Build image"
+echo "---------------------------------"
 ( cd $GIT_WORKSPACE && make podman-build -e IMG="${DSPO_IMAGE}" )
 
-# Create opendatahub namespace
+echo "---------------------------------"
+echo "Create opendatahub namespace"
+echo "---------------------------------"
 kubectl create namespace $OPENDATAHUB_NAMESPACE
 
-# Deploy Argo Lite
+echo "---------------------------------"
+echo "Deploy Argo Lite"
+echo "---------------------------------"
 ( cd "${GIT_WORKSPACE}/.github/resources/argo-lite" && kustomize build . | kubectl -n $OPENDATAHUB_NAMESPACE apply -f - )
 
-# Deploy DSPO
+echo "---------------------------------"
+echo "Deploy DSPO"
+echo "---------------------------------"
 ( cd $GIT_WORKSPACE && make podman-push -e IMG="${DSPO_IMAGE}" )
 ( cd $GIT_WORKSPACE && make deploy-kind -e IMG="${DSPO_IMAGE}" )
 
-# Create Minio Namespace
+echo "---------------------------------"
+echo "Create Minio Namespace"
+echo "---------------------------------"
 kubectl create namespace $MINIO_NAMESPACE
 
-# Deploy Minio
+echo "---------------------------------"
+echo "Deploy Minio"
+echo "---------------------------------"
 ( cd "${GIT_WORKSPACE}/.github/resources/minio" && kustomize build . | kubectl -n $MINIO_NAMESPACE apply -f - )
 
-# Create MariaDB Namespace
+echo "---------------------------------"
+echo "Create MariaDB Namespace"
+echo "---------------------------------"
 kubectl create namespace $MARIADB_NAMESPACE
 
-# Deploy MariaDB
+echo "---------------------------------"
+echo "Deploy MariaDB"
+echo "---------------------------------"
 ( cd "${GIT_WORKSPACE}/.github/resources/mariadb" && kustomize build . | kubectl -n $MARIADB_NAMESPACE apply -f - )
 
-# Create Pypiserver Namespace
+echo "---------------------------------"
+echo "Create Pypiserver Namespace"
+echo "---------------------------------"
 kubectl create namespace $PYPISERVER_NAMESPACE
 
-# Deploy pypi-server
+echo "---------------------------------"
+echo "Deploy pypi-server"
+echo "---------------------------------"
 ( cd "${GIT_WORKSPACE}/.github/resources/pypiserver/base" && kustomize build . | kubectl -n $PYPISERVER_NAMESPACE apply -f - )
 
-# Wait for Dependencies (DSPO, Minio, Mariadb, Pypi server)
+echo "---------------------------------"
+echo "Wait for Dependencies (DSPO, Minio, Mariadb, Pypi server)"
+echo "---------------------------------"
 kubectl wait -n $OPENDATAHUB_NAMESPACE --timeout=60s --for=condition=Available=true deployment data-science-pipelines-operator-controller-manager
 kubectl wait -n $MARIADB_NAMESPACE --timeout=60s --for=condition=Available=true deployment mariadb
 kubectl wait -n $MINIO_NAMESPACE --timeout=60s --for=condition=Available=true deployment minio
 kubectl wait -n $PYPISERVER_NAMESPACE --timeout=60s --for=condition=Available=true deployment pypi-server
 
-# Upload Python Packages to pypi-server
+echo "---------------------------------"
+echo "Upload Python Packages to pypi-server"
+echo "---------------------------------"
 ( cd "${GIT_WORKSPACE}/.github/scripts/python_package_upload" && sh package_upload.sh )
 
-# Create DSPA Namespace
+echo "---------------------------------"
+echo "Create DSPA Namespace"
+echo "---------------------------------"
 kubectl create namespace $DSPA_NAMESPACE
 
-# Create Namespace for DSPA with External connections
+echo "---------------------------------"
+echo "Create Namespace for DSPA with External connections"
+echo "---------------------------------"
 kubectl create namespace $DSPA_EXTERNAL_NAMESPACE
 
-# Apply MariaDB and Minio Secrets and Configmaps in the External Namespace
+echo "---------------------------------"
+echo "Apply MariaDB and Minio Secrets and Configmaps in the External Namespace"
+echo "---------------------------------"
 ( cd "${GIT_WORKSPACE}/.github/resources/external-pre-reqs" && kustomize build . |  oc -n $DSPA_EXTERNAL_NAMESPACE apply -f - )
 
-# Apply PIP Server ConfigMap
+echo "---------------------------------"
+echo "Apply PIP Server ConfigMap"
+echo "---------------------------------"
 ( cd "${GIT_WORKSPACE}/.github/resources/pypiserver/base" && kubectl apply -f $RESOURCES_DIR_PYPI/nginx-tls-config.yaml -n $DSPA_NAMESPACE )
 
-# Run tests
+echo "---------------------------------"
+echo "Run tests"
+echo "---------------------------------"
 ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=$(oc whoami --show-server) DSPANAMESPACE=${DSPA_NAMESPACE} DSPAPATH=${DSPA_PATH} )
 
-# Run tests for DSPA with External Connections
+echo "---------------------------------"
+echo "Run tests for DSPA with External Connections"
+echo "---------------------------------"
 ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=$(oc whoami --show-server) DSPANAMESPACE=${DSPA_EXTERNAL_NAMESPACE} DSPAPATH=${DSPA_EXTERNAL_PATH} )
 
-# Clean up
+echo "---------------------------------"
+echo "Clean up"
+echo "---------------------------------"
 ( cd $GIT_WORKSPACE && make undeploy-kind )
