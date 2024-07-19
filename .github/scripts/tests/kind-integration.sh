@@ -2,11 +2,11 @@
 set -e
 
 if [ "$GIT_WORKSPACE" = "" ]; then
-    echo "GIT_WORKSPACE variable not definied. Should be the root of the source code. Example GIT_WORKSPACE=/home/dev/git/data-science-pipelines-operator" && exit
+    echo "GIT_WORKSPACE variable not defined. Should be the root of the source code. Example GIT_WORKSPACE=/home/dev/git/data-science-pipelines-operator" && exit
 fi
 
 if [ "$REGISTRY_ADDRESS" = "" ]; then
-    echo "REGISTRY_ADDRESS variable not definied." && exit
+    echo "REGISTRY_ADDRESS variable not defined." && exit
 fi
 
 # Env vars
