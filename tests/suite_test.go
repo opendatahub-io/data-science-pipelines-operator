@@ -24,7 +24,9 @@ import (
 	"flag"
 	"fmt"
 	routev1 "github.com/openshift/api/route/v1"
+	"k8s.io/client-go/kubernetes"
 	"log"
+	"strings"
 	"testing"
 	"time"
 
@@ -103,6 +105,7 @@ type IntegrationTestSuite struct {
 	Ctx           context.Context
 	DSPANamespace string
 	DSPA          *dspav1.DataSciencePipelinesApplication
+	clientset     *kubernetes.Clientset
 }
 
 type testLogWriter struct {
@@ -167,6 +170,11 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 	cfg, err = clientcmd.BuildConfigFromFlags(k8sApiServerHost, kubeconfig)
 	suite.Require().NoError(err)
 
+	clientset, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		log.Fatalf("Error creating Kubernetes client: %v", err)
+	}
+	suite.clientset = clientset
 	clientmgr.k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	suite.Require().NoError(err)
 	suite.Require().NotNil(clientmgr.k8sClient)
@@ -185,6 +193,21 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 
 	if !skipDeploy {
 		loggr.Info("Deploying DSPA...")
+
+		// externalStorage.host is a string and the test suite must be agnostic
+		// We are going to replace the externalStorage.host if a route exists
+		if DSPA.Spec.ObjectStorage.ExternalStorage != nil {
+			route := &routev1.Route{}
+			parts := strings.Split(DSPA.Spec.ObjectStorage.ExternalStorage.Host, ".")
+			name := parts[0]
+			namespace := parts[1]
+			err = clientmgr.k8sClient.Get(context.TODO(), client.ObjectKey{Name: name, Namespace: namespace}, route)
+			if err == nil {
+				DSPA.Spec.ObjectStorage.ExternalStorage.Host = route.Spec.Host
+				DSPA.Spec.ObjectStorage.ExternalStorage.Port = ""
+			}
+		}
+
 		err = testUtil.DeployDSPA(suite.T(), ctx, clientmgr.k8sClient, DSPA, DSPANamespace, DeployTimeout, PollInterval)
 		require.NoError(suite.T(), err)
 		loggr.Info("Waiting for DSPA pods to ready...")
