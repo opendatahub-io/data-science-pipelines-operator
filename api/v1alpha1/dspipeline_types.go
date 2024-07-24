@@ -150,8 +150,8 @@ type APIServer struct {
 
 	// The expiry time (seconds) for artifact download links when
 	// querying the dsp server via /apis/v2beta1/artifacts/{id}?share_url=true
-	// Default: 15
-	// +kubebuilder:default:=15
+	// Default: 60
+	// +kubebuilder:default:=60
 	// +kubebuilder:validation:Optional
 	ArtifactSignedURLExpirySeconds *int `json:"artifactSignedURLExpirySeconds"`
 }
