@@ -80,7 +80,7 @@ spec:
             - name: ML_PIPELINE_SERVICE_PORT_GRPC
               value: "8887"
             - name: SIGNED_URL_EXPIRY_TIME_SECONDS
-              value: "15"
+              value: "60"
             - name: EXECUTIONTYPE
               value: PipelineRun
             - name: CACHE_IMAGE
