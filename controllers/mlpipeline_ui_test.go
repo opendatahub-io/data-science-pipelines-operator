@@ -18,6 +18,7 @@ limitations under the License.
 package controllers
 
 import (
+	"log/slog"
 	"testing"
 
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
@@ -57,9 +58,12 @@ func TestDeployUI(t *testing.T) {
 	dspa.Namespace = testNamespace
 	dspa.Name = testDSPAName
 
+	//Create Logging using slog
+	log := slog.With("namespace", dspa.Namespace).With("dspa_name", dspa.Name)
+
 	// Create Context, Fake Controller and Params
 	ctx, params, reconciler := CreateNewTestObjects()
-	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, log)
 	assert.Nil(t, err)
 
 	// Ensure UI Deployement doesn't yet exist
@@ -111,9 +115,12 @@ func TestDontDeployUI(t *testing.T) {
 	dspa.Namespace = testNamespace
 	dspa.Name = testDSPAName
 
+	//Create Logging using slog
+	log := slog.With("namespace", dspa.Namespace).With("dspa_name", dspa.Name)
+
 	// Create Context, Fake Controller and Params
 	ctx, params, reconciler := CreateNewTestObjects()
-	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, log)
 	assert.Nil(t, err)
 
 	// Ensure UI Deployment doesn't yet exist
@@ -161,9 +168,12 @@ func TestDefaultDeployBehaviorUI(t *testing.T) {
 	dspa.Namespace = testNamespace
 	dspa.Name = testDSPAName
 
+	//Create Logging using slog
+	log := slog.With("namespace", dspa.Namespace).With("dspa_name", dspa.Name)
+
 	// Create Context, Fake Controller and Params
 	ctx, params, reconciler := CreateNewTestObjects()
-	params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	params.ExtractParams(ctx, dspa, reconciler.Client, log)
 
 	// Ensure UI Deployment doesn't yet exist
 	deployment := &appsv1.Deployment{}

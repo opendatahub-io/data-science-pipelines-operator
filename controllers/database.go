@@ -22,12 +22,12 @@ import (
 	"database/sql"
 	b64 "encoding/base64"
 	"fmt"
+	"log/slog"
 
 	"time"
 
 	"errors"
 
-	"github.com/go-logr/logr"
 	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
@@ -94,7 +94,7 @@ func createMySQLConfig(user, password string, mysqlServiceHost string,
 
 var ConnectAndQueryDatabase = func(
 	host string,
-	log logr.Logger,
+	log *slog.Logger,
 	port, username, password, dbname, tls string,
 	dbConnectionTimeout time.Duration,
 	pemCerts [][]byte,
@@ -162,11 +162,11 @@ var ConnectAndQueryDatabase = func(
 
 func (r *DSPAReconciler) isDatabaseAccessible(dsp *dspav1alpha1.DataSciencePipelinesApplication,
 	params *DSPAParams) (bool, error) {
-	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
+	log := slog.With("namespace", dsp.Namespace).With("dspa_name", dsp.Name)
 
 	if params.DatabaseHealthCheckDisabled(dsp) {
 		infoMessage := "Database health check disabled, assuming database is available and ready."
-		log.V(1).Info(infoMessage)
+		log.Info(infoMessage)
 		return true, nil
 	}
 
@@ -206,7 +206,7 @@ func (r *DSPAReconciler) isDatabaseAccessible(dsp *dspav1alpha1.DataSciencePipel
 		tls = val
 	}
 
-	log.V(1).Info(fmt.Sprintf("Attempting Database Heath Check connection (with timeout: %s)", dbConnectionTimeout))
+	log.Info(fmt.Sprintf("Attempting Database Heath Check connection (with timeout: %s)", dbConnectionTimeout))
 
 	dbHealthCheckPassed, err := ConnectAndQueryDatabase(
 		params.DBConnection.Host,
@@ -235,7 +235,7 @@ func (r *DSPAReconciler) isDatabaseAccessible(dsp *dspav1alpha1.DataSciencePipel
 func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,
 	params *DSPAParams) error {
 
-	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
+	log := slog.With("namespace", dsp.Namespace).With("dspa_name", dsp.Name)
 	databaseSpecified := dsp.Spec.Database != nil
 	// DB field can be specified as an empty obj, confirm that subfields are also specified
 	// By default if Database is empty, we deploy mariadb

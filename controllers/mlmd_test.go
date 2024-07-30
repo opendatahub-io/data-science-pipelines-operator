@@ -18,8 +18,10 @@ limitations under the License.
 package controllers
 
 import (
-	v1 "github.com/openshift/api/route/v1"
+	"log/slog"
 	"testing"
+
+	v1 "github.com/openshift/api/route/v1"
 
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/stretchr/testify/assert"
@@ -62,9 +64,12 @@ func TestDeployMLMDV1(t *testing.T) {
 	dspa.Namespace = testNamespace
 	dspa.Name = testDSPAName
 
+	//Create Logging using slog
+	log := slog.With("namespace", dspa.Namespace).With("dspa_name", dspa.Name)
+
 	// Create Context, Fake Controller and Params
 	ctx, params, reconciler := CreateNewTestObjects()
-	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, log)
 	assert.Nil(t, err)
 
 	// Ensure MLMD-Envoy resources doesn't yet exist
@@ -157,9 +162,12 @@ func TestDeployMLMDV2(t *testing.T) {
 	dspa.Namespace = testNamespace
 	dspa.Name = testDSPAName
 
+	//Create Logging using slog
+	log := slog.With("namespace", dspa.Namespace).With("dspa_name", dspa.Name)
+
 	// Create Context, Fake Controller and Params
 	ctx, params, reconciler := CreateNewTestObjects()
-	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, log)
 	assert.Nil(t, err)
 
 	// Ensure MLMD-Envoy resources doesn't yet exist
@@ -251,9 +259,12 @@ func TestDontDeployMLMDV1(t *testing.T) {
 	dspa.Namespace = testNamespace
 	dspa.Name = testDSPAName
 
+	//Create Logging using slog
+	log := slog.With("namespace", dspa.Namespace).With("dspa_name", dspa.Name)
+
 	// Create Context, Fake Controller and Params
 	ctx, params, reconciler := CreateNewTestObjects()
-	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, log)
 	assert.Nil(t, err)
 
 	// Ensure MLMD-Envoy resources doesn't yet exist
@@ -342,9 +353,12 @@ func TestDontDeployMLMDV2(t *testing.T) {
 	dspa.Namespace = testNamespace
 	dspa.Name = testDSPAName
 
+	//Create Logging using slog
+	log := slog.With("namespace", dspa.Namespace).With("dspa_name", dspa.Name)
+
 	// Create Context, Fake Controller and Params
 	ctx, params, reconciler := CreateNewTestObjects()
-	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, log)
 	assert.EqualError(t, err, MlmdIsRequiredInV2Msg)
 }
 
@@ -381,9 +395,12 @@ func TestDefaultDeployBehaviorMLMDV1(t *testing.T) {
 	dspa.Namespace = testNamespace
 	dspa.Name = testDSPAName
 
+	//Create Logging using slog
+	log := slog.With("namespace", dspa.Namespace).With("dspa_name", dspa.Name)
+
 	// Create Context, Fake Controller and Params
 	ctx, params, reconciler := CreateNewTestObjects()
-	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, log)
 	assert.Nil(t, err)
 
 	// Ensure MLMD-Envoy resources doesn't yet exist
@@ -473,9 +490,12 @@ func TestDefaultDeployBehaviorMLMDV2(t *testing.T) {
 	dspa.Namespace = testNamespace
 	dspa.Name = testDSPAName
 
+	//Create Logging using slog
+	log := slog.With("namespace", dspa.Namespace).With("dspa_name", dspa.Name)
+
 	// Create Context, Fake Controller and Params
 	ctx, params, reconciler := CreateNewTestObjects()
-	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, log)
 	assert.Nil(t, err)
 
 	// Ensure MLMD-Envoy resources doesn't yet exist
@@ -568,9 +588,12 @@ func TestDeployEnvoyRouteV1(t *testing.T) {
 	dspa.Namespace = testNamespace
 	dspa.Name = testDSPAName
 
+	//Create Logging using slog
+	log := slog.With("namespace", dspa.Namespace).With("dspa_name", dspa.Name)
+
 	// Create Context, Fake Controller and Params
 	ctx, params, reconciler := CreateNewTestObjects()
-	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, log)
 	assert.Nil(t, err)
 
 	// Ensure MLMD-Envoy resources doesn't yet exist
@@ -640,9 +663,12 @@ func TestDeployEnvoyRouteV2(t *testing.T) {
 	dspa.Namespace = testNamespace
 	dspa.Name = testDSPAName
 
+	//Create Logging using slog
+	log := slog.With("namespace", dspa.Namespace).With("dspa_name", dspa.Name)
+
 	// Create Context, Fake Controller and Params
 	ctx, params, reconciler := CreateNewTestObjects()
-	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, log)
 	assert.Nil(t, err)
 
 	// Ensure MLMD-Envoy resources doesn't yet exist
@@ -711,9 +737,12 @@ func TestDontDeployEnvoyRouteV1(t *testing.T) {
 	dspa.Namespace = testNamespace
 	dspa.Name = testDSPAName
 
+	//Create Logging using slog
+	log := slog.With("namespace", dspa.Namespace).With("dspa_name", dspa.Name)
+
 	// Create Context, Fake Controller and Params
 	ctx, params, reconciler := CreateNewTestObjects()
-	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, log)
 	assert.Nil(t, err)
 
 	// Ensure MLMD-Envoy resources doesn't yet exist
@@ -783,9 +812,12 @@ func TestDontDeployEnvoyRouteV2(t *testing.T) {
 	dspa.Namespace = testNamespace
 	dspa.Name = testDSPAName
 
+	//Create Logging using slog
+	log := slog.With("namespace", dspa.Namespace).With("dspa_name", dspa.Name)
+
 	// Create Context, Fake Controller and Params
 	ctx, params, reconciler := CreateNewTestObjects()
-	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, log)
 	assert.Nil(t, err)
 
 	// Ensure MLMD-Envoy resources doesn't yet exist

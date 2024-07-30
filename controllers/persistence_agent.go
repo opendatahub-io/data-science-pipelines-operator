@@ -18,6 +18,7 @@ package controllers
 
 import (
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	"log/slog"
 )
 
 var persistenceAgentTemplatesDir = "persistence-agent"
@@ -27,7 +28,7 @@ const persistenceAgentDefaultResourceNamePrefix = "ds-pipeline-persistenceagent-
 func (r *DSPAReconciler) ReconcilePersistenceAgent(dsp *dspav1alpha1.DataSciencePipelinesApplication,
 	params *DSPAParams) error {
 
-	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
+	log := slog.With("namespace", dsp.Namespace).With("dspa_name", dsp.Name)
 
 	if !dsp.Spec.PersistenceAgent.Deploy {
 		log.Info("Skipping Application of PersistenceAgent Resources")

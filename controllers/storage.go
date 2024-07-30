@@ -22,11 +22,10 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
-
 	"time"
 
-	"github.com/go-logr/logr"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
@@ -74,7 +73,7 @@ func createCredentialProvidersChain(accessKey, secretKey string) *credentials.Cr
 	return credentials.New(&credentials.Chain{Providers: providers})
 }
 
-func getHttpsTransportWithCACert(log logr.Logger, pemCerts [][]byte) (*http.Transport, error) {
+func getHttpsTransportWithCACert(log *slog.Logger, pemCerts [][]byte) (*http.Transport, error) {
 	transport, err := minio.DefaultTransport(true)
 	if err != nil {
 		return nil, fmt.Errorf("error creating default transport : %s", err)
@@ -83,7 +82,7 @@ func getHttpsTransportWithCACert(log logr.Logger, pemCerts [][]byte) (*http.Tran
 	if transport.TLSClientConfig.RootCAs == nil {
 		pool, err := x509.SystemCertPool()
 		if err != nil {
-			log.Error(err, "error initializing TLS Pool: %s")
+			log.Error("error initializing TLS Pool: %s", err)
 			transport.TLSClientConfig.RootCAs = x509.NewCertPool()
 		} else {
 			transport.TLSClientConfig.RootCAs = pool
@@ -100,7 +99,7 @@ func getHttpsTransportWithCACert(log logr.Logger, pemCerts [][]byte) (*http.Tran
 
 var ConnectAndQueryObjStore = func(
 	ctx context.Context,
-	log logr.Logger,
+	log *slog.Logger,
 	endpoint, bucket string,
 	accesskey, secretkey []byte,
 	secure bool,
@@ -117,7 +116,7 @@ var ConnectAndQueryObjStore = func(
 		tr, err := getHttpsTransportWithCACert(log, pemCerts)
 		if err != nil {
 			errorMessage := "Encountered error when processing custom ca bundle."
-			log.Error(err, errorMessage)
+			log.Error(errorMessage, err)
 			return false, errors.New(errorMessage)
 		}
 		opts.Transport = tr
@@ -126,7 +125,7 @@ var ConnectAndQueryObjStore = func(
 	minioClient, err := minio.New(endpoint, opts)
 	if err != nil {
 		errorMessage := fmt.Sprintf("Could not connect to object storage endpoint: %s", endpoint)
-		log.Error(err, errorMessage)
+		log.Error(errorMessage, err)
 		return false, errors.New(errorMessage)
 	}
 
@@ -174,10 +173,10 @@ var ConnectAndQueryObjStore = func(
 
 func (r *DSPAReconciler) isObjectStorageAccessible(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,
 	params *DSPAParams) (bool, error) {
-	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
+	log := slog.With("namespace", dsp.Namespace).With("dspa_name", dsp.Name)
 	if params.ObjectStorageHealthCheckDisabled(dsp) {
 		infoMessage := "Object Storage health check disabled, assuming object store is available and ready."
-		log.V(1).Info(infoMessage)
+		log.Info(infoMessage)
 		return true, nil
 	}
 
@@ -186,27 +185,27 @@ func (r *DSPAReconciler) isObjectStorageAccessible(ctx context.Context, dsp *dsp
 	endpoint, err := joinHostPort(params.ObjectStorageConnection.Host, params.ObjectStorageConnection.Port)
 	if err != nil {
 		errorMessage := "Could not determine Object Storage Endpoint"
-		log.Error(err, errorMessage)
+		log.Error(errorMessage, err)
 		return false, errors.New(errorMessage)
 	}
 
 	accesskey, err := base64.StdEncoding.DecodeString(params.ObjectStorageConnection.AccessKeyID)
 	if err != nil {
 		errorMessage := "Could not decode Object Storage Access Key ID"
-		log.Error(err, errorMessage)
+		log.Error(errorMessage, err)
 		return false, errors.New(errorMessage)
 	}
 
 	secretkey, err := base64.StdEncoding.DecodeString(params.ObjectStorageConnection.SecretAccessKey)
 	if err != nil {
 		errorMessage := "Could not decode Object Storage Secret Access Key"
-		log.Error(err, errorMessage)
+		log.Error(errorMessage, err)
 		return false, errors.New(errorMessage)
 	}
 
 	objStoreConnectionTimeout := config.GetDurationConfigWithDefault(config.ObjStoreConnectionTimeoutConfigName, config.DefaultObjStoreConnectionTimeout)
 
-	log.V(1).Info(fmt.Sprintf("Object Store connection timeout: %s", objStoreConnectionTimeout))
+	log.Info(fmt.Sprintf("Object Store connection timeout: %s", objStoreConnectionTimeout))
 
 	verified, err := ConnectAndQueryObjStore(ctx, log, endpoint, params.ObjectStorageConnection.Bucket, accesskey, secretkey,
 		*params.ObjectStorageConnection.Secure, params.APICustomPemCerts, objStoreConnectionTimeout)
@@ -223,7 +222,7 @@ func (r *DSPAReconciler) isObjectStorageAccessible(ctx context.Context, dsp *dsp
 func (r *DSPAReconciler) ReconcileStorage(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,
 	params *DSPAParams) error {
 
-	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
+	log := slog.With("namespace", dsp.Namespace).With("dspa_name", dsp.Name)
 
 	storageSpecified := dsp.Spec.ObjectStorage != nil
 	// Storage field can be specified as an empty obj, confirm that subfields are also specified

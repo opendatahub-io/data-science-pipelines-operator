@@ -17,6 +17,7 @@ package controllers
 
 import (
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	"log/slog"
 )
 
 var commonTemplatesDir = "common/default"
@@ -26,7 +27,8 @@ var tektonOnlyCommonTemplatesDir = "common/tekton"
 const commonCusterRolebindingTemplate = "common/no-owner/clusterrolebinding.yaml.tmpl"
 
 func (r *DSPAReconciler) ReconcileCommon(dsp *dspav1alpha1.DataSciencePipelinesApplication, params *DSPAParams) error {
-	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
+
+	log := slog.With("namespace", dsp.Namespace).With("dspa_name", dsp.Name)
 
 	log.Info("Applying Common Resources")
 	err := r.ApplyDir(dsp, params, commonTemplatesDir)

@@ -19,14 +19,10 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/dspastatus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-
-	"github.com/go-logr/logr"
 	mf "github.com/manifestival/manifestival"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/dspastatus"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/util"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/prometheus/client_golang/prometheus"
@@ -34,10 +30,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"log/slog"
+	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -53,7 +53,7 @@ const (
 type DSPAReconciler struct {
 	client.Client
 	Scheme                  *runtime.Scheme
-	Log                     logr.Logger
+	Log                     slog.Logger
 	TemplatesPath           string
 	MaxConcurrentReconciles int
 }
@@ -168,9 +168,9 @@ func (r *DSPAReconciler) DeleteResourceIfItExists(ctx context.Context, obj clien
 //+kubebuilder:rbac:groups=workload.codeflare.dev,resources=appwrappers;appwrappers/finalizers;appwrappers/status,verbs=create;delete;deletecollection;get;list;patch;update;watch
 
 func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("namespace", req.Namespace).WithValues("dspa_name", req.Name)
 
-	log.V(1).Info("DataSciencePipelinesApplication Reconciler called.")
+	log := slog.New(slog.NewTextHandler(os.Stderr, nil)).With("namespace", req.Namespace).With("dspa_name", req.Name)
+	log.Debug("DataSciencePipelinesApplication Reconciler called.")
 
 	params := &DSPAParams{}
 
@@ -180,7 +180,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		log.Info("DSPA resource was not found")
 		return ctrl.Result{}, nil
 	} else if err != nil {
-		log.Error(err, "Encountered error when fetching DSPA")
+		log.Error("Encountered error when fetching DSPA", err)
 		return ctrl.Result{}, err
 	}
 
@@ -223,7 +223,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	requeueTime := config.GetDurationConfigWithDefault(config.RequeueTimeConfigName, config.DefaultRequeueTime)
-	err = params.ExtractParams(ctx, dspa, r.Client, r.Log)
+	err = params.ExtractParams(ctx, dspa, r.Client, log)
 	if err != nil {
 		log.Info(fmt.Sprintf("Encountered error when parsing CR: [%s]", err))
 		return ctrl.Result{Requeue: true, RequeueAfter: requeueTime}, nil
@@ -344,21 +344,21 @@ func (r *DSPAReconciler) setStatusAsNotReady(conditionType string, err error, se
 
 func (r *DSPAReconciler) setStatus(ctx context.Context, resourceName string, conditionType string,
 	dspa *dspav1alpha1.DataSciencePipelinesApplication, setStatus func(metav1.Condition),
-	log logr.Logger) {
+	log *slog.Logger) {
 	condition, err := r.evaluateCondition(ctx, dspa, resourceName, conditionType)
 	setStatus(condition)
 	if err != nil {
-		log.Error(err, fmt.Sprintf("Encountered error when creating the %s readiness condition", conditionType))
+		log.Error(fmt.Sprintf("Encountered error when creating the %s readiness condition", conditionType), err)
 	}
 }
 
 func (r *DSPAReconciler) updateStatus(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication,
-	dspaStatus dspastatus.DSPAStatus, log logr.Logger, req ctrl.Request) {
+	dspaStatus dspastatus.DSPAStatus, log *slog.Logger, req ctrl.Request) {
 	r.refreshDspa(ctx, dspa, req, log)
 	dspa.Status.Conditions = dspaStatus.GetConditions()
 	err := r.Status().Update(ctx, dspa)
 	if err != nil {
-		log.Error(err, errorUpdatingDspaStatusMsg)
+		log.Error(errorUpdatingDspaStatusMsg, err)
 	}
 }
 
@@ -478,7 +478,7 @@ func (r *DSPAReconciler) evaluateCondition(ctx context.Context, dspa *dspav1alph
 
 }
 
-func (r *DSPAReconciler) refreshDspa(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication, req ctrl.Request, log logr.Logger) {
+func (r *DSPAReconciler) refreshDspa(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication, req ctrl.Request, log *slog.Logger) {
 	err := r.Get(ctx, req.NamespacedName, dspa)
 	if err != nil {
 		log.Info(err.Error())
@@ -486,7 +486,7 @@ func (r *DSPAReconciler) refreshDspa(ctx context.Context, dspa *dspav1alpha1.Dat
 }
 
 func (r *DSPAReconciler) PublishMetrics(dspa *dspav1alpha1.DataSciencePipelinesApplication, metricsMap map[metav1.Condition]*prometheus.GaugeVec) {
-	log := r.Log.WithValues("namespace", dspa.Namespace).WithValues("dspa_name", dspa.Name)
+	log := slog.With("namespace", dspa.Namespace).With("dspa_name", dspa.Name)
 	log.Info("Publishing Ready Metrics")
 
 	for conditionType, metric := range metricsMap {
@@ -522,17 +522,17 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, o client.Object) []reconcile.Request {
 				cm := o.(*corev1.ConfigMap)
 				thisNamespace := cm.Namespace
-				log := r.Log.WithValues("namespace", thisNamespace)
+				log := slog.With("namespace", thisNamespace)
 
 				if cm.Name != "odh-trusted-ca-bundle" {
 					return nil
 				}
 
-				log.V(1).Info(fmt.Sprintf("Reconcile event triggered by change in event on Global CA Bundle: %s", cm.Name))
+				log.Info(fmt.Sprintf("Reconcile event triggered by change in event on Global CA Bundle: %s", cm.Name))
 
 				var dspaList dspav1alpha1.DataSciencePipelinesApplicationList
 				if err := r.List(ctx, &dspaList, client.InNamespace(thisNamespace)); err != nil {
-					log.Error(err, "unable to list DSPA's when attempting to handle Global CA Bundle event.")
+					log.Error("unable to list DSPA's when attempting to handle Global CA Bundle event.", err)
 					return nil
 				}
 
@@ -551,7 +551,7 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		WatchesRawSource(source.Kind(mgr.GetCache(), &corev1.Pod{}),
 			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, o client.Object) []reconcile.Request {
 				pod := o.(*corev1.Pod)
-				log := r.Log.WithValues("namespace", pod.Namespace)
+				log := slog.With("namespace", pod.Namespace)
 
 				component, hasComponentLabel := pod.Labels["component"]
 				if !hasComponentLabel || component != "data-science-pipelines" {
@@ -562,11 +562,11 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				if !hasDSPALabel {
 					msg := fmt.Sprintf("Pod with data-science-pipelines label encountered, but is missing dspa "+
 						"label, could not reconcile on [Pod: %s] ", pod.Name)
-					log.V(1).Info(msg)
+					log.Info(msg)
 					return nil
 				}
 
-				log.V(1).Info(fmt.Sprintf("Reconcile event triggered by [Pod: %s] ", pod.Name))
+				log.Info(fmt.Sprintf("Reconcile event triggered by [Pod: %s] ", pod.Name))
 				namespacedName := types.NamespacedName{
 					Name:      dspaName,
 					Namespace: pod.Namespace,

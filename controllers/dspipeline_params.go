@@ -22,6 +22,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"math/rand"
 	"os"
 	"strings"
@@ -29,7 +30,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/go-logr/logr"
 	mf "github.com/manifestival/manifestival"
 	dspa "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
@@ -185,7 +185,7 @@ func (p *DSPAParams) ExternalRouteEnabled(dsp *dspa.DataSciencePipelinesApplicat
 	return false
 }
 
-func (p *DSPAParams) RetrieveAndSetExternalRoute(ctx context.Context, client client.Client, log logr.Logger) (*routev1.Route, error) {
+func (p *DSPAParams) RetrieveAndSetExternalRoute(ctx context.Context, client client.Client, log *slog.Logger) (*routev1.Route, error) {
 	// Retrieve the external route
 	route := &routev1.Route{}
 	namespacedName := types.NamespacedName{
@@ -207,7 +207,7 @@ func passwordGen(n int) string {
 	return string(b)
 }
 
-func (p *DSPAParams) RetrieveSecret(ctx context.Context, client client.Client, secretName, secretKey string, log logr.Logger) (string, error) {
+func (p *DSPAParams) RetrieveSecret(ctx context.Context, client client.Client, secretName, secretKey string, log *slog.Logger) (string, error) {
 	secret := &v1.Secret{}
 	namespacedName := types.NamespacedName{
 		Name:      secretName,
@@ -215,26 +215,26 @@ func (p *DSPAParams) RetrieveSecret(ctx context.Context, client client.Client, s
 	}
 	err := client.Get(ctx, namespacedName, secret)
 	if err != nil {
-		log.V(1).Info(fmt.Sprintf("Unable to retrieve secret [%s].", secretName))
+		log.Info(fmt.Sprintf("Unable to retrieve secret [%s].", secretName))
 		return "", err
 	}
 	return base64.StdEncoding.EncodeToString(secret.Data[secretKey]), nil
 }
 
-func (p *DSPAParams) RetrieveOrCreateSecret(ctx context.Context, client client.Client, secretName, secretKey string, generatedPasswordLength int, log logr.Logger) (string, error) {
+func (p *DSPAParams) RetrieveOrCreateSecret(ctx context.Context, client client.Client, secretName, secretKey string, generatedPasswordLength int, log *slog.Logger) (string, error) {
 	val, err := p.RetrieveSecret(ctx, client, secretName, secretKey, log)
 	if err != nil && apierrs.IsNotFound(err) {
 		generatedPass := passwordGen(generatedPasswordLength)
 		return base64.StdEncoding.EncodeToString([]byte(generatedPass)), nil
 	} else if err != nil {
-		log.Error(err, "Unable to create DB secret...")
+		log.Error("Unable to create DB secret...", err)
 		return "", err
 	}
 	log.Info(fmt.Sprintf("Secret [%s] already exists, using stored value.", secretName))
 	return val, nil
 }
 
-func (p *DSPAParams) RetrieveOrCreateDBSecret(ctx context.Context, client client.Client, secret *dspa.SecretKeyValue, log logr.Logger) (string, error) {
+func (p *DSPAParams) RetrieveOrCreateDBSecret(ctx context.Context, client client.Client, secret *dspa.SecretKeyValue, log *slog.Logger) (string, error) {
 	dbPassword, err := p.RetrieveOrCreateSecret(ctx, client, secret.Name, secret.Key, config.GeneratedDBPasswordLength, log)
 	if err != nil {
 		return "", err
@@ -243,7 +243,7 @@ func (p *DSPAParams) RetrieveOrCreateDBSecret(ctx context.Context, client client
 
 }
 
-func (p *DSPAParams) RetrieveOrCreateObjectStoreSecret(ctx context.Context, client client.Client, secret *dspa.S3CredentialSecret, log logr.Logger) (string, string, error) {
+func (p *DSPAParams) RetrieveOrCreateObjectStoreSecret(ctx context.Context, client client.Client, secret *dspa.S3CredentialSecret, log *slog.Logger) (string, string, error) {
 	accessKey, err := p.RetrieveOrCreateSecret(ctx, client, secret.SecretName, secret.AccessKey, config.GeneratedObjectStorageAccessKeyLength, log)
 	if err != nil {
 		return "", "", err
@@ -258,7 +258,7 @@ func (p *DSPAParams) RetrieveOrCreateObjectStoreSecret(ctx context.Context, clie
 // SetupDBParams Populates the DB connection Parameters.
 // If an external secret is specified, SetupDBParams will retrieve DB credentials from it.
 // If DSPO is managing a dynamically created secret, then SetupDBParams generates the creds.
-func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, log logr.Logger) error {
+func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, log *slog.Logger) error {
 
 	usingExternalDB := p.UsingExternalDB(dsp)
 	if usingExternalDB {
@@ -276,7 +276,7 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 		}
 		dbExtraParams, err := config.GetDefaultDBExtraParams(tlsParams, log)
 		if err != nil {
-			log.Error(err, "Unexpected error encountered while retrieving DBExtraparams")
+			log.Error("Unexpected error encountered while retrieving DBExtraparams", err)
 			return err
 		}
 		p.DBConnection.ExtraParams = dbExtraParams
@@ -284,7 +284,7 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 		// Retreive DB Password from specified secret.  Ignore error if the secret simply doesn't exist (will be created later)
 		password, err := p.RetrieveSecret(ctx, client, p.DBConnection.CredentialsSecret.Name, p.DBConnection.CredentialsSecret.Key, log)
 		if err != nil && !apierrs.IsNotFound(err) {
-			log.Error(err, "Unexpected error encountered while fetching Database Secret")
+			log.Error("Unexpected error encountered while fetching Database Secret", err)
 			return err
 		}
 		p.DBConnection.Password = password
@@ -325,7 +325,7 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 		}
 		dbExtraParams, err := config.GetDefaultDBExtraParams(tlsParams, log)
 		if err != nil {
-			log.Error(err, "Unexpected error encountered while retrieving DBExtraparams")
+			log.Error("Unexpected error encountered while retrieving DBExtraparams", err)
 			return err
 		}
 		p.DBConnection.ExtraParams = dbExtraParams
@@ -368,7 +368,7 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 // SetupObjectParams Populates the Object Storage connection Parameters.
 // If an external secret is specified, SetupObjectParams will retrieve storage credentials from it.
 // If DSPO is managing a dynamically created secret, then SetupObjectParams generates the creds.
-func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, log logr.Logger) error {
+func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, log *slog.Logger) error {
 
 	usingExternalObjectStorage := p.UsingExternalStorage(dsp)
 	if usingExternalObjectStorage {
@@ -399,12 +399,12 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 		// Retrieve ObjStore Creds from specified secret.  Ignore error if the secret simply doesn't exist (will be created later)
 		accesskey, err := p.RetrieveSecret(ctx, client, p.ObjectStorageConnection.CredentialsSecret.SecretName, p.ObjectStorageConnection.CredentialsSecret.AccessKey, log)
 		if err != nil && !apierrs.IsNotFound(err) {
-			log.Error(err, "Unexpected error encountered while fetching Object Storage Secret")
+			log.Error("Unexpected error encountered while fetching Object Storage Secret", err)
 			return err
 		}
 		secretkey, err := p.RetrieveSecret(ctx, client, p.ObjectStorageConnection.CredentialsSecret.SecretName, p.ObjectStorageConnection.CredentialsSecret.SecretKey, log)
 		if err != nil && !apierrs.IsNotFound(err) {
-			log.Error(err, "Unexpected error encountered while fetching Object Storage Secret")
+			log.Error("Unexpected error encountered while fetching Object Storage Secret", err)
 			return err
 		}
 		p.ObjectStorageConnection.AccessKeyID = accesskey
@@ -496,7 +496,7 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 
 }
 
-func (p *DSPAParams) SetupMLMD(dsp *dspa.DataSciencePipelinesApplication, log logr.Logger) error {
+func (p *DSPAParams) SetupMLMD(dsp *dspa.DataSciencePipelinesApplication, log *slog.Logger) error {
 	if p.UsingV2Pipelines(dsp) {
 		if p.MLMD == nil {
 			log.Info("MLMD not specified, but is a required component for V2 Pipelines. Including MLMD with default specs.")
@@ -573,7 +573,7 @@ func setResourcesDefault(defaultValue dspa.ResourceRequirements, value **dspa.Re
 	}
 }
 
-func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, loggr logr.Logger) error {
+func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, loggr *slog.Logger) error {
 	p.Name = dsp.Name
 	p.Namespace = dsp.Namespace
 	p.DSPONamespace = os.Getenv("DSPO_NAMESPACE")
@@ -607,7 +607,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		}
 	}
 
-	log := loggr.WithValues("namespace", p.Namespace).WithValues("dspa_name", p.Name)
+	log := loggr.With("namespace", p.Namespace).With("dspa_name", p.Name)
 
 	if p.APIServer != nil {
 		APIServerImagePath := p.GetImageForComponent(dsp, config.APIServerImagePath, config.APIServerImagePathV2Argo, config.APIServerImagePathV2Tekton)

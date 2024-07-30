@@ -17,6 +17,7 @@ package controllers
 
 import (
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	"log/slog"
 )
 
 const (
@@ -27,10 +28,10 @@ const (
 func (r *DSPAReconciler) ReconcileMLMD(dsp *dspav1alpha1.DataSciencePipelinesApplication,
 	params *DSPAParams) error {
 
-	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
+	log := slog.With("namespace", dsp.Namespace).With("dspa_name", dsp.Name)
 
 	if (params.MLMD == nil || !params.MLMD.Deploy) && (dsp.Spec.MLMD == nil || !dsp.Spec.MLMD.Deploy) {
-		r.Log.Info("Skipping Application of ML-Metadata (MLMD) Resources")
+		log.Info("Skipping Application of ML-Metadata (MLMD) Resources")
 		return nil
 	}
 

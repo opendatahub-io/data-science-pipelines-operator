@@ -18,8 +18,10 @@ limitations under the License.
 package controllers
 
 import (
-	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
+	"log/slog"
 	"testing"
+
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/stretchr/testify/assert"
@@ -57,9 +59,12 @@ func TestDeployScheduledWorkflow(t *testing.T) {
 	dspa.Namespace = testNamespace
 	dspa.Name = testDSPAName
 
+	//Create Logging using slog
+	log := slog.With("namespace", dspa.Namespace).With("dspa_name", dspa.Name)
+
 	// Create Context, Fake Controller and Params
 	ctx, params, reconciler := CreateNewTestObjects()
-	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, log)
 	assert.Nil(t, err)
 
 	// Ensure ScheduledWorkflow Deployment doesn't yet exist

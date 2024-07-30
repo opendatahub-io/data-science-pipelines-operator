@@ -18,6 +18,7 @@ package controllers
 
 import (
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	"log/slog"
 )
 
 var scheduledWorkflowTemplatesDir = "scheduled-workflow"
@@ -27,7 +28,7 @@ const scheduledWorkflowDefaultResourceNamePrefix = "ds-pipeline-scheduledworkflo
 func (r *DSPAReconciler) ReconcileScheduledWorkflow(dsp *dspav1alpha1.DataSciencePipelinesApplication,
 	params *DSPAParams) error {
 
-	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
+	log := slog.With("namespace", dsp.Namespace).With("dspa_name", dsp.Name)
 
 	if !dsp.Spec.ScheduledWorkflow.Deploy {
 		log.Info("Skipping Application of ScheduledWorkflow Resources")

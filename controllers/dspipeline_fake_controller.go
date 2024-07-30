@@ -19,9 +19,9 @@ package controllers
 
 import (
 	"context"
+	"log/slog"
 
 	"k8s.io/client-go/kubernetes/scheme"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -54,7 +54,7 @@ func NewFakeController() *DSPAReconciler {
 	// Generate DSPAReconciler using Fake Client
 	r := &DSPAReconciler{
 		Client:        FakeClient,
-		Log:           ctrl.Log.WithName("controllers").WithName("ds-pipelines-controller"),
+		Log:           slog.Logger{},
 		Scheme:        FakeScheme,
 		TemplatesPath: "../config/internal/",
 	}

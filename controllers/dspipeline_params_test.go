@@ -18,13 +18,15 @@ limitations under the License.
 package controllers
 
 import (
+	"log/slog"
+	"testing"
+
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/testutil"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"testing"
 )
 
 type Client struct {
@@ -33,8 +35,12 @@ type Client struct {
 
 func TestExtractParams_WithEmptyDSPA(t *testing.T) {
 	dspa := testutil.CreateEmptyDSPA()
+
+	//Create Logging using slog
+	log := slog.With("namespace", dspa.Namespace).With("dspa_name", dspa.Name)
+
 	ctx, params, reconciler := CreateNewTestObjects()
-	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, log)
 	assert.Nil(t, err)
 }
 
@@ -223,7 +229,11 @@ func TestExtractParams_CABundle(t *testing.T) {
 			}
 
 			actualParams := &DSPAParams{}
-			extractError := actualParams.ExtractParams(ctx, test.dsp, client.Client, client.Log)
+
+			//Create Logging using slog
+			log := slog.With("namespace", actualParams.Namespace).With("dspa_name", actualParams.Name)
+
+			extractError := actualParams.ExtractParams(ctx, test.dsp, client.Client, log)
 			if test.errorMsg != "" {
 				assert.Contains(t, extractError.Error(), test.errorMsg)
 			} else {

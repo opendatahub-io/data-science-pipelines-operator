@@ -22,6 +22,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/spf13/viper"
+	"log/slog"
 	"os"
 	"strings"
 	"time"
@@ -104,6 +105,7 @@ func main() {
 	var probeAddr string
 	var configPath string
 	var maxConcurrentReconciles int
+
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.StringVar(&configPath, "config", "", "Path to JSON file containing config")
@@ -141,7 +143,7 @@ func main() {
 	if err = (&controllers.DSPAReconciler{
 		Client:                  mgr.GetClient(),
 		Scheme:                  mgr.GetScheme(),
-		Log:                     ctrl.Log,
+		Log:                     slog.Logger{},
 		TemplatesPath:           "config/internal/",
 		MaxConcurrentReconciles: maxConcurrentReconciles,
 	}).SetupWithManager(mgr); err != nil {
