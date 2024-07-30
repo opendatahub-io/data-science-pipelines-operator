@@ -177,7 +177,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	dspa := &dspav1alpha1.DataSciencePipelinesApplication{}
 	err := r.Get(ctx, req.NamespacedName, dspa)
 	if err != nil && apierrs.IsNotFound(err) {
-		log.Info("DSPA resource was not found")
+		log.Debug("DSPA resource was not found, assuming it was recently deleted, nothing to do here")
 		return ctrl.Result{}, nil
 	} else if err != nil {
 		log.Error("Encountered error when fetching DSPA", err)
