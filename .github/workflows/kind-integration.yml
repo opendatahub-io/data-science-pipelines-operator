@@ -12,6 +12,7 @@ on:
       - tests/**
       - .github/resources/**
       - '.github/workflows/kind-integration.yml'
+      - Makefile
     types:
       - opened
       - reopened
