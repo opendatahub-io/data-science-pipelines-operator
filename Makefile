@@ -205,9 +205,9 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest
 arch:= $(shell uname -m)
 
 ifeq ($(arch), ppc64le)
-KUSTOMIZE_VERSION ?= v5.1.0
+KUSTOMIZE_VERSION ?= v5.2.1
 else
-KUSTOMIZE_VERSION ?= v3.8.7
+KUSTOMIZE_VERSION ?= v5.2.1
 endif
 CONTROLLER_TOOLS_VERSION ?= v0.10.0
 

@@ -12,6 +12,7 @@ on:
       - tests/**
       - .github/resources/**
       - '.github/workflows/kind-integration.yml'
+      - Makefile
     types:
       - opened
       - reopened
@@ -27,7 +28,7 @@ env:
 
 jobs:
   dspo-tests:
-    runs-on: ubuntu-20.04
+    runs-on: macos-latest
     timeout-minutes: 60
 
     steps:
