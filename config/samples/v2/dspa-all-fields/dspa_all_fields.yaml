@@ -11,6 +11,7 @@ metadata:
 spec:
   dspVersion: v2
   apiServer:
+    customKfpLauncherConfigMap: configmapname
     deploy: true
     enableSamplePipeline: true
     image: quay.io/opendatahub/ds-pipelines-api-server:latest

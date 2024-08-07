@@ -256,3 +256,17 @@ func CreateDSPAWithAPIServerPodtoPodTlsEnabled() *dspav1alpha1.DataSciencePipeli
 func boolPtr(b bool) *bool {
 	return &b
 }
+
+func CreateDSPAWithCustomKfpLauncherConfigMap(configMapName string) *dspav1alpha1.DataSciencePipelinesApplication {
+	dspa := CreateEmptyDSPA()
+	dspa.Spec.DSPVersion = "v2"
+	// required, or we get an error because OCP certs aren't found
+	dspa.Spec.PodToPodTLS = boolPtr(false)
+	// required, or we get an error because this is required in v2
+	dspa.Spec.MLMD.Deploy = true
+	dspa.Spec.APIServer = &dspav1alpha1.APIServer{
+		Deploy:                     true,
+		CustomKfpLauncherConfigMap: configMapName,
+	}
+	return dspa
+}

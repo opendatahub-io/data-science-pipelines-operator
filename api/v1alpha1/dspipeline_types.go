@@ -86,6 +86,19 @@ type APIServer struct {
 	// for the api server to use instead.
 	CustomServerConfig *ScriptConfigMap `json:"customServerConfigMap,omitempty"`
 
+	// When specified, the `data` contents of the `kfp-launcher` ConfigMap that DSPO writes
+	// will be fully replaced with the `data` contents of the ConfigMap specified here.
+	// This allows the user to fully replace the `data` contents of the kfp-launcher ConfigMap.
+	// The `kfp-launcher` component requires a ConfigMap to exist in the namespace
+	// where it runs (i.e. the namespace where pipelines run). This ConfigMap contains
+	// object storage configuration, as well as pipeline root (object store root path
+	// where artifacts will be uploaded) configuration. Currently this ConfigMap *must*
+	// be named "kfp-launcher". We currently deploy a default copy of the kfp-launcher
+	// ConfigMap via DSPO, but a user may want to provide their own ConfigMap configuration,
+	// so that they can specify multiple object storage sources and paths.
+	// +kubebuilder:validation:Optional
+	CustomKfpLauncherConfigMap string `json:"customKfpLauncherConfigMap,omitempty"`
+
 	// Default: true
 	// Deprecated: DSP V1 only, will be removed in the future.
 	// +kubebuilder:default:=true

@@ -66,6 +66,7 @@ type DSPAParams struct {
 	Minio                                *dspa.Minio
 	MLMD                                 *dspa.MLMD
 	WorkflowController                   *dspa.WorkflowController
+	CustomKfpLauncherConfigMapData       string
 	DBConnection
 	ObjectStorageConnection
 
@@ -643,6 +644,29 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 			p.APIServer.CustomServerConfig = &dspa.ScriptConfigMap{
 				Name: config.CustomServerConfigMapNamePrefix + dsp.Name,
 				Key:  config.CustomServerConfigMapNameKey,
+			}
+		}
+
+		if p.APIServer.CustomKfpLauncherConfigMap != "" {
+			cm, err := util.GetConfigMap(ctx, p.APIServer.CustomKfpLauncherConfigMap, p.Namespace, client)
+			if err != nil {
+				if apierrs.IsNotFound(err) {
+					log.Info(fmt.Sprintf("ConfigMap referenced by CustomKfpLauncherConfig not found: [%s], Error: %v", p.APIServer.CustomKfpLauncherConfigMap, err))
+					return err
+				} else {
+					log.Info(fmt.Sprintf("Error fetching ConfigMap referenced by CustomKfpLauncherConfig: [%s], Error: %v", p.APIServer.CustomKfpLauncherConfigMap, err))
+					return err
+				}
+
+			} else {
+				// when setting a map into the `data` field of a ConfigMap, text/template works well with a json object
+				jsonData, err := json.Marshal(cm.Data)
+				if err != nil {
+					log.Info(fmt.Sprintf("Error reading data of ConfigMap referenced by CustomKfpLauncherConfig: [%s], Error: %v", p.APIServer.CustomKfpLauncherConfigMap, err))
+					return err
+				} else {
+					p.CustomKfpLauncherConfigMapData = string(jsonData)
+				}
 			}
 		}
 
