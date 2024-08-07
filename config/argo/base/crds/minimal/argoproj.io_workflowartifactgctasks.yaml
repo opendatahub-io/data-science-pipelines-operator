@@ -1,18 +1,16 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  annotations:
-    internal.kpt.dev/upstream-identifier: apiextensions.k8s.io|CustomResourceDefinition|default|workfloweventbindings.argoproj.io
-  name: workfloweventbindings.argoproj.io
+  name: workflowartifactgctasks.argoproj.io
 spec:
   group: argoproj.io
   names:
-    kind: WorkflowEventBinding
-    listKind: WorkflowEventBindingList
-    plural: workfloweventbindings
+    kind: WorkflowArtifactGCTask
+    listKind: WorkflowArtifactGCTaskList
+    plural: workflowartifactgctasks
     shortNames:
-    - wfeb
-    singular: workfloweventbinding
+    - wfat
+    singular: workflowartifactgctask
   scope: Namespaced
   versions:
   - name: v1alpha1
@@ -29,9 +27,15 @@ spec:
             type: object
             x-kubernetes-map-type: atomic
             x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
         required:
         - metadata
         - spec
         type: object
     served: true
     storage: true
+    subresources:
+      status: {}

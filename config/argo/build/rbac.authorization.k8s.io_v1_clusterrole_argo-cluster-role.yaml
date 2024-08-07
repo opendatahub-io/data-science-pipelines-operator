@@ -1,24 +1,8 @@
----
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
-  annotations:
-    internal.kpt.dev/upstream-identifier: rbac.authorization.k8s.io|Role|default|argo-role
-  labels:
-    app: ds-pipeline-workflow-controller-{{.Name}}
-    component: data-science-pipelines
-    dspa: {{.Name}}
-  name: ds-pipeline-workflow-controller-role-{{.Name}}
-  namespace: {{.Namespace}}
+  name: argo-cluster-role
 rules:
-- apiGroups:
-  - coordination.k8s.io
-  resources:
-  - leases
-  verbs:
-  - create
-  - get
-  - update
 - apiGroups:
   - ""
   resources:
@@ -71,6 +55,8 @@ rules:
   resources:
   - workflowtemplates
   - workflowtemplates/finalizers
+  - clusterworkflowtemplates
+  - clusterworkflowtemplates/finalizers
   verbs:
   - get
   - list
@@ -91,12 +77,6 @@ rules:
   - get
   - list
 - apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - get
-- apiGroups:
   - argoproj.io
   resources:
   - cronworkflows
@@ -116,11 +96,10 @@ rules:
   - create
   - patch
 - apiGroups:
-  - "policy"
+  - policy
   resources:
   - poddisruptionbudgets
   verbs:
   - create
   - get
   - delete
-
