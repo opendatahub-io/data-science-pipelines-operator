@@ -65,6 +65,7 @@ type DSPAParams struct {
 	MariaDB                              *dspa.MariaDB
 	Minio                                *dspa.Minio
 	MLMD                                 *dspa.MLMD
+	MlmdProxyDefaultResourceName         string
 	WorkflowController                   *dspa.WorkflowController
 	CustomKfpLauncherConfigMapData       string
 	DBConnection
@@ -593,6 +594,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.Minio = dsp.Spec.ObjectStorage.Minio.DeepCopy()
 	p.OAuthProxy = config.GetStringConfigWithDefault(config.OAuthProxyImagePath, config.DefaultImageValue)
 	p.MLMD = dsp.Spec.MLMD.DeepCopy()
+	p.MlmdProxyDefaultResourceName = mlmdProxyDefaultResourceNamePrefix + dsp.Name
 	p.CustomCABundleRootMountPath = config.CustomCABundleRootMountPath
 	p.PiplinesCABundleMountPath = config.GetCABundleFileMountPath()
 	p.PodToPodTLS = false
