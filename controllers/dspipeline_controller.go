@@ -304,18 +304,19 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			return ctrl.Result{}, err
 		}
 
-		err = r.ReconcileMLMD(dspa, params)
+		err = r.ReconcileWorkflowController(dspa, params)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		// MLMD should be the last to reconcile because it can cause an early exit due to the lack of the TLS secret, which may not have been created yet.
+		err = r.ReconcileMLMD(ctx, dspa, params)
 		if err != nil {
 			r.setStatusAsNotReady(config.MLMDProxyReady, err, dspaStatus.SetMLMDProxyStatus)
 			return ctrl.Result{}, err
 		} else {
 			r.setStatus(ctx, params.MlmdProxyDefaultResourceName, config.MLMDProxyReady, dspa,
 				dspaStatus.SetMLMDProxyStatus, log)
-		}
-
-		err = r.ReconcileWorkflowController(dspa, params)
-		if err != nil {
-			return ctrl.Result{}, err
 		}
 	}
 
@@ -633,6 +634,44 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 					Namespace: pod.Namespace,
 				}
 				return []reconcile.Request{{NamespacedName: namespacedName}}
+			}),
+		).
+		WatchesRawSource(source.Kind(mgr.GetCache(), &corev1.Secret{}),
+			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, o client.Object) []reconcile.Request {
+				secret := o.(*corev1.Secret)
+				log := r.Log.WithValues("namespace", secret.Namespace)
+
+				if secret.Annotations["openshift.io/owning-component"] != "service-ca" {
+					return nil
+				}
+
+				log.V(1).Info(fmt.Sprintf("Reconcile event triggered by change on Secret owned by service-ca: %s", secret.Name))
+
+				serviceName := secret.Annotations["service.beta.openshift.io/originating-service-name"]
+
+				namespacedServiceName := types.NamespacedName{
+					Name:      serviceName,
+					Namespace: secret.Namespace,
+				}
+
+				service := &corev1.Service{}
+
+				err := r.Get(ctx, namespacedServiceName, service)
+				if err != nil {
+					return nil
+				}
+
+				dspaName, hasDSPALabel := service.Labels["dspa"]
+				if !hasDSPALabel {
+					return nil
+				}
+
+				log.V(1).Info(fmt.Sprintf("Reconcile event triggered by [Service: %s] ", serviceName))
+				namespacedDspaName := types.NamespacedName{
+					Name:      dspaName,
+					Namespace: secret.Namespace,
+				}
+				return []reconcile.Request{{NamespacedName: namespacedDspaName}}
 			}),
 		).
 		WithOptions(controller.Options{
