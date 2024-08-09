@@ -94,7 +94,7 @@ func TestDeployMLMDV1(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Run test reconciliation
-	err = reconciler.ReconcileMLMD(dspa, params)
+	err = reconciler.ReconcileMLMD(ctx, dspa, params)
 	assert.Nil(t, err)
 
 	// Ensure MLMD-Envoy resources now exists
@@ -189,7 +189,7 @@ func TestDeployMLMDV2(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Run test reconciliation
-	err = reconciler.ReconcileMLMD(dspa, params)
+	err = reconciler.ReconcileMLMD(ctx, dspa, params)
 	assert.Nil(t, err)
 
 	// Ensure MLMD-Envoy resources now exists
@@ -283,7 +283,7 @@ func TestDontDeployMLMDV1(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Run test reconciliation
-	err = reconciler.ReconcileMLMD(dspa, params)
+	err = reconciler.ReconcileMLMD(ctx, dspa, params)
 	assert.Nil(t, err)
 
 	// Ensure MLMD-Envoy resources still doesn't exist
@@ -413,7 +413,7 @@ func TestDefaultDeployBehaviorMLMDV1(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Run test reconciliation
-	err = reconciler.ReconcileMLMD(dspa, params)
+	err = reconciler.ReconcileMLMD(ctx, dspa, params)
 	assert.Nil(t, err)
 
 	// Ensure MLMD-Envoy resources still doesn't exist
@@ -505,7 +505,7 @@ func TestDefaultDeployBehaviorMLMDV2(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Run test reconciliation
-	err = reconciler.ReconcileMLMD(dspa, params)
+	err = reconciler.ReconcileMLMD(ctx, dspa, params)
 	assert.Nil(t, err)
 
 	// Ensure MLMD-Envoy resources now exists
@@ -588,7 +588,7 @@ func TestDeployEnvoyRouteV1(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Run test reconciliation
-	err = reconciler.ReconcileMLMD(dspa, params)
+	err = reconciler.ReconcileMLMD(ctx, dspa, params)
 	assert.Nil(t, err)
 
 	// Ensure MLMD-Envoy resources now exists
@@ -660,7 +660,7 @@ func TestDeployEnvoyRouteV2(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Run test reconciliation
-	err = reconciler.ReconcileMLMD(dspa, params)
+	err = reconciler.ReconcileMLMD(ctx, dspa, params)
 	assert.Nil(t, err)
 
 	// Ensure MLMD-Envoy resources now exists
@@ -731,7 +731,7 @@ func TestDontDeployEnvoyRouteV1(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Run test reconciliation
-	err = reconciler.ReconcileMLMD(dspa, params)
+	err = reconciler.ReconcileMLMD(ctx, dspa, params)
 	assert.Nil(t, err)
 
 	// Ensure MLMD-Envoy resources now exists
@@ -803,7 +803,7 @@ func TestDontDeployEnvoyRouteV2(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Run test reconciliation
-	err = reconciler.ReconcileMLMD(dspa, params)
+	err = reconciler.ReconcileMLMD(ctx, dspa, params)
 	assert.Nil(t, err)
 
 	// Ensure MLMD-Envoy resources now exists
@@ -880,7 +880,7 @@ func TestGetEndpointsMLMDV2(t *testing.T) {
 	require.Nil(t, err)
 
 	// Run test reconciliation
-	err = reconciler.ReconcileMLMD(dspa, params)
+	err = reconciler.ReconcileMLMD(ctx, dspa, params)
 	require.Nil(t, err)
 
 	// Ensure MLMD-Envoy resources now exists

@@ -121,6 +121,8 @@ spec:
             {{ if .PodToPodTLS }}
             - name: ML_PIPELINE_TLS_ENABLED
               value: "true"
+            - name: METADATA_TLS_ENABLED
+              value: "true"
             {{ end }}
             {{ if (eq .DSPVersion "v2") }}
             ## Argo-Specific Env Vars ##
