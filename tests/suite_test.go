@@ -22,6 +22,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"k8s.io/client-go/kubernetes"
 	"testing"
 	"time"
 
@@ -87,6 +88,7 @@ type ClientManager struct {
 	k8sClient client.Client
 	mfsClient mf.Client
 	mfopts    mf.Option
+	clientset kubernetes.Interface
 }
 
 type IntegrationTestSuite struct {
@@ -157,6 +159,9 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 	suite.Require().NotNil(clientmgr.k8sClient)
 	clientmgr.mfsClient = mfc.NewClient(clientmgr.k8sClient)
 	clientmgr.mfopts = mf.UseClient(clientmgr.mfsClient)
+	clientset, err := kubernetes.NewForConfig(cfg)
+	suite.Require().NoError(err)
+	clientmgr.clientset = clientset
 	suite.Clientmgr = clientmgr
 
 	DSPA = testUtil.GetDSPAFromPath(suite.T(), clientmgr.mfopts, DSPAPath)
