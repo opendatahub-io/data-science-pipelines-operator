@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/dspastatus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -305,7 +306,11 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 		err = r.ReconcileMLMD(dspa, params)
 		if err != nil {
+			r.setStatusAsNotReady(config.MLMDProxyReady, err, dspaStatus.SetMLMDProxyStatus)
 			return ctrl.Result{}, err
+		} else {
+			r.setStatus(ctx, params.MlmdProxyDefaultResourceName, config.MLMDProxyReady, dspa,
+				dspaStatus.SetMLMDProxyStatus, log)
 		}
 
 		err = r.ReconcileWorkflowController(dspa, params)
@@ -325,6 +330,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		util.GetConditionByType(config.APIServerReady, conditions):         APIServerReadyMetric,
 		util.GetConditionByType(config.PersistenceAgentReady, conditions):  PersistenceAgentReadyMetric,
 		util.GetConditionByType(config.ScheduledWorkflowReady, conditions): ScheduledWorkflowReadyMetric,
+		util.GetConditionByType(config.MLMDProxyReady, conditions):         MLMDProxyReadyMetric,
 		util.GetConditionByType(config.CrReady, conditions):                CrReadyMetric,
 	}
 	r.PublishMetrics(dspa, metricsMap)
@@ -356,6 +362,7 @@ func (r *DSPAReconciler) setStatus(ctx context.Context, resourceName string, con
 func (r *DSPAReconciler) updateStatus(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication,
 	dspaStatus dspastatus.DSPAStatus, log logr.Logger, req ctrl.Request) {
 	r.refreshDspa(ctx, dspa, req, log)
+	dspa.Status.Components = r.GetComponents(ctx, dspa)
 	dspa.Status.Conditions = dspaStatus.GetConditions()
 	err := r.Status().Update(ctx, dspa)
 	if err != nil {
@@ -500,6 +507,59 @@ func (r *DSPAReconciler) PublishMetrics(dspa *dspav1alpha1.DataSciencePipelinesA
 		log.Info(condition.Type, " Status:", status)
 		metric.WithLabelValues(dspa.Name, dspa.Namespace).Set(float64(value))
 	}
+}
+
+func (r *DSPAReconciler) GetComponents(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication) dspav1alpha1.ComponentStatus {
+	log := r.Log.WithValues("namespace", dspa.Namespace).WithValues("dspa_name", dspa.Name)
+	log.Info("Updating components endpoints")
+
+	mlmdProxyResourceName := fmt.Sprintf("ds-pipeline-md-%s", dspa.Name)
+	apiServerResourceName := fmt.Sprintf("ds-pipeline-%s", dspa.Name)
+
+	mlmdProxyUrl, err := util.GetServiceHostname(ctx, mlmdProxyResourceName, dspa.Namespace, r.Client)
+	if err != nil {
+		log.Error(err, "Error retrieving MLMD Proxy Service endpoint")
+	}
+
+	mlmdProxyExternalUrl, err := util.GetRouteHostname(ctx, mlmdProxyResourceName, dspa.Namespace, r.Client)
+	if err != nil {
+		log.Error(err, "Error retrieving MLMD Proxy Route endpoint")
+	}
+
+	apiServerUrl, err := util.GetServiceHostname(ctx, apiServerResourceName, dspa.Namespace, r.Client)
+	if err != nil {
+		log.Error(err, "Error retrieving API Server Service endpoint")
+	}
+
+	apiServerExternalUrl, err := util.GetRouteHostname(ctx, apiServerResourceName, dspa.Namespace, r.Client)
+	if err != nil {
+		log.Error(err, "Error retrieving API Server Route endpoint")
+	}
+
+	mlmdProxyComponent := &dspav1alpha1.ComponentDetailStatus{}
+	if mlmdProxyUrl != "" {
+		mlmdProxyComponent.Url = mlmdProxyUrl
+	}
+	if mlmdProxyExternalUrl != "" {
+		mlmdProxyComponent.ExternalUrl = mlmdProxyExternalUrl
+	}
+
+	apiServerComponent := &dspav1alpha1.ComponentDetailStatus{}
+	if apiServerUrl != "" {
+		apiServerComponent.Url = apiServerUrl
+	}
+	if apiServerExternalUrl != "" {
+		apiServerComponent.ExternalUrl = apiServerExternalUrl
+	}
+
+	status := dspav1alpha1.ComponentStatus{}
+	if mlmdProxyComponent.Url != "" && mlmdProxyComponent.ExternalUrl != "" {
+		status.MLMDProxy = *mlmdProxyComponent
+	}
+	if apiServerComponent.Url != "" && apiServerComponent.ExternalUrl != "" {
+		status.APIServer = *apiServerComponent
+	}
+	return status
 }
 
 // SetupWithManager sets up the controller with the Manager.
