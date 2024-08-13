@@ -36,6 +36,7 @@ data:
     WBV3KJBsYK/wijtLeip1oKobU76oE0ML/bnhV10k6usvl4n8cDmcONo5FnGoT8Pk
     80htx6w5fanMFu4MnoBeyJhhzNfg7ywJcc2VZSM27s2B
     -----END CERTIFICATE-----
+
   odh-ca-bundle.crt: |
     -----BEGIN CERTIFICATE-----
     MIIFLTCCAxWgAwIBAgIUIvY4jV0212P/ddjuCZhcUyJfoocwDQYJKoZIhvcNAQEL

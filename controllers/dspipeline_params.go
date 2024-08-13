@@ -798,7 +798,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 				},
 
 				Data: map[string]string{
-					p.CustomCABundle.ConfigMapKey: string(bytes.Join(p.APICustomPemCerts, []byte{})),
+					p.CustomCABundle.ConfigMapKey: string(bytes.Join(p.APICustomPemCerts, []byte("\n"))),
 				},
 			}
 
