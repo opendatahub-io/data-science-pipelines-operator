@@ -18,7 +18,6 @@ spec:
               pipelines.kubeflow.org/v2_component: 'true'
         - podSelector:
            matchLabels:
-             app: ds-pipeline-metadata-envoy-{{.Name}}
              component: data-science-pipelines
   policyTypes:
     - Ingress
