@@ -41,6 +41,7 @@ spec:
     deploy: true
     envoy:
       image: quay.io/maistra/proxyv2-ubi8:2.5.0
+      deployRoute: false
       resources:
         limits:
           cpu: 20m

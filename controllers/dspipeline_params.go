@@ -504,6 +504,9 @@ func (p *DSPAParams) SetupMLMD(dsp *dspa.DataSciencePipelinesApplication, log lo
 			log.Info("MLMD not specified, but is a required component for V2 Pipelines. Including MLMD with default specs.")
 			p.MLMD = &dspa.MLMD{
 				Deploy: true,
+				Envoy: &dspa.Envoy{
+					DeployRoute: true,
+				},
 			}
 		} else if !p.MLMD.Deploy {
 			return fmt.Errorf(MlmdIsRequiredInV2Msg)
@@ -515,7 +518,8 @@ func (p *DSPAParams) SetupMLMD(dsp *dspa.DataSciencePipelinesApplication, log lo
 
 		if p.MLMD.Envoy == nil {
 			p.MLMD.Envoy = &dspa.Envoy{
-				Image: config.GetStringConfigWithDefault(MlmdEnvoyImagePath, config.DefaultImageValue),
+				Image:       config.GetStringConfigWithDefault(MlmdEnvoyImagePath, config.DefaultImageValue),
+				DeployRoute: true,
 			}
 		}
 		if p.MLMD.GRPC == nil {
