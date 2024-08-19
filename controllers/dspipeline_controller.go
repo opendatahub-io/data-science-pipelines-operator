@@ -188,8 +188,6 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	dspaStatus := dspastatus.NewDSPAStatus(dspa)
 
-	defer r.updateStatus(ctx, dspa, dspaStatus, log, req)
-
 	// FixMe: Hack for stubbing gvk during tests as these are not populated by test suite
 	// https://github.com/opendatahub-io/data-science-pipelines-operator/pull/7#discussion_r1102887037
 	// In production we expect these to be populated
@@ -199,25 +197,27 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		dspa.APIVersion, dspa.Kind = gvk.Version, gvk.Kind
 	}
 
+	updateFinalizer := func() {
+		if err1 := r.Update(ctx, dspa); err1 != nil {
+			log.Info(fmt.Sprintf("Encountered error when updating finalizer %s, error: %v", finalizerName, err1))
+		}
+	}
+
 	// Ensure that empty values do not overwrite desired state
 	if dspa.ObjectMeta.DeletionTimestamp.IsZero() {
 		if !controllerutil.ContainsFinalizer(dspa, finalizerName) {
 			controllerutil.AddFinalizer(dspa, finalizerName)
-			if err := r.Update(ctx, dspa); err != nil {
-				return ctrl.Result{}, err
-			}
+			defer updateFinalizer()
 		}
 	} else {
 		if controllerutil.ContainsFinalizer(dspa, finalizerName) {
 			params.Name = dspa.Name
 			params.Namespace = dspa.Namespace
-			if err := r.cleanUpResources(params); err != nil {
-				return ctrl.Result{}, err
+			if err1 := r.cleanUpResources(params); err1 != nil {
+				return ctrl.Result{}, err1
 			}
 			controllerutil.RemoveFinalizer(dspa, finalizerName)
-			if err := r.Update(ctx, dspa); err != nil {
-				return ctrl.Result{}, err
-			}
+			defer updateFinalizer()
 		}
 
 		// Stop reconciliation as the item is being deleted
@@ -340,6 +340,8 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 		return ctrl.Result{Requeue: true, RequeueAfter: requeueTime}, nil
 	}
+
+	r.updateStatus(ctx, dspa, dspaStatus, log, req)
 
 	return ctrl.Result{}, nil
 }
