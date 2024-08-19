@@ -137,3 +137,19 @@ func waitFor(ctx context.Context, timeout, interval time.Duration, conditionFunc
 	}
 	return fmt.Errorf("timed out waiting for condition")
 }
+
+func PrintConditions(ctx context.Context, dspa *v1alpha1.DataSciencePipelinesApplication, namespace string, client client.Client) string {
+	nsn := types.NamespacedName{
+		Name:      dspa.Name,
+		Namespace: namespace,
+	}
+	err := client.Get(ctx, nsn, dspa)
+	if err != nil {
+		return "No conditions"
+	}
+	conditions := ""
+	for _, condition := range dspa.Status.Conditions {
+		conditions = conditions + fmt.Sprintf("Type: %s, Status: %s, Message: %s\n", condition.Type, condition.Status, condition.Message)
+	}
+	return conditions
+}

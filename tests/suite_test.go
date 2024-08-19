@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/anthhub/forwarder"
 	"github.com/go-logr/logr"
@@ -167,12 +168,12 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 	if !skipDeploy {
 		loggr.Info("Deploying DSPA...")
 		err = testUtil.DeployDSPA(suite.T(), ctx, clientmgr.k8sClient, DSPA, DSPANamespace, DeployTimeout, PollInterval)
-		assert.NoError(suite.T(), err)
+		require.NoError(suite.T(), err)
 		loggr.Info("Waiting for DSPA pods to ready...")
 	}
 
 	err = testUtil.WaitForDSPAReady(suite.T(), ctx, clientmgr.k8sClient, DSPA.Name, DSPANamespace, DeployTimeout, PollInterval)
-	assert.NoError(suite.T(), err)
+	require.NoError(suite.T(), err, fmt.Sprintf("Error Deploying DSPA:\n%s", testUtil.PrintConditions(ctx, DSPA, DSPANamespace, clientmgr.k8sClient)))
 	loggr.Info("DSPA Deployed.")
 
 	loggr.Info("Setting up Portforwarding service.")

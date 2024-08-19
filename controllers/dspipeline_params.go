@@ -65,7 +65,9 @@ type DSPAParams struct {
 	MariaDB                              *dspa.MariaDB
 	Minio                                *dspa.Minio
 	MLMD                                 *dspa.MLMD
+	MlmdProxyDefaultResourceName         string
 	WorkflowController                   *dspa.WorkflowController
+	CustomKfpLauncherConfigMapData       string
 	DBConnection
 	ObjectStorageConnection
 
@@ -502,6 +504,9 @@ func (p *DSPAParams) SetupMLMD(dsp *dspa.DataSciencePipelinesApplication, log lo
 			log.Info("MLMD not specified, but is a required component for V2 Pipelines. Including MLMD with default specs.")
 			p.MLMD = &dspa.MLMD{
 				Deploy: true,
+				Envoy: &dspa.Envoy{
+					DeployRoute: true,
+				},
 			}
 		} else if !p.MLMD.Deploy {
 			return fmt.Errorf(MlmdIsRequiredInV2Msg)
@@ -513,7 +518,8 @@ func (p *DSPAParams) SetupMLMD(dsp *dspa.DataSciencePipelinesApplication, log lo
 
 		if p.MLMD.Envoy == nil {
 			p.MLMD.Envoy = &dspa.Envoy{
-				Image: config.GetStringConfigWithDefault(MlmdEnvoyImagePath, config.DefaultImageValue),
+				Image:       config.GetStringConfigWithDefault(MlmdEnvoyImagePath, config.DefaultImageValue),
+				DeployRoute: true,
 			}
 		}
 		if p.MLMD.GRPC == nil {
@@ -592,6 +598,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.Minio = dsp.Spec.ObjectStorage.Minio.DeepCopy()
 	p.OAuthProxy = config.GetStringConfigWithDefault(config.OAuthProxyImagePath, config.DefaultImageValue)
 	p.MLMD = dsp.Spec.MLMD.DeepCopy()
+	p.MlmdProxyDefaultResourceName = mlmdProxyDefaultResourceNamePrefix + dsp.Name
 	p.CustomCABundleRootMountPath = config.CustomCABundleRootMountPath
 	p.PiplinesCABundleMountPath = config.GetCABundleFileMountPath()
 	p.PodToPodTLS = false
@@ -643,6 +650,29 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 			p.APIServer.CustomServerConfig = &dspa.ScriptConfigMap{
 				Name: config.CustomServerConfigMapNamePrefix + dsp.Name,
 				Key:  config.CustomServerConfigMapNameKey,
+			}
+		}
+
+		if p.APIServer.CustomKfpLauncherConfigMap != "" {
+			cm, err := util.GetConfigMap(ctx, p.APIServer.CustomKfpLauncherConfigMap, p.Namespace, client)
+			if err != nil {
+				if apierrs.IsNotFound(err) {
+					log.Info(fmt.Sprintf("ConfigMap referenced by CustomKfpLauncherConfig not found: [%s], Error: %v", p.APIServer.CustomKfpLauncherConfigMap, err))
+					return err
+				} else {
+					log.Info(fmt.Sprintf("Error fetching ConfigMap referenced by CustomKfpLauncherConfig: [%s], Error: %v", p.APIServer.CustomKfpLauncherConfigMap, err))
+					return err
+				}
+
+			} else {
+				// when setting a map into the `data` field of a ConfigMap, text/template works well with a json object
+				jsonData, err := json.Marshal(cm.Data)
+				if err != nil {
+					log.Info(fmt.Sprintf("Error reading data of ConfigMap referenced by CustomKfpLauncherConfig: [%s], Error: %v", p.APIServer.CustomKfpLauncherConfigMap, err))
+					return err
+				} else {
+					p.CustomKfpLauncherConfigMapData = string(jsonData)
+				}
 			}
 		}
 
@@ -772,7 +802,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 				},
 
 				Data: map[string]string{
-					p.CustomCABundle.ConfigMapKey: string(bytes.Join(p.APICustomPemCerts, []byte{})),
+					p.CustomCABundle.ConfigMapKey: string(bytes.Join(p.APICustomPemCerts, []byte("\n"))),
 				},
 			}
 

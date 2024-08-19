@@ -139,6 +139,7 @@ const (
 	APIServerReady         = "APIServerReady"
 	PersistenceAgentReady  = "PersistenceAgentReady"
 	ScheduledWorkflowReady = "ScheduledWorkflowReady"
+	MLMDProxyReady         = "MLMDProxyReady"
 	CrReady                = "Ready"
 )
 

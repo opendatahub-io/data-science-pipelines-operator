@@ -177,17 +177,17 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 	$(KUSTOMIZE) build config/overlays/make-deploy | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: deploy-kind
-deploy-kind:
+deploy-kind: manifests kustomize
 	cd config/overlays/kind-tests \
-		&& kustomize edit set image controller=${IMG} \
-		&& kustomize edit set namespace ${OPERATOR_NS}
-	kustomize build config/overlays/kind-tests | kubectl apply -f -
+		&& $(KUSTOMIZE) edit set image controller=${IMG} \
+		&& $(KUSTOMIZE) edit set namespace ${OPERATOR_NS}
+	$(KUSTOMIZE) build config/overlays/kind-tests | kubectl apply -f -
 
 .PHONY: undeploy-kind
-undeploy-kind: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+undeploy-kind: manifests kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	cd config/overlays/kind-tests \
-		&& kustomize edit set namespace ${OPERATOR_NS}
-	kustomize build config/overlays/kind-tests | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+		&& $(KUSTOMIZE) edit set namespace ${OPERATOR_NS}
+	$(KUSTOMIZE) build config/overlays/kind-tests | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 ##@ Build Dependencies
 
@@ -204,11 +204,7 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest
 ## Tool Versions
 arch:= $(shell uname -m)
 
-ifeq ($(arch), ppc64le)
-KUSTOMIZE_VERSION ?= v5.1.0
-else
-KUSTOMIZE_VERSION ?= v3.8.7
-endif
+KUSTOMIZE_VERSION ?= v5.2.1
 CONTROLLER_TOOLS_VERSION ?= v0.10.0
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"

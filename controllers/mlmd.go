@@ -20,8 +20,9 @@ import (
 )
 
 const (
-	mlmdTemplatesDir = "ml-metadata"
-	mlmdEnvoyRoute   = mlmdTemplatesDir + "/route/metadata-envoy.route.yaml.tmpl"
+	mlmdTemplatesDir                   = "ml-metadata"
+	mlmdEnvoyRoute                     = mlmdTemplatesDir + "/route/metadata-envoy.route.yaml.tmpl"
+	mlmdProxyDefaultResourceNamePrefix = "ds-pipeline-scheduledworkflow-"
 )
 
 func (r *DSPAReconciler) ReconcileMLMD(dsp *dspav1alpha1.DataSciencePipelinesApplication,

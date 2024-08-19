@@ -18,13 +18,16 @@ limitations under the License.
 package controllers
 
 import (
+	"encoding/json"
+	"testing"
+
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"testing"
 )
 
 type Client struct {
@@ -257,4 +260,27 @@ func TestExtractParams_CABundle(t *testing.T) {
 
 func strPtr(v string) *string {
 	return &v
+}
+
+func TestExtractParams_WithCustomKfpLauncherConfigMap(t *testing.T) {
+	ctx, params, client := CreateNewTestObjects()
+	cmDataExpected := map[string]string{
+		"this-is-the-only-thing": "that-should-be-in-kfp-launcher-now",
+	}
+	cm := v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "my-custom-kfp-launcher",
+			Namespace: "testnamespace",
+		},
+		Data: cmDataExpected,
+	}
+	err := client.Create(ctx, &cm)
+	require.Nil(t, err)
+
+	dspa := testutil.CreateDSPAWithCustomKfpLauncherConfigMap("my-custom-kfp-launcher")
+	err = params.ExtractParams(ctx, dspa, client.Client, client.Log)
+	require.Nil(t, err)
+
+	cmDataExpectedJson, err := json.Marshal(cmDataExpected)
+	require.Equal(t, string(cmDataExpectedJson), params.CustomKfpLauncherConfigMapData)
 }
