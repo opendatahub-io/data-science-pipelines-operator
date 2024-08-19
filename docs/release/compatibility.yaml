@@ -1,3 +1,14 @@
+- dsp: 2.5
+  kfp: 2.0.5
+  argo: 3.3.10
+  ml-metadata: 1.14.0
+  envoy: 1.22.11
+  ocp-pipelines: "N/A"
+  oauth-proxy: v4.10
+  mariadb-103: 1
+  ubi-minimal: "N/A"
+  ubi-micro: "N/A"
+  openshift: 4.14,4.15,4.16
 - dsp: 2.4
   kfp: 2.0.5
   argo: 3.3.10

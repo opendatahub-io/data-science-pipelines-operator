@@ -71,6 +71,7 @@ spec:
             - mountPath: /etc/envoy.yaml
               name: envoy-config
               subPath: envoy.yaml
+        {{ if .MLMD.Envoy.DeployRoute }}
         - name: oauth-proxy
           args:
             - --https-address=:8443
@@ -118,6 +119,7 @@ spec:
           volumeMounts:
             - mountPath: /etc/tls/private
               name: proxy-tls
+        {{ end }}
       serviceAccountName: ds-pipeline-metadata-envoy-{{.Name}}
       volumes:
         - name: envoy-config

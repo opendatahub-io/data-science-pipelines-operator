@@ -18,8 +18,9 @@ limitations under the License.
 package controllers
 
 import (
-	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"testing"
+
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/stretchr/testify/assert"
@@ -119,4 +120,57 @@ func TestDontDeployAPIServer(t *testing.T) {
 	created, err = reconciler.IsResourceCreated(ctx, dspa, expectedAPIServerName, testNamespace)
 	assert.False(t, created)
 	assert.Nil(t, err)
+}
+
+func TestApiServerEndpoints(t *testing.T) {
+	testNamespace := "testnamespace"
+	testDSPAName := "testdspa"
+	expectedAPIServerName := apiServerDefaultResourceNamePrefix + testDSPAName
+
+	// Construct DSPASpec with deployed APIServer
+	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
+		Spec: dspav1alpha1.DSPASpec{
+			APIServer: &dspav1alpha1.APIServer{
+				Deploy: true,
+			},
+			MLMD: &dspav1alpha1.MLMD{},
+			Database: &dspav1alpha1.Database{
+				DisableHealthCheck: false,
+				MariaDB: &dspav1alpha1.MariaDB{
+					Deploy: true,
+				},
+			},
+			ObjectStorage: &dspav1alpha1.ObjectStorage{
+				DisableHealthCheck: false,
+				Minio: &dspav1alpha1.Minio{
+					Deploy: false,
+					Image:  "someimage",
+				},
+			},
+		},
+	}
+
+	// Enrich DSPA with name+namespace
+	dspa.Name = testDSPAName
+	dspa.Namespace = testNamespace
+
+	// Create Context, Fake Controller and Params
+	ctx, params, reconciler := CreateNewTestObjects()
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	assert.Nil(t, err)
+
+	// Assert APIServer Deployment doesn't yet exist
+	deployment := &appsv1.Deployment{}
+	created, err := reconciler.IsResourceCreated(ctx, deployment, expectedAPIServerName, testNamespace)
+	assert.False(t, created)
+	assert.Nil(t, err)
+
+	// Run test reconciliation
+	err = reconciler.ReconcileAPIServer(ctx, dspa, params)
+	assert.Nil(t, err)
+
+	dspa_created := &dspav1alpha1.DataSciencePipelinesApplication{}
+	created, err = reconciler.IsResourceCreated(ctx, dspa, testDSPAName, testNamespace)
+	assert.NotNil(t, dspa_created.Status.Components.APIServer.Url)
+	assert.NotNil(t, dspa_created.Status.Components.APIServer.ExternalUrl)
 }

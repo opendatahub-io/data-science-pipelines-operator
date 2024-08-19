@@ -18,6 +18,7 @@ package testutil
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/go-test/deep"
 
@@ -50,6 +51,16 @@ func configMapsAreEqual(expected, actual *unstructured.Unstructured) (bool, erro
 
 	if expectedConfigMap.Name != actualConfigMap.Name {
 		return false, notEqualMsg("Configmap Names are not equal.")
+	}
+
+	// Functional tests are very buggy when it comes to accounting for trailing white spaces and can be hard to
+	// diagnose, we trim these so we are only comparing the core contents, to account for whitespace testing
+	// defer to unit testing
+	for k := range expectedConfigMap.Data {
+		expectedConfigMap.Data[k] = strings.TrimSpace(expectedConfigMap.Data[k])
+	}
+	for k := range actualConfigMap.Data {
+		actualConfigMap.Data[k] = strings.TrimSpace(actualConfigMap.Data[k])
 	}
 
 	diff := deep.Equal(expectedConfigMap.Data, actualConfigMap.Data)
