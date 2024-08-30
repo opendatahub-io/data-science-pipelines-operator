@@ -3,6 +3,10 @@ kind: Service
 metadata:
   name: mariadb-{{.Name}}
   namespace: {{.Namespace}}
+  {{ if .PodToPodTLS }}
+  annotations:
+    service.beta.openshift.io/serving-cert-secret-name: ds-pipelines-mariadb-tls-{{.Name}}
+  {{ end }}
   labels:
     app: mariadb-{{.Name}}
     component: data-science-pipelines
