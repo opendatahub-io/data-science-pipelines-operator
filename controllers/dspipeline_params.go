@@ -325,6 +325,9 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 		tlsParams := config.DBExtraParams{
 			"tls": "false",
 		}
+		if p.PodToPodTLS {
+			tlsParams["tls"] = "true"
+		}
 		dbExtraParams, err := config.GetDefaultDBExtraParams(tlsParams, log)
 		if err != nil {
 			log.Error(err, "Unexpected error encountered while retrieving DBExtraparams")
