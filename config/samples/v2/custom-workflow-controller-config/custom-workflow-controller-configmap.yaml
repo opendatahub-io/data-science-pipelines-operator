@@ -27,7 +27,7 @@ data:
         key: "secretkey"
   containerRuntimeExecutor: emissary
   executor: |
-    imagePullPolicy: IfNotPresent  # TODO
+    # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting  # TODO
 kind: ConfigMap
 metadata:
   name: custom-workflow-controller-configmap

@@ -34,7 +34,7 @@ spec:
         - /home/config
         image: $(IMAGES_DSPO)
         name: manager
-        imagePullPolicy: Always
+        # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
         env:
           # Env vars are prioritized over --config
           - name: IMAGES_APISERVER

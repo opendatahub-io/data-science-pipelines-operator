@@ -72,7 +72,7 @@ spec:
             - name: DISABLE_GKE_METADATA
               value: 'true'
           image: frontend:test7
-          imagePullPolicy: IfNotPresent
+          # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
           livenessProbe:
             exec:
               command:

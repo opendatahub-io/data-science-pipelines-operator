@@ -37,7 +37,7 @@ spec:
             - name: EXECUTIONTYPE
               value: Workflow
           image: persistenceagent:test9
-          imagePullPolicy: IfNotPresent
+          # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
           name: ds-pipeline-persistenceagent
           command:
             - persistence_agent
