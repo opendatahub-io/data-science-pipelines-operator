@@ -38,4 +38,4 @@ data:
         key: "{{.ObjectStorageConnection.CredentialsSecret.SecretKey}}"
   containerRuntimeExecutor: emissary  # TODO
   executor: |
-    imagePullPolicy: IfNotPresent  # TODO
+    # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting  # TODO

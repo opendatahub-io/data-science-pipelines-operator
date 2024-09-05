@@ -176,7 +176,7 @@ spec:
               value: "{{.APIServer.TerminateStatus}}"
             {{ end }}
           image: {{.APIServer.Image}}
-          imagePullPolicy: Always
+          # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
           name: ds-pipeline-api-server
           command: ['/bin/apiserver']
           args:

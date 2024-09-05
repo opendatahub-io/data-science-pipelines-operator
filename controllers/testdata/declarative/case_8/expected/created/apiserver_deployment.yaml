@@ -113,7 +113,7 @@ spec:
             - name: DBCONFIG_MYSQLCONFIG_PORT
               value: "3306"
           image: api-server:test8
-          imagePullPolicy: Always
+          # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
           name: ds-pipeline-api-server
           command: ['/bin/apiserver']
           args:
