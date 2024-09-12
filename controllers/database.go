@@ -47,6 +47,22 @@ var mariadbTemplates = []string{
 	"mariadb/default/tls-config.yaml.tmpl",
 }
 
+// tLSClientConfig creates and returns a TLS client configuration that includes
+// a set of custom CA certificates for secure communication. It reads CA
+// certificates from the environment variable `SSL_CERT_FILE` if it is set,
+// and appends any additional certificates passed as input.
+//
+// Parameters:
+//
+//	pems [][]byte: PEM-encoded certificates to be appended to the
+//	root certificate pool.
+//
+// Returns:
+//
+//	*cryptoTls.Config: A TLS configuration with the certificates set to the updated
+//	certificate pool.
+//	error: An error if there is a failure in parsing any of the provided PEM
+//	certificates, or nil if successful.
 func tLSClientConfig(pems [][]byte) (*cryptoTls.Config, error) {
 	rootCertPool := x509.NewCertPool()
 
@@ -120,7 +136,6 @@ var ConnectAndQueryDatabase = func(
 		// don't set anything
 	case "true":
 		var err error
-		// if pemCerts is empty, that is OK, we still add OS certs to the tls config
 		tlsConfig, err = tLSClientConfig(pemCerts)
 		if err != nil {
 			log.Info(fmt.Sprintf("Encountered error when processing custom ca bundle, Error: %v", err))
