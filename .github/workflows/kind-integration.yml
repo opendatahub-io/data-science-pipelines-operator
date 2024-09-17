@@ -48,4 +48,4 @@ jobs:
       - name: Run test
         working-directory: ${{ github.workspace }}/.github/scripts/tests
         run: |
-          sh kind-integration.sh
+          sh tests.sh --kind
