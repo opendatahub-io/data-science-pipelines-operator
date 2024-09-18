@@ -6,7 +6,6 @@
 
 set -e
 
-# ------------------------------------
 # Env vars
 echo "GIT_WORKSPACE=$GIT_WORKSPACE"
 if [ "$GIT_WORKSPACE" = "" ]; then
@@ -28,15 +27,15 @@ CONFIG_DIR="${GIT_WORKSPACE}/config"
 RESOURCES_DIR_CRD="${GIT_WORKSPACE}/.github/resources"
 OPENDATAHUB_NAMESPACE="opendatahub"
 RESOURCES_DIR_PYPI="${GIT_WORKSPACE}/.github/resources/pypiserver/base"
-# ------------------------------------
 
-# ------------------------------------
 # Functions
 get_dspo_image() {
   if [ "$REGISTRY_ADDRESS" = "" ]; then
       echo "REGISTRY_ADDRESS variable not defined." && exit 1
   fi
-  echo "${REGISTRY_ADDRESS}/data-science-pipelines-operator"
+  local image="${REGISTRY_ADDRESS}/data-science-pipelines-operator"
+  echo "Using $image for DSPO image"
+  echo $image
 }
 
 apply_crd() {
@@ -178,12 +177,15 @@ run_tests_dspa_external_connections() {
 
 undeploy_kind_resources() {
   echo "---------------------------------"
-  echo "Clean up"
+  echo "Clean up resources created for testing on kind"
   echo "---------------------------------"
   ( cd $GIT_WORKSPACE && make undeploy-kind )
 }
 
 remove_namespace_created_for_rhoai() {
+  echo "---------------------------------"
+  echo "Clean up resources created for testing on RHOAI"
+  echo "---------------------------------"
   kubectl delete projects $MINIO_NAMESPACE --now || true
   kubectl delete projects $MARIADB_NAMESPACE --now || true
   kubectl delete projects $PYPISERVER_NAMESPACE --now || true
@@ -224,9 +226,7 @@ run_rhoai_tests() {
   run_tests
   run_tests_dspa_external_connections
 }
-# ------------------------------------
 
-# ------------------------------------
 # Run
 case "$1" in
     --kind)
@@ -240,4 +240,3 @@ case "$1" in
         exit 1
         ;;
 esac
-# ------------------------------------
