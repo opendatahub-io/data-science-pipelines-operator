@@ -34,3 +34,4 @@ Dockerfile.cross
 __pycache__/
 *.py[cod]
 *$py.class
+.github/scripts/python_package_upload/
