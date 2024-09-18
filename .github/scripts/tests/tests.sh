@@ -28,13 +28,11 @@ RESOURCES_DIR_CRD="${GIT_WORKSPACE}/.github/resources"
 OPENDATAHUB_NAMESPACE="opendatahub"
 RESOURCES_DIR_PYPI="${GIT_WORKSPACE}/.github/resources/pypiserver/base"
 
-# Functions
 get_dspo_image() {
   if [ "$REGISTRY_ADDRESS" = "" ]; then
       echo "REGISTRY_ADDRESS variable not defined." && exit 1
   fi
   local image="${REGISTRY_ADDRESS}/data-science-pipelines-operator"
-  echo "Using $image for DSPO image"
   echo $image
 }
 
@@ -47,10 +45,10 @@ apply_crd() {
 }
 
 build_image() {
-  echo "---------------------------------"
-  echo "Build image"
-  echo "---------------------------------"
   IMG=$(get_dspo_image)
+  echo "---------------------------------"
+  echo "Building image: $IMG"
+  echo "---------------------------------"
   ( cd $GIT_WORKSPACE && make podman-build -e IMG="$IMG" )
 }
 
@@ -69,10 +67,10 @@ deploy_argo_lite() {
 }
 
 deploy_dspo() {
-  echo "---------------------------------"
-  echo "Deploy DSPO"
-  echo "---------------------------------"
   IMG=$(get_dspo_image)
+  echo "---------------------------------"
+  echo "Deploying DSPO: $IMG"
+  echo "---------------------------------"
   ( cd $GIT_WORKSPACE && make podman-push -e IMG="$IMG" )
   ( cd $GIT_WORKSPACE && make deploy-kind -e IMG="$IMG" )
 }
