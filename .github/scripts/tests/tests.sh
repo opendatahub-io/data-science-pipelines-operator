@@ -12,13 +12,13 @@ if [ "$GIT_WORKSPACE" = "" ]; then
     echo "GIT_WORKSPACE variable not defined. Should be the root of the source code. Example GIT_WORKSPACE=/home/dev/git/data-science-pipelines-operator" && exit 1
 fi
 
+CLEANUP=false
+K8SAPISERVERHOST=""
 DSPA_NAMESPACE="test-dspa"
 DSPA_EXTERNAL_NAMESPACE="dspa-ext"
 MINIO_NAMESPACE="test-minio"
 MARIADB_NAMESPACE="test-mariadb"
 PYPISERVER_NAMESPACE="test-pypiserver"
-DSPA_NAME="test-dspa"
-DSPA_EXTERNAL_NAME="dspa-ext"
 DSPA_DEPLOY_WAIT_TIMEOUT="300"
 INTEGRATION_TESTS_DIR="${GIT_WORKSPACE}/tests"
 DSPA_PATH="${GIT_WORKSPACE}/tests/resources/dspa-lite.yaml"
@@ -30,7 +30,7 @@ RESOURCES_DIR_PYPI="${GIT_WORKSPACE}/.github/resources/pypiserver/base"
 
 get_dspo_image() {
   if [ "$REGISTRY_ADDRESS" = "" ]; then
-      echo "REGISTRY_ADDRESS variable not defined." && exit 1
+  echo "REGISTRY_ADDRESS variable not defined." && exit 1
   fi
   local image="${REGISTRY_ADDRESS}/data-science-pipelines-operator"
   echo $image
@@ -163,14 +163,14 @@ run_tests() {
   echo "---------------------------------"
   echo "Run tests"
   echo "---------------------------------"
-  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=$(kubectl whoami --show-server) DSPANAMESPACE=${DSPA_NAMESPACE} DSPAPATH=${DSPA_PATH} )
+  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_NAMESPACE} DSPAPATH=${DSPA_PATH} )
 }
 
 run_tests_dspa_external_connections() {
   echo "---------------------------------"
   echo "Run tests for DSPA with External Connections"
   echo "---------------------------------"
-  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=$(kubectl whoami --show-server) DSPANAMESPACE=${DSPA_EXTERNAL_NAMESPACE} DSPAPATH=${DSPA_EXTERNAL_PATH} )
+  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_EXTERNAL_NAMESPACE} DSPAPATH=${DSPA_EXTERNAL_PATH} )
 }
 
 undeploy_kind_resources() {
@@ -184,12 +184,14 @@ remove_namespace_created_for_rhoai() {
   echo "---------------------------------"
   echo "Clean up resources created for testing on RHOAI"
   echo "---------------------------------"
+  kubectl delete projects $DSPA_NAMESPACE --now || true
+  kubectl delete projects $DSPA_EXTERNAL_NAMESPACE --now || true
   kubectl delete projects $MINIO_NAMESPACE --now || true
   kubectl delete projects $MARIADB_NAMESPACE --now || true
   kubectl delete projects $PYPISERVER_NAMESPACE --now || true
 }
 
-run_kind_tests() {
+setup_kind_requirements() {
   apply_crd
   build_image
   create_opendatahub_namespace
@@ -205,13 +207,9 @@ run_kind_tests() {
   create_namespace_dspa_external_connections
   apply_mariadb_minio_secrets_configmaps_external_namespace
   apply_pip_server_configmap
-  run_tests
-  run_tests_dspa_external_connections
-  undeploy_kind_resources
 }
 
-run_rhoai_tests() {
-  remove_namespace_created_for_rhoai
+setup_rhoai_requirements() {
   deploy_minio
   deploy_mariadb
   deploy_pypi_server
@@ -221,20 +219,96 @@ run_rhoai_tests() {
   create_namespace_dspa_external_connections
   apply_mariadb_minio_secrets_configmaps_external_namespace
   apply_pip_server_configmap
-  run_tests
-  run_tests_dspa_external_connections
 }
 
 # Run
-case "$1" in
+while [ "$#" -gt 0 ]; do
+  case "$1" in
     --kind)
-        run_kind_tests
-        ;;
+      TARGET="kind"
+      shift
+      ;;
     --rhoai)
-        run_rhoai_tests
-        ;;
-    *)
-        echo "Usage: $0 [--kind]"
+      TARGET="rhoai"
+      shift
+      ;;
+    --cleanup)
+      CLEANUP=true
+      shift
+      ;;
+    --k8s-api-server-host)
+      shift
+      if [[ -n "$1" ]]; then
+        K8SAPISERVERHOST="$1"
+        shift
+      else
+        echo "Error: --k8s-api-server-host requires a value"
         exit 1
-        ;;
-esac
+      fi
+      ;;
+    --dspa-namespace)
+      shift
+      if [[ -n "$1" ]]; then
+        DSPANAMESPACE="$1"
+        shift
+      else
+        echo "Error: --dspa-namespace requires a value"
+        exit 1
+      fi
+      ;;
+    --dspa-external-namespace)
+      shift
+      if [[ -n "$1" ]]; then
+        DSPA_EXTERNAL_NAMESPACE="$1"
+        shift
+      else
+        echo "Error: --dspa-external-namespace requires a value"
+        exit 1
+      fi
+      ;;
+    --dspa-path)
+      shift
+      if [[ -n "$1" ]]; then
+        DSPAPATH="$1"
+        shift
+      else
+        echo "Error: --dspa-path requires a value"
+        exit 1
+      fi
+      ;;
+    --kube-config)
+      shift
+      if [[ -n "$1" ]]; then
+        KUBECONFIGPATH="$1"
+        shift
+      else
+        echo "Error: --kube-config requires a value"
+        exit 1
+      fi
+      ;;
+    *)
+      echo "Unknown command line switch: $1"
+      exit 1
+      ;;
+  esac
+done
+
+if [ "$K8SAPISERVERHOST" = "" ]; then
+  echo "K8SAPISERVERHOST is empty. It will use suite_test.go::Defaultk8sApiServerHost"
+  echo "If the TARGET is OpenShift or RHOAI. You can use: oc whoami --show-server"
+fi
+
+if [ "$TARGET" = "kind" ]; then
+  if [ "$CLEANUP" = true ] ; then
+      undeploy_kind_resources
+  fi
+  setup_kind_requirements
+elif [ "$TARGET" = "rhoai" ]; then
+  if [ "$CLEANUP" = true ] ; then
+      remove_namespace_created_for_rhoai
+  fi
+  setup_rhoai_requirements
+fi
+
+run_tests
+run_tests_dspa_external_connections
