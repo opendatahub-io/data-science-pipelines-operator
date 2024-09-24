@@ -71,8 +71,8 @@ func FormFromFile(t *testing.T, form map[string]string) (*bytes.Buffer, string) 
 	return body, mp.FormDataContentType()
 }
 
-func RetrievePipelineId(t *testing.T, APIServerURL string, PipelineDisplayName string) (string, error) {
-	response, err := http.Get(fmt.Sprintf("%s/apis/v2beta1/pipelines", APIServerURL))
+func RetrievePipelineId(t *testing.T, httpClient http.Client, APIServerURL string, PipelineDisplayName string) (string, error) {
+	response, err := httpClient.Get(fmt.Sprintf("%s/apis/v2beta1/pipelines", APIServerURL))
 	require.NoError(t, err)
 	responseData, err := io.ReadAll(response.Body)
 	require.NoError(t, err)
@@ -107,7 +107,7 @@ func FormatRequestBody(t *testing.T, pipelineID string, PipelineDisplayName stri
 	return body
 }
 
-func WaitForPipelineRunCompletion(t *testing.T, APIServerURL string) error {
+func WaitForPipelineRunCompletion(t *testing.T, httpClient http.Client, APIServerURL string) error {
 	timeout := time.After(6 * time.Minute)
 	ticker := time.NewTicker(6 * time.Second)
 	defer ticker.Stop()
@@ -117,7 +117,7 @@ func WaitForPipelineRunCompletion(t *testing.T, APIServerURL string) error {
 			return fmt.Errorf("timed out waiting for pipeline run completion")
 		case <-ticker.C:
 			// Check the status of the pipeline run
-			status, err := CheckPipelineRunStatus(t, APIServerURL)
+			status, err := CheckPipelineRunStatus(t, httpClient, APIServerURL)
 			require.NoError(t, err)
 			switch status {
 			case "SUCCEEDED":
@@ -129,8 +129,8 @@ func WaitForPipelineRunCompletion(t *testing.T, APIServerURL string) error {
 	}
 }
 
-func CheckPipelineRunStatus(t *testing.T, APIServerURL string) (string, error) {
-	response, err := http.Get(fmt.Sprintf("%s/apis/v2beta1/runs", APIServerURL))
+func CheckPipelineRunStatus(t *testing.T, httpClient http.Client, APIServerURL string) (string, error) {
+	response, err := httpClient.Get(fmt.Sprintf("%s/apis/v2beta1/runs", APIServerURL))
 	require.NoError(t, err)
 	responseData, err := io.ReadAll(response.Body)
 	require.NoError(t, err)

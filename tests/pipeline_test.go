@@ -21,7 +21,6 @@ package integration
 import (
 	"fmt"
 	"io"
-	"net/http"
 	"net/url"
 	"testing"
 
@@ -32,7 +31,7 @@ import (
 
 func (suite *IntegrationTestSuite) TestAPIServerDeployment() {
 	suite.T().Run("Should successfully fetch pipelines", func(t *testing.T) {
-		response, err := http.Get(fmt.Sprintf("%s/apis/v2beta1/pipelines", APIServerURL))
+		response, err := suite.Clientmgr.httpClient.Get(fmt.Sprintf("%s/apis/v2beta1/pipelines", APIServerURL))
 		require.NoError(t, err)
 
 		responseData, err := io.ReadAll(response.Body)
@@ -50,7 +49,7 @@ func (suite *IntegrationTestSuite) TestAPIServerDeployment() {
 		}
 		body, contentType := TestUtil.FormFromFile(t, vals)
 
-		response, err := http.Post(postUrl, contentType, body)
+		response, err := suite.Clientmgr.httpClient.Post(postUrl, contentType, body)
 		require.NoError(t, err)
 		responseData, err := io.ReadAll(response.Body)
 		responseString := string(responseData)
@@ -68,7 +67,7 @@ func (suite *IntegrationTestSuite) TestAPIServerDeployment() {
 		}
 		body, contentType := TestUtil.FormFromFile(t, vals)
 
-		response, err := http.Post(postUrl, contentType, body)
+		response, err := suite.Clientmgr.httpClient.Post(postUrl, contentType, body)
 		require.NoError(t, err)
 		responseData, err := io.ReadAll(response.Body)
 		responseString := string(responseData)

@@ -1,0 +1,41 @@
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: dspa-ext
+spec:
+  dspVersion: v2
+  podToPodTLS: true
+  apiServer:
+    deploy: true
+    enableOauth: true
+    enableSamplePipeline: true
+    cABundle:
+      configMapName: root-ca
+      configMapKey: public.crt
+  scheduledWorkflow:
+    deploy: true
+  persistenceAgent:
+    deploy: true
+  mlmd:
+    deploy: true
+  database:
+    customExtraParams: '{"tls":"true"}'
+    externalDB:
+      host: mariadb.test-mariadb.svc.cluster.local
+      port: "3306"
+      username: mlpipeline
+      pipelineDBName: mlpipeline
+      passwordSecret:
+        name: ds-pipeline-db-test
+        key: password
+  objectStorage:
+    externalStorage:
+      bucket: mlpipeline
+      host: minio.test-minio.svc.cluster.local
+      port: "9000"
+      region: us-east-2
+      s3CredentialsSecret:
+        accessKey: accesskey
+        secretKey: secretkey
+        secretName: minio
+      scheme: https
