@@ -25,7 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	buildv1 "github.com/openshift/api/build/v1"
 	imagev1 "github.com/openshift/api/image/v1"
 	routev1 "github.com/openshift/api/route/v1"
@@ -45,7 +45,7 @@ func NewFakeController() *DSPAReconciler {
 	utilruntime.Must(buildv1.Install(FakeScheme))
 	utilruntime.Must(imagev1.Install(FakeScheme))
 	utilruntime.Must(routev1.Install(FakeScheme))
-	utilruntime.Must(dspav1alpha1.AddToScheme(FakeScheme))
+	utilruntime.Must(dspav1.AddToScheme(FakeScheme))
 	FakeBuilder.WithScheme(FakeScheme)
 
 	// Build Fake Client

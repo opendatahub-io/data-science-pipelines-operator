@@ -18,7 +18,7 @@ package controllers
 import (
 	"context"
 	"errors"
-	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 )
 
 const (
@@ -28,7 +28,7 @@ const (
 	mlmdGrpcService                    = "grpc-service"
 )
 
-func (r *DSPAReconciler) ReconcileMLMD(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,
+func (r *DSPAReconciler) ReconcileMLMD(ctx context.Context, dsp *dspav1.DataSciencePipelinesApplication,
 	params *DSPAParams) error {
 
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
@@ -40,54 +40,33 @@ func (r *DSPAReconciler) ReconcileMLMD(ctx context.Context, dsp *dspav1alpha1.Da
 
 	log.Info("Applying ML-Metadata (MLMD) Resources")
 
-	if params.UsingV1Pipelines(dsp) {
-		if dsp.Spec.MLMD != nil {
-			err := r.ApplyDir(dsp, params, mlmdTemplatesDir)
-			if err != nil {
-				return err
-			}
+	// We need to create the service first so OpenShift creates the certificate that we'll use later.
+	err := r.ApplyDir(dsp, params, mlmdTemplatesDir+"/"+mlmdGrpcService)
+	if err != nil {
+		return err
+	}
 
-			if dsp.Spec.MLMD.Envoy == nil || dsp.Spec.MLMD.Envoy.DeployRoute {
-				err = r.Apply(dsp, params, mlmdEnvoyRoute)
-				if err != nil {
-					return err
-				}
-			}
-		}
-
-		err := r.ApplyDir(dsp, params, mlmdTemplatesDir+"/v1")
-		if err != nil {
-			return err
-		}
-	} else {
-		// We need to create the service first so OpenShift creates the certificate that we'll use later.
-		err := r.ApplyDir(dsp, params, mlmdTemplatesDir+"/"+mlmdGrpcService)
+	if params.PodToPodTLS {
+		var certificatesExist bool
+		certificatesExist, err = params.LoadMlmdCertificates(ctx, r.Client)
 		if err != nil {
 			return err
 		}
 
-		if params.PodToPodTLS {
-			var certificatesExist bool
-			certificatesExist, err = params.LoadMlmdCertificates(ctx, r.Client)
-			if err != nil {
-				return err
-			}
-
-			if !certificatesExist {
-				return errors.New("secret containing the certificate for MLMD gRPC Server was not created yet")
-			}
+		if !certificatesExist {
+			return errors.New("secret containing the certificate for MLMD gRPC Server was not created yet")
 		}
+	}
 
-		err = r.ApplyDir(dsp, params, mlmdTemplatesDir)
+	err = r.ApplyDir(dsp, params, mlmdTemplatesDir)
+	if err != nil {
+		return err
+	}
+
+	if dsp.Spec.MLMD == nil || dsp.Spec.MLMD.Envoy == nil || dsp.Spec.MLMD.Envoy.DeployRoute {
+		err = r.Apply(dsp, params, mlmdEnvoyRoute)
 		if err != nil {
 			return err
-		}
-
-		if dsp.Spec.MLMD == nil || dsp.Spec.MLMD.Envoy == nil || dsp.Spec.MLMD.Envoy.DeployRoute {
-			err = r.Apply(dsp, params, mlmdEnvoyRoute)
-			if err != nil {
-				return err
-			}
 		}
 	}
 

@@ -20,7 +20,7 @@ package controllers
 import (
 	"testing"
 
-	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/stretchr/testify/assert"
 	networkingv1 "k8s.io/api/networking/v1"
 )
@@ -32,17 +32,17 @@ func TestDeployCommonPolicies(t *testing.T) {
 	expectedEnvoyNetworkPolicyName := "ds-pipelines-envoy-testdspa"
 
 	// Construct Basic DSPA Spec
-	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
-		Spec: dspav1alpha1.DSPASpec{
-			Database: &dspav1alpha1.Database{
+	dspa := &dspav1.DataSciencePipelinesApplication{
+		Spec: dspav1.DSPASpec{
+			Database: &dspav1.Database{
 				DisableHealthCheck: false,
-				MariaDB: &dspav1alpha1.MariaDB{
+				MariaDB: &dspav1.MariaDB{
 					Deploy: true,
 				},
 			},
-			ObjectStorage: &dspav1alpha1.ObjectStorage{
+			ObjectStorage: &dspav1.ObjectStorage{
 				DisableHealthCheck: false,
-				Minio: &dspav1alpha1.Minio{
+				Minio: &dspav1.Minio{
 					Deploy: false,
 					Image:  "someimage",
 				},

@@ -1,10 +1,14 @@
-# When a DSPA is deployed with all deployments disabled
 Images:
   ApiServer: api-server:test1
-  Artifact: artifact-manager:test1
   PersistentAgent: persistenceagent:test1
   ScheduledWorkflow: scheduledworkflow:test1
-  Cache: ubi-minimal:test1
-  MoveResultsImage: busybox:test1
-  MariaDB: mariadb:test1
+  MlmdEnvoy: mlmdenvoy:test1
+  MlmdGRPC: mlmdgrpc:test1
+  ArgoExecImage: argoexec:test1
+  ArgoWorkflowController: argowfcontroller:test1
+  LauncherImage: launcherimage:test1
+  DriverImage: driverimage:test1
   OAuthProxy: oauth-proxy:test1
+  MariaDB: mariadb:test1
+  MlPipelineUI: frontend:test1
+  Minio: minio:test1

@@ -26,7 +26,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/minio/minio-go/v7/pkg/credentials"
-	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/stretchr/testify/assert"
@@ -40,25 +40,25 @@ func TestDeployStorage(t *testing.T) {
 	expectedStorageName := "minio-testdspa"
 
 	// Construct DSPA Spec with deployed Minio Object Storage
-	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
-		Spec: dspav1alpha1.DSPASpec{
-			Database: &dspav1alpha1.Database{
+	dspa := &dspav1.DataSciencePipelinesApplication{
+		Spec: dspav1.DSPASpec{
+			Database: &dspav1.Database{
 				DisableHealthCheck: false,
-				MariaDB: &dspav1alpha1.MariaDB{
+				MariaDB: &dspav1.MariaDB{
 					Deploy: true,
 				},
 			},
-			ObjectStorage: &dspav1alpha1.ObjectStorage{
+			ObjectStorage: &dspav1.ObjectStorage{
 				DisableHealthCheck: false,
-				Minio: &dspav1alpha1.Minio{
+				Minio: &dspav1.Minio{
 					Deploy: true,
 					Image:  "someimage",
-					Resources: &dspav1alpha1.ResourceRequirements{ //TODO: fails without this block.  Why?
-						Requests: &dspav1alpha1.Resources{
+					Resources: &dspav1.ResourceRequirements{ //TODO: fails without this block.  Why?
+						Requests: &dspav1.Resources{
 							CPU:    resource.MustParse("250m"),
 							Memory: resource.MustParse("500Mi"),
 						},
-						Limits: &dspav1alpha1.Resources{
+						Limits: &dspav1.Resources{
 							CPU:    resource.MustParse("500m"),
 							Memory: resource.MustParse("1Gi"),
 						},
@@ -106,26 +106,26 @@ func TestDeployStorageWithExternalRouteEnabled(t *testing.T) {
 	expectedStorageName := "minio-testdspa"
 
 	// Construct DSPA Spec with deployed Minio Object Storage
-	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
-		Spec: dspav1alpha1.DSPASpec{
-			Database: &dspav1alpha1.Database{
+	dspa := &dspav1.DataSciencePipelinesApplication{
+		Spec: dspav1.DSPASpec{
+			Database: &dspav1.Database{
 				DisableHealthCheck: false,
-				MariaDB: &dspav1alpha1.MariaDB{
+				MariaDB: &dspav1.MariaDB{
 					Deploy: true,
 				},
 			},
-			ObjectStorage: &dspav1alpha1.ObjectStorage{
+			ObjectStorage: &dspav1.ObjectStorage{
 				DisableHealthCheck:  false,
 				EnableExternalRoute: true,
-				Minio: &dspav1alpha1.Minio{
+				Minio: &dspav1.Minio{
 					Deploy: true,
 					Image:  "someimage",
-					Resources: &dspav1alpha1.ResourceRequirements{ //TODO: fails without this block.  Why?
-						Requests: &dspav1alpha1.Resources{
+					Resources: &dspav1.ResourceRequirements{ //TODO: fails without this block.  Why?
+						Requests: &dspav1.Resources{
 							CPU:    resource.MustParse("250m"),
 							Memory: resource.MustParse("500Mi"),
 						},
-						Limits: &dspav1alpha1.Resources{
+						Limits: &dspav1.Resources{
 							CPU:    resource.MustParse("500m"),
 							Memory: resource.MustParse("1Gi"),
 						},
@@ -179,17 +179,17 @@ func TestDontDeployStorage(t *testing.T) {
 	expectedStorageName := "minio-testdspa"
 
 	// Construct DSPA Spec with non-deployed Minio Object Storage
-	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
-		Spec: dspav1alpha1.DSPASpec{
-			Database: &dspav1alpha1.Database{
+	dspa := &dspav1.DataSciencePipelinesApplication{
+		Spec: dspav1.DSPASpec{
+			Database: &dspav1.Database{
 				DisableHealthCheck: false,
-				MariaDB: &dspav1alpha1.MariaDB{
+				MariaDB: &dspav1.MariaDB{
 					Deploy: true,
 				},
 			},
-			ObjectStorage: &dspav1alpha1.ObjectStorage{
+			ObjectStorage: &dspav1.ObjectStorage{
 				DisableHealthCheck: false,
-				Minio: &dspav1alpha1.Minio{
+				Minio: &dspav1.Minio{
 					Deploy: false,
 					Image:  "someimage",
 				},
@@ -229,15 +229,15 @@ func TestDefaultDeployBehaviorStorage(t *testing.T) {
 	expectedStorageName := "minio-testdspa"
 
 	// Construct DSPA Spec with deployed Minio Object Storage
-	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
-		Spec: dspav1alpha1.DSPASpec{
-			Database: &dspav1alpha1.Database{
+	dspa := &dspav1.DataSciencePipelinesApplication{
+		Spec: dspav1.DSPASpec{
+			Database: &dspav1.Database{
 				DisableHealthCheck: false,
-				MariaDB: &dspav1alpha1.MariaDB{
+				MariaDB: &dspav1.MariaDB{
 					Deploy: true,
 				},
 			},
-			ObjectStorage: &dspav1alpha1.ObjectStorage{
+			ObjectStorage: &dspav1.ObjectStorage{
 				DisableHealthCheck: false,
 			},
 		},
@@ -279,9 +279,9 @@ func TestIsDatabaseAccessibleTrue(t *testing.T) {
 	testDSPAName := "testdspa"
 
 	// Minimal Inputs
-	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
-		Spec: dspav1alpha1.DSPASpec{
-			ObjectStorage: &dspav1alpha1.ObjectStorage{
+	dspa := &dspav1.DataSciencePipelinesApplication{
+		Spec: dspav1.DSPASpec{
+			ObjectStorage: &dspav1.ObjectStorage{
 				DisableHealthCheck: false,
 			},
 		},
@@ -317,9 +317,9 @@ func TestIsDatabaseNotAccessibleFalse(t *testing.T) {
 	testDSPAName := "testdspa"
 
 	// Minimal Inputs
-	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
-		Spec: dspav1alpha1.DSPASpec{
-			ObjectStorage: &dspav1alpha1.ObjectStorage{
+	dspa := &dspav1.DataSciencePipelinesApplication{
+		Spec: dspav1.DSPASpec{
+			ObjectStorage: &dspav1.ObjectStorage{
 				DisableHealthCheck: false,
 			},
 		},
@@ -355,9 +355,9 @@ func TestDisabledHealthCheckReturnsTrue(t *testing.T) {
 	testDSPAName := "testdspa"
 
 	// Minimal Inputs
-	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
-		Spec: dspav1alpha1.DSPASpec{
-			ObjectStorage: &dspav1alpha1.ObjectStorage{
+	dspa := &dspav1.DataSciencePipelinesApplication{
+		Spec: dspav1.DSPASpec{
+			ObjectStorage: &dspav1.ObjectStorage{
 				DisableHealthCheck: true,
 			},
 		},
@@ -395,9 +395,9 @@ func TestIsDatabaseAccessibleBadAccessKey(t *testing.T) {
 	testDSPAName := "testdspa"
 
 	// Minimal Inputs
-	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
-		Spec: dspav1alpha1.DSPASpec{
-			ObjectStorage: &dspav1alpha1.ObjectStorage{
+	dspa := &dspav1.DataSciencePipelinesApplication{
+		Spec: dspav1.DSPASpec{
+			ObjectStorage: &dspav1.ObjectStorage{
 				DisableHealthCheck: false,
 			},
 		},
@@ -433,9 +433,9 @@ func TestIsDatabaseAccessibleBadSecretKey(t *testing.T) {
 	testDSPAName := "testdspa"
 
 	// Minimal Inputs
-	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
-		Spec: dspav1alpha1.DSPASpec{
-			ObjectStorage: &dspav1alpha1.ObjectStorage{
+	dspa := &dspav1.DataSciencePipelinesApplication{
+		Spec: dspav1.DSPASpec{
+			ObjectStorage: &dspav1.ObjectStorage{
 				DisableHealthCheck: false,
 			},
 		},

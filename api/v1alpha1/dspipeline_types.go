@@ -424,10 +424,10 @@ type ComponentDetailStatus struct {
 	ExternalUrl string `json:"externalUrl,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-//+kubebuilder:resource:shortName=dspa
-
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:shortName=dspa
+// +kubebuilder:deprecatedversion:warning="datasciencepipelinesapplications.opendatahub.io/v1alpha1 is deprecated."
 type DataSciencePipelinesApplication struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

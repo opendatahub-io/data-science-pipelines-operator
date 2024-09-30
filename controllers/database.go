@@ -30,7 +30,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
-	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"k8s.io/apimachinery/pkg/util/json"
 	"os"
@@ -161,7 +161,7 @@ var ConnectAndQueryDatabase = func(
 	return true, nil
 }
 
-func (r *DSPAReconciler) isDatabaseAccessible(dsp *dspav1alpha1.DataSciencePipelinesApplication,
+func (r *DSPAReconciler) isDatabaseAccessible(dsp *dspav1.DataSciencePipelinesApplication,
 	params *DSPAParams) (bool, error) {
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
 
@@ -233,7 +233,7 @@ func (r *DSPAReconciler) isDatabaseAccessible(dsp *dspav1alpha1.DataSciencePipel
 	return dbHealthCheckPassed, err
 }
 
-func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,
+func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1.DataSciencePipelinesApplication,
 	params *DSPAParams) error {
 
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
@@ -273,7 +273,7 @@ func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha
 		// Update the CR with the state of mariaDB to accurately portray
 		// desired state.
 		if !databaseSpecified {
-			dsp.Spec.Database = &dspav1alpha1.Database{}
+			dsp.Spec.Database = &dspav1.Database{}
 		}
 		if !databaseSpecified || defaultDBRequired {
 			dsp.Spec.Database.MariaDB = params.MariaDB.DeepCopy()

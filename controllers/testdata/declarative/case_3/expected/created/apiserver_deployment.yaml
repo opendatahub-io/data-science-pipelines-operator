@@ -37,10 +37,6 @@ spec:
               value: "testdbhost3"
             - name: DBCONFIG_PORT
               value: "test3"
-            - name: AUTO_UPDATE_PIPELINE_DEFAULT_VERSION
-              value: "true"
-            - name: DBCONFIG_CONMAXLIFETIMESEC
-              value: "120"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_HOST
               value: "ds-pipeline-visualizationserver"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
@@ -75,6 +71,10 @@ spec:
               value: "argolauncherimage:test3"
             - name: V2_DRIVER_IMAGE
               value: "argodriverimage:test3"
+            - name: METADATA_GRPC_SERVICE_SERVICE_HOST
+              value: "ds-pipeline-metadata-grpc-testdsp3.default.svc.cluster.local"
+            - name: METADATA_GRPC_SERVICE_SERVICE_PORT
+              value: "8080"
             - name: ML_PIPELINE_SERVICE_HOST
               value: ds-pipeline-testdsp3.default.svc.cluster.local
             - name: ML_PIPELINE_SERVICE_PORT_GRPC
@@ -82,36 +82,22 @@ spec:
             - name: SIGNED_URL_EXPIRY_TIME_SECONDS
               value: "60"
             - name: EXECUTIONTYPE
-              value: PipelineRun
-            - name: CACHE_IMAGE
-              value: ubi-minimal:test3
-            - name: MOVERESULTS_IMAGE
-              value: busybox:test3
-            - name: ARTIFACT_IMAGE
-              value: artifact-manager:test3
-            - name: ARTIFACT_BUCKET
-              value: "testbucket3"
-            - name: ARTIFACT_ENDPOINT
-              value: "https://teststoragehost3:80"
-            - name: ARTIFACT_SCRIPT
+              value: Workflow
+            - name: DB_DRIVER_NAME
+              value: mysql
+            - name: DBCONFIG_MYSQLCONFIG_USER
+              value: "testuser3"
+            - name: DBCONFIG_MYSQLCONFIG_PASSWORD
               valueFrom:
-                configMapKeyRef:
-                  key: "somekey"
-                  name: "doesnotexist"
-            - name: ARCHIVE_LOGS
-              value: "false"
-            - name: TRACK_ARTIFACTS
-              value: "true"
-            - name: STRIP_EOF
-              value: "true"
-            - name: PIPELINE_RUNTIME
-              value: "tekton"
-            - name: INJECT_DEFAULT_SCRIPT
-              value: "true"
-            - name: APPLY_TEKTON_CUSTOM_RESOURCE
-              value: "true"
-            - name: TERMINATE_STATUS
-              value: "Cancelled"
+                secretKeyRef:
+                  key: "testpswkey3"
+                  name: "testdbpswsecretname3"
+            - name: DBCONFIG_MYSQLCONFIG_DBNAME
+              value: "testdbname3"
+            - name: DBCONFIG_MYSQLCONFIG_HOST
+              value: "testdbhost3"
+            - name: DBCONFIG_MYSQLCONFIG_PORT
+              value: "test3"
           image: api-server:test3
           # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
           name: ds-pipeline-api-server

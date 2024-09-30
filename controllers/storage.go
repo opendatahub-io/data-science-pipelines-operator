@@ -29,7 +29,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
-	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/util"
 )
@@ -172,7 +172,7 @@ var ConnectAndQueryObjStore = func(
 	return true, nil
 }
 
-func (r *DSPAReconciler) isObjectStorageAccessible(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,
+func (r *DSPAReconciler) isObjectStorageAccessible(ctx context.Context, dsp *dspav1.DataSciencePipelinesApplication,
 	params *DSPAParams) (bool, error) {
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
 	if params.ObjectStorageHealthCheckDisabled(dsp) {
@@ -220,7 +220,7 @@ func (r *DSPAReconciler) isObjectStorageAccessible(ctx context.Context, dsp *dsp
 }
 
 // ReconcileStorage will set up Storage Connection.
-func (r *DSPAReconciler) ReconcileStorage(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,
+func (r *DSPAReconciler) ReconcileStorage(ctx context.Context, dsp *dspav1.DataSciencePipelinesApplication,
 	params *DSPAParams) error {
 
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
@@ -259,7 +259,7 @@ func (r *DSPAReconciler) ReconcileStorage(ctx context.Context, dsp *dspav1alpha1
 		// Update the CR with the state of minio to accurately portray
 		// desired state.
 		if !storageSpecified {
-			dsp.Spec.ObjectStorage = &dspav1alpha1.ObjectStorage{}
+			dsp.Spec.ObjectStorage = &dspav1.ObjectStorage{}
 			dsp.Spec.ObjectStorage.Minio = params.Minio.DeepCopy()
 			dsp.Spec.ObjectStorage.Minio.Deploy = true
 			if err := r.Update(ctx, dsp); err != nil {
