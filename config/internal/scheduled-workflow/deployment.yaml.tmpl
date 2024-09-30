@@ -28,8 +28,6 @@ spec:
               value: "{{.Namespace}}"
             - name: CRON_SCHEDULE_TIMEZONE
               value: "{{.ScheduledWorkflow.CronScheduleTimezone}}"
-            - name: EXECUTIONTYPE
-              value: PipelineRun
           image: "{{.ScheduledWorkflow.Image}}"
           # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
           name: ds-pipeline-scheduledworkflow

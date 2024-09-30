@@ -37,10 +37,6 @@ spec:
               value: "mariadb-testdsp4.default.svc.cluster.local"
             - name: DBCONFIG_PORT
               value: "3306"
-            - name: AUTO_UPDATE_PIPELINE_DEFAULT_VERSION
-              value: "true"
-            - name: DBCONFIG_CONMAXLIFETIMESEC
-              value: "125"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_HOST
               value: "ds-pipeline-visualizationserver"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
@@ -75,6 +71,10 @@ spec:
               value: "this-argolauncher-image-from-cr-should-be-used:test4"
             - name: V2_DRIVER_IMAGE
               value: "this-argodriver-image-from-cr-should-be-used:test4"
+            - name: METADATA_GRPC_SERVICE_SERVICE_HOST
+              value: "ds-pipeline-metadata-grpc-testdsp4.default.svc.cluster.local"
+            - name: METADATA_GRPC_SERVICE_SERVICE_PORT
+              value: "8080"
             - name: ML_PIPELINE_SERVICE_HOST
               value: ds-pipeline-testdsp4.default.svc.cluster.local
             - name: ML_PIPELINE_SERVICE_PORT_GRPC
@@ -82,44 +82,26 @@ spec:
             - name: SIGNED_URL_EXPIRY_TIME_SECONDS
               value: "60"
             - name: EXECUTIONTYPE
-              value: PipelineRun
-            - name: CACHE_IMAGE
-              value: "this-ubi-minimal-image-from-cr-should-be-used:test4"
-            - name: MOVERESULTS_IMAGE
-              value: "this-busybox-image-from-cr-should-be-used:test4"
-            - name: ARTIFACT_IMAGE
-              value: "this-artifact-manager-image-from-cr-should-be-used:test4"
-            - name: ARTIFACT_BUCKET
-              value: "mlpipeline"
-            - name: ARTIFACT_ENDPOINT
-              value: "http://minio-testdsp4.default.svc.cluster.local:9000"
-            - name: ARTIFACT_SCRIPT
+              value: Workflow
+            - name: DB_DRIVER_NAME
+              value: mysql
+            - name: DBCONFIG_MYSQLCONFIG_USER
+              value: "testuser"
+            - name: DBCONFIG_MYSQLCONFIG_PASSWORD
               valueFrom:
-                configMapKeyRef:
-                  key: "artifact_script"
-                  name: "ds-pipeline-artifact-script-testdsp4"
-            - name: ARCHIVE_LOGS
-              value: "false"
-            - name: TRACK_ARTIFACTS
-              value: "true"
-            - name: STRIP_EOF
-              value: "true"
-            - name: PIPELINE_RUNTIME
-              value: "tekton"
-            - name: INJECT_DEFAULT_SCRIPT
-              value: "true"
-            - name: APPLY_TEKTON_CUSTOM_RESOURCE
-              value: "true"
-            - name: TERMINATE_STATUS
-              value: "Cancelled"
+                secretKeyRef:
+                  key: "password"
+                  name: "ds-pipeline-db-testdsp4"
+            - name: DBCONFIG_MYSQLCONFIG_DBNAME
+              value: "randomDBName"
+            - name: DBCONFIG_MYSQLCONFIG_HOST
+              value: "mariadb-testdsp4.default.svc.cluster.local"
+            - name: DBCONFIG_MYSQLCONFIG_PORT
+              value: "3306"
           image: this-apiserver-image-from-cr-should-be-used:test4
           # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
           name: ds-pipeline-api-server
           command: ['/bin/apiserver']
-          volumeMounts:
-            - name: server-config
-              mountPath: /config/config.json
-              subPath: config.json
           args:
             - --config=/config
             - -logtostderr=true
@@ -161,6 +143,10 @@ spec:
             limits:
               cpu: 2522m
               memory: 5Gi
+          volumeMounts:
+            - mountPath: /config/config.json
+              name: server-config
+              subPath: config.json
         - name: oauth-proxy
           args:
             - --https-address=:8443

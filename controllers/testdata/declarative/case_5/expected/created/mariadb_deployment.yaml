@@ -73,7 +73,25 @@ spec:
           volumeMounts:
             - name: mariadb-persistent-storage
               mountPath: /var/lib/mysql
+            - name: mariadb-tls
+              mountPath: /.mariadb/certs
+            - name: mariadb-tls-config
+              mountPath: /etc/my.cnf.d/mariadb-tls-config.cnf
+              subPath: mariadb-tls-config.cnf
       volumes:
         - name: mariadb-persistent-storage
           persistentVolumeClaim:
             claimName: mariadb-testdsp5
+        - name: mariadb-tls
+          secret:
+            secretName: ds-pipelines-mariadb-tls-testdsp5
+            items:
+              - key: tls.crt
+                path: tls.crt
+              - key: tls.key
+                path: tls.key
+            defaultMode: 420
+        - name: mariadb-tls-config
+          configMap:
+            name: ds-pipelines-mariadb-tls-config-testdsp5
+            defaultMode: 420

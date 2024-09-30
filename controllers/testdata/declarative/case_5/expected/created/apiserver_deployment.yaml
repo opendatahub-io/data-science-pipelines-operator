@@ -37,10 +37,14 @@ spec:
               value: "mariadb-testdsp5.default.svc.cluster.local"
             - name: DBCONFIG_PORT
               value: "3306"
-            - name: AUTO_UPDATE_PIPELINE_DEFAULT_VERSION
-              value: "true"
-            - name: DBCONFIG_CONMAXLIFETIMESEC
-              value: "120"
+            - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_NAME
+              value: dsp-trusted-ca-testdsp5
+            - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_KEY
+              value: testcabundleconfigmapkey5.crt
+            - name: ARTIFACT_COPY_STEP_CABUNDLE_MOUNTPATH
+              value: /dsp-custom-certs
+            - name: SSL_CERT_DIR
+              value: "/dsp-custom-certs:/etc/ssl/certs:/etc/pki/tls/certs"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_HOST
               value: "ds-pipeline-visualizationserver"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
@@ -72,50 +76,40 @@ spec:
             - name: MINIO_SERVICE_SERVICE_PORT
               value: "9000"
             - name: V2_LAUNCHER_IMAGE
-              value: "argolauncherimage:test5"
+              value: "launcherimage:test5"
             - name: V2_DRIVER_IMAGE
-              value: "argodriverimage:test5"
+              value: "driverimage:test5"
             - name: METADATA_GRPC_SERVICE_SERVICE_HOST
               value: "ds-pipeline-metadata-grpc-testdsp5.default.svc.cluster.local"
             - name: METADATA_GRPC_SERVICE_SERVICE_PORT
-              value: "1337"
+              value: "8080"
             - name: ML_PIPELINE_SERVICE_HOST
               value: ds-pipeline-testdsp5.default.svc.cluster.local
             - name: ML_PIPELINE_SERVICE_PORT_GRPC
               value: "8887"
             - name: SIGNED_URL_EXPIRY_TIME_SECONDS
               value: "60"
+            - name: ML_PIPELINE_TLS_ENABLED
+              value: "true"
+            - name: METADATA_TLS_ENABLED
+              value: "true"
             - name: EXECUTIONTYPE
-              value: PipelineRun
-            - name: CACHE_IMAGE
-              value: "ubi-minimal:test5"
-            - name: MOVERESULTS_IMAGE
-              value: "busybox:test5"
-            - name: ARTIFACT_IMAGE
-              value: "artifact-manager:test5"
-            - name: ARTIFACT_BUCKET
+              value: Workflow
+            - name: DB_DRIVER_NAME
+              value: mysql
+            - name: DBCONFIG_MYSQLCONFIG_USER
               value: "mlpipeline"
-            - name: ARTIFACT_ENDPOINT
-              value: "http://minio-testdsp5.default.svc.cluster.local:9000"
-            - name: ARTIFACT_SCRIPT
+            - name: DBCONFIG_MYSQLCONFIG_PASSWORD
               valueFrom:
-                configMapKeyRef:
-                  key: "artifact_script"
-                  name: "ds-pipeline-artifact-script-testdsp5"
-            - name: ARCHIVE_LOGS
-              value: "false"
-            - name: TRACK_ARTIFACTS
-              value: "true"
-            - name: STRIP_EOF
-              value: "true"
-            - name: PIPELINE_RUNTIME
-              value: "tekton"
-            - name: INJECT_DEFAULT_SCRIPT
-              value: "true"
-            - name: APPLY_TEKTON_CUSTOM_RESOURCE
-              value: "true"
-            - name: TERMINATE_STATUS
-              value: "Cancelled"
+                secretKeyRef:
+                  key: "password"
+                  name: "ds-pipeline-db-testdsp5"
+            - name: DBCONFIG_MYSQLCONFIG_DBNAME
+              value: "mlpipeline"
+            - name: DBCONFIG_MYSQLCONFIG_HOST
+              value: "mariadb-testdsp5.default.svc.cluster.local"
+            - name: DBCONFIG_MYSQLCONFIG_PORT
+              value: "3306"
           image: api-server:test5
           # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
           name: ds-pipeline-api-server
@@ -123,6 +117,8 @@ spec:
           args:
             - --config=/config
             - -logtostderr=true
+            - --tlsCertPath=/etc/tls/private/tls.crt
+            - --tlsCertKeyPath=/etc/tls/private/tls.key
           ports:
             - containerPort: 8888
               name: http
@@ -131,29 +127,15 @@ spec:
               name: grpc
               protocol: TCP
           livenessProbe:
-            exec:
-              command:
-                - wget
-                - -q
-                - -S
-                - -O
-                - '-'
-                - http://localhost:8888/apis/v1beta1/healthz
-            initialDelaySeconds: 3
-            periodSeconds: 5
-            timeoutSeconds: 2
+            httpGet:
+              path: /apis/v1beta1/healthz
+              port: http
+              scheme: HTTPS
           readinessProbe:
-            exec:
-              command:
-                - wget
-                - -q
-                - -S
-                - -O
-                - '-'
-                - http://localhost:8888/apis/v1beta1/healthz
-            initialDelaySeconds: 3
-            periodSeconds: 5
-            timeoutSeconds: 2
+            httpGet:
+              path: /apis/v1beta1/healthz
+              port: http
+              scheme: HTTPS
           resources:
             requests:
               cpu: 250m
@@ -165,12 +147,17 @@ spec:
             - name: server-config
               mountPath: /config/config.json
               subPath: config.json
+            - mountPath: /etc/tls/private
+              name: proxy-tls
+            - name: ca-bundle
+              mountPath: /dsp-custom-certs
         - name: oauth-proxy
           args:
             - --https-address=:8443
             - --provider=openshift
             - --openshift-service-account=ds-pipeline-testdsp5
-            - --upstream=http://localhost:8888
+            - --upstream=https://ds-pipeline-testdsp5.default.svc.cluster.local:8888
+            - --upstream-ca=/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
             - --tls-cert=/etc/tls/private/tls.crt
             - --tls-key=/etc/tls/private/tls.key
             - --cookie-secret=SECRET
@@ -217,8 +204,12 @@ spec:
           secret:
             secretName: ds-pipelines-proxy-tls-testdsp5
             defaultMode: 420
-        - configMap:
-            defaultMode: 420
+        - name: server-config
+          configMap:
             name: ds-pipeline-server-config-testdsp5
-          name: server-config
+            defaultMode: 420
+        - name: ca-bundle
+          configMap:
+            name: dsp-trusted-ca-testdsp5
+            defaultMode: 420
       serviceAccountName: ds-pipeline-testdsp5

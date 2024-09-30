@@ -12,7 +12,7 @@ metadata:
   namespace: {{.Namespace}}
 data:
   artifactRepository: |
-    archiveLogs: {{.APIServer.ArchiveLogs}}
+    archiveLogs: false
     s3:
       endpoint: "{{.ObjectStorageConnection.Endpoint}}"
       bucket: "{{.ObjectStorageConnection.Bucket}}"

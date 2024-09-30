@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ds-pipeline-metadata-envoy-testdsp2
+  namespace: default
+  labels:
+    app: ds-pipeline-metadata-envoy-testdsp2
+    component: data-science-pipelines
+    dspa: testdsp2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ds-pipeline-metadata-envoy-testdsp2
+      component: data-science-pipelines
+      dspa: testdsp2
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "false"
+      labels:
+        app: ds-pipeline-metadata-envoy-testdsp2
+        component: data-science-pipelines
+        dspa: testdsp2
+    spec:
+      containers:
+        - image: mlmdenvoy:test2
+          name: container
+          command: ["/usr/local/bin/envoy"]
+          args: [
+            "-c",
+            "/etc/envoy.yaml"
+          ]
+          ports:
+            - containerPort: 9090
+              name: md-envoy
+              protocol: TCP
+            - containerPort: 9901
+              name: envoy-admin
+              protocol: TCP
+          livenessProbe:
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            tcpSocket:
+              port: md-envoy
+            timeoutSeconds: 2
+          readinessProbe:
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            tcpSocket:
+              port: md-envoy
+            timeoutSeconds: 2
+          resources:
+            requests:
+              cpu: 1334m
+              memory: 1Gi
+            limits:
+              cpu: 2535m
+              memory: 5Gi
+          volumeMounts:
+            - mountPath: /etc/envoy.yaml
+              name: envoy-config
+              subPath: envoy.yaml
+      serviceAccountName: ds-pipeline-metadata-envoy-testdsp2
+      volumes:
+        - name: envoy-config
+          configMap:
+            name: ds-pipeline-metadata-envoy-config-testdsp2
+            defaultMode: 420
+        - name: proxy-tls
+          secret:
+            secretName: ds-pipelines-envoy-proxy-tls-testdsp2
+            defaultMode: 420
+        - name: proxy-tls-upstream
+          configMap:
+            name: dsp-trusted-ca-testdsp2
+            defaultMode: 420
