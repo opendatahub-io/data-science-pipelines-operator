@@ -66,6 +66,8 @@ type DSPAParams struct {
 	Minio                                *dspa.Minio
 	MLMD                                 *dspa.MLMD
 	MlmdProxyDefaultResourceName         string
+	MlmdGrpcCertificateContents          string
+	MlmdGrpcPrivateKeyContents           string
 	WorkflowController                   *dspa.WorkflowController
 	CustomKfpLauncherConfigMapData       string
 	DBConnection
@@ -101,6 +103,7 @@ type DBConnection struct {
 	DBName            string
 	CredentialsSecret *dspa.SecretKeyValue
 	Password          string
+	DecodedPassword   string
 	ExtraParams       string
 }
 type ObjectStorageConnection struct {
@@ -290,6 +293,8 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 			return err
 		}
 		p.DBConnection.Password = password
+		decodedPasswordBytes, _ := base64.StdEncoding.DecodeString(password)
+		p.DBConnection.DecodedPassword = string(decodedPasswordBytes)
 	} else {
 		// If no externalDB or mariaDB is specified, DSPO assumes
 		// MariaDB deployment with defaults.
@@ -325,6 +330,9 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 		tlsParams := config.DBExtraParams{
 			"tls": "false",
 		}
+		if p.PodToPodTLS {
+			tlsParams["tls"] = "true"
+		}
 		dbExtraParams, err := config.GetDefaultDBExtraParams(tlsParams, log)
 		if err != nil {
 			log.Error(err, "Unexpected error encountered while retrieving DBExtraparams")
@@ -346,6 +354,8 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 			return err
 		}
 		p.DBConnection.Password = dbPassword
+		decodedPasswordBytes, _ := base64.StdEncoding.DecodeString(dbPassword)
+		p.DBConnection.DecodedPassword = string(decodedPasswordBytes)
 	}
 
 	// User specified custom Extra parameters will always take precedence
@@ -577,6 +587,20 @@ func setResourcesDefault(defaultValue dspa.ResourceRequirements, value **dspa.Re
 	if *value == nil {
 		*value = defaultValue.DeepCopy()
 	}
+}
+
+func (p *DSPAParams) LoadMlmdCertificates(ctx context.Context, client client.Client) (bool, error) {
+	secret, err := util.GetSecret(ctx, "ds-pipeline-metadata-grpc-tls-certs-"+p.Name, p.Namespace, client)
+	if err != nil {
+		if apierrs.IsNotFound(err) {
+			return false, nil
+		} else {
+			return false, err
+		}
+	}
+	p.MlmdGrpcCertificateContents = strings.ReplaceAll(string(secret.Data["tls.crt"]), "\n", "\\n")
+	p.MlmdGrpcPrivateKeyContents = strings.ReplaceAll(string(secret.Data["tls.key"]), "\n", "\\n")
+	return true, nil
 }
 
 func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, loggr logr.Logger) error {

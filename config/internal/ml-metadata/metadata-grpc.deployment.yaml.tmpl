@@ -30,6 +30,9 @@ spec:
             - --mysql_config_user=$(DBCONFIG_USER)
             - --mysql_config_password=$(DBCONFIG_PASSWORD)
             - --enable_database_upgrade=true
+            {{ if .PodToPodTLS }}
+            - --metadata_store_server_config_file=/mlmd-tls-config/config.proto
+            {{ end }}
             {{ if .CustomCABundle }}
             - --mysql_config_sslrootcert={{ .PiplinesCABundleMountPath }}
             {{ end }}
@@ -90,10 +93,29 @@ spec:
             - mountPath: {{ .CustomCABundleRootMountPath }}
               name: ca-bundle
             {{ end }}
+            {{ if .PodToPodTLS }}
+            - name: ds-pipeline-metadata-grpc-tls-config-{{.Name}}
+              mountPath: /mlmd-tls-config
+            - name: ds-pipeline-metadata-grpc-tls-certs-{{.Name}}
+              mountPath: "/etc/tls"
+            {{ end }}
       serviceAccountName: ds-pipeline-metadata-grpc-{{.Name}}
       volumes:
         {{ if .CustomCABundle }}
         - name: ca-bundle
           configMap:
             name: {{ .CustomCABundle.ConfigMapName }}
+        {{ end }}
+        {{ if .PodToPodTLS }}
+        - name: ds-pipeline-metadata-grpc-tls-config-{{.Name}}
+          secret:
+            secretName: ds-pipeline-metadata-grpc-tls-config-secret-{{.Name}}
+        - name: ds-pipeline-metadata-grpc-tls-certs-{{.Name}}
+          secret:
+            secretName: ds-pipeline-metadata-grpc-tls-certs-{{.Name}}
+            items:
+            - key: tls.key
+              path: tls.key
+            - key: tls.crt
+              path: tls.crt
         {{ end }}

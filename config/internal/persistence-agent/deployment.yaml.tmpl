@@ -45,7 +45,7 @@ spec:
               value: "/etc/pki/tls/certs:/var/run/secrets/kubernetes.io/serviceaccount/"
             {{ end }}
           image: "{{.PersistenceAgent.Image}}"
-          imagePullPolicy: IfNotPresent
+          # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
           name: ds-pipeline-persistenceagent
           command:
             - persistence_agent

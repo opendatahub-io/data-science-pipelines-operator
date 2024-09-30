@@ -2,36 +2,33 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mariadb-{{.Name}}
-  namespace: {{.Namespace}}
+  name: mariadb-testdsp8
+  namespace: default
   labels:
-    app: mariadb-{{.Name}}
+    app: mariadb-testdsp8
     component: data-science-pipelines
-    dspa: {{.Name}}
+    dspa: testdsp8
 spec:
   strategy:
-    # Need this since backing PVC is ReadWriteOnce,
-    # which creates resource lock condition in default
-    # Rolling strategy
-    type: Recreate
+    type: Recreate  # Need this since backing PVC is ReadWriteOnce, which creates resource lock condition in default Rolling strategy
   selector:
     matchLabels:
-      app: mariadb-{{.Name}}
+      app: mariadb-testdsp8
       component: data-science-pipelines
-      dspa: {{.Name}}
+      dspa: testdsp8
   template:
     metadata:
       labels:
-        app: mariadb-{{.Name}}
+        app: mariadb-testdsp8
         component: data-science-pipelines
-        dspa: {{.Name}}
+        dspa: testdsp8
     spec:
-      serviceAccountName: ds-pipelines-mariadb-sa-{{.Name}}
       containers:
         - name: mariadb
-          image: {{.MariaDB.Image}}
+          image: mariadb:test8
           ports:
             - containerPort: 3306
+              protocol: TCP
           readinessProbe:
             exec:
               command:
@@ -56,59 +53,45 @@ spec:
             timeoutSeconds: 1
           env:
             - name: MYSQL_USER
-              value: "{{.DBConnection.Username}}"
+              value: "mlpipeline"
             - name: MYSQL_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  key: "{{.DBConnection.CredentialsSecret.Key}}"
-                  name: "{{.DBConnection.CredentialsSecret.Name}}"
+                  key: "password"
+                  name: "ds-pipeline-db-testdsp8"
             - name: MYSQL_DATABASE
-              value: "{{.DBConnection.DBName}}"
+              value: "mlpipeline"
             - name: MYSQL_ALLOW_EMPTY_PASSWORD
               value: "true"
           resources:
-            {{ if .MariaDB.Resources.Requests }}
             requests:
-              {{ if .MariaDB.Resources.Requests.CPU }}
-              cpu: {{.MariaDB.Resources.Requests.CPU}}
-              {{ end }}
-              {{ if .MariaDB.Resources.Requests.Memory }}
-              memory: {{.MariaDB.Resources.Requests.Memory}}
-              {{ end }}
-            {{ end }}
-            {{ if .MariaDB.Resources.Limits }}
+              cpu: 300m
+              memory: 800Mi
             limits:
-              {{ if .MariaDB.Resources.Limits.CPU }}
-              cpu: {{.MariaDB.Resources.Limits.CPU}}
-              {{ end }}
-              {{ if .MariaDB.Resources.Limits.Memory }}
-              memory: {{.MariaDB.Resources.Limits.Memory}}
-              {{ end }}
-            {{ end }}
+              cpu: "1"
+              memory: 1Gi
           volumeMounts:
             - name: mariadb-persistent-storage
               mountPath: /var/lib/mysql
-            {{ if .PodToPodTLS }}
             - name: mariadb-tls
               mountPath: /.mariadb/certs
             - name: mariadb-tls-config
               mountPath: /etc/my.cnf.d/mariadb-tls-config.cnf
               subPath: mariadb-tls-config.cnf
-            {{ end }}
       volumes:
         - name: mariadb-persistent-storage
           persistentVolumeClaim:
-            claimName: mariadb-{{.Name}}
-        {{ if .PodToPodTLS }}
+            claimName: mariadb-testdsp8
         - name: mariadb-tls
           secret:
-            secretName: ds-pipelines-mariadb-tls-{{.Name}}
+            secretName: ds-pipelines-mariadb-tls-testdsp8
             items:
               - key: tls.crt
                 path: tls.crt
               - key: tls.key
                 path: tls.key
+            defaultMode: 420
         - name: mariadb-tls-config
           configMap:
-            name: ds-pipelines-mariadb-tls-config-{{.Name}}
-        {{ end }}
+            name: ds-pipelines-mariadb-tls-config-testdsp8
+            defaultMode: 420

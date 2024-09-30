@@ -117,7 +117,7 @@ spec:
             - name: TERMINATE_STATUS
               value: "Cancelled"
           image: api-server:test5
-          imagePullPolicy: Always
+          # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
           name: ds-pipeline-api-server
           command: ['/bin/apiserver']
           args:
