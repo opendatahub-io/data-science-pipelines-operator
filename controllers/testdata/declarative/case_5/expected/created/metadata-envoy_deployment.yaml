@@ -117,3 +117,7 @@ spec:
           secret:
             secretName: ds-pipelines-envoy-proxy-tls-testdsp5
             defaultMode: 420
+        - name: proxy-tls-upstream
+          configMap:
+            name: dsp-trusted-ca-testdsp5
+            defaultMode: 420

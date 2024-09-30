@@ -6,6 +6,9 @@ spec:
   dspVersion: v2
   apiServer:
     enableSamplePipeline: true
+    cABundle:
+      configMapKey: ca.crt
+      configMapName: kube-root-ca.crt
   objectStorage:
     # Need to enable this for artifact download links to work
     # i.e. for when requesting /apis/v2beta1/artifacts/{id}?share_url=true

@@ -198,3 +198,16 @@ func GetRouteIfAvailable(ctx context.Context, routeName, ns string, client clien
 	}
 	return true, route, nil
 }
+
+func GetSecret(ctx context.Context, secretName, ns string, client client.Client) (*v1.Secret, error) {
+	secret := &v1.Secret{}
+	namespacedName := types.NamespacedName{
+		Name:      secretName,
+		Namespace: ns,
+	}
+	err := client.Get(ctx, namespacedName, secret)
+	if err != nil {
+		return &v1.Secret{}, err
+	}
+	return secret, nil
+}

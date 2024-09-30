@@ -55,7 +55,7 @@ spec:
           ports:
             - containerPort: 9000
               protocol: TCP
-          imagePullPolicy: IfNotPresent
+          # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
           volumeMounts:
             - name: data
               mountPath: /data

@@ -37,7 +37,7 @@ spec:
             - name: EXECUTIONTYPE
               value: PipelineRun
           image: this-persistenceagent-image-from-cr-should-be-used:test4
-          imagePullPolicy: IfNotPresent
+          # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
           name: ds-pipeline-persistenceagent
           command:
             - persistence_agent

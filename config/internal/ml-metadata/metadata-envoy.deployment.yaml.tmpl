@@ -71,6 +71,10 @@ spec:
             - mountPath: /etc/envoy.yaml
               name: envoy-config
               subPath: envoy.yaml
+            {{ if .PodToPodTLS }}
+            - name: proxy-tls-upstream
+              mountPath: "/etc/ssl/certs/"
+            {{ end }}
         {{ if .MLMD.Envoy.DeployRoute }}
         - name: oauth-proxy
           args:
@@ -128,3 +132,6 @@ spec:
         - name: proxy-tls
           secret:
             secretName: ds-pipelines-envoy-proxy-tls-{{.Name}}
+        - name: proxy-tls-upstream
+          configMap:
+            name: dsp-trusted-ca-{{.Name}}

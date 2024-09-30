@@ -21,7 +21,9 @@ import (
 	"fmt"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"os"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"testing"
 	"time"
 
@@ -121,22 +123,25 @@ func DeleteResource(uc UtilContext, path string, t *testing.T) {
 // See testutil.CompareResourceProcs for supported procedures.
 func CompareResources(uc UtilContext, path string, t *testing.T) {
 	manifest, err := mf.NewManifest(path, uc.Opts)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	manifest, err = manifest.Transform(mf.InjectNamespace(uc.Ns))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	expected := &manifest.Resources()[0]
 	var actual *unstructured.Unstructured
 
-	assert.Eventually(t, func() bool {
+	require.Eventually(t, func() bool {
 		var err error
 		actual, err = manifest.Client.Get(expected)
+		if err != nil {
+			ctrl.Log.Info("Error when trying to get " + expected.GetName() + " (will keep trying until reaching timeout): " + err.Error())
+		}
 		return err == nil
 	}, timeout, interval)
 
 	rest := expected.Object["kind"].(string)
 	result, err := CompareResourceProcs[rest](expected, actual)
-	assert.NoError(t, err)
-	assert.True(t, result)
+	require.NoError(t, err)
+	require.True(t, result)
 }
 
 // DirExists checks whether dir at path exists

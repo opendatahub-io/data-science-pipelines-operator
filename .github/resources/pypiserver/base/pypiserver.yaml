@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - image: "quay.io/harshad16/pypi-server"
-          imagePullPolicy: IfNotPresent
+          # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
           name: pypi-server
           command:
             - pypi-server
