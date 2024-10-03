@@ -15,4 +15,4 @@ def hello_pipeline(recipient: str) -> str:
 
 
 if __name__ == '__main__':
-    compiler.Compiler().compile(hello_pipeline, __file__ + '.yaml')
+    compiler.Compiler().compile(hello_pipeline, __file__.replace('.py', '-run.yaml'))
