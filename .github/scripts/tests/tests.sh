@@ -12,7 +12,7 @@ if [ "$GIT_WORKSPACE" = "" ]; then
     echo "GIT_WORKSPACE variable not defined. Should be the root of the source code. Example GIT_WORKSPACE=/home/dev/git/data-science-pipelines-operator" && exit 1
 fi
 
-CLEANUP=false
+CLEAN_INFRA=false
 K8SAPISERVERHOST=""
 DSPA_NAMESPACE="test-dspa"
 DSPA_EXTERNAL_NAMESPACE="dspa-ext"
@@ -232,8 +232,11 @@ while [ "$#" -gt 0 ]; do
       TARGET="rhoai"
       shift
       ;;
-    --cleanup)
-      CLEANUP=true
+    # The clean-infra option is helpful when rerunning tests on the same target environment, as it eliminates
+    # the need to manually delete the necessary infrastructure. By default, this setting is set to false.
+    # If true, before running the test, it delete the necessary infrastructure.
+    --clean-infra)
+      CLEAN_INFRA=true
       shift
       ;;
     --k8s-api-server-host)
@@ -249,7 +252,7 @@ while [ "$#" -gt 0 ]; do
     --dspa-namespace)
       shift
       if [[ -n "$1" ]]; then
-        DSPANAMESPACE="$1"
+        DSPA_NAMESPACE="$1"
         shift
       else
         echo "Error: --dspa-namespace requires a value"
@@ -269,10 +272,20 @@ while [ "$#" -gt 0 ]; do
     --dspa-path)
       shift
       if [[ -n "$1" ]]; then
-        DSPAPATH="$1"
+        DSPA_PATH="$1"
         shift
       else
         echo "Error: --dspa-path requires a value"
+        exit 1
+      fi
+      ;;
+    --external-dspa-path)
+      shift
+      if [[ -n "$1" ]]; then
+        DSPA_EXTERNAL_PATH="$1"
+        shift
+      else
+        echo "Error: --external-dspa-path requires a value"
         exit 1
       fi
       ;;
@@ -299,12 +312,12 @@ if [ "$K8SAPISERVERHOST" = "" ]; then
 fi
 
 if [ "$TARGET" = "kind" ]; then
-  if [ "$CLEANUP" = true ] ; then
+  if [ "$CLEAN_INFRA" = true ] ; then
       undeploy_kind_resources
   fi
   setup_kind_requirements
 elif [ "$TARGET" = "rhoai" ]; then
-  if [ "$CLEANUP" = true ] ; then
+  if [ "$CLEAN_INFRA" = true ] ; then
       remove_namespace_created_for_rhoai
   fi
   setup_rhoai_requirements

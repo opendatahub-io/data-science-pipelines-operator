@@ -20,8 +20,12 @@ package integration
 
 import (
 	"context"
+	"crypto/tls"
 	"flag"
 	"fmt"
+	routev1 "github.com/openshift/api/route/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"log"
 	"testing"
 	"time"
 
@@ -40,6 +44,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -62,6 +67,7 @@ var (
 	PortforwardLocalPort int
 	DSPA                 *dspav1alpha1.DataSciencePipelinesApplication
 	forwarderResult      *forwarder.Result
+	endpointType         string
 )
 
 var (
@@ -82,12 +88,14 @@ const (
 	DefaultSkipDeploy           = false
 	DefaultSkipCleanup          = false
 	DefaultDSPAPath             = ""
+	DefaultEndpointType         = "service"
 )
 
 type ClientManager struct {
-	k8sClient client.Client
-	mfsClient mf.Client
-	mfopts    mf.Option
+	k8sClient  client.Client
+	mfsClient  mf.Client
+	mfopts     mf.Option
+	httpClient http.Client
 }
 
 type IntegrationTestSuite struct {
@@ -100,6 +108,11 @@ type IntegrationTestSuite struct {
 
 type testLogWriter struct {
 	t *testing.T
+}
+
+type customTransport struct {
+	Transport http.RoundTripper
+	Token     string
 }
 
 func (w *testLogWriter) Write(p []byte) (n int, err error) {
@@ -131,6 +144,8 @@ func init() {
 	flag.BoolVar(&skipDeploy, "skipDeploy", DefaultSkipDeploy, "Skip DSPA deployment. Use this if you have already "+
 		"manually deployed a DSPA, and want to skip this part.")
 	flag.BoolVar(&skipCleanup, "skipCleanup", DefaultSkipCleanup, "Skip DSPA cleanup.")
+
+	flag.StringVar(&endpointType, "endpointType", DefaultEndpointType, "Specify how the test suite will interact with DSPO. Options: 'service' for a Kubernetes service or 'route' for an OpenShift route.")
 }
 
 func (suite *IntegrationTestSuite) SetupSuite() {
@@ -158,7 +173,11 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 	suite.Require().NotNil(clientmgr.k8sClient)
 	clientmgr.mfsClient = mfc.NewClient(clientmgr.k8sClient)
 	clientmgr.mfopts = mf.UseClient(clientmgr.mfsClient)
+	clientmgr.httpClient = http.Client{}
 	suite.Clientmgr = clientmgr
+
+	// Register API objects
+	utilruntime.Must(routev1.AddToScheme(scheme.Scheme))
 
 	DSPA = testUtil.GetDSPAFromPath(suite.T(), clientmgr.mfopts, DSPAPath)
 
@@ -176,23 +195,83 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 	require.NoError(suite.T(), err, fmt.Sprintf("Error Deploying DSPA:\n%s", testUtil.PrintConditions(ctx, DSPA, DSPANamespace, clientmgr.k8sClient)))
 	loggr.Info("DSPA Deployed.")
 
-	loggr.Info("Setting up Portforwarding service.")
-	options := []*forwarder.Option{
-		{
-			LocalPort:   PortforwardLocalPort,
-			RemotePort:  APIServerPort,
-			ServiceName: fmt.Sprintf("ds-pipeline-%s", DSPA.Name),
-			Namespace:   DSPANamespace,
-		},
+	if endpointType == "service" {
+
+		loggr.Info("Setting up Portforwarding service.")
+		options := []*forwarder.Option{
+			{
+				LocalPort:   PortforwardLocalPort,
+				RemotePort:  APIServerPort,
+				ServiceName: fmt.Sprintf("ds-pipeline-%s", DSPA.Name),
+				Namespace:   DSPANamespace,
+			},
+		}
+
+		forwarderResult, err = forwarder.WithForwarders(ctx, options, kubeconfig)
+		suite.Require().NoError(err)
+		_, err = forwarderResult.Ready()
+		suite.Require().NoError(err)
+
+		APIServerURL = fmt.Sprintf("http://127.0.0.1:%d", PortforwardLocalPort)
+
+		loggr.Info(fmt.Sprintf("Port forwarding service Successfully set up: %s", APIServerURL))
+
+	} else if endpointType == "route" {
+
+		// Define the namespaced name
+		key := types.NamespacedName{
+			Namespace: DSPANamespace,
+			Name:      "ds-pipeline-" + suite.DSPA.Name,
+		}
+
+		route := &routev1.Route{}
+
+		// Retrieve the route
+		count := 1
+		ok := false
+		for count < 10 {
+			err := clientmgr.k8sClient.Get(context.TODO(), key, route)
+			if err == nil {
+				ok = true
+				break
+			}
+			count++
+			time.Sleep(1 * time.Second)
+		}
+		if !ok {
+			log.Fatal("failed to retrieve route")
+		}
+
+		APIServerURL = fmt.Sprintf("https://%s", route.Status.Ingress[0].Host)
+
+		loggr.Info(fmt.Sprintf("The Api Server URL was retrieved from the Route: %s", APIServerURL))
+
+		suite.Clientmgr.httpClient.Transport = &customTransport{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
+			Token: cfg.BearerToken,
+		}
+
+		// waiting for pods to sit down
+		count = 1
+		ok = false
+		for count < 10 {
+			response, _ := suite.Clientmgr.httpClient.Get(fmt.Sprintf("%s/apis/v2beta1/healthz", APIServerURL))
+			if response.StatusCode == 200 {
+				ok = true
+				break
+			}
+			count++
+			time.Sleep(1 * time.Second)
+		}
+		if !ok {
+			log.Fatal("Pods didn't started properly")
+		}
+
+	} else {
+		log.Fatal(fmt.Sprintf("Invalid endpointType. Supported service or route. Provided: %s", endpointType))
 	}
-
-	forwarderResult, err = forwarder.WithForwarders(ctx, options, kubeconfig)
-	suite.Require().NoError(err)
-	_, err = forwarderResult.Ready()
-	suite.Require().NoError(err)
-
-	APIServerURL = fmt.Sprintf("http://127.0.0.1:%d", PortforwardLocalPort)
-	loggr.Info("Portforwarding service Successfully set up.")
 }
 
 func (suite *IntegrationTestSuite) TearDownSuite() {
@@ -208,4 +287,12 @@ func (suite *IntegrationTestSuite) TearDownSuite() {
 
 func TestIntegrationTestSuite(t *testing.T) {
 	suite.Run(t, new(IntegrationTestSuite))
+}
+
+func (t *customTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	// Add the Authorization header globally
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", t.Token))
+
+	// Proceed with the default RoundTripper (http.DefaultTransport)
+	return t.Transport.RoundTrip(req)
 }
