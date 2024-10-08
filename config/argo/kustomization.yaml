@@ -24,6 +24,7 @@ resources:
 - crd.clusterworkflowtemplates.yaml
 - crd.cronworkflows.yaml
 - crd.viewers.yaml
+- crd.workflowartifactgctasks.yaml
 - crd.workfloweventbinding.yaml
 - crd.workflows.yaml
 - crd.workflowtaskresult.yaml
