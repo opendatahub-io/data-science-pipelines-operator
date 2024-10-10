@@ -24,7 +24,6 @@ import (
 	"flag"
 	"fmt"
 	routev1 "github.com/openshift/api/route/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"log"
 	"testing"
 	"time"
@@ -192,7 +191,7 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 	}
 
 	err = testUtil.WaitForDSPAReady(suite.T(), ctx, clientmgr.k8sClient, DSPA.Name, DSPANamespace, DeployTimeout, PollInterval)
-	require.NoError(suite.T(), err, fmt.Sprintf("Error Deploying DSPA:\n%s", testUtil.PrintConditions(ctx, DSPA, DSPANamespace, clientmgr.k8sClient)))
+	require.NoError(suite.T(), err, fmt.Sprintf("Error waiting for DSPA being ready:\n%s", testUtil.PrintConditions(ctx, DSPA, DSPANamespace, clientmgr.k8sClient)))
 	loggr.Info("DSPA Deployed.")
 
 	if endpointType == "service" {
@@ -218,28 +217,9 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 
 	} else if endpointType == "route" {
 
-		// Define the namespaced name
-		key := types.NamespacedName{
-			Namespace: DSPANamespace,
-			Name:      "ds-pipeline-" + suite.DSPA.Name,
-		}
-
-		route := &routev1.Route{}
-
-		// Retrieve the route
-		count := 1
-		ok := false
-		for count < 10 {
-			err := clientmgr.k8sClient.Get(context.TODO(), key, route)
-			if err == nil {
-				ok = true
-				break
-			}
-			count++
-			time.Sleep(1 * time.Second)
-		}
-		if !ok {
-			log.Fatal("failed to retrieve route")
+		route, err := testUtil.GetDSPARoute(clientmgr.k8sClient, DSPANamespace, suite.DSPA.Name)
+		if err != nil {
+			log.Fatal(err, "failed to retrieve route")
 		}
 
 		APIServerURL = fmt.Sprintf("https://%s", route.Status.Ingress[0].Host)
@@ -254,19 +234,15 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 		}
 
 		// waiting for pods to sit down
-		count = 1
-		ok = false
-		for count < 10 {
-			response, _ := suite.Clientmgr.httpClient.Get(fmt.Sprintf("%s/apis/v2beta1/healthz", APIServerURL))
-			if response.StatusCode == 200 {
-				ok = true
-				break
+		err = testUtil.WaitFor(ctx, DeployTimeout, PollInterval, func() (bool, error) {
+			response, err := suite.Clientmgr.httpClient.Get(fmt.Sprintf("%s/apis/v2beta1/healthz", APIServerURL))
+			if response.StatusCode != 200 {
+				return false, err
 			}
-			count++
-			time.Sleep(1 * time.Second)
-		}
-		if !ok {
-			log.Fatal("Pods didn't started properly")
+			return true, nil
+		})
+		if err != nil {
+			log.Fatal(err, "healthz endpoint is not working properly")
 		}
 
 	} else {

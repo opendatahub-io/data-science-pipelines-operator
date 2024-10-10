@@ -27,6 +27,7 @@ CONFIG_DIR="${GIT_WORKSPACE}/config"
 RESOURCES_DIR_CRD="${GIT_WORKSPACE}/.github/resources"
 OPENDATAHUB_NAMESPACE="opendatahub"
 RESOURCES_DIR_PYPI="${GIT_WORKSPACE}/.github/resources/pypiserver/base"
+ENDPOINT_TYPE="service"
 
 get_dspo_image() {
   if [ "$REGISTRY_ADDRESS" = "" ]; then
@@ -163,14 +164,14 @@ run_tests() {
   echo "---------------------------------"
   echo "Run tests"
   echo "---------------------------------"
-  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_NAMESPACE} DSPAPATH=${DSPA_PATH} )
+  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_NAMESPACE} DSPAPATH=${DSPA_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} )
 }
 
 run_tests_dspa_external_connections() {
   echo "---------------------------------"
   echo "Run tests for DSPA with External Connections"
   echo "---------------------------------"
-  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_EXTERNAL_NAMESPACE} DSPAPATH=${DSPA_EXTERNAL_PATH} )
+  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_EXTERNAL_NAMESPACE} DSPAPATH=${DSPA_EXTERNAL_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} )
 }
 
 undeploy_kind_resources() {
@@ -296,6 +297,16 @@ while [ "$#" -gt 0 ]; do
         shift
       else
         echo "Error: --kube-config requires a value"
+        exit 1
+      fi
+      ;;
+    --endpoint-type)
+      shift
+      if [[ -n "$1" ]]; then
+        ENDPOINT_TYPE="$1"
+        shift
+      else
+        echo "Error: --endpoint-type requires a value [service, route]"
         exit 1
       fi
       ;;
