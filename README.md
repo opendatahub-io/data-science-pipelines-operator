@@ -608,7 +608,7 @@ The specific tests that are executed when you run `make test` can include unit t
 
 **To deploy DSPO as a developer :**
 
-Follow the instructions from [here](#deploy-the-standalone-operator) to deploy the operator standalone.
+Follow the instructions from [here](#deploy-the-standalone-operator) to deploy the standalone operator.
 
 Follow the instructions from [here](#deploy-the-operator-via-odh) to deploy the operator via ODH.
 
