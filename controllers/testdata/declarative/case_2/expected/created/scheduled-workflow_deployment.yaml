@@ -28,8 +28,6 @@ spec:
               value: "default"
             - name: CRON_SCHEDULE_TIMEZONE
               value: "EST"
-            - name: EXECUTIONTYPE
-              value: PipelineRun
           image: scheduledworkflow:test2
           # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
           name: ds-pipeline-scheduledworkflow

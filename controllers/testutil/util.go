@@ -19,7 +19,7 @@ package testutil
 import (
 	"context"
 	"fmt"
-	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"os"
@@ -207,22 +207,23 @@ func GenerateDeclarativeTestCases(t *testing.T) []Case {
 	return testcases
 }
 
-func CreateEmptyDSPA() *dspav1alpha1.DataSciencePipelinesApplication {
-	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
-		Spec: dspav1alpha1.DSPASpec{
-			APIServer:         &dspav1alpha1.APIServer{Deploy: false},
-			MLMD:              &dspav1alpha1.MLMD{Deploy: false},
-			PersistenceAgent:  &dspav1alpha1.PersistenceAgent{Deploy: false},
-			ScheduledWorkflow: &dspav1alpha1.ScheduledWorkflow{Deploy: false},
-			MlPipelineUI: &dspav1alpha1.MlPipelineUI{
+func CreateEmptyDSPA() *dspav1.DataSciencePipelinesApplication {
+	dspa := &dspav1.DataSciencePipelinesApplication{
+		Spec: dspav1.DSPASpec{
+			PodToPodTLS:       boolPtr(false),
+			APIServer:         &dspav1.APIServer{Deploy: false},
+			MLMD:              &dspav1.MLMD{Deploy: true}, // MLMD is required
+			PersistenceAgent:  &dspav1.PersistenceAgent{Deploy: false},
+			ScheduledWorkflow: &dspav1.ScheduledWorkflow{Deploy: false},
+			MlPipelineUI: &dspav1.MlPipelineUI{
 				Deploy: false,
 				Image:  "testimage-MlPipelineUI:test",
 			},
-			WorkflowController: &dspav1alpha1.WorkflowController{Deploy: false},
-			Database:           &dspav1alpha1.Database{DisableHealthCheck: false, MariaDB: &dspav1alpha1.MariaDB{Deploy: false}},
-			ObjectStorage: &dspav1alpha1.ObjectStorage{
+			WorkflowController: &dspav1.WorkflowController{Deploy: false},
+			Database:           &dspav1.Database{DisableHealthCheck: false, MariaDB: &dspav1.MariaDB{Deploy: false}},
+			ObjectStorage: &dspav1.ObjectStorage{
 				DisableHealthCheck: false,
-				Minio: &dspav1alpha1.Minio{
+				Minio: &dspav1.Minio{
 					Deploy: false,
 					Image:  "testimage-Minio:test",
 				},
@@ -234,11 +235,11 @@ func CreateEmptyDSPA() *dspav1alpha1.DataSciencePipelinesApplication {
 	return dspa
 }
 
-func CreateDSPAWithAPIServerCABundle(key string, cfgmapName string) *dspav1alpha1.DataSciencePipelinesApplication {
+func CreateDSPAWithAPIServerCABundle(key string, cfgmapName string) *dspav1.DataSciencePipelinesApplication {
 	dspa := CreateEmptyDSPA()
-	dspa.Spec.APIServer = &dspav1alpha1.APIServer{
+	dspa.Spec.APIServer = &dspav1.APIServer{
 		Deploy: true,
-		CABundle: &dspav1alpha1.CABundle{
+		CABundle: &dspav1.CABundle{
 			ConfigMapKey:  key,
 			ConfigMapName: cfgmapName,
 		},
@@ -246,10 +247,10 @@ func CreateDSPAWithAPIServerCABundle(key string, cfgmapName string) *dspav1alpha
 	return dspa
 }
 
-func CreateDSPAWithAPIServerPodtoPodTlsEnabled() *dspav1alpha1.DataSciencePipelinesApplication {
+func CreateDSPAWithAPIServerPodtoPodTlsEnabled() *dspav1.DataSciencePipelinesApplication {
 	dspa := CreateEmptyDSPA()
 	dspa.Spec.DSPVersion = "v2"
-	dspa.Spec.APIServer = &dspav1alpha1.APIServer{
+	dspa.Spec.APIServer = &dspav1.APIServer{
 		Deploy: true,
 	}
 	dspa.Spec.MLMD.Deploy = true
@@ -262,14 +263,14 @@ func boolPtr(b bool) *bool {
 	return &b
 }
 
-func CreateDSPAWithCustomKfpLauncherConfigMap(configMapName string) *dspav1alpha1.DataSciencePipelinesApplication {
+func CreateDSPAWithCustomKfpLauncherConfigMap(configMapName string) *dspav1.DataSciencePipelinesApplication {
 	dspa := CreateEmptyDSPA()
 	dspa.Spec.DSPVersion = "v2"
 	// required, or we get an error because OCP certs aren't found
 	dspa.Spec.PodToPodTLS = boolPtr(false)
 	// required, or we get an error because this is required in v2
 	dspa.Spec.MLMD.Deploy = true
-	dspa.Spec.APIServer = &dspav1alpha1.APIServer{
+	dspa.Spec.APIServer = &dspav1.APIServer{
 		Deploy:                     true,
 		CustomKfpLauncherConfigMap: configMapName,
 	}

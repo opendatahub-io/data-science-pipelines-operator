@@ -22,7 +22,7 @@ import (
 
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 
-	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 )
@@ -33,21 +33,24 @@ func TestDeployAPIServer(t *testing.T) {
 	expectedAPIServerName := apiServerDefaultResourceNamePrefix + testDSPAName
 
 	// Construct DSPASpec with deployed APIServer
-	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
-		Spec: dspav1alpha1.DSPASpec{
-			APIServer: &dspav1alpha1.APIServer{
+	dspa := &dspav1.DataSciencePipelinesApplication{
+		Spec: dspav1.DSPASpec{
+			PodToPodTLS: boolPtr(false),
+			APIServer: &dspav1.APIServer{
 				Deploy: true,
 			},
-			MLMD: &dspav1alpha1.MLMD{},
-			Database: &dspav1alpha1.Database{
+			MLMD: &dspav1.MLMD{
+				Deploy: true,
+			},
+			Database: &dspav1.Database{
 				DisableHealthCheck: false,
-				MariaDB: &dspav1alpha1.MariaDB{
+				MariaDB: &dspav1.MariaDB{
 					Deploy: true,
 				},
 			},
-			ObjectStorage: &dspav1alpha1.ObjectStorage{
+			ObjectStorage: &dspav1.ObjectStorage{
 				DisableHealthCheck: false,
-				Minio: &dspav1alpha1.Minio{
+				Minio: &dspav1.Minio{
 					Deploy: false,
 					Image:  "someimage",
 				},
@@ -92,9 +95,9 @@ func TestDontDeployAPIServer(t *testing.T) {
 	expectedAPIServerName := apiServerDefaultResourceNamePrefix + testDSPAName
 
 	// Construct DSPASpec with non-deployed APIServer
-	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
-		Spec: dspav1alpha1.DSPASpec{
-			APIServer: &dspav1alpha1.APIServer{
+	dspa := &dspav1.DataSciencePipelinesApplication{
+		Spec: dspav1.DSPASpec{
+			APIServer: &dspav1.APIServer{
 				Deploy: false,
 			},
 		},
@@ -128,21 +131,24 @@ func TestApiServerEndpoints(t *testing.T) {
 	expectedAPIServerName := apiServerDefaultResourceNamePrefix + testDSPAName
 
 	// Construct DSPASpec with deployed APIServer
-	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
-		Spec: dspav1alpha1.DSPASpec{
-			APIServer: &dspav1alpha1.APIServer{
+	dspa := &dspav1.DataSciencePipelinesApplication{
+		Spec: dspav1.DSPASpec{
+			PodToPodTLS: boolPtr(false),
+			APIServer: &dspav1.APIServer{
 				Deploy: true,
 			},
-			MLMD: &dspav1alpha1.MLMD{},
-			Database: &dspav1alpha1.Database{
+			MLMD: &dspav1.MLMD{
+				Deploy: true,
+			},
+			Database: &dspav1.Database{
 				DisableHealthCheck: false,
-				MariaDB: &dspav1alpha1.MariaDB{
+				MariaDB: &dspav1.MariaDB{
 					Deploy: true,
 				},
 			},
-			ObjectStorage: &dspav1alpha1.ObjectStorage{
+			ObjectStorage: &dspav1.ObjectStorage{
 				DisableHealthCheck: false,
-				Minio: &dspav1alpha1.Minio{
+				Minio: &dspav1.Minio{
 					Deploy: false,
 					Image:  "someimage",
 				},
@@ -169,7 +175,7 @@ func TestApiServerEndpoints(t *testing.T) {
 	err = reconciler.ReconcileAPIServer(ctx, dspa, params)
 	assert.Nil(t, err)
 
-	dspa_created := &dspav1alpha1.DataSciencePipelinesApplication{}
+	dspa_created := &dspav1.DataSciencePipelinesApplication{}
 	created, err = reconciler.IsResourceCreated(ctx, dspa, testDSPAName, testNamespace)
 	assert.NotNil(t, dspa_created.Status.Components.APIServer.Url)
 	assert.NotNil(t, dspa_created.Status.Components.APIServer.ExternalUrl)

@@ -36,22 +36,6 @@ rules:
       - patch
       - delete
   - apiGroups:
-      - tekton.dev
-    resources:
-      - pipelineruns
-      - taskruns
-      - conditions
-      - runs
-      - tasks
-    verbs:
-      - create
-      - get
-      - list
-      - watch
-      - update
-      - patch
-      - delete
-  - apiGroups:
       - kubeflow.org
     resources:
       - scheduledworkflows
@@ -74,18 +58,6 @@ rules:
       - tokenreviews
     verbs:
       - create
-  - apiGroups:
-      - custom.tekton.dev
-    resources:
-      - pipelineloops
-    verbs:
-      - create
-      - get
-      - list
-      - watch
-      - update
-      - patch
-      - delete
   - apiGroups:
       - image.openshift.io
     resources:

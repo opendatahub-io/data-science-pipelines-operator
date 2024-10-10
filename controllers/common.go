@@ -16,16 +16,14 @@ limitations under the License.
 package controllers
 
 import (
-	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 )
 
 var commonTemplatesDir = "common/default"
-var argoOnlyCommonTemplatesDir = "common/argo"
-var tektonOnlyCommonTemplatesDir = "common/tekton"
 
 const commonCusterRolebindingTemplate = "common/no-owner/clusterrolebinding.yaml.tmpl"
 
-func (r *DSPAReconciler) ReconcileCommon(dsp *dspav1alpha1.DataSciencePipelinesApplication, params *DSPAParams) error {
+func (r *DSPAReconciler) ReconcileCommon(dsp *dspav1.DataSciencePipelinesApplication, params *DSPAParams) error {
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
 
 	log.Info("Applying Common Resources")
@@ -33,17 +31,6 @@ func (r *DSPAReconciler) ReconcileCommon(dsp *dspav1alpha1.DataSciencePipelinesA
 	if err != nil {
 		return err
 	}
-
-	log.Info("Applying Engine-Specific Common Resources")
-	if params.UsingArgoEngineDriver(dsp) {
-		err = r.ApplyDir(dsp, params, argoOnlyCommonTemplatesDir)
-	} else if params.UsingTektonEngineDriver(dsp) {
-		err = r.ApplyDir(dsp, params, tektonOnlyCommonTemplatesDir)
-	}
-	if err != nil {
-		return err
-	}
-
 	err = r.ApplyWithoutOwner(params, commonCusterRolebindingTemplate)
 	if err != nil {
 		return err

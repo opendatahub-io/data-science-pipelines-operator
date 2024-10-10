@@ -21,7 +21,7 @@ import (
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"testing"
 
-	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 )
@@ -32,20 +32,20 @@ func TestDeployPersistenceAgent(t *testing.T) {
 	expectedPersistenceAgentName := persistenceAgentDefaultResourceNamePrefix + testDSPAName
 
 	// Construct DSPASpec with deployed PersistenceAgent
-	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
-		Spec: dspav1alpha1.DSPASpec{
-			PersistenceAgent: &dspav1alpha1.PersistenceAgent{
+	dspa := &dspav1.DataSciencePipelinesApplication{
+		Spec: dspav1.DSPASpec{
+			PersistenceAgent: &dspav1.PersistenceAgent{
 				Deploy: true,
 			},
-			Database: &dspav1alpha1.Database{
+			Database: &dspav1.Database{
 				DisableHealthCheck: false,
-				MariaDB: &dspav1alpha1.MariaDB{
+				MariaDB: &dspav1.MariaDB{
 					Deploy: true,
 				},
 			},
-			ObjectStorage: &dspav1alpha1.ObjectStorage{
+			ObjectStorage: &dspav1.ObjectStorage{
 				DisableHealthCheck: false,
-				Minio: &dspav1alpha1.Minio{
+				Minio: &dspav1.Minio{
 					Deploy: false,
 					Image:  "someimage",
 				},
@@ -90,9 +90,9 @@ func TestDontDeployPersistenceAgent(t *testing.T) {
 	expectedPersistenceAgentName := persistenceAgentDefaultResourceNamePrefix + testDSPAName
 
 	// Construct DSPASpec with non-deployed PersistenceAgent
-	dspa := &dspav1alpha1.DataSciencePipelinesApplication{
-		Spec: dspav1alpha1.DSPASpec{
-			PersistenceAgent: &dspav1alpha1.PersistenceAgent{
+	dspa := &dspav1.DataSciencePipelinesApplication{
+		Spec: dspav1.DSPASpec{
+			PersistenceAgent: &dspav1.PersistenceAgent{
 				Deploy: false,
 			},
 		},

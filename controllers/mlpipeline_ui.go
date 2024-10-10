@@ -17,12 +17,12 @@ limitations under the License.
 package controllers
 
 import (
-	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 )
 
 var mlPipelineUITemplatesDir = "mlpipelines-ui"
 
-func (r *DSPAReconciler) ReconcileUI(dsp *dspav1alpha1.DataSciencePipelinesApplication,
+func (r *DSPAReconciler) ReconcileUI(dsp *dspav1.DataSciencePipelinesApplication,
 	params *DSPAParams) error {
 
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)

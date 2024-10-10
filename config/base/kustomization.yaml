@@ -17,6 +17,14 @@ configMapGenerator:
     envs:
       - params.env
 vars:
+  # Images
+  - name: IMAGES_DSPO
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGES_DSPO
   - name: IMAGES_APISERVER
     objref:
       kind: ConfigMap
@@ -24,13 +32,6 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.IMAGES_APISERVER
-  - name: IMAGES_ARTIFACT
-    objref:
-      kind: ConfigMap
-      name: dspo-parameters
-      apiVersion: v1
-    fieldref:
-      fieldpath: data.IMAGES_ARTIFACT
   - name: IMAGES_OAUTHPROXY
     objref:
       kind: ConfigMap
@@ -38,13 +39,13 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.IMAGES_OAUTHPROXY
-  - name: IMAGES_PERSISTENTAGENT
+  - name: IMAGES_PERSISTENCEAGENT
     objref:
       kind: ConfigMap
       name: dspo-parameters
       apiVersion: v1
     fieldref:
-      fieldpath: data.IMAGES_PERSISTENTAGENT
+      fieldpath: data.IMAGES_PERSISTENCEAGENT
   - name: IMAGES_SCHEDULEDWORKFLOW
     objref:
       kind: ConfigMap
@@ -52,20 +53,6 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.IMAGES_SCHEDULEDWORKFLOW
-  - name: IMAGES_CACHE
-    objref:
-      kind: ConfigMap
-      name: dspo-parameters
-      apiVersion: v1
-    fieldref:
-      fieldpath: data.IMAGES_CACHE
-  - name: IMAGES_MOVERESULTSIMAGE
-    objref:
-      kind: ConfigMap
-      name: dspo-parameters
-      apiVersion: v1
-    fieldref:
-      fieldpath: data.IMAGES_MOVERESULTSIMAGE
   - name: IMAGES_MARIADB
     objref:
       kind: ConfigMap
@@ -87,20 +74,36 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.IMAGES_MLMDGRPC
-  - name: IMAGES_MLMDWRITER
+  - name: IMAGES_LAUNCHER
     objref:
       kind: ConfigMap
       name: dspo-parameters
       apiVersion: v1
     fieldref:
-      fieldpath: data.IMAGES_MLMDWRITER
-  - name: IMAGES_DSPO
+      fieldpath: data.IMAGES_LAUNCHER
+  - name: IMAGES_DRIVER
     objref:
       kind: ConfigMap
       name: dspo-parameters
       apiVersion: v1
     fieldref:
-      fieldpath: data.IMAGES_DSPO
+      fieldpath: data.IMAGES_DRIVER
+  - name: IMAGES_ARGO_EXEC
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGES_ARGO_EXEC
+  - name: IMAGES_ARGO_WORKFLOWCONTROLLER
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGES_ARGO_WORKFLOWCONTROLLER
+
+  # DSPO level configs
   - name: ZAP_LOG_LEVEL
     objref:
       kind: ConfigMap
@@ -136,69 +139,6 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.DSPO_HEALTHCHECK_OBJECTSTORE_CONNECTIONTIMEOUT
-  - name: IMAGESV2_ARGO_APISERVER
-    objref:
-      kind: ConfigMap
-      name: dspo-parameters
-      apiVersion: v1
-    fieldref:
-      fieldpath: data.IMAGESV2_ARGO_APISERVER
-  - name: IMAGESV2_ARGO_PERSISTENCEAGENT
-    objref:
-      kind: ConfigMap
-      name: dspo-parameters
-      apiVersion: v1
-    fieldref:
-      fieldpath: data.IMAGESV2_ARGO_PERSISTENCEAGENT
-  - name: IMAGESV2_ARGO_SCHEDULEDWORKFLOW
-    objref:
-      kind: ConfigMap
-      name: dspo-parameters
-      apiVersion: v1
-    fieldref:
-      fieldpath: data.IMAGESV2_ARGO_SCHEDULEDWORKFLOW
-  - name: IMAGESV2_ARGO_MLMDENVOY
-    objref:
-      kind: ConfigMap
-      name: dspo-parameters
-      apiVersion: v1
-    fieldref:
-      fieldpath: data.IMAGESV2_ARGO_MLMDENVOY
-  - name: IMAGESV2_ARGO_MLMDGRPC
-    objref:
-      kind: ConfigMap
-      name: dspo-parameters
-      apiVersion: v1
-    fieldref:
-      fieldpath: data.IMAGESV2_ARGO_MLMDGRPC
-  - name: IMAGESV2_ARGO_ARGOEXEC
-    objref:
-      kind: ConfigMap
-      name: dspo-parameters
-      apiVersion: v1
-    fieldref:
-      fieldpath: data.IMAGESV2_ARGO_ARGOEXEC
-  - name: IMAGESV2_ARGO_WORKFLOWCONTROLLER
-    objref:
-      kind: ConfigMap
-      name: dspo-parameters
-      apiVersion: v1
-    fieldref:
-      fieldpath: data.IMAGESV2_ARGO_WORKFLOWCONTROLLER
-  - name: V2_LAUNCHER_IMAGE
-    objref:
-      kind: ConfigMap
-      name: dspo-parameters
-      apiVersion: v1
-    fieldref:
-      fieldpath: data.V2_LAUNCHER_IMAGE
-  - name: V2_DRIVER_IMAGE
-    objref:
-      kind: ConfigMap
-      name: dspo-parameters
-      apiVersion: v1
-    fieldref:
-      fieldpath: data.V2_DRIVER_IMAGE
   - name: DSPO_APISERVER_INCLUDE_OWNERREFERENCE
     objref:
       kind: ConfigMap

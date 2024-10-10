@@ -27,7 +27,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers"
 	buildv1 "github.com/openshift/api/build/v1"
 	imagev1 "github.com/openshift/api/image/v1"
@@ -56,7 +56,7 @@ func init() {
 	utilruntime.Must(imagev1.AddToScheme(scheme))
 	utilruntime.Must(routev1.AddToScheme(scheme))
 
-	utilruntime.Must(dspav1alpha1.AddToScheme(scheme))
+	utilruntime.Must(dspav1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 
 	controllers.InitMetrics()
@@ -81,7 +81,7 @@ func initConfig(configPath string) error {
 
 	for _, c := range config.GetConfigRequiredFields() {
 		if !viper.IsSet(c) {
-			return fmt.Errorf(fmt.Sprintf("Missing required field in config: %s", c))
+			return fmt.Errorf("missing required field in config: %s", c)
 		}
 	}
 

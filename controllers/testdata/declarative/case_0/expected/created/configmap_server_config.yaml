@@ -8,15 +8,20 @@ metadata:
     component: data-science-pipelines
 data:
   config.json: |
-
-      {
-        "DBConfig": {
-          "DriverName": "mysql",
-          "ConMaxLifeTime": "120s",
-          "ExtraParams": {"tls":"false"}
-        },
-        "ObjectStoreConfig": {
-          "PipelinePath": "pipelines"
-        },
-        "InitConnectionTimeout": "6m"
-      }
+    {
+      "DBConfig": {
+        "MySQLConfig": {
+          "ExtraParams": {"tls":"false"},
+          "GroupConcatMaxLen": "4194304"
+         },
+        "PostgreSQLConfig": {},
+        "ConMaxLifeTime": "120s"
+      },
+      "ObjectStoreConfig": {
+        "PipelinePath": "pipelines"
+      },
+      "DBDriverName": "mysql",
+      "ARCHIVE_CONFIG_LOG_FILE_NAME": "main.log",
+      "ARCHIVE_CONFIG_LOG_PATH_PREFIX": "/artifacts",
+      "InitConnectionTimeout": "6m"
+    }

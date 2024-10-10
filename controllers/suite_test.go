@@ -21,7 +21,7 @@ package controllers
 import (
 	"context"
 	"github.com/go-logr/logr"
-	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	buildv1 "github.com/openshift/api/build/v1"
 	imagev1 "github.com/openshift/api/image/v1"
 	routev1 "github.com/openshift/api/route/v1"
@@ -107,7 +107,7 @@ func (s *ControllerSuite) SetupSuite() {
 	utilruntime.Must(buildv1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(imagev1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(routev1.AddToScheme(scheme.Scheme))
-	utilruntime.Must(dspav1alpha1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(dspav1.AddToScheme(scheme.Scheme))
 
 	//+kubebuilder:scaffold:scheme
 

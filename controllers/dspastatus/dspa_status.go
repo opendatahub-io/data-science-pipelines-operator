@@ -3,7 +3,7 @@ package dspastatus
 import (
 	"fmt"
 
-	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -23,10 +23,12 @@ type DSPAStatus interface {
 
 	SetMLMDProxyStatus(mlmdProxyReady metav1.Condition)
 
+	SetDSPANotReady(err error, reason string)
+
 	GetConditions() []metav1.Condition
 }
 
-func NewDSPAStatus(dspa *dspav1alpha1.DataSciencePipelinesApplication) DSPAStatus {
+func NewDSPAStatus(dspa *dspav1.DataSciencePipelinesApplication) DSPAStatus {
 	databaseCondition := BuildUnknownCondition(config.DatabaseAvailable)
 	objStoreCondition := BuildUnknownCondition(config.ObjectStoreAvailable)
 	apiServerCondition := BuildUnknownCondition(config.APIServerReady)
@@ -46,13 +48,14 @@ func NewDSPAStatus(dspa *dspav1alpha1.DataSciencePipelinesApplication) DSPAStatu
 }
 
 type dspaStatus struct {
-	dspa                   *dspav1alpha1.DataSciencePipelinesApplication
+	dspa                   *dspav1.DataSciencePipelinesApplication
 	databaseAvailable      *metav1.Condition
 	objStoreAvailable      *metav1.Condition
 	apiServerReady         *metav1.Condition
 	persistenceAgentReady  *metav1.Condition
 	scheduledWorkflowReady *metav1.Condition
 	mlmdProxyReady         *metav1.Condition
+	dspaReady              *metav1.Condition
 }
 
 func (s *dspaStatus) SetDatabaseNotReady(err error, reason string) {
@@ -100,6 +103,20 @@ func (s *dspaStatus) SetMLMDProxyStatus(mlmdProxyReady metav1.Condition) {
 	s.mlmdProxyReady = &mlmdProxyReady
 }
 
+// SetDSPANotReady is an override option for reporting a custom
+// overall DSP Ready state. This is the condition type that
+// reports on the overall state of the DSPA. If this is never
+// called, then the overall ready state is auto generated based
+// on the conditions of the other components.
+func (s *dspaStatus) SetDSPANotReady(err error, reason string) {
+	message := ""
+	if err != nil {
+		message = err.Error()
+	}
+	condition := BuildFalseCondition(config.CrReady, reason, message)
+	s.dspaReady = &condition
+}
+
 func (s *dspaStatus) GetConditions() []metav1.Condition {
 	componentConditions := []metav1.Condition{
 		*s.getDatabaseAvailableCondition(),
@@ -119,23 +136,28 @@ func (s *dspaStatus) GetConditions() []metav1.Condition {
 		}
 	}
 
-	var crReady metav1.Condition
+	// Allow for dspa ready status to be overridden
+	// otherwise we auto generate the overall ready status
+	// based off of the other components
+	crReady := s.dspaReady
 
-	if allReady {
-		crReady = metav1.Condition{
-			Type:               config.CrReady,
-			Status:             metav1.ConditionTrue,
-			Reason:             config.MinimumReplicasAvailable,
-			Message:            "All components are ready.",
-			LastTransitionTime: metav1.Now(),
-		}
-	} else {
-		crReady = metav1.Condition{
-			Type:               config.CrReady,
-			Status:             metav1.ConditionFalse,
-			Reason:             config.MinimumReplicasAvailable,
-			Message:            failureMessages,
-			LastTransitionTime: metav1.Now(),
+	if s.dspaReady == nil {
+		if allReady {
+			crReady = &metav1.Condition{
+				Type:               config.CrReady,
+				Status:             metav1.ConditionTrue,
+				Reason:             config.MinimumReplicasAvailable,
+				Message:            "All components are ready.",
+				LastTransitionTime: metav1.Now(),
+			}
+		} else {
+			crReady = &metav1.Condition{
+				Type:               config.CrReady,
+				Status:             metav1.ConditionFalse,
+				Reason:             config.MinimumReplicasAvailable,
+				Message:            failureMessages,
+				LastTransitionTime: metav1.Now(),
+			}
 		}
 	}
 
@@ -146,7 +168,7 @@ func (s *dspaStatus) GetConditions() []metav1.Condition {
 		*s.persistenceAgentReady,
 		*s.scheduledWorkflowReady,
 		*s.mlmdProxyReady,
-		crReady,
+		*crReady,
 	}
 
 	for i, condition := range s.dspa.Status.Conditions {
