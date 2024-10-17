@@ -25,7 +25,6 @@ data:
       secretKeySecret:
         name: "ds-pipeline-s3-sample"
         key: "secretkey"
-  containerRuntimeExecutor: emissary
   executor: |
     # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting  # TODO
 kind: ConfigMap

@@ -10,12 +10,24 @@ data:
   {{ end }}
   providers: |
     s3:
-      endpoint: {{.ObjectStorageConnection.Endpoint}}
-      region: {{.ObjectStorageConnection.Region}}
-      defaultProviderSecretRef:
-        secretName: {{.ObjectStorageConnection.CredentialsSecret.SecretName}}
-        accessKeyKey: {{.ObjectStorageConnection.CredentialsSecret.AccessKey}}
-        secretKeyKey: {{.ObjectStorageConnection.CredentialsSecret.SecretKey}}
+      default:
+        endpoint: {{.ObjectStorageConnection.Endpoint}}
+        {{ if .ObjectStorageConnection.Secure }}
+        disableSSL:  false
+        {{else}}
+        disableSSL: true
+        {{end}}
+        region: {{.ObjectStorageConnection.Region}}
+        credentials:
+          {{if .ObjectStorageConnection.CredentialsSecret}}
+          fromEnv: false
+          secretRef:
+            secretName: {{.ObjectStorageConnection.CredentialsSecret.SecretName}}
+            accessKeyKey: {{.ObjectStorageConnection.CredentialsSecret.AccessKey}}
+            secretKeyKey: {{.ObjectStorageConnection.CredentialsSecret.SecretKey}}
+          {{else}}
+          fromEnv: true
+          {{end}}
   {{ end }}
 kind: ConfigMap
 metadata:

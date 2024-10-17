@@ -31,6 +31,10 @@ spec:
               kubernetes.io/metadata.name: redhat-ods-monitoring
         - podSelector:
             matchLabels:
+              app: ds-pipeline-{{.Name}}
+              component: data-science-pipelines
+        - podSelector:
+            matchLabels:
               app: mariadb-{{.Name}}
               component: data-science-pipelines
         - podSelector:

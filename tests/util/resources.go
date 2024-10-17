@@ -16,6 +16,7 @@ package testUtil
 import (
 	"context"
 	"fmt"
+	routev1 "github.com/openshift/api/route/v1"
 	"testing"
 	"time"
 
@@ -41,7 +42,7 @@ func DeployDSPA(t *testing.T, ctx context.Context, client client.Client, deployD
 		Namespace: dspaNS,
 	}
 	fetchedDspa := &v1alpha1.DataSciencePipelinesApplication{}
-	return waitFor(ctx, timeout, interval, func() (bool, error) {
+	return WaitFor(ctx, timeout, interval, func() (bool, error) {
 		err := client.Get(ctx, nsn, fetchedDspa)
 		if err != nil {
 			return false, err
@@ -57,7 +58,7 @@ func WaitForDSPAReady(t *testing.T, ctx context.Context, client client.Client, d
 		Namespace: dspaNS,
 	}
 	dspa := &v1alpha1.DataSciencePipelinesApplication{}
-	return waitFor(ctx, timeout, interval, func() (bool, error) {
+	err := WaitFor(ctx, timeout, interval, func() (bool, error) {
 		err := client.Get(ctx, nsn, dspa)
 		if err != nil {
 			return false, err
@@ -69,6 +70,34 @@ func WaitForDSPAReady(t *testing.T, ctx context.Context, client client.Client, d
 		}
 		return false, nil
 	})
+	// fail fast
+	if err != nil {
+		return err
+	}
+	if dspa.Spec.EnableRoute {
+		err = WaitFor(ctx, timeout, interval, func() (bool, error) {
+			_, err := GetDSPARoute(client, dspaNS, dspa.ObjectMeta.Name)
+			if err != nil {
+				return false, err
+			}
+			return true, nil
+		})
+		// fail fast
+		if err != nil {
+			return err
+		}
+	}
+	return err
+}
+
+func GetDSPARoute(client client.Client, dspaNS, name string) (*routev1.Route, error) {
+	key := types.NamespacedName{
+		Namespace: dspaNS,
+		Name:      "ds-pipeline-" + name,
+	}
+	route := &routev1.Route{}
+	err := client.Get(context.TODO(), key, route)
+	return route, err
 }
 
 // DeleteDSPA will delete DSPA found in path by requesting
@@ -85,7 +114,7 @@ func DeleteDSPA(t *testing.T, ctx context.Context, client client.Client, dspaNam
 	}
 	err := client.Delete(ctx, dspa)
 	require.NoError(t, err)
-	return waitFor(ctx, timeout, interval, func() (bool, error) {
+	return WaitFor(ctx, timeout, interval, func() (bool, error) {
 		err := client.Get(ctx, nsn, dspa)
 		if apierrs.IsNotFound(err) {
 			return true, nil
@@ -122,16 +151,16 @@ func GetDSPAFromPath(t *testing.T, opts mf.Option, path string) *v1alpha1.DataSc
 	return dspa
 }
 
-// waitFor is a helper function
-func waitFor(ctx context.Context, timeout, interval time.Duration, conditionFunc func() (bool, error)) error {
+// WaitFor is a helper function
+func WaitFor(ctx context.Context, timeout, interval time.Duration, conditionFunc func() (bool, error)) error {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
 		done, err := conditionFunc()
-		if done {
-			return nil
-		}
 		if err != nil {
 			return err
+		}
+		if done {
+			return nil
 		}
 		time.Sleep(interval)
 	}

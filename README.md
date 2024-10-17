@@ -12,7 +12,7 @@ Data Science Pipeline stacks onto individual OCP namespaces.
   - [Pre-requisites](#pre-requisites)
   - [Deploy the Operator via ODH](#deploy-the-operator-via-odh)
     - [Using a development image](#using-a-development-image)
-  - [Deploy the Operator standalone](#deploy-the-operator-standalone)
+  - [Deploy the standalone_Operator](#deploy-the-standalone-operator)
   - [Deploy DSP instance](#deploy-dsp-instance)
     - [Deploy another DSP instance](#deploy-another-dsp-instance)
     - [Deploy a DSP with custom credentials](#deploy-a-dsp-with-custom-credentials)
@@ -64,12 +64,14 @@ To get started you will first need to satisfy the following pre-requisites:
 3. Based on which DSP version to install you will need to do the following:
    1. For DSPv1: The OpenShift Cluster must have OpenShift Pipelines 1.8 or higher installed. We recommend channel pipelines-1.8
       on OCP 4.10 and pipelines-1.9 or pipelines-1.10 for OCP 4.11, 4.12 and 4.13. Instructions [here][OCP Pipelines Operator].
-   2. For DSPv2: The OpenShift Cluster must be Argo Workflows installed. You can follow the steps listed in the standalone deployment section [here](#deploy-the-operator-standalone).
+   2. For DSPv2: The DSPO will install a namespace-scoped Argo Workflow Controller, so ensure the OpenShift Cluster does not have a cluster-scoped Argo Workflows installation already present.
 4. Based on installation type you will need one of the following:
    1. For Standalone method: You will need to have [Kustomize] version 4.5+ installed
    2. For ODH method: The Open Data Hub operator needs to be installed. You can install it via [OperatorHub][installodh].
 
 ## Deploy the Operator via ODH
+
+Use this method to deploy DSPO using the OpenDataHub operator
 
 On a cluster with ODH installed, create a namespace where you would like to install DSPO:
 Deploy the following `DataScienceCluster`:
@@ -140,7 +142,9 @@ spec:
             sourcePath: base
 ```
 
-## Deploy the Operator standalone
+## Deploy the standalone Operator
+
+Use this method to deploy DSPO **without** OpenDataHub operator
 
 First clone this repository:
 
@@ -604,7 +608,7 @@ The specific tests that are executed when you run `make test` can include unit t
 
 **To deploy DSPO as a developer :**
 
-Follow the instructions from [here](#deploy-the-operator-standalone) to deploy the operator standalone.
+Follow the instructions from [here](#deploy-the-standalone-operator) to deploy the standalone operator.
 
 Follow the instructions from [here](#deploy-the-operator-via-odh) to deploy the operator via ODH.
 

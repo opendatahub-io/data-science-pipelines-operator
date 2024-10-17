@@ -52,8 +52,10 @@ func (suite *IntegrationTestSuite) TestDSPADeployment() {
 	suite.T().Run("with default MariaDB and Minio", func(t *testing.T) {
 		t.Run(fmt.Sprintf("should have %d pods", podCount), func(t *testing.T) {
 			podList := &corev1.PodList{}
+			// retrieve the running pods only, to allow for multiple reruns of  the test suite
 			listOpts := []client.ListOption{
 				client.InNamespace(suite.DSPANamespace),
+				client.MatchingFields{"status.phase": string(corev1.PodRunning)},
 			}
 			err := suite.Clientmgr.k8sClient.List(suite.Ctx, podList, listOpts...)
 			require.NoError(t, err)
