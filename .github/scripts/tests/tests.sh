@@ -12,7 +12,7 @@ if [ "$GIT_WORKSPACE" = "" ]; then
     echo "GIT_WORKSPACE variable not defined. Should be the root of the source code. Example GIT_WORKSPACE=/home/dev/git/data-science-pipelines-operator" && exit 1
 fi
 
-CLEANUP=false
+CLEAN_INFRA=false
 K8SAPISERVERHOST=""
 DSPA_NAMESPACE="test-dspa"
 DSPA_EXTERNAL_NAMESPACE="dspa-ext"
@@ -27,6 +27,7 @@ CONFIG_DIR="${GIT_WORKSPACE}/config"
 RESOURCES_DIR_CRD="${GIT_WORKSPACE}/.github/resources"
 OPENDATAHUB_NAMESPACE="opendatahub"
 RESOURCES_DIR_PYPI="${GIT_WORKSPACE}/.github/resources/pypiserver/base"
+ENDPOINT_TYPE="service"
 
 get_dspo_image() {
   if [ "$REGISTRY_ADDRESS" = "" ]; then
@@ -128,7 +129,7 @@ upload_python_packages_to_pypi_server() {
   echo "---------------------------------"
   echo "Upload Python Packages to pypi-server"
   echo "---------------------------------"
-  ( cd "${GIT_WORKSPACE}/.github/scripts/python_package_upload" && sh package_upload.sh )
+  ( cd "${GIT_WORKSPACE}/.github/scripts/python_package_upload" && sh package_upload_run.sh )
 }
 
 create_dspa_namespace() {
@@ -163,14 +164,14 @@ run_tests() {
   echo "---------------------------------"
   echo "Run tests"
   echo "---------------------------------"
-  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_NAMESPACE} DSPAPATH=${DSPA_PATH} )
+  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_NAMESPACE} DSPAPATH=${DSPA_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} )
 }
 
 run_tests_dspa_external_connections() {
   echo "---------------------------------"
   echo "Run tests for DSPA with External Connections"
   echo "---------------------------------"
-  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_EXTERNAL_NAMESPACE} DSPAPATH=${DSPA_EXTERNAL_PATH} )
+  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_EXTERNAL_NAMESPACE} DSPAPATH=${DSPA_EXTERNAL_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} )
 }
 
 undeploy_kind_resources() {
@@ -232,8 +233,11 @@ while [ "$#" -gt 0 ]; do
       TARGET="rhoai"
       shift
       ;;
-    --cleanup)
-      CLEANUP=true
+    # The clean-infra option is helpful when rerunning tests on the same target environment, as it eliminates
+    # the need to manually delete the necessary infrastructure. By default, this setting is set to false.
+    # If true, before running the test, it delete the necessary infrastructure.
+    --clean-infra)
+      CLEAN_INFRA=true
       shift
       ;;
     --k8s-api-server-host)
@@ -249,7 +253,7 @@ while [ "$#" -gt 0 ]; do
     --dspa-namespace)
       shift
       if [[ -n "$1" ]]; then
-        DSPANAMESPACE="$1"
+        DSPA_NAMESPACE="$1"
         shift
       else
         echo "Error: --dspa-namespace requires a value"
@@ -269,10 +273,20 @@ while [ "$#" -gt 0 ]; do
     --dspa-path)
       shift
       if [[ -n "$1" ]]; then
-        DSPAPATH="$1"
+        DSPA_PATH="$1"
         shift
       else
         echo "Error: --dspa-path requires a value"
+        exit 1
+      fi
+      ;;
+    --external-dspa-path)
+      shift
+      if [[ -n "$1" ]]; then
+        DSPA_EXTERNAL_PATH="$1"
+        shift
+      else
+        echo "Error: --external-dspa-path requires a value"
         exit 1
       fi
       ;;
@@ -283,6 +297,16 @@ while [ "$#" -gt 0 ]; do
         shift
       else
         echo "Error: --kube-config requires a value"
+        exit 1
+      fi
+      ;;
+    --endpoint-type)
+      shift
+      if [[ -n "$1" ]]; then
+        ENDPOINT_TYPE="$1"
+        shift
+      else
+        echo "Error: --endpoint-type requires a value [service, route]"
         exit 1
       fi
       ;;
@@ -299,12 +323,12 @@ if [ "$K8SAPISERVERHOST" = "" ]; then
 fi
 
 if [ "$TARGET" = "kind" ]; then
-  if [ "$CLEANUP" = true ] ; then
+  if [ "$CLEAN_INFRA" = true ] ; then
       undeploy_kind_resources
   fi
   setup_kind_requirements
 elif [ "$TARGET" = "rhoai" ]; then
-  if [ "$CLEANUP" = true ] ; then
+  if [ "$CLEAN_INFRA" = true ] ; then
       remove_namespace_created_for_rhoai
   fi
   setup_rhoai_requirements

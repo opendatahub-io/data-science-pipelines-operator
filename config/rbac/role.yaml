@@ -42,6 +42,13 @@ rules:
 - apiGroups:
   - argoproj.io
   resources:
+  - workflowartifactgctasks
+  - workflowartifactgctasks/finalizers
+  verbs:
+  - '*'
+- apiGroups:
+  - argoproj.io
+  resources:
   - workflows
   verbs:
   - '*'

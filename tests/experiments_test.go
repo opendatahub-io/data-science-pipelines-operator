@@ -21,7 +21,6 @@ package integration
 import (
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -29,7 +28,7 @@ import (
 
 func (suite *IntegrationTestSuite) TestFetchExperiments() {
 	suite.T().Run("Should successfully fetch experiments", func(t *testing.T) {
-		response, err := http.Get(fmt.Sprintf("%s/apis/v2beta1/experiments", APIServerURL))
+		response, err := suite.Clientmgr.httpClient.Get(fmt.Sprintf("%s/apis/v2beta1/experiments", APIServerURL))
 		require.NoError(t, err, "Error fetching experiments")
 
 		responseData, err := ioutil.ReadAll(response.Body)

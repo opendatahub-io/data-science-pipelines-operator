@@ -1,0 +1,26 @@
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: test-dspa
+spec:
+  dspVersion: v2
+  podToPodTLS: true
+  apiServer:
+    deploy: true
+    enableOauth: true
+    enableSamplePipeline: true
+    cABundle:
+      configMapName: nginx-tls-config
+      configMapKey: rootCA.crt
+  objectStorage:
+    minio:
+      deploy: true
+      image: 'quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance'
+      pvcSize: 500Mi
+      resources:
+        limits:
+          cpu: 20m
+          memory: 500Mi
+        requests:
+          cpu: 20m
+          memory: 100m

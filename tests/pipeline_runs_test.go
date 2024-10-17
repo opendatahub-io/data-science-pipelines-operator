@@ -22,7 +22,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"net/http"
 	"testing"
 
 	TestUtil "github.com/opendatahub-io/data-science-pipelines-operator/tests/util"
@@ -34,13 +33,13 @@ func (suite *IntegrationTestSuite) TestPipelineSuccessfulRun() {
 	suite.T().Run("Should create a Pipeline Run", func(t *testing.T) {
 		// Retrieve Pipeline ID to create a new run
 		pipelineDisplayName := "[Demo] iris-training"
-		pipelineID, err := TestUtil.RetrievePipelineId(t, APIServerURL, pipelineDisplayName)
+		pipelineID, err := TestUtil.RetrievePipelineId(t, suite.Clientmgr.httpClient, APIServerURL, pipelineDisplayName)
 		require.NoError(t, err)
 		postUrl := fmt.Sprintf("%s/apis/v2beta1/runs", APIServerURL)
 		body := TestUtil.FormatRequestBody(t, pipelineID, pipelineDisplayName)
 		contentType := "application/json"
 		// Create a new run
-		response, err := http.Post(postUrl, contentType, bytes.NewReader(body))
+		response, err := suite.Clientmgr.httpClient.Post(postUrl, contentType, bytes.NewReader(body))
 		require.NoError(t, err)
 		responseData, err := io.ReadAll(response.Body)
 		responseString := string(responseData)
@@ -48,20 +47,20 @@ func (suite *IntegrationTestSuite) TestPipelineSuccessfulRun() {
 		require.NoError(t, err)
 		require.Equal(t, 200, response.StatusCode)
 
-		err = TestUtil.WaitForPipelineRunCompletion(t, APIServerURL)
+		err = TestUtil.WaitForPipelineRunCompletion(t, suite.Clientmgr.httpClient, APIServerURL)
 		require.NoError(t, err)
 	})
 
 	suite.T().Run("Should create a Pipeline Run using custom pip server", func(t *testing.T) {
 		// Retrieve Pipeline ID to create a new run
 		pipelineDisplayName := "Test pipeline run with custom pip server"
-		pipelineID, err := TestUtil.RetrievePipelineId(t, APIServerURL, pipelineDisplayName)
+		pipelineID, err := TestUtil.RetrievePipelineId(t, suite.Clientmgr.httpClient, APIServerURL, pipelineDisplayName)
 		require.NoError(t, err)
 		postUrl := fmt.Sprintf("%s/apis/v2beta1/runs", APIServerURL)
 		body := TestUtil.FormatRequestBody(t, pipelineID, pipelineDisplayName)
 		contentType := "application/json"
 		// Create a new run
-		response, err := http.Post(postUrl, contentType, bytes.NewReader(body))
+		response, err := suite.Clientmgr.httpClient.Post(postUrl, contentType, bytes.NewReader(body))
 		require.NoError(t, err)
 		responseData, err := io.ReadAll(response.Body)
 		responseString := string(responseData)
@@ -69,7 +68,7 @@ func (suite *IntegrationTestSuite) TestPipelineSuccessfulRun() {
 		require.NoError(t, err)
 		require.Equal(t, 200, response.StatusCode)
 
-		err = TestUtil.WaitForPipelineRunCompletion(t, APIServerURL)
+		err = TestUtil.WaitForPipelineRunCompletion(t, suite.Clientmgr.httpClient, APIServerURL)
 		require.NoError(t, err)
 	})
 }
