@@ -35,7 +35,7 @@ import (
 	"github.com/go-logr/logr"
 	mfc "github.com/manifestival/controller-runtime-client"
 	mf "github.com/manifestival/manifestival"
-	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	testUtil "github.com/opendatahub-io/data-science-pipelines-operator/tests/util"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap/zapcore"
@@ -64,7 +64,7 @@ var (
 	skipDeploy           bool
 	skipCleanup          bool
 	PortforwardLocalPort int
-	DSPA                 *dspav1alpha1.DataSciencePipelinesApplication
+	DSPA                 *dspav1.DataSciencePipelinesApplication
 	forwarderResult      *forwarder.Result
 	endpointType         string
 )
@@ -102,7 +102,7 @@ type IntegrationTestSuite struct {
 	Clientmgr     ClientManager
 	Ctx           context.Context
 	DSPANamespace string
-	DSPA          *dspav1alpha1.DataSciencePipelinesApplication
+	DSPA          *dspav1.DataSciencePipelinesApplication
 }
 
 type testLogWriter struct {
@@ -161,7 +161,7 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 
 	var err error
 
-	utilruntime.Must(dspav1alpha1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(dspav1.AddToScheme(scheme.Scheme))
 	clientmgr = ClientManager{}
 
 	cfg, err = clientcmd.BuildConfigFromFlags(k8sApiServerHost, kubeconfig)

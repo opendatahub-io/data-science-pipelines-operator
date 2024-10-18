@@ -22,10 +22,15 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/spf13/viper"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
+
+const DSPV2VersionString = "v2"
+const DSPVersionk8sLabel = "dsp-version"
+
+var SupportedDSPVersions = []string{DSPV2VersionString}
 
 const (
 	DefaultImageValue = "MustSetInConfig"
@@ -48,9 +53,7 @@ const (
 	DefaultSystemSSLCertFile     = "SSL_CERT_FILE"
 	DefaultSystemSSLCertFilePath = "/etc/pki/tls/certs/ca-bundle.crt" // Fedora/RHEL 6
 
-	MLPipelineUIConfigMapPrefix       = "ds-pipeline-ui-configmap-"
-	ArtifactScriptConfigMapNamePrefix = "ds-pipeline-artifact-script-"
-	ArtifactScriptConfigMapKey        = "artifact_script"
+	MLPipelineUIConfigMapPrefix = "ds-pipeline-ui-configmap-"
 
 	CustomServerConfigMapNamePrefix = "ds-pipeline-server-config-"
 	CustomServerConfigMapNameKey    = "config.json"
@@ -85,51 +88,24 @@ const (
 
 // DSPO Config File Paths
 const (
-	APIServerImagePath                       = "Images.ApiServer"
-	APIServerArtifactImagePath               = "Images.Artifact"
-	PersistenceAgentImagePath                = "Images.PersistentAgent"
-	ScheduledWorkflowImagePath               = "Images.ScheduledWorkflow"
-	APIServerCacheImagePath                  = "Images.Cache"
-	APIServerMoveResultsImagePath            = "Images.MoveResultsImage"
-	MariaDBImagePath                         = "Images.MariaDB"
-	OAuthProxyImagePath                      = "Images.OAuthProxy"
-	MlmdEnvoyImagePath                       = "Images.MlmdEnvoy"
-	MlmdGRPCImagePath                        = "Images.MlmdGRPC"
-	MlmdWriterImagePath                      = "Images.MlmdWriter"
+	// Images
+	APIServerImagePath              = "Images.ApiServer"
+	PersistenceAgentImagePath       = "Images.PersistentAgent"
+	ScheduledWorkflowImagePath      = "Images.ScheduledWorkflow"
+	MlmdEnvoyImagePath              = "Images.MlmdEnvoy"
+	MlmdGRPCImagePath               = "Images.MlmdGRPC"
+	LauncherImagePath               = "Images.LauncherImage"
+	DriverImagePath                 = "Images.DriverImage"
+	ArgoExecImagePath               = "Images.ArgoExecImage"
+	ArgoWorkflowControllerImagePath = "Images.ArgoWorkflowController"
+	MariaDBImagePath                = "Images.MariaDB"
+	OAuthProxyImagePath             = "Images.OAuthProxy"
+
+	// Other configs
 	ObjStoreConnectionTimeoutConfigName      = "DSPO.HealthCheck.ObjectStore.ConnectionTimeout"
 	DBConnectionTimeoutConfigName            = "DSPO.HealthCheck.Database.ConnectionTimeout"
 	RequeueTimeConfigName                    = "DSPO.RequeueTime"
 	ApiServerIncludeOwnerReferenceConfigName = "DSPO.ApiServer.IncludeOwnerReference"
-)
-
-// DSPV2-Argo Image Paths
-const (
-	APIServerImagePathV2Argo             = "ImagesV2.Argo.ApiServer"
-	APIServerArtifactImagePathV2Argo     = "ImagesV2.Argo.Artifact"
-	APIServerCacheImagePathV2Argo        = "ImagesV2.Argo.Cache"
-	APIServerMoveResultsImagePathV2Argo  = "ImagesV2.Argo.MoveResultsImage"
-	APIServerArgoLauncherImagePathV2Argo = "ImagesV2.Argo.ArgoLauncherImage"
-	APIServerArgoDriverImagePathV2Argo   = "ImagesV2.Argo.ArgoDriverImage"
-	PersistenceAgentImagePathV2Argo      = "ImagesV2.Argo.PersistentAgent"
-	ScheduledWorkflowImagePathV2Argo     = "ImagesV2.Argo.ScheduledWorkflow"
-	MlmdEnvoyImagePathV2Argo             = "ImagesV2.Argo.MlmdEnvoy"
-	MlmdGRPCImagePathV2Argo              = "ImagesV2.Argo.MlmdGRPC"
-	ArgoWorkflowControllerImagePath      = "ImagesV2.Argo.WorkflowController"
-	ArgoExecImagePath                    = "ImagesV2.Argo.ArgoExecImage"
-)
-
-// DSPV2-Tekton Image Paths
-// Note: These won't exist in config but aren't used, adding in case of future support
-// TODO: remove
-const (
-	APIServerImagePathV2Tekton            = "ImagesV2.Tekton.ApiServer"
-	APIServerArtifactImagePathV2Tekton    = "ImagesV2.Tekton.Artifact"
-	APIServerCacheImagePathV2Tekton       = "ImagesV2.Tekton.Cache"
-	APIServerMoveResultsImagePathV2Tekton = "ImagesV2.Tekton.MoveResultsImage"
-	PersistenceAgentImagePathV2Tekton     = "ImagesV2.Tekton.PersistentAgent"
-	ScheduledWorkflowImagePathV2Tekton    = "ImagesV2.Tekton.ScheduledWorkflow"
-	MlmdEnvoyImagePathV2Tekton            = "ImagesV2.Tekton.MlmdEnvoy"
-	MlmdGRPCImagePathV2Tekton             = "ImagesV2.Tekton.MlmdGRPC"
 )
 
 // DSPA Status Condition Types
@@ -153,6 +129,7 @@ const (
 	FailingToDeploy             = "FailingToDeploy"
 	Deploying                   = "Deploying"
 	ComponentDeploymentNotFound = "ComponentDeploymentNotFound"
+	UnsupportedVersion          = "UnsupportedVersion"
 )
 
 // Any required Configmap paths can be added here,
@@ -160,11 +137,8 @@ const (
 // validation check
 var requiredFields = []string{
 	APIServerImagePath,
-	APIServerArtifactImagePath,
 	PersistenceAgentImagePath,
 	ScheduledWorkflowImagePath,
-	APIServerCacheImagePath,
-	APIServerMoveResultsImagePath,
 	MariaDBImagePath,
 	OAuthProxyImagePath,
 }
@@ -196,18 +170,17 @@ var (
 	MlPipelineUIResourceRequirements       = createResourceRequirement(resource.MustParse("100m"), resource.MustParse("256Mi"), resource.MustParse("100m"), resource.MustParse("256Mi"))
 	MlmdEnvoyResourceRequirements          = createResourceRequirement(resource.MustParse("100m"), resource.MustParse("256Mi"), resource.MustParse("100m"), resource.MustParse("256Mi"))
 	MlmdGRPCResourceRequirements           = createResourceRequirement(resource.MustParse("100m"), resource.MustParse("256Mi"), resource.MustParse("100m"), resource.MustParse("256Mi"))
-	MlmdWriterResourceRequirements         = createResourceRequirement(resource.MustParse("100m"), resource.MustParse("256Mi"), resource.MustParse("100m"), resource.MustParse("256Mi"))
 )
 
 type DBExtraParams map[string]string
 
-func createResourceRequirement(RequestsCPU resource.Quantity, RequestsMemory resource.Quantity, LimitsCPU resource.Quantity, LimitsMemory resource.Quantity) dspav1alpha1.ResourceRequirements {
-	return dspav1alpha1.ResourceRequirements{
-		Requests: &dspav1alpha1.Resources{
+func createResourceRequirement(RequestsCPU resource.Quantity, RequestsMemory resource.Quantity, LimitsCPU resource.Quantity, LimitsMemory resource.Quantity) dspav1.ResourceRequirements {
+	return dspav1.ResourceRequirements{
+		Requests: &dspav1.Resources{
 			CPU:    RequestsCPU,
 			Memory: RequestsMemory,
 		},
-		Limits: &dspav1alpha1.Resources{
+		Limits: &dspav1.Resources{
 			CPU:    LimitsCPU,
 			Memory: LimitsMemory,
 		},
@@ -251,4 +224,8 @@ func GetDefaultDBExtraParams(params DBExtraParams, log logr.Logger) (string, err
 		return "", err
 	}
 	return string(extraParamsJson), nil
+}
+
+func GetSupportedDSPAVersions() []string {
+	return SupportedDSPVersions
 }

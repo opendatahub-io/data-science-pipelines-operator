@@ -1,19 +1,19 @@
-apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
 kind: DataSciencePipelinesApplication
 metadata:
   name: testdsp3
 spec:
+  podToPodTLS: false
   apiServer:
     enableOauth: true
     enableSamplePipeline: false
-    artifactScriptConfigMap:
-      name: doesnotexist
-      key: "somekey"
     deploy: true
     argoLauncherImage: argolauncherimage:test3
     argoDriverImage: argodriverimage:test3
   persistenceAgent: {}
   scheduledWorkflow: {}
+  mlmd:
+    deploy: true
   database:
     externalDB:
       host: testdbhost3

@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -47,13 +47,13 @@ func TestExtractParams_CABundle(t *testing.T) {
 
 	tt := []struct {
 		msg                         string
-		dsp                         *dspav1alpha1.DataSciencePipelinesApplication
+		dsp                         *dspav1.DataSciencePipelinesApplication
 		CustomCABundleRootMountPath string
 		CustomSSLCertDir            *string
 		PiplinesCABundleMountPath   string
 		SSLCertFileEnv              string
 		APICustomPemCerts           [][]byte
-		CustomCABundle              *dspav1alpha1.CABundle
+		CustomCABundle              *dspav1.CABundle
 		ConfigMapPreReq             []*v1.ConfigMap
 		errorMsg                    string
 	}{
@@ -84,7 +84,7 @@ func TestExtractParams_CABundle(t *testing.T) {
 			CustomSSLCertDir:            strPtr("/dsp-custom-certs:/etc/ssl/certs:/etc/pki/tls/certs"),
 			PiplinesCABundleMountPath:   "/dsp-custom-certs/dsp-ca.crt",
 			APICustomPemCerts:           [][]byte{[]byte("bundle-contents")},
-			CustomCABundle:              &dspav1alpha1.CABundle{ConfigMapKey: "dsp-ca.crt", ConfigMapName: "dsp-trusted-ca-testdspa"},
+			CustomCABundle:              &dspav1.CABundle{ConfigMapKey: "dsp-ca.crt", ConfigMapName: "dsp-trusted-ca-testdspa"},
 			ConfigMapPreReq: []*v1.ConfigMap{
 				{
 					ObjectMeta: metav1.ObjectMeta{Name: "testcaname", Namespace: "testnamespace"},
@@ -99,7 +99,7 @@ func TestExtractParams_CABundle(t *testing.T) {
 			CustomSSLCertDir:            strPtr("/dsp-custom-certs:/etc/ssl/certs:/etc/pki/tls/certs"),
 			PiplinesCABundleMountPath:   "/dsp-custom-certs/dsp-ca.crt",
 			APICustomPemCerts:           [][]byte{[]byte("odh-bundle-contents")},
-			CustomCABundle:              &dspav1alpha1.CABundle{ConfigMapKey: "dsp-ca.crt", ConfigMapName: "dsp-trusted-ca-testdspa"},
+			CustomCABundle:              &dspav1.CABundle{ConfigMapKey: "dsp-ca.crt", ConfigMapName: "dsp-trusted-ca-testdspa"},
 			ConfigMapPreReq: []*v1.ConfigMap{
 				{
 					ObjectMeta: metav1.ObjectMeta{Name: "odh-trusted-ca-bundle", Namespace: "testnamespace"},
@@ -114,7 +114,7 @@ func TestExtractParams_CABundle(t *testing.T) {
 			CustomSSLCertDir:            strPtr("/dsp-custom-certs:/etc/ssl/certs:/etc/pki/tls/certs"),
 			PiplinesCABundleMountPath:   "/dsp-custom-certs/dsp-ca.crt",
 			APICustomPemCerts:           [][]byte{[]byte("odh-bundle-contents-2")},
-			CustomCABundle:              &dspav1alpha1.CABundle{ConfigMapKey: "dsp-ca.crt", ConfigMapName: "dsp-trusted-ca-testdspa"},
+			CustomCABundle:              &dspav1.CABundle{ConfigMapKey: "dsp-ca.crt", ConfigMapName: "dsp-trusted-ca-testdspa"},
 			ConfigMapPreReq: []*v1.ConfigMap{
 				{
 					ObjectMeta: metav1.ObjectMeta{Name: "odh-trusted-ca-bundle", Namespace: "testnamespace"},
@@ -144,7 +144,7 @@ func TestExtractParams_CABundle(t *testing.T) {
 			CustomSSLCertDir:            strPtr("/dsp-custom-certs:/etc/ssl/certs:/etc/pki/tls/certs"),
 			PiplinesCABundleMountPath:   "/dsp-custom-certs/dsp-ca.crt",
 			APICustomPemCerts:           [][]byte{[]byte("odh-bundle-contents"), []byte("bundle-contents")},
-			CustomCABundle:              &dspav1alpha1.CABundle{ConfigMapKey: "dsp-ca.crt", ConfigMapName: "dsp-trusted-ca-testdspa"},
+			CustomCABundle:              &dspav1.CABundle{ConfigMapKey: "dsp-ca.crt", ConfigMapName: "dsp-trusted-ca-testdspa"},
 			ConfigMapPreReq: []*v1.ConfigMap{
 				{
 					ObjectMeta: metav1.ObjectMeta{Name: "odh-trusted-ca-bundle", Namespace: "testnamespace"},
@@ -163,7 +163,7 @@ func TestExtractParams_CABundle(t *testing.T) {
 			CustomSSLCertDir:            strPtr("/dsp-custom-certs:/etc/ssl/certs:/etc/pki/tls/certs"),
 			PiplinesCABundleMountPath:   "/dsp-custom-certs/dsp-ca.crt",
 			APICustomPemCerts:           [][]byte{[]byte("odh-bundle-contents"), []byte("bundle-contents"), []byte("dummycontent")},
-			CustomCABundle:              &dspav1alpha1.CABundle{ConfigMapKey: "dsp-ca.crt", ConfigMapName: "dsp-trusted-ca-testdspa"},
+			CustomCABundle:              &dspav1.CABundle{ConfigMapKey: "dsp-ca.crt", ConfigMapName: "dsp-trusted-ca-testdspa"},
 			ConfigMapPreReq: []*v1.ConfigMap{
 				{
 					ObjectMeta: metav1.ObjectMeta{Name: "odh-trusted-ca-bundle", Namespace: "testnamespace"},
@@ -184,7 +184,7 @@ func TestExtractParams_CABundle(t *testing.T) {
 			CustomSSLCertDir:            strPtr("/dsp-custom-certs:/etc/ssl/certs:/etc/pki/tls/certs"),
 			PiplinesCABundleMountPath:   "/dsp-custom-certs/dsp-ca.crt",
 			APICustomPemCerts:           [][]byte{[]byte("service-ca-contents")},
-			CustomCABundle:              &dspav1alpha1.CABundle{ConfigMapKey: "dsp-ca.crt", ConfigMapName: "dsp-trusted-ca-testdspa"},
+			CustomCABundle:              &dspav1.CABundle{ConfigMapKey: "dsp-ca.crt", ConfigMapName: "dsp-trusted-ca-testdspa"},
 			ConfigMapPreReq: []*v1.ConfigMap{
 				{
 					ObjectMeta: metav1.ObjectMeta{Name: "openshift-service-ca.crt", Namespace: "testnamespace"},
@@ -199,7 +199,7 @@ func TestExtractParams_CABundle(t *testing.T) {
 			CustomSSLCertDir:            strPtr("/dsp-custom-certs:/etc/ssl/certs:/etc/pki/tls/certs"),
 			PiplinesCABundleMountPath:   "/dsp-custom-certs/dsp-ca.crt",
 			APICustomPemCerts:           [][]byte{[]byte("service-ca-contents"), []byte("dummycontent")},
-			CustomCABundle:              &dspav1alpha1.CABundle{ConfigMapKey: "dsp-ca.crt", ConfigMapName: "dsp-trusted-ca-testdspa"},
+			CustomCABundle:              &dspav1.CABundle{ConfigMapKey: "dsp-ca.crt", ConfigMapName: "dsp-trusted-ca-testdspa"},
 			ConfigMapPreReq: []*v1.ConfigMap{
 				{
 					ObjectMeta: metav1.ObjectMeta{Name: "openshift-service-ca.crt", Namespace: "testnamespace"},

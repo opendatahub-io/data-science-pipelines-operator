@@ -17,6 +17,7 @@ limitations under the License.
 package testutil
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -168,7 +169,7 @@ func deploymentsAreEqual(expected, actual *unstructured.Unstructured) (bool, err
 	}
 
 	if len(expectedDep.Spec.Template.Spec.Containers) != len(actualDep.Spec.Template.Spec.Containers) {
-		return false, notEqualMsg("Containers")
+		return false, notEqualMsg("Container lengths")
 	}
 	for i := range expectedDep.Spec.Template.Spec.Containers {
 		expectedContainer := expectedDep.Spec.Template.Spec.Containers[i]
@@ -224,5 +225,5 @@ func notDeeplyEqualMsg(value string, diff []string) error {
 	for _, d := range diff {
 		errStr += fmt.Sprintln("\t" + d)
 	}
-	return fmt.Errorf(errStr)
+	return errors.New(errStr)
 }

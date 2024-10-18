@@ -19,14 +19,13 @@ package controllers
 import (
 	"context"
 	"fmt"
-
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/dspastatus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
 	"github.com/go-logr/logr"
 	mf "github.com/manifestival/manifestival"
-	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/util"
 	routev1 "github.com/openshift/api/route/v1"
@@ -82,18 +81,25 @@ func (r *DSPAReconciler) Apply(owner mf.Owner, params *DSPAParams, template stri
 	if err != nil {
 		return fmt.Errorf("error loading template (%s) yaml: %w", template, err)
 	}
+
+	// Apply the owner injection transformation
 	tmplManifest, err = tmplManifest.Transform(
 		mf.InjectOwner(owner),
+		// Apply dsp-version=<ver> label on all resources managed by this dspo
+		util.AddLabelTransformer(config.DSPVersionk8sLabel, params.DSPVersion),
+		util.AddDeploymentPodLabelTransformer(config.DSPVersionk8sLabel, params.DSPVersion),
 	)
 	if err != nil {
 		return err
 	}
 
+	// Apply dsp-version labels to all manifests
 	tmplManifest, err = tmplManifest.Transform(fns...)
 	if err != nil {
 		return err
 	}
 
+	// Apply the manifest
 	return tmplManifest.Apply()
 }
 
@@ -159,8 +165,6 @@ func (r *DSPAReconciler) DeleteResourceIfItExists(ctx context.Context, obj clien
 //+kubebuilder:rbac:groups=kubeflow.org,resources=*,verbs=*
 //+kubebuilder:rbac:groups=batch,resources=jobs,verbs=*
 //+kubebuilder:rbac:groups=machinelearning.seldon.io,resources=seldondeployments,verbs=*
-//+kubebuilder:rbac:groups=tekton.dev,resources=*,verbs=*
-//+kubebuilder:rbac:groups=custom.tekton.dev,resources=pipelineloops,verbs=*
 //+kubebuilder:rbac:groups=ray.io,resources=rayclusters;rayjobs;rayservices,verbs=create;get;list;patch;delete
 //+kubebuilder:rbac:groups=authorization.k8s.io,resources=subjectaccessreviews,verbs=create
 //+kubebuilder:rbac:groups=authentication.k8s.io,resources=tokenreviews,verbs=create
@@ -176,7 +180,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	params := &DSPAParams{}
 
-	dspa := &dspav1alpha1.DataSciencePipelinesApplication{}
+	dspa := &dspav1.DataSciencePipelinesApplication{}
 	err := r.Get(ctx, req.NamespacedName, dspa)
 	if err != nil && apierrs.IsNotFound(err) {
 		log.V(1).Info("DSPA resource was not found, assuming it was recently deleted, nothing to do here")
@@ -190,12 +194,26 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	defer r.updateStatus(ctx, dspa, dspaStatus, log, req)
 
+	if !util.DSPAWithSupportedDSPVersion(dspa) {
+		err1 := fmt.Errorf("unsupported DSP version %s detected. Please manually remove "+
+			"this DSP resource and re-apply with a supported version field set", dspa.Spec.DSPVersion)
+		dspaStatus.SetDatabaseNotReady(err1, config.UnsupportedVersion)
+		dspaStatus.SetObjStoreNotReady(err1, config.UnsupportedVersion)
+		r.setStatusAsUnsupported(config.APIServerReady, err1, dspaStatus.SetApiServerStatus)
+		r.setStatusAsUnsupported(config.PersistenceAgentReady, err1, dspaStatus.SetPersistenceAgentStatus)
+		r.setStatusAsUnsupported(config.ScheduledWorkflowReady, err1, dspaStatus.SetScheduledWorkflowStatus)
+		r.setStatusAsUnsupported(config.MLMDProxyReady, err1, dspaStatus.SetMLMDProxyStatus)
+		dspaStatus.SetDSPANotReady(err1, config.UnsupportedVersion)
+		log.Info(err1.Error())
+		return ctrl.Result{}, nil
+	}
+
 	// FixMe: Hack for stubbing gvk during tests as these are not populated by test suite
 	// https://github.com/opendatahub-io/data-science-pipelines-operator/pull/7#discussion_r1102887037
 	// In production we expect these to be populated
 	if dspa.Kind == "" {
 		dspa = dspa.DeepCopy()
-		gvk := dspav1alpha1.GroupVersion.WithKind("DataSciencePipelinesApplication")
+		gvk := dspav1.GroupVersion.WithKind("DataSciencePipelinesApplication")
 		dspa.APIVersion, dspa.Kind = gvk.Version, gvk.Kind
 	}
 
@@ -351,8 +369,13 @@ func (r *DSPAReconciler) setStatusAsNotReady(conditionType string, err error, se
 	setStatus(condition)
 }
 
+func (r *DSPAReconciler) setStatusAsUnsupported(conditionType string, err error, setStatus func(metav1.Condition)) {
+	condition := dspastatus.BuildFalseCondition(conditionType, config.UnsupportedVersion, err.Error())
+	setStatus(condition)
+}
+
 func (r *DSPAReconciler) setStatus(ctx context.Context, resourceName string, conditionType string,
-	dspa *dspav1alpha1.DataSciencePipelinesApplication, setStatus func(metav1.Condition),
+	dspa *dspav1.DataSciencePipelinesApplication, setStatus func(metav1.Condition),
 	log logr.Logger) {
 	condition, err := r.evaluateCondition(ctx, dspa, resourceName, conditionType)
 	setStatus(condition)
@@ -361,7 +384,7 @@ func (r *DSPAReconciler) setStatus(ctx context.Context, resourceName string, con
 	}
 }
 
-func (r *DSPAReconciler) updateStatus(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication,
+func (r *DSPAReconciler) updateStatus(ctx context.Context, dspa *dspav1.DataSciencePipelinesApplication,
 	dspaStatus dspastatus.DSPAStatus, log logr.Logger, req ctrl.Request) {
 	r.refreshDspa(ctx, dspa, req, log)
 
@@ -380,7 +403,7 @@ func (r *DSPAReconciler) updateStatus(ctx context.Context, dspa *dspav1alpha1.Da
 // evaluateCondition evaluates if condition with "name" is in condition of type "conditionType".
 // this procedure is valid only for conditions with bool status type, for conditions of non bool type
 // results are undefined.
-func (r *DSPAReconciler) evaluateCondition(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication, component string, conditionType string) (metav1.Condition, error) {
+func (r *DSPAReconciler) evaluateCondition(ctx context.Context, dspa *dspav1.DataSciencePipelinesApplication, component string, conditionType string) (metav1.Condition, error) {
 	condition := dspastatus.BuildUnknownCondition(conditionType)
 	deployment := &appsv1.Deployment{}
 
@@ -493,14 +516,14 @@ func (r *DSPAReconciler) evaluateCondition(ctx context.Context, dspa *dspav1alph
 
 }
 
-func (r *DSPAReconciler) refreshDspa(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication, req ctrl.Request, log logr.Logger) {
+func (r *DSPAReconciler) refreshDspa(ctx context.Context, dspa *dspav1.DataSciencePipelinesApplication, req ctrl.Request, log logr.Logger) {
 	err := r.Get(ctx, req.NamespacedName, dspa)
 	if err != nil {
 		log.Info(err.Error())
 	}
 }
 
-func (r *DSPAReconciler) PublishMetrics(dspa *dspav1alpha1.DataSciencePipelinesApplication, metricsMap map[metav1.Condition]*prometheus.GaugeVec) {
+func (r *DSPAReconciler) PublishMetrics(dspa *dspav1.DataSciencePipelinesApplication, metricsMap map[metav1.Condition]*prometheus.GaugeVec) {
 	log := r.Log.WithValues("namespace", dspa.Namespace).WithValues("dspa_name", dspa.Name)
 	log.Info("Publishing Ready Metrics")
 
@@ -516,10 +539,8 @@ func (r *DSPAReconciler) PublishMetrics(dspa *dspav1alpha1.DataSciencePipelinesA
 	}
 }
 
-func (r *DSPAReconciler) GetComponents(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication) dspav1alpha1.ComponentStatus {
+func (r *DSPAReconciler) GetComponents(ctx context.Context, dspa *dspav1.DataSciencePipelinesApplication) dspav1.ComponentStatus {
 	log := r.Log.WithValues("namespace", dspa.Namespace).WithValues("dspa_name", dspa.Name)
-	log.Info("Updating components endpoints")
-
 	mlmdProxyResourceName := fmt.Sprintf("ds-pipeline-md-%s", dspa.Name)
 	apiServerResourceName := fmt.Sprintf("ds-pipeline-%s", dspa.Name)
 
@@ -543,7 +564,7 @@ func (r *DSPAReconciler) GetComponents(ctx context.Context, dspa *dspav1alpha1.D
 		log.Error(err, "Error retrieving API Server Route endpoint")
 	}
 
-	mlmdProxyComponent := &dspav1alpha1.ComponentDetailStatus{}
+	mlmdProxyComponent := &dspav1.ComponentDetailStatus{}
 	if mlmdProxyUrl != "" {
 		mlmdProxyComponent.Url = mlmdProxyUrl
 	}
@@ -551,7 +572,7 @@ func (r *DSPAReconciler) GetComponents(ctx context.Context, dspa *dspav1alpha1.D
 		mlmdProxyComponent.ExternalUrl = mlmdProxyExternalUrl
 	}
 
-	apiServerComponent := &dspav1alpha1.ComponentDetailStatus{}
+	apiServerComponent := &dspav1.ComponentDetailStatus{}
 	if apiServerUrl != "" {
 		apiServerComponent.Url = apiServerUrl
 	}
@@ -559,7 +580,7 @@ func (r *DSPAReconciler) GetComponents(ctx context.Context, dspa *dspav1alpha1.D
 		apiServerComponent.ExternalUrl = apiServerExternalUrl
 	}
 
-	status := dspav1alpha1.ComponentStatus{}
+	status := dspav1.ComponentStatus{}
 	if mlmdProxyComponent.Url != "" && mlmdProxyComponent.ExternalUrl != "" {
 		status.MLMDProxy = *mlmdProxyComponent
 	}
@@ -572,7 +593,7 @@ func (r *DSPAReconciler) GetComponents(ctx context.Context, dspa *dspav1alpha1.D
 // SetupWithManager sets up the controller with the Manager.
 func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&dspav1alpha1.DataSciencePipelinesApplication{}).
+		For(&dspav1.DataSciencePipelinesApplication{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.ConfigMap{}).
@@ -585,7 +606,6 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// Watch for global ca bundle, if one is added to this namespace
 		// we need to reconcile on all the dspa's in this namespace
 		// so they may mount this cert in the appropriate containers
-
 		WatchesRawSource(source.Kind(mgr.GetCache(), &corev1.ConfigMap{}),
 			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, o client.Object) []reconcile.Request {
 				cm := o.(*corev1.ConfigMap)
@@ -596,9 +616,7 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 					return nil
 				}
 
-				log.V(1).Info(fmt.Sprintf("Reconcile event triggered by change in event on Global CA Bundle: %s", cm.Name))
-
-				var dspaList dspav1alpha1.DataSciencePipelinesApplicationList
+				var dspaList dspav1.DataSciencePipelinesApplicationList
 				if err := r.List(ctx, &dspaList, client.InNamespace(thisNamespace)); err != nil {
 					log.Error(err, "unable to list DSPA's when attempting to handle Global CA Bundle event.")
 					return nil
@@ -606,11 +624,18 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 				var reconcileRequests []reconcile.Request
 				for _, dspa := range dspaList.Items {
-					namespacedName := types.NamespacedName{
-						Name:      dspa.Name,
-						Namespace: thisNamespace,
+					// Only update supported DSP versions
+					if util.DSPAWithSupportedDSPVersion(&dspa) {
+						namespacedName := types.NamespacedName{
+							Name:      dspa.Name,
+							Namespace: thisNamespace,
+						}
+						reconcileRequests = append(reconcileRequests, reconcile.Request{NamespacedName: namespacedName})
 					}
-					reconcileRequests = append(reconcileRequests, reconcile.Request{NamespacedName: namespacedName})
+				}
+
+				if len(reconcileRequests) > 0 {
+					log.V(1).Info(fmt.Sprintf("Reconcile event triggered by change in event on Global CA Bundle: %s", cm.Name))
 				}
 
 				return reconcileRequests
@@ -623,6 +648,12 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 				component, hasComponentLabel := pod.Labels["component"]
 				if !hasComponentLabel || component != "data-science-pipelines" {
+					return nil
+				}
+
+				// Silently skip reconcile on this pod if the resource was owned
+				// by an unsupported dspa
+				if !util.HasSupportedDSPVersionLabel(pod.Labels) {
 					return nil
 				}
 
@@ -650,9 +681,6 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				if secret.Annotations["openshift.io/owning-component"] != "service-ca" {
 					return nil
 				}
-
-				log.V(1).Info(fmt.Sprintf("Reconcile event triggered by change on Secret owned by service-ca: %s", secret.Name))
-
 				serviceName := secret.Annotations["service.beta.openshift.io/originating-service-name"]
 
 				namespacedServiceName := types.NamespacedName{
@@ -666,17 +694,22 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				if err != nil {
 					return nil
 				}
-
 				dspaName, hasDSPALabel := service.Labels["dspa"]
 				if !hasDSPALabel {
 					return nil
 				}
 
-				log.V(1).Info(fmt.Sprintf("Reconcile event triggered by [Service: %s] ", serviceName))
+				// Silently skip reconcile on this ervice if the resource was owned
+				// by an unsupported DSPA
+				if !util.HasSupportedDSPVersionLabel(service.Labels) {
+					return nil
+				}
+
 				namespacedDspaName := types.NamespacedName{
 					Name:      dspaName,
 					Namespace: secret.Namespace,
 				}
+				log.V(1).Info(fmt.Sprintf("Reconcile event triggered by change on Secret: %s owned by service-ca: %s", secret.Name, serviceName))
 				return []reconcile.Request{{NamespacedName: namespacedDspaName}}
 			}),
 		).

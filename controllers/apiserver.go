@@ -18,7 +18,7 @@ package controllers
 import (
 	"context"
 
-	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	v1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -39,7 +39,7 @@ var samplePipelineTemplates = map[string]string{
 	"sample-config":   "apiserver/sample-pipeline/sample-config.yaml.tmpl",
 }
 
-func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication, params *DSPAParams) error {
+func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1.DataSciencePipelinesApplication, params *DSPAParams) error {
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
 
 	if !dsp.Spec.APIServer.Deploy {

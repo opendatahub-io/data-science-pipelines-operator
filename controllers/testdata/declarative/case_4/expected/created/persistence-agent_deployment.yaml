@@ -4,6 +4,7 @@ metadata:
   name: ds-pipeline-persistenceagent-testdsp4
   namespace: default
   labels:
+    dsp-version: v2
     app: ds-pipeline-persistenceagent-testdsp4
     component: data-science-pipelines
     dspa: testdsp4
@@ -18,6 +19,7 @@ spec:
       annotations:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
       labels:
+        dsp-version: v2
         app: ds-pipeline-persistenceagent-testdsp4
         component: data-science-pipelines
         dspa: testdsp4
@@ -35,7 +37,7 @@ spec:
             - name: KUBEFLOW_USERID_PREFIX
               value: ""
             - name: EXECUTIONTYPE
-              value: PipelineRun
+              value: Workflow
           image: this-persistenceagent-image-from-cr-should-be-used:test4
           # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
           name: ds-pipeline-persistenceagent
@@ -73,4 +75,17 @@ spec:
             limits:
               cpu: 2524m
               memory: 5Gi
+          volumeMounts:
+            - mountPath: /var/run/secrets/kubeflow/tokens/persistenceagent-sa-token
+              name: persistenceagent-sa-token
+              subPath: ds-pipeline-persistenceagent-testdsp4-token
       serviceAccountName: ds-pipeline-persistenceagent-testdsp4
+      volumes:
+        - name: persistenceagent-sa-token
+          projected:
+            defaultMode: 420
+            sources:
+              - serviceAccountToken:
+                  audience: pipelines.kubeflow.org
+                  expirationSeconds: 3600
+                  path: ds-pipeline-persistenceagent-testdsp4-token
