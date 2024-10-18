@@ -218,6 +218,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			if err := r.Update(ctx, dspa); err != nil {
 				return ctrl.Result{}, err
 			}
+			log.Info("DSPA resources cleaned up.")
 		}
 
 		// Stop reconciliation as the item is being deleted
@@ -363,6 +364,11 @@ func (r *DSPAReconciler) setStatus(ctx context.Context, resourceName string, con
 func (r *DSPAReconciler) updateStatus(ctx context.Context, dspa *dspav1alpha1.DataSciencePipelinesApplication,
 	dspaStatus dspastatus.DSPAStatus, log logr.Logger, req ctrl.Request) {
 	r.refreshDspa(ctx, dspa, req, log)
+
+	// TODO: this is a workaround, handle deletion more gracefully
+	if dspa.DeletionTimestamp != nil {
+		return
+	}
 	dspa.Status.Components = r.GetComponents(ctx, dspa)
 	dspa.Status.Conditions = dspaStatus.GetConditions()
 	err := r.Status().Update(ctx, dspa)
