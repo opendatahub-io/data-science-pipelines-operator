@@ -4,6 +4,7 @@ metadata:
   name: ds-pipeline-server-config-testdsp0
   namespace: default
   labels:
+    dsp-version: v2
     app: ds-pipeline-testdsp0
     component: data-science-pipelines
 data:

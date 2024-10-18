@@ -859,7 +859,7 @@ spec:
       status: {}
   - deprecated: true
     deprecationWarning: datasciencepipelinesapplications.opendatahub.io/v1alpha1 is
-      deprecated
+      deprecated.
     name: v1alpha1
     schema:
       openAPIV3Schema:

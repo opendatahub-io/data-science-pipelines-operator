@@ -27,10 +27,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
+const DSPV2VersionString = "v2"
+const DSPVersionk8sLabel = "dsp-version"
+
+var SupportedDSPVersions = []string{DSPV2VersionString}
+
 const (
-	DSPDefaultVersion  = "v2"
-	DSPV2VersionString = DSPDefaultVersion
-	DefaultImageValue  = "MustSetInConfig"
+	DefaultImageValue = "MustSetInConfig"
 
 	CustomCABundleRootMountPath = "/dsp-custom-certs"
 
@@ -221,4 +224,8 @@ func GetDefaultDBExtraParams(params DBExtraParams, log logr.Logger) (string, err
 		return "", err
 	}
 	return string(extraParamsJson), nil
+}
+
+func GetSupportedDSPAVersions() []string {
+	return SupportedDSPVersions
 }

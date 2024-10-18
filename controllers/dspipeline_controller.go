@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/dspastatus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -82,18 +81,25 @@ func (r *DSPAReconciler) Apply(owner mf.Owner, params *DSPAParams, template stri
 	if err != nil {
 		return fmt.Errorf("error loading template (%s) yaml: %w", template, err)
 	}
+
+	// Apply the owner injection transformation
 	tmplManifest, err = tmplManifest.Transform(
 		mf.InjectOwner(owner),
+		// Apply dsp-version=<ver> label on all resources managed by this dspo
+		util.AddLabelTransformer(config.DSPVersionk8sLabel, params.DSPVersion),
+		util.AddDeploymentPodLabelTransformer(config.DSPVersionk8sLabel, params.DSPVersion),
 	)
 	if err != nil {
 		return err
 	}
 
+	// Apply dsp-version labels to all manifests
 	tmplManifest, err = tmplManifest.Transform(fns...)
 	if err != nil {
 		return err
 	}
 
+	// Apply the manifest
 	return tmplManifest.Apply()
 }
 
@@ -188,7 +194,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	defer r.updateStatus(ctx, dspa, dspaStatus, log, req)
 
-	if dspa.Spec.DSPVersion != config.DSPV2VersionString {
+	if !util.DSPAWithSupportedDSPVersion(dspa) {
 		err1 := fmt.Errorf("unsupported DSP version %s detected. Please manually remove "+
 			"this DSP resource and re-apply with a supported version field set", dspa.Spec.DSPVersion)
 		dspaStatus.SetDatabaseNotReady(err1, config.UnsupportedVersion)
@@ -600,7 +606,6 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// Watch for global ca bundle, if one is added to this namespace
 		// we need to reconcile on all the dspa's in this namespace
 		// so they may mount this cert in the appropriate containers
-
 		WatchesRawSource(source.Kind(mgr.GetCache(), &corev1.ConfigMap{}),
 			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, o client.Object) []reconcile.Request {
 				cm := o.(*corev1.ConfigMap)
@@ -611,8 +616,6 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 					return nil
 				}
 
-				log.V(1).Info(fmt.Sprintf("Reconcile event triggered by change in event on Global CA Bundle: %s", cm.Name))
-
 				var dspaList dspav1.DataSciencePipelinesApplicationList
 				if err := r.List(ctx, &dspaList, client.InNamespace(thisNamespace)); err != nil {
 					log.Error(err, "unable to list DSPA's when attempting to handle Global CA Bundle event.")
@@ -621,11 +624,18 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 				var reconcileRequests []reconcile.Request
 				for _, dspa := range dspaList.Items {
-					namespacedName := types.NamespacedName{
-						Name:      dspa.Name,
-						Namespace: thisNamespace,
+					// Only update supported DSP versions
+					if util.DSPAWithSupportedDSPVersion(&dspa) {
+						namespacedName := types.NamespacedName{
+							Name:      dspa.Name,
+							Namespace: thisNamespace,
+						}
+						reconcileRequests = append(reconcileRequests, reconcile.Request{NamespacedName: namespacedName})
 					}
-					reconcileRequests = append(reconcileRequests, reconcile.Request{NamespacedName: namespacedName})
+				}
+
+				if len(reconcileRequests) > 0 {
+					log.V(1).Info(fmt.Sprintf("Reconcile event triggered by change in event on Global CA Bundle: %s", cm.Name))
 				}
 
 				return reconcileRequests
@@ -638,6 +648,12 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 				component, hasComponentLabel := pod.Labels["component"]
 				if !hasComponentLabel || component != "data-science-pipelines" {
+					return nil
+				}
+
+				// Silently skip reconcile on this pod if the resource was owned
+				// by an unsupported dspa
+				if !util.HasSupportedDSPVersionLabel(pod.Labels) {
 					return nil
 				}
 
@@ -665,9 +681,6 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				if secret.Annotations["openshift.io/owning-component"] != "service-ca" {
 					return nil
 				}
-
-				log.V(1).Info(fmt.Sprintf("Reconcile event triggered by change on Secret owned by service-ca: %s", secret.Name))
-
 				serviceName := secret.Annotations["service.beta.openshift.io/originating-service-name"]
 
 				namespacedServiceName := types.NamespacedName{
@@ -681,17 +694,22 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				if err != nil {
 					return nil
 				}
-
 				dspaName, hasDSPALabel := service.Labels["dspa"]
 				if !hasDSPALabel {
 					return nil
 				}
 
-				log.V(1).Info(fmt.Sprintf("Reconcile event triggered by [Service: %s] ", serviceName))
+				// Silently skip reconcile on this ervice if the resource was owned
+				// by an unsupported DSPA
+				if !util.HasSupportedDSPVersionLabel(service.Labels) {
+					return nil
+				}
+
 				namespacedDspaName := types.NamespacedName{
 					Name:      dspaName,
 					Namespace: secret.Namespace,
 				}
+				log.V(1).Info(fmt.Sprintf("Reconcile event triggered by change on Secret: %s owned by service-ca: %s", secret.Name, serviceName))
 				return []reconcile.Request{{NamespacedName: namespacedDspaName}}
 			}),
 		).

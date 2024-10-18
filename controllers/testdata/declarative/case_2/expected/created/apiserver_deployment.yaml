@@ -4,6 +4,7 @@ metadata:
   name: ds-pipeline-testdsp2
   namespace: default
   labels:
+    dsp-version: v2
     app: ds-pipeline-testdsp2
     component: data-science-pipelines
     dspa: testdsp2
@@ -16,6 +17,7 @@ spec:
   template:
     metadata:
       labels:
+        dsp-version: v2
         app: ds-pipeline-testdsp2
         component: data-science-pipelines
         dspa: testdsp2

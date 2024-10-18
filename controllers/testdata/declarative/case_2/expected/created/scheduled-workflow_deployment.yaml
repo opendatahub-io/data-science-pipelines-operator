@@ -4,6 +4,7 @@ metadata:
   name: ds-pipeline-scheduledworkflow-testdsp2
   namespace: default
   labels:
+    dsp-version: v2
     app: ds-pipeline-scheduledworkflow-testdsp2
     component: data-science-pipelines
     dspa: testdsp2
@@ -18,6 +19,7 @@ spec:
       annotations:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
       labels:
+        dsp-version: v2
         app: ds-pipeline-scheduledworkflow-testdsp2
         component: data-science-pipelines
         dspa: testdsp2

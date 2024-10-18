@@ -4,6 +4,7 @@ metadata:
   name: ds-pipeline-metadata-envoy-testdsp2
   namespace: default
   labels:
+    dsp-version: v2
     app: ds-pipeline-metadata-envoy-testdsp2
     component: data-science-pipelines
     dspa: testdsp2
@@ -19,6 +20,7 @@ spec:
       annotations:
         sidecar.istio.io/inject: "false"
       labels:
+        dsp-version: v2
         app: ds-pipeline-metadata-envoy-testdsp2
         component: data-science-pipelines
         dspa: testdsp2
