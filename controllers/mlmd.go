@@ -17,8 +17,8 @@ package controllers
 
 import (
 	"context"
-	"errors"
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/util"
 )
 
 const (
@@ -72,9 +72,8 @@ func (r *DSPAReconciler) ReconcileMLMD(ctx context.Context, dsp *dspav1alpha1.Da
 			if err != nil {
 				return err
 			}
-
 			if !certificatesExist {
-				return errors.New("secret containing the certificate for MLMD gRPC Server was not created yet")
+				return &util.LaggingDependencyCreationError{Message: "MLMD gRPC Server cert secret not found, this is likely because it has not been created yet"}
 			}
 		}
 

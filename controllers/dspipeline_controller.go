@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/dspastatus"
@@ -313,7 +314,14 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		err = r.ReconcileMLMD(ctx, dspa, params)
 		if err != nil {
 			r.setStatusAsNotReady(config.MLMDProxyReady, err, dspaStatus.SetMLMDProxyStatus)
-			return ctrl.Result{}, err
+			// TODO: this (and other components) should handle these scenarios via states or statuses instead of error
+			var depErr *util.LaggingDependencyCreationError
+			if errors.As(err, &depErr) {
+				log.Info(depErr.Message)
+				return ctrl.Result{}, nil
+			} else {
+				return ctrl.Result{}, err
+			}
 		} else {
 			r.setStatus(ctx, params.MlmdProxyDefaultResourceName, config.MLMDProxyReady, dspa,
 				dspaStatus.SetMLMDProxyStatus, log)
