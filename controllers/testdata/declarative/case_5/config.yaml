@@ -1,6 +1,6 @@
 Images:
   ApiServer: api-server:test5
-  PersistentAgent: persistenceagent:test5
+  PersistenceAgent: persistenceagent:test5
   ScheduledWorkflow: scheduledworkflow:test5
   MlmdEnvoy: mlmdenvoy:test5
   MlmdGRPC: mlmdgrpc:test5

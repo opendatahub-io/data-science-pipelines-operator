@@ -1,6 +1,6 @@
 Images:
   ApiServer: $(IMAGES_APISERVER)
-  PersistentAgent: $(IMAGES_PERSISTENCEAGENT)
+  PersistenceAgent: $(IMAGES_PERSISTENCEAGENT)
   ScheduledWorkflow: $(IMAGES_SCHEDULEDWORKFLOW)
   MlmdEnvoy: $(IMAGES_MLMDENVOY)
   MlmdGRPC: $(IMAGES_MLMDGRPC)
