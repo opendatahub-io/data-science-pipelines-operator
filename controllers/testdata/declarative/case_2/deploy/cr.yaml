@@ -1,29 +1,18 @@
 # Test:
 # Various DSPA fields, resources, apiserver fields, custom script
-apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
 kind: DataSciencePipelinesApplication
 metadata:
   name: testdsp2
 spec:
+  podToPodTLS: false
   apiServer:
     deploy: true
     image: api-server:test2
-    applyTektonCustomResource: true
-    archiveLogs: false
-    artifactImage: artifact-manager:test2
-    cacheImage: ubi-minimal:test2
-    moveResultsImage: busybox:test2
     argoLauncherImage: argolauncherimage:test2
     argoDriverImage: argodriverimage:test2
-    injectDefaultScript: true
-    stripEOF: true
     enableOauth: true
     enableSamplePipeline: true
-    terminateStatus: Cancelled
-    trackArtifacts: true
-    dbConfigConMaxLifetimeSec: 125
-    collectMetrics: true
-    autoUpdatePipelineDefaultVersion: true
     customServerConfigMap:
       name: testserverconfigmapdspa2
       key: testserverconfigmapkeydspa2
@@ -94,3 +83,25 @@ spec:
         limits:
           cpu: "2535m"
           memory: "5Gi"
+  mlmd:
+    deploy: true
+    grpc:
+      resources:
+        requests:
+          cpu: "1334m"
+          memory: "1Gi"
+        limits:
+          cpu: "2535m"
+          memory: "5Gi"
+      image: mlmdgrpc:test2
+      port: "8080"
+    envoy:
+      resources:
+        requests:
+          cpu: "1334m"
+          memory: "1Gi"
+        limits:
+          cpu: "2535m"
+          memory: "5Gi"
+      image: mlmdenvoy:test2
+      deployRoute: false

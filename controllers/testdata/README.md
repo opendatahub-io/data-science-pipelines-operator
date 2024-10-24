@@ -14,7 +14,7 @@ Let's say we want a new test case `case_4` that tests that this `DSPA`...
 
 ```yaml
 # dspa.yaml
-apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
 kind: DataSciencePipelinesApplication
 metadata:
   name: testdsp4 #ma

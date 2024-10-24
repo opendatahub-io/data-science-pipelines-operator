@@ -119,12 +119,6 @@ rules:
   verbs:
   - '*'
 - apiGroups:
-  - custom.tekton.dev
-  resources:
-  - pipelineloops
-  verbs:
-  - '*'
-- apiGroups:
   - datasciencepipelinesapplications.opendatahub.io
   resources:
   - datasciencepipelinesapplications
@@ -256,12 +250,6 @@ rules:
   - create
   - delete
   - get
-- apiGroups:
-  - tekton.dev
-  resources:
-  - '*'
-  verbs:
-  - '*'
 - apiGroups:
   - workload.codeflare.dev
   resources:

@@ -91,22 +91,6 @@ rules:
     verbs:
       - '*'
   - apiGroups:
-      - tekton.dev
-    resources:
-      - pipelineruns
-      - taskruns
-      - conditions
-      - runs
-      - tasks
-    verbs:
-      - create
-      - get
-      - list
-      - watch
-      - update
-      - patch
-      - delete
-  - apiGroups:
       - ray.io
     resources:
       - rayclusters

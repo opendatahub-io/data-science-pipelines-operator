@@ -1,8 +1,9 @@
-apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
 kind: DataSciencePipelinesApplication
 metadata:
   name: testdsp1
 spec:
+  podToPodTLS: false
   apiServer:
     deploy: false
   persistenceAgent:
@@ -19,3 +20,8 @@ spec:
     minio:
       deploy: false
       image: minio:test0
+  mlmd:
+    # curently logic requires mlmd
+    # probably should make this consistent
+    # with other components
+    deploy: true

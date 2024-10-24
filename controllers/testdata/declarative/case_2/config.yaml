@@ -1,13 +1,18 @@
-# When a complete DSPA is deployed with (defaults specified)
 Images:
   ApiServer: api-server:test2
-  Artifact: artifact-manager:test2
   PersistentAgent: persistenceagent:test2
   ScheduledWorkflow: scheduledworkflow:test2
-  Cache: ubi-minimal:test2
-  MoveResultsImage: busybox:test2
-  MariaDB: mariadb:test2
+  MlmdEnvoy: mlmdenvoy:test2
+  MlmdGRPC: mlmdgrpc:test2
+  ArgoExecImage: argoexec:test2
+  ArgoWorkflowController: argowfcontroller:test2
+  LauncherImage: launcherimage:test2
+  DriverImage: driverimage:test2
   OAuthProxy: oauth-proxy:test2
+  MariaDB: mariadb:test2
+  MlPipelineUI: frontend:test2
+  Minio: minio:test2
+
 DSPO:
   ApiServer:
     IncludeOwnerReference: false
