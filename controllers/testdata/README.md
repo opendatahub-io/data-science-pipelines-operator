@@ -83,7 +83,7 @@ Each case requires a configmap, we can add one like this:
 Images:
   ApiServer: api-server:test4
   Artifact: artifact-manager:test4
-  PersistentAgent: persistenceagent:test4
+  PersistenceAgent: persistenceagent:test4
   ScheduledWorkflow: scheduledworkflow:test4
   Cache: ubi-minimal:test4
   MoveResultsImage: busybox:test4

@@ -90,7 +90,7 @@ const (
 const (
 	// Images
 	APIServerImagePath              = "Images.ApiServer"
-	PersistenceAgentImagePath       = "Images.PersistentAgent"
+	PersistenceAgentImagePath       = "Images.PersistenceAgent"
 	ScheduledWorkflowImagePath      = "Images.ScheduledWorkflow"
 	MlmdEnvoyImagePath              = "Images.MlmdEnvoy"
 	MlmdGRPCImagePath               = "Images.MlmdGRPC"

@@ -578,7 +578,7 @@ Images:
   ApiServer: quay.io/opendatahub/ds-pipelines-api-server:latest
   Artifact: quay.io/opendatahub/ds-pipelines-artifact-manager:latest
   OAuthProxy: registry.redhat.io/openshift4/ose-oauth-proxy:v4.12.0
-  PersistentAgent: quay.io/opendatahub/ds-pipelines-persistenceagent:latest
+  PersistenceAgent: quay.io/opendatahub/ds-pipelines-persistenceagent:latest
   ScheduledWorkflow: quay.io/opendatahub/ds-pipelines-scheduledworkflow:latest
   Cache: registry.access.redhat.com/ubi8/ubi-minimal
   MoveResultsImage: registry.access.redhat.com/ubi8/ubi-micro

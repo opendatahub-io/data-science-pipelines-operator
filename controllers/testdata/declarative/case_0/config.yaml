@@ -1,7 +1,7 @@
 # When a minimal DSPA is deployed
 Images:
   ApiServer: api-server:test0
-  PersistentAgent: persistenceagent:test0
+  PersistenceAgent: persistenceagent:test0
   ScheduledWorkflow: scheduledworkflow:test0
   MlmdEnvoy: mlmdenvoy:test0
   MlmdGRPC: mlmdgrpc:test0
