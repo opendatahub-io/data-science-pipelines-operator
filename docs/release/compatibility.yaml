@@ -4,7 +4,7 @@
   ml-metadata: 1.14.0
   envoy: 1.22.11
   ocp-pipelines: "N/A"
-  oauth-proxy: v4.10
+  oauth-proxy: v4.14
   mariadb-103: 1
   ubi-minimal: "N/A"
   ubi-micro: "N/A"
