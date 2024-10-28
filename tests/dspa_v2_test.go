@@ -59,7 +59,22 @@ func (suite *IntegrationTestSuite) TestDSPADeployment() {
 			}
 			err := suite.Clientmgr.k8sClient.List(suite.Ctx, podList, listOpts...)
 			require.NoError(t, err)
-			assert.Equal(t, podCount, len(podList.Items))
+			actualPodCount := len(podList.Items)
+			assert.Equal(t, podCount, actualPodCount)
+
+			// Print out pod statuses for troubleshooting
+			if podCount != actualPodCount {
+				t.Log(fmt.Sprintf("expected %d pods to successfully deploy, got %d instead. Pods in the namespace:", podCount, actualPodCount))
+				totalPodList := &corev1.PodList{}
+				listOpts1 := []client.ListOption{
+					client.InNamespace(suite.DSPANamespace),
+				}
+				err1 := suite.Clientmgr.k8sClient.List(suite.Ctx, totalPodList, listOpts1...)
+				require.NoError(t, err1)
+				for _, pod := range totalPodList.Items {
+					t.Log(fmt.Sprintf("Pod Name: %s, Status: %s", pod.Name, pod.Status.Phase))
+				}
+			}
 		})
 		for _, deployment := range deployments {
 			t.Run(fmt.Sprintf("should have a ready %s deployment", deployment), func(t *testing.T) {

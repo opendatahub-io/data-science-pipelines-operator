@@ -18,6 +18,9 @@ package util
 
 import (
 	"fmt"
+	mf "github.com/manifestival/manifestival"
+	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"os"
 	"path/filepath"
 
@@ -210,4 +213,70 @@ func GetSecret(ctx context.Context, secretName, ns string, client client.Client)
 		return &v1.Secret{}, err
 	}
 	return secret, nil
+}
+
+// DSPAWithSupportedDSPVersion returns True if dspa's dsp version is supported, return False otherwise.
+// Note that the procedure verifies the DSPA's .spec.dspVerson field. Not to be confused with the apiversion.
+func DSPAWithSupportedDSPVersion(dspa *dspav1.DataSciencePipelinesApplication) bool {
+	isSupported := false
+	for _, supportedVersion := range config.GetSupportedDSPAVersions() {
+		if dspa.Spec.DSPVersion == supportedVersion {
+			isSupported = true
+		}
+	}
+	return isSupported
+}
+
+// HasSupportedDSPVersionLabel returns true if labels (representing labels for a k8s resource)
+// has the DSPVersionk8sLabel label AND the value belongs to a supported DSP Version
+func HasSupportedDSPVersionLabel(labels map[string]string) bool {
+	version, ok := labels[config.DSPVersionk8sLabel]
+	if !ok {
+		return false
+	}
+	for _, supportedVersion := range config.GetSupportedDSPAVersions() {
+		if version == supportedVersion {
+			return true
+		}
+	}
+	return false
+}
+
+func AddLabelTransformer(labelKey, labelValue string) mf.Transformer {
+	return func(mfObj *unstructured.Unstructured) error {
+		// Get existing labels
+		labels := mfObj.GetLabels()
+		if labels == nil {
+			labels = make(map[string]string)
+		}
+		// Add or override the label
+		labels[labelKey] = labelValue
+		// Set the labels back on the object
+		mfObj.SetLabels(labels)
+		return nil
+	}
+}
+
+func AddDeploymentPodLabelTransformer(labelKey, labelValue string) mf.Transformer {
+	return func(mfObj *unstructured.Unstructured) error {
+		// Check if the resource is a Deployment
+		if mfObj.GetKind() == "Deployment" {
+			// Get the spec.template.metadata.labels (which are the Pod labels)
+			podLabels, found, err := unstructured.NestedStringMap(mfObj.Object, "spec", "template", "metadata", "labels")
+			if err != nil {
+				return err
+			}
+			if !found {
+				podLabels = make(map[string]string)
+			}
+			// Add or override the pod label
+			podLabels[labelKey] = labelValue
+			// Set the updated labels back to spec.template.metadata.labels
+			err = unstructured.SetNestedStringMap(mfObj.Object, podLabels, "spec", "template", "metadata", "labels")
+			if err != nil {
+				return fmt.Errorf("failed to set pod labels: %w", err)
+			}
+		}
+		return nil
+	}
 }

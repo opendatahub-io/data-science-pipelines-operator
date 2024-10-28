@@ -2,50 +2,37 @@ import sys
 
 import requests
 
-V1_TAG = "v1.6.4"
 
 ODH_QUAY_ORG = "opendatahub"
 
-QUAY_REPOS_V1 = {
-    "IMAGES_APISERVER":  "ds-pipelines-api-server",
-    "IMAGES_ARTIFACT":  "ds-pipelines-artifact-manager",
-    "IMAGES_PERSISTENTAGENT":  "ds-pipelines-persistenceagent",
-    "IMAGES_SCHEDULEDWORKFLOW":  "ds-pipelines-scheduledworkflow",
-    "IMAGES_MLMDENVOY":  "ds-pipelines-metadata-envoy",
-    "IMAGES_MLMDGRPC":  "ds-pipelines-metadata-grpc",
-    "IMAGES_MLMDWRITER":  "ds-pipelines-metadata-writer",
-}
-
-QUAY_REPOS_V2 = {
+QUAY_REPOS = {
     "IMAGES_DSPO":  "data-science-pipelines-operator",
-    "V2_LAUNCHER_IMAGE":  "ds-pipelines-launcher",
-    "V2_DRIVER_IMAGE":  "ds-pipelines-driver",
-    "IMAGESV2_ARGO_APISERVER":  "ds-pipelines-api-server",
-    "IMAGESV2_ARGO_PERSISTENCEAGENT":  "ds-pipelines-persistenceagent",
-    "IMAGESV2_ARGO_SCHEDULEDWORKFLOW":  "ds-pipelines-scheduledworkflow",
+    "IMAGES_APISERVER":  "ds-pipelines-api-server",
+    "IMAGES_PERSISTENCEAGENT":  "ds-pipelines-persistenceagent",
+    "IMAGES_SCHEDULEDWORKFLOW":  "ds-pipelines-scheduledworkflow",
+    "IMAGES_LAUNCHER":  "ds-pipelines-launcher",
+    "IMAGES_DRIVER":  "ds-pipelines-driver",
 }
 
 TAGGED_REPOS = {
-    "IMAGESV2_ARGO_WORKFLOWCONTROLLER" : {
+    "IMAGES_ARGO_WORKFLOWCONTROLLER" : {
         "TAG": "3.3.10-upstream",
         "REPO": "ds-pipelines-argo-workflowcontroller"
     },
-    "IMAGESV2_ARGO_ARGOEXEC" : {
+    "IMAGES_ARGO_EXEC" : {
         "TAG": "3.3.10-upstream",
         "REPO": "ds-pipelines-argo-argoexec"
     },
-    "IMAGESV2_ARGO_MLMDGRPC": {
+    "IMAGES_MLMDGRPC": {
         "TAG": "main-94ae1e9",
         "REPO": "mlmd-grpc-server"
     },
 }
 
 STATIC_REPOS = {
-    "IMAGESV2_ARGO_MLMDENVOY": "registry.redhat.io/openshift-service-mesh/proxyv2-rhel8@sha256:a744c1b386fd5e4f94e43543e829df1bfdd1b564137917372a11da06872f4bcb",
+    "IMAGES_MLMDENVOY": "registry.redhat.io/openshift-service-mesh/proxyv2-rhel8@sha256:a744c1b386fd5e4f94e43543e829df1bfdd1b564137917372a11da06872f4bcb",
     "IMAGES_MARIADB": "registry.redhat.io/rhel8/mariadb-103@sha256:3d30992e60774f887c4e7959c81b0c41b0d82d042250b3b56f05ab67fd4cdee1",
     "IMAGES_OAUTHPROXY": "registry.redhat.io/openshift4/ose-oauth-proxy@sha256:ab112105ac37352a2a4916a39d6736f5db6ab4c29bad4467de8d613e80e9bb33",
-    "IMAGES_CACHE": "registry.redhat.io/ubi8/ubi-minimal@sha256:5d2d4d4dbec470f8ffb679915e2a8ae25ad754cd9193fa966deee1ecb7b3ee00",
-    "IMAGES_MOVERESULTSIMAGE": "registry.redhat.io/ubi8/ubi-micro@sha256:396baed3d689157d96aa7d8988fdfea7eb36684c8335eb391cf1952573e689c1",
 }
 
 OTHER_OPTIONS = {
@@ -116,8 +103,7 @@ def generate_params(args):
 
     env_var_lines = []
 
-    fetch_images(QUAY_REPOS_V1, overrides, env_var_lines, quay_org, V1_TAG)
-    fetch_images(QUAY_REPOS_V2, overrides, env_var_lines, quay_org, tag)
+    fetch_images(QUAY_REPOS, overrides, env_var_lines, quay_org, tag)
     for image in TAGGED_REPOS:
         target_repo = {image: TAGGED_REPOS[image]["REPO"]}
         target_tag = TAGGED_REPOS[image]["TAG"]

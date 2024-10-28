@@ -1,13 +1,17 @@
-# When a DSPA with a custom db/storage secret, and custom artifact script is deployed.
 Images:
-  ApiServer: this-apiserver-image-from-config-should-not-be-used:test4
-  Artifact: this-artifact-manager-image-from-config-should-not-be-used:test4
-  PersistentAgent: this-persistenceagent-image-from-config-should-not-be-used:test4
-  ScheduledWorkflow: this-scheduledworkflow-image-from-config-should-not-be-used:test4
-  Cache: this-ubi-minimal-image-from-config-should-not-be-used:test4
-  MoveResultsImage: this-busybox-image-from-config-should-not-be-used:test4
-  MariaDB: this-mariadb-image-from-config-should-not-be-used:test4
+  ApiServer: api-server:test4
+  PersistenceAgent: persistenceagent:test4
+  ScheduledWorkflow: scheduledworkflow:test4
+  MlmdEnvoy: mlmdenvoy:test4
+  MlmdGRPC: mlmdgrpc:test4
+  ArgoExecImage: argoexec:test4
+  ArgoWorkflowController: argowfcontroller:test4
+  LauncherImage: launcherimage:test4
+  DriverImage: driverimage:test4
   OAuthProxy: oauth-proxy:test4
+  MariaDB: mariadb:test4
+  MlPipelineUI: frontend:test4
+  Minio: minio:test4
 DSPO:
   ApiServer:
     IncludeOwnerReference: false

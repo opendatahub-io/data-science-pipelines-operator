@@ -1,18 +1,17 @@
-# When a minimal DSPA is deployed
 Images:
   ApiServer: api-server:test5
-  Artifact: artifact-manager:test5
-  PersistentAgent: persistenceagent:test5
+  PersistenceAgent: persistenceagent:test5
   ScheduledWorkflow: scheduledworkflow:test5
-  Cache: ubi-minimal:test5
-  MoveResultsImage: busybox:test5
-  MlPipelineUI: frontend:test5
-  MariaDB: mariadb:test5
-  Minio: minio:test5
+  MlmdEnvoy: mlmdenvoy:test5
+  MlmdGRPC: mlmdgrpc:test5
+  ArgoExecImage: argoexec:test5
+  ArgoWorkflowController: argowfcontroller:test5
+  LauncherImage: launcherimage:test5
+  DriverImage: driverimage:test5
   OAuthProxy: oauth-proxy:test5
-  MlmdEnvoy: metadata-envoy:changeme
-  MlmdGrpc: metadata-grpc:changeme
-  MlmdWriter: metadata-grpc:changeme
+  MariaDB: mariadb:test5
+  MlPipelineUI: frontend:test5
+  Minio: minio:test5
 DSPO:
   ApiServer:
     IncludeOwnerReference: false

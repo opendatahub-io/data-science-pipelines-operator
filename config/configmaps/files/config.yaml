@@ -1,26 +1,15 @@
 Images:
   ApiServer: $(IMAGES_APISERVER)
-  Artifact: $(IMAGES_ARTIFACT)
-  OAuthProxy: $(IMAGES_OAUTHPROXY)
-  PersistentAgent: $(IMAGES_PERSISTENTAGENT)
+  PersistenceAgent: $(IMAGES_PERSISTENCEAGENT)
   ScheduledWorkflow: $(IMAGES_SCHEDULEDWORKFLOW)
-  Cache: $(IMAGES_CACHE)
-  MoveResultsImage: $(IMAGES_MOVERESULTSIMAGE)
-  MariaDB: $(IMAGES_MARIADB)
   MlmdEnvoy: $(IMAGES_MLMDENVOY)
   MlmdGRPC: $(IMAGES_MLMDGRPC)
-  MlmdWriter: $(IMAGES_MLMDWRITER)
-ImagesV2:
-  Argo:
-    ApiServer: $(IMAGESV2_ARGO_APISERVER)
-    PersistentAgent: $(IMAGESV2_ARGO_PERSISTENCEAGENT)
-    ScheduledWorkflow: $(IMAGESV2_ARGO_SCHEDULEDWORKFLOW)
-    MlmdEnvoy: $(IMAGESV2_ARGO_MLMDENVOY)
-    MlmdGRPC: $(IMAGESV2_ARGO_MLMDGRPC)
-    WorkflowController: $(IMAGESV2_ARGO_WORKFLOWCONTROLLER)
-    ArgoExecImage: $(IMAGESV2_ARGO_ARGOEXEC)
-    ArgoLauncherImage: $(V2_LAUNCHER_IMAGE)
-    ArgoDriverImage: $(V2_DRIVER_IMAGE)
+  ArgoExecImage: $(IMAGES_ARGO_EXEC)
+  ArgoWorkflowController: $(IMAGES_ARGO_WORKFLOWCONTROLLER)
+  LauncherImage: $(IMAGES_LAUNCHER)
+  DriverImage: $(IMAGES_DRIVER)
+  OAuthProxy: $(IMAGES_OAUTHPROXY)
+  MariaDB: $(IMAGES_MARIADB)
 DSPO:
   HealthCheck:
     Database:
