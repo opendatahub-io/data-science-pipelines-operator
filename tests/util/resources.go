@@ -16,12 +16,12 @@ package testUtil
 import (
 	"context"
 	"fmt"
+	v1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	"testing"
 	"time"
 
 	mf "github.com/manifestival/manifestival"
-	"github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
@@ -32,7 +32,7 @@ import (
 )
 
 // DeployDSPA will deploy resource found in path by requesting
-func DeployDSPA(t *testing.T, ctx context.Context, client client.Client, deployDSPA *v1alpha1.DataSciencePipelinesApplication, dspaNS string, timeout, interval time.Duration) error {
+func DeployDSPA(t *testing.T, ctx context.Context, client client.Client, deployDSPA *v1.DataSciencePipelinesApplication, dspaNS string, timeout, interval time.Duration) error {
 	deployDSPA.ObjectMeta.Namespace = dspaNS
 	err := client.Create(ctx, deployDSPA)
 	require.NoError(t, err)
@@ -41,7 +41,7 @@ func DeployDSPA(t *testing.T, ctx context.Context, client client.Client, deployD
 		Name:      deployDSPA.ObjectMeta.Name,
 		Namespace: dspaNS,
 	}
-	fetchedDspa := &v1alpha1.DataSciencePipelinesApplication{}
+	fetchedDspa := &v1.DataSciencePipelinesApplication{}
 	return WaitFor(ctx, timeout, interval, func() (bool, error) {
 		err := client.Get(ctx, nsn, fetchedDspa)
 		if err != nil {
@@ -57,7 +57,7 @@ func WaitForDSPAReady(t *testing.T, ctx context.Context, client client.Client, d
 		Name:      dspaName,
 		Namespace: dspaNS,
 	}
-	dspa := &v1alpha1.DataSciencePipelinesApplication{}
+	dspa := &v1.DataSciencePipelinesApplication{}
 	err := WaitFor(ctx, timeout, interval, func() (bool, error) {
 		err := client.Get(ctx, nsn, dspa)
 		if err != nil {
@@ -106,7 +106,7 @@ func DeleteDSPA(t *testing.T, ctx context.Context, client client.Client, dspaNam
 		Name:      dspaName,
 		Namespace: dspaNS,
 	}
-	dspa := &v1alpha1.DataSciencePipelinesApplication{
+	dspa := &v1.DataSciencePipelinesApplication{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dspaName,
 			Namespace: dspaNS,
@@ -141,8 +141,8 @@ func TestForSuccessfulDeployment(t *testing.T, ctx context.Context, namespace, d
 	require.True(t, deploymentAvailable)
 }
 
-func GetDSPAFromPath(t *testing.T, opts mf.Option, path string) *v1alpha1.DataSciencePipelinesApplication {
-	dspa := &v1alpha1.DataSciencePipelinesApplication{}
+func GetDSPAFromPath(t *testing.T, opts mf.Option, path string) *v1.DataSciencePipelinesApplication {
+	dspa := &v1.DataSciencePipelinesApplication{}
 	manifest, err := mf.NewManifest(path, opts)
 	require.NoError(t, err)
 	expected := &manifest.Resources()[0]
@@ -167,7 +167,7 @@ func WaitFor(ctx context.Context, timeout, interval time.Duration, conditionFunc
 	return fmt.Errorf("timed out waiting for condition")
 }
 
-func PrintConditions(ctx context.Context, dspa *v1alpha1.DataSciencePipelinesApplication, namespace string, client client.Client) string {
+func PrintConditions(ctx context.Context, dspa *v1.DataSciencePipelinesApplication, namespace string, client client.Client) string {
 	nsn := types.NamespacedName{
 		Name:      dspa.Name,
 		Namespace: namespace,

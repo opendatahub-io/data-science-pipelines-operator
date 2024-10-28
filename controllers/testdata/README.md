@@ -14,7 +14,7 @@ Let's say we want a new test case `case_4` that tests that this `DSPA`...
 
 ```yaml
 # dspa.yaml
-apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
 kind: DataSciencePipelinesApplication
 metadata:
   name: testdsp4 #ma
@@ -83,7 +83,7 @@ Each case requires a configmap, we can add one like this:
 Images:
   ApiServer: api-server:test4
   Artifact: artifact-manager:test4
-  PersistentAgent: persistenceagent:test4
+  PersistenceAgent: persistenceagent:test4
   ScheduledWorkflow: scheduledworkflow:test4
   Cache: ubi-minimal:test4
   MoveResultsImage: busybox:test4

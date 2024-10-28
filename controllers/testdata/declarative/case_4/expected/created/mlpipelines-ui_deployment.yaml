@@ -4,6 +4,7 @@ metadata:
   name: ds-pipeline-ui-testdsp4
   namespace: default
   labels:
+    dsp-version: v2
     app: ds-pipeline-ui-testdsp4
     component: data-science-pipelines
     dspa: testdsp4
@@ -18,6 +19,7 @@ spec:
       annotations:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
       labels:
+        dsp-version: v2
         app: ds-pipeline-ui-testdsp4
         component: data-science-pipelines
         dspa: testdsp4

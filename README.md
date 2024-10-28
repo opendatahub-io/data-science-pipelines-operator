@@ -285,7 +285,7 @@ To understand how these components interact with each other please refer to the 
 To deploy a standalone MariaDB metadata database (rather than providing your own database connection details), simply add a `mariaDB` item under the `spec.database` in your DSPA definition with an `deploy` key set to `true`.  All other fields are defaultable/optional, see [All Fields DSPA Example](config/samples/v2/dspa-all-fields/dspa_all_fields.yaml) for full details.  Note that this component is mutually exclusive with externally-provided databases (defined by `spec.database.externalDB`).
 
 ```yaml
-apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
 kind: DataSciencePipelinesApplication
 metadata:
   name: sample
@@ -302,7 +302,7 @@ spec:
 To deploy a Minio Object Storage component (rather than providing your own object storage connection details), simply add a `minio` item under the `spec.objectStorage` in your DSPA definition with an `image` key set to a valid minio component container image.  All other fields are defaultable/optional, see [All Fields DSPA Example](config/samples/v2/dspa-all-fields/dspa_all_fields.yaml) for full details.  Note that this component is mutually exclusive with externally-provided object stores (defined by `spec.objectStorage.externalStorage`).
 
 ```yaml
-apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
 kind: DataSciencePipelinesApplication
 metadata:
   name: sample
@@ -320,7 +320,7 @@ spec:
 To deploy the standalone DS Pipelines UI component, simply add a `spec.mlpipelineUI` item to your DSPA with an `image` key set to a valid ui component container image.  All other fields are defaultable/optional, see [All Fields DSPA Example](config/samples/v2/dspa-all-fields/dspa_all_fields.yaml) for full details.
 
 ```yaml
-apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
 kind: DataSciencePipelinesApplication
 metadata:
   name: sample
@@ -337,7 +337,7 @@ spec:
 To deploy the ML Metadata artifact linage/metadata component, simply add a `spec.mlmd` item to your DSPA with `deploy` set to `true`.  All other fields are defaultable/optional, see [All Fields DSPA Example](config/samples/v2/dspa-all-fields/dspa_all_fields.yaml) for full details.
 
 ```yaml
-apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
 kind: DataSciencePipelinesApplication
 metadata:
   name: sample
@@ -578,7 +578,7 @@ Images:
   ApiServer: quay.io/opendatahub/ds-pipelines-api-server:latest
   Artifact: quay.io/opendatahub/ds-pipelines-artifact-manager:latest
   OAuthProxy: registry.redhat.io/openshift4/ose-oauth-proxy:v4.12.0
-  PersistentAgent: quay.io/opendatahub/ds-pipelines-persistenceagent:latest
+  PersistenceAgent: quay.io/opendatahub/ds-pipelines-persistenceagent:latest
   ScheduledWorkflow: quay.io/opendatahub/ds-pipelines-scheduledworkflow:latest
   Cache: registry.access.redhat.com/ubi8/ubi-minimal
   MoveResultsImage: registry.access.redhat.com/ubi8/ubi-micro

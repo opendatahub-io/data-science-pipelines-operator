@@ -35,11 +35,7 @@ spec:
             - name: KUBEFLOW_USERID_PREFIX
               value: ""
             - name: EXECUTIONTYPE
-              {{ if eq .DSPVersion "v2" }}
               value: Workflow
-              {{ else }}
-              value: PipelineRun
-              {{ end }}
             {{ if .PodToPodTLS }}
             - name: SSL_CERT_DIR
               value: "/etc/pki/tls/certs:/var/run/secrets/kubernetes.io/serviceaccount/"
@@ -96,14 +92,11 @@ spec:
               memory: {{.PersistenceAgent.Resources.Limits.Memory}}
               {{ end }}
             {{ end }}
-          {{ if eq .DSPVersion "v2" }}
           volumeMounts:
             - mountPath: /var/run/secrets/kubeflow/tokens/persistenceagent-sa-token
               name: persistenceagent-sa-token
               subPath: ds-pipeline-persistenceagent-{{.Name}}-token
-          {{ end }}
       serviceAccountName: ds-pipeline-persistenceagent-{{.Name}}
-      {{ if eq .DSPVersion "v2" }}
       volumes:
         - name: persistenceagent-sa-token
           projected:
@@ -112,4 +105,3 @@ spec:
                 audience: pipelines.kubeflow.org
                 expirationSeconds: 3600
                 path: ds-pipeline-persistenceagent-{{.Name}}-token
-      {{ end }}

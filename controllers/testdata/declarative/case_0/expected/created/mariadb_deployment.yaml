@@ -5,6 +5,7 @@ metadata:
   name: mariadb-testdsp0
   namespace: default
   labels:
+    dsp-version: v2
     app: mariadb-testdsp0
     component: data-science-pipelines
     dspa: testdsp0
@@ -19,6 +20,7 @@ spec:
   template:
     metadata:
       labels:
+        dsp-version: v2
         app: mariadb-testdsp0
         component: data-science-pipelines
         dspa: testdsp0
