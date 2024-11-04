@@ -51,8 +51,8 @@ func (suite *IntegrationTestSuite) TestDSPADeployment() {
 	}
 	suite.T().Run("with default MariaDB and Minio", func(t *testing.T) {
 		t.Run(fmt.Sprintf("should have %d pods", podCount), func(t *testing.T) {
-			timeout := time.Second * 120
-			interval := time.Second * 2
+			timeout := time.Second * 10
+			interval := time.Millisecond * 2
 			actualPodCount := 0
 
 			require.Eventually(t, func() bool {
