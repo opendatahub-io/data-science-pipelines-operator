@@ -55,6 +55,9 @@ spec:
             - "--namespace={{.Namespace}}"
             - "--mlPipelineServiceHttpPort=8888"
             - "--mlPipelineServiceGRPCPort=8887"
+            {{ if and .CustomCABundle .PodToPodTLS }}
+            - "--caCertPath={{ .PiplinesCABundleMountPath }}"
+            {{ end }}
           livenessProbe:
             exec:
               command:
@@ -96,6 +99,10 @@ spec:
             - mountPath: /var/run/secrets/kubeflow/tokens/persistenceagent-sa-token
               name: persistenceagent-sa-token
               subPath: ds-pipeline-persistenceagent-{{.Name}}-token
+            {{ if and .CustomCABundle .PodToPodTLS }}
+            - mountPath: {{ .CustomCABundleRootMountPath  }}
+              name: ca-bundle
+            {{ end }}
       serviceAccountName: ds-pipeline-persistenceagent-{{.Name}}
       volumes:
         - name: persistenceagent-sa-token
@@ -105,3 +112,8 @@ spec:
                 audience: pipelines.kubeflow.org
                 expirationSeconds: 3600
                 path: ds-pipeline-persistenceagent-{{.Name}}-token
+        {{ if and .CustomCABundle .PodToPodTLS }}
+        - name: ca-bundle
+          configMap:
+            name: {{ .CustomCABundle.ConfigMapName }}
+        {{ end }}
