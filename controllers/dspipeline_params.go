@@ -654,7 +654,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 			// "odh-trusted-ca-bundle" can have fields: "odh-ca-bundle.crt" and "ca-bundle.crt", we need to utilize both
 			for _, val := range globalCerts {
 				// If the ca-bundle field is empty, ignore it
-				if val != "" {
+				if strings.TrimSpace(val) != "" {
 					p.APICustomPemCerts = append(p.APICustomPemCerts, []byte(val))
 				}
 			}
@@ -679,7 +679,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 			}
 			dspaProvidedCABundle := util.GetConfigMapValue(dspaCaBundleCfgKey, dspaCAConfigMap)
 			// If the ca-bundle field is empty, ignore it
-			if dspaProvidedCABundle != "" {
+			if strings.TrimSpace(dspaProvidedCABundle) != "" {
 				p.APICustomPemCerts = append(p.APICustomPemCerts, []byte(dspaProvidedCABundle))
 			}
 		}
@@ -694,7 +694,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 				return serviceCACfgErr
 			}
 			serviceCABundle := util.GetConfigMapValue(config.OpenshiftServiceCAConfigMapKey, serviceCA)
-			if serviceCABundle == "" {
+			if strings.TrimSpace(serviceCABundle) == "" {
 				return fmt.Errorf("expected key %s from configmap %s not found", config.OpenshiftServiceCAConfigMapKey, config.OpenshiftServiceCAConfigMapName)
 			}
 			p.APICustomPemCerts = append(p.APICustomPemCerts, []byte(serviceCABundle))
@@ -729,7 +729,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 					return sysCertsErr
 				}
 
-				if len(certs) != 0 {
+				if len(bytes.TrimSpace(certs)) != 0 {
 					p.APICustomPemCerts = append(p.APICustomPemCerts, certs)
 				}
 			}
