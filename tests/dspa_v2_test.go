@@ -21,9 +21,9 @@ package integration
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	testUtil "github.com/opendatahub-io/data-science-pipelines-operator/tests/util"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -51,30 +51,38 @@ func (suite *IntegrationTestSuite) TestDSPADeployment() {
 	}
 	suite.T().Run("with default MariaDB and Minio", func(t *testing.T) {
 		t.Run(fmt.Sprintf("should have %d pods", podCount), func(t *testing.T) {
-			podList := &corev1.PodList{}
-			// retrieve the running pods only, to allow for multiple reruns of  the test suite
-			listOpts := []client.ListOption{
-				client.InNamespace(suite.DSPANamespace),
-				client.MatchingFields{"status.phase": string(corev1.PodRunning)},
-			}
-			err := suite.Clientmgr.k8sClient.List(suite.Ctx, podList, listOpts...)
-			require.NoError(t, err)
-			actualPodCount := len(podList.Items)
-			assert.Equal(t, podCount, actualPodCount)
+			timeout := time.Second * 120
+			interval := time.Second * 2
+			actualPodCount := 0
 
-			// Print out pod statuses for troubleshooting
-			if podCount != actualPodCount {
-				t.Log(fmt.Sprintf("expected %d pods to successfully deploy, got %d instead. Pods in the namespace:", podCount, actualPodCount))
-				totalPodList := &corev1.PodList{}
-				listOpts1 := []client.ListOption{
+			require.Eventually(t, func() bool {
+				podList := &corev1.PodList{}
+				// retrieve the running pods only, to allow for multiple reruns of  the test suite
+				listOpts := []client.ListOption{
 					client.InNamespace(suite.DSPANamespace),
+					client.MatchingFields{"status.phase": string(corev1.PodRunning)},
 				}
-				err1 := suite.Clientmgr.k8sClient.List(suite.Ctx, totalPodList, listOpts1...)
-				require.NoError(t, err1)
-				for _, pod := range totalPodList.Items {
-					t.Log(fmt.Sprintf("Pod Name: %s, Status: %s", pod.Name, pod.Status.Phase))
+				err := suite.Clientmgr.k8sClient.List(suite.Ctx, podList, listOpts...)
+				require.NoError(suite.T(), err)
+				actualPodCount = len(podList.Items)
+
+				// Print out pod statuses for troubleshooting
+				if podCount != actualPodCount {
+					t.Log(fmt.Sprintf("expected %d pods to successfully deploy, got %d instead. Pods in the namespace:", podCount, actualPodCount))
+					totalPodList := &corev1.PodList{}
+					listOpts1 := []client.ListOption{
+						client.InNamespace(suite.DSPANamespace),
+					}
+					err1 := suite.Clientmgr.k8sClient.List(suite.Ctx, totalPodList, listOpts1...)
+					require.NoError(t, err1)
+					for _, pod := range totalPodList.Items {
+						t.Log(fmt.Sprintf("Pod Name: %s, Status: %s", pod.Name, pod.Status.Phase))
+					}
+					return false
+				} else {
+					return true
 				}
-			}
+			}, timeout, interval)
 		})
 		for _, deployment := range deployments {
 			t.Run(fmt.Sprintf("should have a ready %s deployment", deployment), func(t *testing.T) {
