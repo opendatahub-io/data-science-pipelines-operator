@@ -50,3 +50,4 @@ jobs:
         working-directory: ${{ github.workspace }}/.github/scripts/tests
         run: |
           sh tests.sh --kind
+# FORCE RUN
