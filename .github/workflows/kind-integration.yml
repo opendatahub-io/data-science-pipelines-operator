@@ -47,6 +47,47 @@ jobs:
         uses: ./.github/actions/kind
 
       - name: Run test
+        id: test
         working-directory: ${{ github.workspace }}/.github/scripts/tests
         run: |
           sh tests.sh --kind
+        continue-on-error: true
+
+      - name: Collect events and logs
+        if: steps.test.outcome != 'success'
+        run: |
+          kubectl -n test-dspa get pods
+          kubectl -n opendatahub get pods
+          
+          POD_NAMES=$(kubectl -n test-dspa get pods -o custom-columns=":metadata.name")
+          
+          for POD_NAME in ${POD_NAMES}; do
+              echo "===== Pod: ${POD_NAME} ====="
+              
+              echo "----- EVENTS -----" 
+              kubectl describe pod ${POD_NAME} -n test-dspa | grep -A 100 Events
+              
+              echo "----- LOGS -----"
+              kubectl logs ${POD_NAME} -n test-dspa
+          
+              echo "==========================="
+              echo ""
+          done
+          
+          POD_NAMES=$(kubectl -n opendatahub get pods -o custom-columns=":metadata.name")
+          
+          for POD_NAME in ${POD_NAMES}; do
+              echo "===== Pod: ${POD_NAME} ====="
+              
+              echo "----- EVENTS -----" 
+              kubectl describe pod ${POD_NAME} -n opendatahub | grep -A 100 Events
+              
+              echo "----- LOGS -----"
+              kubectl logs ${POD_NAME} -n opendatahub
+          
+              echo "==========================="
+              echo ""
+          done
+          
+          exit 1
+          
