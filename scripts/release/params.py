@@ -16,11 +16,11 @@ QUAY_REPOS = {
 
 TAGGED_REPOS = {
     "IMAGES_ARGO_WORKFLOWCONTROLLER" : {
-        "TAG": "3.3.10-upstream",
+        "TAG": "odh-v3.4.17-1",
         "REPO": "ds-pipelines-argo-workflowcontroller"
     },
     "IMAGES_ARGO_EXEC" : {
-        "TAG": "3.3.10-upstream",
+        "TAG": "odh-v3.4.17-1",
         "REPO": "ds-pipelines-argo-argoexec"
     },
     "IMAGES_MLMDGRPC": {
