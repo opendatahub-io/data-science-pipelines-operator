@@ -62,13 +62,6 @@ spec:
       deploy: true
       image: quay.io/centos7/mariadb-103-centos7:ea07c0dade9571d78a272b453fd2dea92077dc7f
       pvcSize: 500Mi
-      resources:
-        limits:
-          cpu: 60m
-          memory: 500Mi
-        requests:
-          cpu: 60m
-          memory: 500Mi
   objectStorage:
     minio:
       deploy: true
