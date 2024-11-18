@@ -26,21 +26,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kubeflow/pipelines/backend/api/v2beta1/go_http_client/pipeline_model"
 	"github.com/stretchr/testify/require"
 )
-
-type PipelineRequest struct {
-	DisplayName              string `json:"display_name"`
-	PipelineVersionReference struct {
-		PipelineID string `json:"pipeline_id"`
-	} `json:"pipeline_version_reference"`
-}
-type Pipeline struct {
-	Pipelines []struct {
-		PipelineID  string `json:"pipeline_id"`
-		DisplayName string `json:"display_name"`
-	} `json:"pipelines"`
-}
 
 // FormFromFile creates a multipart form data from the provided form map where the values are paths to files.
 // It returns a buffer containing the encoded form data and the content type of the form.
@@ -76,7 +64,7 @@ func RetrievePipelineId(t *testing.T, httpClient http.Client, APIServerURL strin
 	require.NoError(t, err)
 	responseData, err := io.ReadAll(response.Body)
 	require.NoError(t, err)
-	var pipelineData Pipeline
+	var pipelineData pipeline_model.V2beta1ListPipelinesResponse
 	var pipelineID *string
 	err = json.Unmarshal(responseData, &pipelineData)
 	require.NoError(t, err)
@@ -95,11 +83,9 @@ func RetrievePipelineId(t *testing.T, httpClient http.Client, APIServerURL strin
 }
 
 func FormatRequestBody(t *testing.T, pipelineID string, PipelineDisplayName string) []byte {
-	requestBody := PipelineRequest{
+	requestBody := pipeline_model.V2beta1Pipeline{
 		DisplayName: PipelineDisplayName,
-		PipelineVersionReference: struct {
-			PipelineID string `json:"pipeline_id"`
-		}{PipelineID: pipelineID},
+		PipelineID:  pipelineID,
 	}
 
 	body, err := json.Marshal(requestBody)

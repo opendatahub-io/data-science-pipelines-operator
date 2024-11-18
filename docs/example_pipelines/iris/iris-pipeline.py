@@ -108,15 +108,15 @@ def my_pipeline(
 
     normalize_dataset_task = normalize_dataset(
         input_iris_dataset=create_dataset_task.outputs['iris_dataset'],
-        standard_scaler=True)
+        standard_scaler=standard_scaler)
 
     train_model(
         normalized_iris_dataset=normalize_dataset_task
         .outputs['normalized_iris_dataset'],
         n_neighbors=neighbors)
 
-endpoint = 'http://ml-pipeline-ui-kubeflow.apps.rmartine.dev.datahub.redhat.com/'
 
-compiler.Compiler().compile(
-    pipeline_func=my_pipeline,
-    package_path= __file__.replace('.py', '-v2.yaml'))
+if __name__ == "__main__":
+    compiler.Compiler().compile(
+        pipeline_func=my_pipeline,
+        package_path= __file__.replace('.py', '.yaml'))
