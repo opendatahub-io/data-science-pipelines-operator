@@ -11,6 +11,7 @@ on:
       - config/**
       - tests/**
       - .github/resources/**
+      - .github/actions/**
       - '.github/workflows/kind-integration.yml'
       - '.github/scripts/tests/tests.sh'
       - Makefile
