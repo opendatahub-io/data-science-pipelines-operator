@@ -35,10 +35,14 @@ runs:
         EOF'
 
     - name: Setup KinD cluster
-      uses: helm/kind-action@v1.8.0
+      uses: helm/kind-action@v1
       with:
         cluster_name: cluster
-        version: v0.17.0
+        # The kind version to use
+        version: v0.25.0
+        # The Docker image for the cluster nodes - https://hub.docker.com/r/kindest/node/
+        node_image: kindest/node:v1.30.6@sha256:b6d08db72079ba5ae1f4a88a09025c0a904af3b52387643c285442afb05ab994
+        # The path to the kind config file
         config: ${{ env.KIND_CONFIG_FILE }}
 
     - name: Print cluster info
