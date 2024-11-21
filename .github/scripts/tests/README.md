@@ -8,6 +8,9 @@ To prevent file monitoring issues in development environments (e.g., IDEs or fil
 sudo sysctl fs.inotify.max_user_instances=2280
 sudo sysctl fs.inotify.max_user_watches=1255360
 ```
+## Prerequisites
+* Kind https://kind.sigs.k8s.io/
+
 ## Create kind cluster
 ```bash
 cat <<EOF | kind create cluster --name=kubeflow --config=-
@@ -15,7 +18,7 @@ kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
 - role: control-plane
-  image: kindest/node:v1.31.0@sha256:53df588e04085fd41ae12de0c3fe4c72f7013bba32a20e7325357a1ac94ba865
+  image: kindest/node:v1.30.6@sha256:b6d08db72079ba5ae1f4a88a09025c0a904af3b52387643c285442afb05ab994
   kubeadmConfigPatches:
   - |
     kind: ClusterConfiguration
@@ -32,20 +35,20 @@ Instead of replacing your kubeconfig, we are going to set to a diff file
 kind get kubeconfig --name kubeflow > /tmp/kubeflow-config
 export KUBECONFIG=/tmp/kubeflow-config
 ```
-# docker
+## docker
 In order to by pass the docker limit issue while downloading the images. Let's use your credentials
 ```bash
-docker login
+docker login -u='...' -p='...' quay.io
 ```
 
 Upload the secret. The following command will return an error. You need to replace `to` with user `username`
 ```bash
 kubectl create secret generic regcred \
---from-file=.dockerconfigjson=/home/to/.docker/config.json \
+--from-file=.dockerconfigjson=$HOME/.docker/config.json \
 --type=kubernetes.io/dockerconfigjson
 ```
 
-# Test environment variables
+## Test environment variables
 Replace the `/path/to` in order to match the `data-science-pipelines-operator` folder
 ```bash
 export GIT_WORKSPACE=/path/to/data-science-pipelines-operator
@@ -58,7 +61,34 @@ Replace `username` with your quay user
 export REGISTRY_ADDRESS=quay.io/username
 ```
 
-# Run the test
+## Run the test
 ```bash
 sh .github/scripts/tests/tests.sh --kind
+```
+
+# Debug a test using GoLand
+Let's say you wish to debug the `Should create a Pipeline Run` test.
+The first step is right click inside the method content and select the menu
+`Run 'TestIntegrationTestSuite'`. It will fail because you need to fill some parameters.
+Edit the configuration for `TestIntegrationTestSuite/TestPipelineSuccessfulRun/Should_create_a_Pipeline_Run in github.com/opendatahub-io/data-science-pipelines-operator/tests`
+````
+-k8sApiServerHost=https://127.0.0.1:39873
+-kubeconfig=/tmp/kubeflow-config
+-DSPANamespace=test-dspa
+-DSPAPath=/path/to/data-science-pipelines-operator/tests/resources/dspa-lite.yaml
+````
+## How to retrieve the parameters above
+* `k8sApiServerHost`: inspect the kubeconfig and retrieve the server URL from there
+* `kubeconfig`: the path where you stored the output of `kind get kubeconfig`
+* `DSPANamespace`: namespace
+* `DSPAPath`: full path for the dspa.yaml
+
+`Should create a Pipeline Run`, `DSPANamespace` and `DSPAPath` depends on the test scenario.
+
+If you wish to keep the resources, add `-skipCleanup=True` in the config above.
+
+## If you wish to rerun the test you need to delete the dspa
+```bash
+$ kubectl delete datasciencepipelinesapplications test-dspa -n test-dspa
+datasciencepipelinesapplication.datasciencepipelinesapplications.opendatahub.io "test-dspa" deleted
 ```
