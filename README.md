@@ -593,7 +593,7 @@ Images:
 All the component images are available [here][component-images] and for thirdparty images [here][thirdparty-images]. Build these images from root as shown in the below example:
 
 ```bash
-podman build . -f backend/Dockerfile -t quay.io/your_repo/dsp-apiserver:sometag
+podman build . -f odh_images/Dockerfile -t quay.io/your_repo/dsp-apiserver:sometag
 ```
 
 **To run the tests:**

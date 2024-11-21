@@ -106,7 +106,7 @@ jobs:
           SOURCE_BRANCH: ${{ env.SOURCE_DSP_BRANCH }}
         with:
           IMAGE_REPO: ${{ env.IMAGE_REPO_SERVER }}
-          DOCKERFILE: backend/Dockerfile
+          DOCKERFILE: odh_images/Dockerfile
           GH_REPO: ${{ inputs.dsp_org_repo }}
           OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
 
@@ -138,7 +138,7 @@ jobs:
           SOURCE_BRANCH: ${{ env.SOURCE_DSP_BRANCH }}
         with:
           IMAGE_REPO: ${{ env.IMAGE_REPO_PA }}
-          DOCKERFILE: backend/Dockerfile.persistenceagent
+          DOCKERFILE: odh_images/Dockerfile.persistenceagent
           GH_REPO: ${{ inputs.dsp_org_repo }}
           OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
 
@@ -154,7 +154,7 @@ jobs:
           SOURCE_BRANCH: ${{ env.SOURCE_DSP_BRANCH }}
         with:
           IMAGE_REPO: ${{ env.IMAGE_REPO_SWF }}
-          DOCKERFILE: backend/Dockerfile.scheduledworkflow
+          DOCKERFILE: odh_images/Dockerfile.scheduledworkflow
           GH_REPO: ${{ inputs.dsp_org_repo }}
           OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
 
@@ -170,7 +170,7 @@ jobs:
           SOURCE_BRANCH: ${{ env.SOURCE_DSP_BRANCH }}
         with:
           IMAGE_REPO: ${{ env.IMAGE_REPO_DRIVER }}
-          DOCKERFILE: backend/Dockerfile.driver
+          DOCKERFILE: odh_images/Dockerfile.driver
           GH_REPO: ${{ inputs.dsp_org_repo }}
           OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
 
@@ -186,6 +186,6 @@ jobs:
           SOURCE_BRANCH: ${{ env.SOURCE_DSP_BRANCH }}
         with:
           IMAGE_REPO: ${{ env.IMAGE_REPO_LAUNCHER }}
-          DOCKERFILE: backend/Dockerfile.launcher
+          DOCKERFILE: odh_images/Dockerfile.launcher
           GH_REPO: ${{ inputs.dsp_org_repo }}
           OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
