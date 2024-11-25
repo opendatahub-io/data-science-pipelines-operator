@@ -38,15 +38,16 @@ Steps on how to release `x.y+1`
 
 1. Ensure `compatibility.yaml` is upto date, and generate a new `compatibility.md`
    - Use [release-tools] to accomplish this
-2. Cut branch `vx.y+1` from `main/master`
+2. If the changes include a code rebase from KFP repo, ensure `config/component_metadata.yaml` is updated with the respective KFP version
+3. Cut branch `vx.y+1` from `main/master`
    - Do this for DSPO and DSP repos
-3. Build images. Use the [build-tags] workflow, specifying the branches from above
-4. Retrieve the sha images from the resulting workflow (check quay.io for the digests)
+4. Build images. Use the [build-tags] workflow, specifying the branches from above
+5. Retrieve the sha images from the resulting workflow (check quay.io for the digests)
    - Using [release-tools] generate a `params.env` and submit a new pr to `vx.y+1` branch
    - For images pulled from registry, ensure latest images are upto date
-5. Perform any tests on the branch, confirm stability
+6. Perform any tests on the branch, confirm stability
    - If issues are found, they should be corrected in `main/master` and be cherry-picked into this branch.
-6. Create a tag release (using the branches from above) for `x.y+1.0` in DSPO and DSP (e.g. `v1.3.0`)
+7. Create a tag release (using the branches from above) for `x.y+1.0` in DSPO and DSP (e.g. `v1.3.0`)
 
 ## PATCH Releases
 
