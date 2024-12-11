@@ -92,3 +92,64 @@ If you wish to keep the resources, add `-skipCleanup=True` in the config above.
 $ kubectl delete datasciencepipelinesapplications test-dspa -n test-dspa
 datasciencepipelinesapplication.datasciencepipelinesapplications.opendatahub.io "test-dspa" deleted
 ```
+
+# `tests.sh` details
+This Bash script is designed to set up and test environments for Data Science Pipelines Operator (DSPO) 
+using Kubernetes (K8s) or *OpenShift with RHOAI deployed*. It includes functionalities to deploy dependencies, 
+configure namespaces, build and deploy images, and execute integration tests.
+
+## **Features**
+1. **Environment Variables Declaration**:  
+   The script requires and verifies environment variables such as `GIT_WORKSPACE`, `REGISTRY_ADDRESS`, and `K8SAPISERVERHOST`. These variables define the workspace, registry for container images, and K8s API server address.
+
+2. **Deployment Functions**:  
+   Functions like `deploy_dspo`, `deploy_minio`, and `deploy_mariadb` handle deploying necessary components (e.g., MinIO, MariaDB, PyPI server) to the cluster.
+
+3. **Namespace Configuration**:  
+   Functions like `create_opendatahub_namespace` and `create_dspa_namespace` create and configure Kubernetes namespaces required for DSPO and other dependencies.
+
+4. **Integration Testing**:  
+   The script provides commands to run integration tests for DSPO and its external connections using `run_tests` and `run_tests_dspa_external_connections`.
+
+5. **Cleanup and Resource Removal**:  
+   Includes options like `--clean-infra` to remove namespaces and resources before running tests.
+
+6. **Conditional Execution**:  
+   Supports setting up and testing environments for different targets:
+    - `kind` (local Kubernetes clusters)
+    - `rhoai` (Red Hat OpenShift AI)
+
+7. **Customizable Parameters**:  
+   Allows passing values for paths, namespaces, and K8s API server via command-line arguments.
+
+## **Usage**
+```bash
+./tests.sh [OPTIONS]
+```
+
+### **Options**
+- `--kind`  
+  Targets local `kind` cluster.
+- `--rhoai`  
+  Targets RHOAI
+- `--clean-infra`  
+  Cleans existing resources before running tests.
+- `--k8s-api-server-host <HOST>`  
+  Specifies the Kubernetes API server host.
+- `--dspa-namespace <NAMESPACE>`  
+  Custom namespace for DSPA deployment.
+- `--dspa-path <PATH>`  
+  Path to DSPA resource YAML.
+- `--endpoint-type <TYPE>`  
+  Specifies endpoint type (`service` or `route`).
+
+### **Example**
+To deploy and test DSPA on a local `kind` cluster:
+```bash
+./tests.sh --kind --clean-infra --k8s-api-server-host "https://localhost:6443"
+```
+
+To deploy DSPA on RHOAI:
+```bash
+./tests.sh --rhoai --dspa-namespace "custom-namespace"
+```
