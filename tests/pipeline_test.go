@@ -75,4 +75,29 @@ func (suite *IntegrationTestSuite) TestAPIServerDeployment() {
 		require.NoError(t, err)
 		assert.Equal(t, 200, response.StatusCode)
 	})
+
+	suite.T().Run("Should check for InstructLab pipeline existence based on EnableInstructLabPipeline flag", func(t *testing.T) {
+		expectedDisplayName := "[InstructLab] Multi-Phase Training Pipeline"
+
+		// Retrieve pipelines
+		pipelines, err := TestUtil.RetrievePipelines(t, suite.Clientmgr.httpClient, APIServerURL)
+		require.NoError(t, err, "Failed to retrieve pipelines")
+
+		found := false
+		for _, pipeline := range pipelines.Pipelines {
+			if pipeline.DisplayName == expectedDisplayName {
+				found = true
+				break
+			}
+		}
+		if suite.DSPA.Spec.APIServer.EnableInstructLabPipeline {
+			expectedCount := 4
+			assert.Equal(t, expectedCount, len(pipelines.Pipelines), "Pipeline count should match when EnableInstructLabPipeline flag is enabled")
+			assert.True(t, found, "InstructLab pipeline should exist when the flag is enabled")
+		} else {
+			expectedCount := 3
+			assert.Equal(t, expectedCount, len(pipelines.Pipelines), "Pipeline count should match when EnableInstructLabPipeline flag is disabled")
+			assert.False(t, found, "InstructLab pipeline should not exist when the flag is disabled")
+		}
+	})
 }

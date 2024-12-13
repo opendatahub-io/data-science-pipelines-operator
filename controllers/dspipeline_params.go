@@ -92,9 +92,10 @@ type DSPAParams struct {
 	CustomCABundle *dspa.CABundle
 	DSPONamespace  string
 	// Use to enable tls communication between component pods.
-	PodToPodTLS bool
-
-	APIServerServiceDNSName string
+	PodToPodTLS               bool
+	EnableSamplePipeline      bool
+	EnableInstructLabPipeline bool
+	APIServerServiceDNSName   string
 }
 
 type DBConnection struct {
@@ -600,6 +601,9 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		setStringDefault(argoLauncherImageFromConfig, &p.APIServer.ArgoLauncherImage)
 		setStringDefault(argoDriverImageFromConfig, &p.APIServer.ArgoDriverImage)
 		setResourcesDefault(config.APIServerResourceRequirements, &p.APIServer.Resources)
+
+		p.EnableSamplePipeline = dsp.Spec.APIServer.EnableSamplePipeline
+		p.EnableInstructLabPipeline = dsp.Spec.APIServer.EnableInstructLabPipeline
 
 		if p.APIServer.CustomServerConfig == nil {
 			p.APIServer.CustomServerConfig = &dspa.ScriptConfigMap{
