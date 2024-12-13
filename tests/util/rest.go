@@ -94,6 +94,17 @@ func RetrievePipelineId(t *testing.T, httpClient http.Client, APIServerURL strin
 	}
 }
 
+func RetrievePipelines(t *testing.T, httpClient http.Client, APIServerURL string) (Pipeline, error) {
+	response, err := httpClient.Get(fmt.Sprintf("%s/apis/v2beta1/pipelines", APIServerURL))
+	require.NoError(t, err)
+	responseData, err := io.ReadAll(response.Body)
+	require.NoError(t, err)
+	var pipelineData Pipeline
+	err = json.Unmarshal(responseData, &pipelineData)
+	require.NoError(t, err)
+	return pipelineData, nil
+}
+
 func FormatRequestBody(t *testing.T, pipelineID string, PipelineDisplayName string) []byte {
 	requestBody := PipelineRequest{
 		DisplayName: PipelineDisplayName,
