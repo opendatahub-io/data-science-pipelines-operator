@@ -105,6 +105,12 @@ spec:
                       Server. Setting Deploy to false disables operator reconciliation.
                       Default: true'
                     type: boolean
+                  enableInstructlabPipeline:
+                    default: false
+                    description: 'Include instructlab multi-phase training and LLM
+                      generation pipeline with the deployment of this DSP API Server.
+                      Default: false'
+                    type: boolean
                   enableOauth:
                     default: true
                     description: 'Create an Openshift Route for this DSP API Server.
@@ -989,6 +995,12 @@ spec:
                     description: 'Enable DS Pipelines Operator management of DSP API
                       Server. Setting Deploy to false disables operator reconciliation.
                       Default: true'
+                    type: boolean
+                  enableInstructlabPipeline:
+                    default: false
+                    description: 'Include instructlab multi-phase training and LLM
+                      generation pipeline with the deployment of this DSP API Server.
+                      Default: false'
                     type: boolean
                   enableOauth:
                     default: true

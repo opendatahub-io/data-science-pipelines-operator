@@ -147,7 +147,7 @@ spec:
           args:
             - --config=/config
             - -logtostderr=true
-            {{ if .APIServer.EnableSamplePipeline }}
+            {{ if or .APIServer.EnableSamplePipeline .APIServer.EnableInstructlabPipeline }}
             - --sampleconfig=/config/sample_config.json
             {{ end }}
             {{ if .PodToPodTLS }}
@@ -206,8 +206,8 @@ spec:
             - mountPath: /etc/tls/private
               name: proxy-tls
           {{ end }}
-          {{ if or .APIServer.EnableSamplePipeline .CustomCABundle }}
-            {{ if .APIServer.EnableSamplePipeline }}
+          {{ if or .APIServer.EnableSamplePipeline .CustomCABundle .APIServer.EnableInstructlabPipeline}}
+            {{ if or .APIServer.EnableSamplePipeline .APIServer.EnableInstructlabPipeline}}
             - name: sample-config
               mountPath: /config/sample_config.json
               subPath: sample_config.json
@@ -287,7 +287,7 @@ spec:
           configMap:
             name: {{ .CustomCABundle.ConfigMapName }}
         {{ end }}
-        {{ if .APIServer.EnableSamplePipeline }}
+        {{ if or .APIServer.EnableSamplePipeline .APIServer.EnableInstructlabPipeline}}
         - name: sample-config
           configMap:
             name: sample-config-{{.Name}}
