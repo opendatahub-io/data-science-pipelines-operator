@@ -1,4 +1,4 @@
 releases:
-  - name: Kubeflow Pipelines
+  - name: Red Hat build of Kubeflow Pipelines
     version: 2.2.0
     repoUrl: https://github.com/kubeflow/pipelines
