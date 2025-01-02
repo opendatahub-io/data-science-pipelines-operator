@@ -20,12 +20,13 @@ package controllers
 
 import (
 	"fmt"
+	"testing"
+
 	mfc "github.com/manifestival/controller-runtime-client"
 	mf "github.com/manifestival/manifestival"
 	util "github.com/opendatahub-io/data-science-pipelines-operator/controllers/testutil"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 var uc = util.UtilContext{}

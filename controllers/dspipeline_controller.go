@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/dspastatus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -286,55 +287,55 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	if dspaPrereqsReady {
 		// Manage Common Manifests
-		err = r.ReconcileCommon(dspa, params)
+		var statusMessage string
+		_, err = r.ReconcileCommon(dspa, params)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 
-		err = r.ReconcileAPIServer(ctx, dspa, params)
+		statusMessage, err = r.ReconcileAPIServer(ctx, dspa, params)
 		if err != nil {
 			r.setStatusAsNotReady(config.APIServerReady, err, dspaStatus.SetApiServerStatus)
 			return ctrl.Result{}, err
 		} else {
-			r.setStatus(ctx, params.APIServerDefaultResourceName, config.APIServerReady, dspa,
+			r.setStatus(ctx, params.APIServerDefaultResourceName, config.APIServerReady, statusMessage, dspa,
 				dspaStatus.SetApiServerStatus, log)
 		}
 
-		err = r.ReconcilePersistenceAgent(dspa, params)
+		statusMessage, err = r.ReconcilePersistenceAgent(dspa, params)
 		if err != nil {
 			r.setStatusAsNotReady(config.PersistenceAgentReady, err, dspaStatus.SetPersistenceAgentStatus)
 			return ctrl.Result{}, err
 		} else {
-			r.setStatus(ctx, params.PersistentAgentDefaultResourceName, config.PersistenceAgentReady, dspa,
+			r.setStatus(ctx, params.PersistentAgentDefaultResourceName, config.PersistenceAgentReady, statusMessage, dspa,
 				dspaStatus.SetPersistenceAgentStatus, log)
 		}
 
-		err = r.ReconcileScheduledWorkflow(dspa, params)
+		statusMessage, err = r.ReconcileScheduledWorkflow(dspa, params)
 		if err != nil {
 			r.setStatusAsNotReady(config.ScheduledWorkflowReady, err, dspaStatus.SetScheduledWorkflowStatus)
 			return ctrl.Result{}, err
 		} else {
-			r.setStatus(ctx, params.ScheduledWorkflowDefaultResourceName, config.ScheduledWorkflowReady, dspa,
+			r.setStatus(ctx, params.ScheduledWorkflowDefaultResourceName, config.ScheduledWorkflowReady, statusMessage, dspa,
 				dspaStatus.SetScheduledWorkflowStatus, log)
 		}
 
-		err = r.ReconcileUI(dspa, params)
+		_, err = r.ReconcileUI(dspa, params)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 
-		err = r.ReconcileWorkflowController(dspa, params)
+		_, err = r.ReconcileWorkflowController(dspa, params)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 
-		// MLMD should be the last to reconcile because it can cause an early exit due to the lack of the TLS secret, which may not have been created yet.
-		err = r.ReconcileMLMD(ctx, dspa, params)
+		statusMessage, err = r.ReconcileMLMD(ctx, dspa, params)
 		if err != nil {
 			r.setStatusAsNotReady(config.MLMDProxyReady, err, dspaStatus.SetMLMDProxyStatus)
 			return ctrl.Result{}, err
 		} else {
-			r.setStatus(ctx, params.MlmdProxyDefaultResourceName, config.MLMDProxyReady, dspa,
+			r.setStatus(ctx, params.MlmdProxyDefaultResourceName, config.MLMDProxyReady, statusMessage, dspa,
 				dspaStatus.SetMLMDProxyStatus, log)
 		}
 	}
@@ -374,10 +375,11 @@ func (r *DSPAReconciler) setStatusAsUnsupported(conditionType string, err error,
 	setStatus(condition)
 }
 
-func (r *DSPAReconciler) setStatus(ctx context.Context, resourceName string, conditionType string,
+func (r *DSPAReconciler) setStatus(ctx context.Context, resourceName string, conditionType string, statusMessage string,
 	dspa *dspav1.DataSciencePipelinesApplication, setStatus func(metav1.Condition),
 	log logr.Logger) {
 	condition, err := r.evaluateCondition(ctx, dspa, resourceName, conditionType)
+	condition.Message = statusMessage
 	setStatus(condition)
 	if err != nil {
 		log.Error(err, fmt.Sprintf("Encountered error when creating the %s readiness condition", conditionType))

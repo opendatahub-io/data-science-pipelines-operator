@@ -17,7 +17,7 @@ package controllers
 
 import (
 	"context"
-	"errors"
+
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 )
 
@@ -29,47 +29,47 @@ const (
 )
 
 func (r *DSPAReconciler) ReconcileMLMD(ctx context.Context, dsp *dspav1.DataSciencePipelinesApplication,
-	params *DSPAParams) error {
+	params *DSPAParams) (status string, err error) {
 
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
 
 	if (params.MLMD == nil || !params.MLMD.Deploy) && (dsp.Spec.MLMD == nil || !dsp.Spec.MLMD.Deploy) {
 		r.Log.Info("Skipping Application of ML-Metadata (MLMD) Resources")
-		return nil
+		return "MLMD Resource Application Skipped", nil
 	}
 
 	log.Info("Applying ML-Metadata (MLMD) Resources")
 
 	// We need to create the service first so OpenShift creates the certificate that we'll use later.
-	err := r.ApplyDir(dsp, params, mlmdTemplatesDir+"/"+mlmdGrpcService)
+	err = r.ApplyDir(dsp, params, mlmdTemplatesDir+"/"+mlmdGrpcService)
 	if err != nil {
-		return err
+		return "MLMD Service Failed to create", err
 	}
 
 	if params.PodToPodTLS {
 		var certificatesExist bool
 		certificatesExist, err = params.LoadMlmdCertificates(ctx, r.Client)
 		if err != nil {
-			return err
+			return "Failed to load MLMD Certificate", err
 		}
 
 		if !certificatesExist {
-			return errors.New("secret containing the certificate for MLMD gRPC Server was not created yet")
+			return "Secret containing the certificate for MLMD gRPC Server was not created yet", nil
 		}
 	}
 
 	err = r.ApplyDir(dsp, params, mlmdTemplatesDir)
 	if err != nil {
-		return err
+		return "Failed to apply MLMD Resources", err
 	}
 
 	if dsp.Spec.MLMD == nil || dsp.Spec.MLMD.Envoy == nil || dsp.Spec.MLMD.Envoy.DeployRoute {
 		err = r.Apply(dsp, params, mlmdEnvoyRoute)
 		if err != nil {
-			return err
+			return "Failed to apply MLMD Envoy Route", err
 		}
 	}
 
 	log.Info("Finished applying MLMD Resources")
-	return nil
+	return "MLMD Resources Applied", nil
 }
