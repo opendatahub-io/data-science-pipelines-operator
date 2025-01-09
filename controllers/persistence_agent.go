@@ -25,22 +25,22 @@ var persistenceAgentTemplatesDir = "persistence-agent"
 const persistenceAgentDefaultResourceNamePrefix = "ds-pipeline-persistenceagent-"
 
 func (r *DSPAReconciler) ReconcilePersistenceAgent(dsp *dspav1.DataSciencePipelinesApplication,
-	params *DSPAParams) error {
+	params *DSPAParams) (status string, err error) {
 
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
 
 	if !dsp.Spec.PersistenceAgent.Deploy {
 		log.Info("Skipping Application of PersistenceAgent Resources")
-		return nil
+		return "Skipped Application PersistenceAgent Resources", nil
 	}
 
 	log.Info("Applying PersistenceAgent Resources")
 
-	err := r.ApplyDir(dsp, params, persistenceAgentTemplatesDir)
+	err = r.ApplyDir(dsp, params, persistenceAgentTemplatesDir)
 	if err != nil {
-		return err
+		return "Failed to apply PersistenceAgent Resources", err
 	}
 
 	log.Info("Finished applying PersistenceAgent Resources")
-	return nil
+	return "PersistenceAgent Resources Applied", nil
 }
