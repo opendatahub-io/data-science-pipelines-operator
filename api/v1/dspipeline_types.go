@@ -69,13 +69,9 @@ type APIServer struct {
 	// Include sample pipelines with the deployment of this DSP API Server. Default: true
 	// +kubebuilder:default:=false
 	// +kubebuilder:validation:Optional
-	EnableSamplePipeline bool `json:"enableSamplePipeline"`
-	// Enable the Instructlab Multi-Phase Training pipeline with the deployment of this DSP API server. Default: false
-	// +kubebuilder:default:=false
-	// +kubebuilder:validation:Optional
-	EnableInstructLabPipeline bool   `json:"enableInstructLabPipeline"`
-	ArgoLauncherImage         string `json:"argoLauncherImage,omitempty"`
-	ArgoDriverImage           string `json:"argoDriverImage,omitempty"`
+	EnableSamplePipeline bool   `json:"enableSamplePipeline"`
+	ArgoLauncherImage    string `json:"argoLauncherImage,omitempty"`
+	ArgoDriverImage      string `json:"argoDriverImage,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
 
