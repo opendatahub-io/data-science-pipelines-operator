@@ -9,7 +9,6 @@ spec:
     deploy: true
     enableOauth: false
     enableSamplePipeline: true
-    enableInstructLabPipeline: true
     cABundle:
       configMapName: nginx-tls-config
       configMapKey: rootCA.crt

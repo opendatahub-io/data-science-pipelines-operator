@@ -68,7 +68,7 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1.Dat
 	}
 
 	for cmName, template := range samplePipelineTemplates {
-		if dsp.Spec.APIServer.EnableSamplePipeline || dsp.Spec.APIServer.EnableInstructLabPipeline {
+		if dsp.Spec.APIServer.EnableSamplePipeline {
 			err := r.Apply(dsp, params, template)
 			if err != nil {
 				return err
