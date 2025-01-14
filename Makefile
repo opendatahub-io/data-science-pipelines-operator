@@ -279,3 +279,5 @@ catalog-build: opm ## Build a catalog image.
 .PHONY: catalog-push
 catalog-push: ## Push a catalog image.
 	$(MAKE) podman-push IMG=$(CATALOG_IMG)
+
+# FOO JUST ADDING THIS TO TRIGGER KIND CI
