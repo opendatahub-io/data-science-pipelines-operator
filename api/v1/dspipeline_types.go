@@ -55,6 +55,17 @@ type DSPASpec struct {
 	*WorkflowController `json:"workflowController,omitempty"`
 }
 
+type ManagedPipelines struct {
+	// Include instructlab multi-phase training pipelines with the deployment of this DSP API Server. Default: true
+	// Applicable values:"Managed" or "Removed"
+	// +kubebuilder:validation:Optional
+	EnableInstructLabPipeline string `json:"enableInstructLabPipeline,omitempty"`
+	// Include sample pipelines with the deployment of this DSP API Server. Default: true
+	// Applicable values:"Managed" or "Removed"
+	// +kubebuilder:validation:Optional
+	EnableIrisPipeline string `json:"enableIrisPipeline,omitempty"`
+}
+
 type APIServer struct {
 	// Enable DS Pipelines Operator management of DSP API Server. Setting Deploy to false disables operator reconciliation. Default: true
 	// +kubebuilder:default:=true
@@ -82,6 +93,8 @@ type APIServer struct {
 	ToolboxImage string `json:"toolboxImage,omitempty"`
 	// RhelAI image used for ilab tasks in managed pipelines.
 	RHELAIImage string `json:"rhelAIImage,omitempty"`
+	// Enable various pipelines with the deployment of this DSP API server.
+	ManagedPipelines *ManagedPipelines `json:"managedPipelines,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
 	// Specify init container resource requirements. The init container

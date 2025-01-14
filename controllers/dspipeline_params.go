@@ -58,6 +58,7 @@ type DSPAParams struct {
 	APIServerDefaultResourceName         string
 	APIServerServiceName                 string
 	OAuthProxy                           string
+	SampleConfigJSON                     string
 	ScheduledWorkflow                    *dspa.ScheduledWorkflow
 	ScheduledWorkflowDefaultResourceName string
 	PersistenceAgent                     *dspa.PersistenceAgent
@@ -557,6 +558,15 @@ func (p *DSPAParams) LoadMlmdCertificates(ctx context.Context, client client.Cli
 	return true, nil
 }
 
+func (p *DSPAParams) GenerateSampleConfig() (string, error) {
+	sampleConfigJSON := &bytes.Buffer{}
+	if err := json.Compact(sampleConfigJSON, []byte(FullSampleConfigJSON)); err != nil {
+		return "", err
+	}
+	return sampleConfigJSON.String(), nil
+
+}
+
 func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, loggr logr.Logger) error {
 	p.Name = dsp.Name
 	p.Namespace = dsp.Namespace
@@ -590,6 +600,13 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	}
 
 	log := loggr.WithValues("namespace", p.Namespace).WithValues("dspa_name", p.Name)
+
+	sampleConfigJSON, err := p.GenerateSampleConfig()
+	if err != nil {
+		log.Info(fmt.Sprintf("Error generating samples configuration JSON, Error: %v", err))
+		return err
+	}
+	p.SampleConfigJSON = sampleConfigJSON
 
 	if p.APIServer != nil {
 		serverImageFromConfig := config.GetStringConfigWithDefault(config.APIServerImagePath, config.DefaultImageValue)
@@ -832,7 +849,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		setResourcesDefault(config.WorkflowControllerResourceRequirements, &p.WorkflowController.Resources)
 	}
 
-	err := p.SetupMLMD(dsp, log)
+	err = p.SetupMLMD(dsp, log)
 	if err != nil {
 		return err
 	}

@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/dspastatus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -244,11 +245,19 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	requeueTime := config.GetDurationConfigWithDefault(config.RequeueTimeConfigName, config.DefaultRequeueTime)
+
 	err = params.ExtractParams(ctx, dspa, r.Client, r.Log)
 	if err != nil {
 		log.Info(fmt.Sprintf("Encountered error when parsing CR: [%s]", err))
 		return ctrl.Result{Requeue: true, RequeueAfter: requeueTime}, nil
 	}
+
+	sampleConfigJSON, err := r.GetSampleConfig(ctx, dspa, params)
+	if err != nil {
+		log.Info(fmt.Sprintf("Encountered error while generating sample config: [%s]", err))
+		return ctrl.Result{Requeue: true, RequeueAfter: requeueTime}, nil
+	}
+	params.SampleConfigJSON = sampleConfigJSON
 
 	err = r.ReconcileDatabase(ctx, dspa, params)
 	if err != nil {

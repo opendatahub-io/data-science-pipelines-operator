@@ -156,6 +156,21 @@ spec:
                             x-kubernetes-int-or-string: true
                         type: object
                     type: object
+                  managedPipelines:
+                    description: Enable various pipelines with the deployment of this
+                      DSP API server.
+                    properties:
+                      enableInstructLabPipeline:
+                        description: 'Include instructlab multi-phase training pipelines
+                          with the deployment of this DSP API Server. Default: true
+                          Applicable values:"Managed" or "Removed"'
+                        type: string
+                      enableIrisPipeline:
+                        description: 'Include sample pipelines with the deployment
+                          of this DSP API Server. Default: true Applicable values:"Managed"
+                          or "Removed"'
+                        type: string
+                    type: object
                   resources:
                     description: Specify custom Pod resource requirements for this
                       component.
@@ -1095,6 +1110,21 @@ spec:
                     description: 'Inject the archive step script. Default: true Deprecated:
                       DSP V1 only, will be removed in the future.'
                     type: boolean
+                  managedPipelines:
+                    description: Enable various pipelines with the deployment of this
+                      DSP API server.
+                    properties:
+                      enableInstructLabPipeline:
+                        description: 'Include instructlab multi-phase training pipelines
+                          with the deployment of this DSP API Server. Default: true
+                          Applicable values:"Managed" or "Removed"'
+                        type: string
+                      enableIrisPipeline:
+                        description: 'Include sample pipelines with the deployment
+                          of this DSP API Server. Default: true Applicable values:"Managed"
+                          or "Removed"'
+                        type: string
+                    type: object
                   moveResultsImage:
                     description: 'Image used for internal artifact passing handling
                       within Tekton taskruns. This field specifies the image used
