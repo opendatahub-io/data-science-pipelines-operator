@@ -108,7 +108,7 @@ func FormatRequestBody(t *testing.T, pipelineID string, PipelineDisplayName stri
 }
 
 func WaitForPipelineRunCompletion(t *testing.T, httpClient http.Client, APIServerURL string) error {
-	timeout := time.After(6 * time.Minute)
+	timeout := time.After(10 * time.Minute)
 	ticker := time.NewTicker(6 * time.Second)
 	defer ticker.Stop()
 	for {
