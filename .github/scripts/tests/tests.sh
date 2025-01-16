@@ -31,7 +31,10 @@ ENDPOINT_TYPE="service"
 
 get_dspo_image() {
   if [ "$REGISTRY_ADDRESS" = "" ]; then
-  echo "REGISTRY_ADDRESS variable not defined." && exit 1
+    # this function is called by `IMG=$(get_dspo_image)` that captures the standard output of get_dspo_image
+    set -x
+    echo "REGISTRY_ADDRESS variable not defined."
+    exit 1
   fi
   local image="${REGISTRY_ADDRESS}/data-science-pipelines-operator"
   echo $image

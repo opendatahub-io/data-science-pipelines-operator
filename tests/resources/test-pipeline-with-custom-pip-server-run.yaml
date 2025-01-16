@@ -24,7 +24,7 @@ deploymentSpec:
         - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
           \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
           \ python3 -m pip install --quiet --no-warn-script-location --index-url https://nginx-service.test-pypiserver.svc.cluster.local/simple/\
-          \ 'kfp==2.10.0' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"\
+          \ 'kfp==2.11.0' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"\
           3.9\"'  &&  python3 -m pip install --quiet --no-warn-script-location --index-url\
           \ https://nginx-service.test-pypiserver.svc.cluster.local/simple/ 'numpy'\
           \ && \"$0\" \"$@\"\n"
@@ -66,4 +66,4 @@ root:
       Output:
         parameterType: STRING
 schemaVersion: 2.1.0
-sdkVersion: kfp-2.10.0
+sdkVersion: kfp-2.11.0

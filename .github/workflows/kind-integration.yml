@@ -11,6 +11,7 @@ on:
       - config/**
       - tests/**
       - .github/resources/**
+      - .github/actions/**
       - '.github/workflows/kind-integration.yml'
       - '.github/scripts/tests/tests.sh'
       - Makefile
@@ -47,6 +48,15 @@ jobs:
         uses: ./.github/actions/kind
 
       - name: Run test
+        id: test
         working-directory: ${{ github.workspace }}/.github/scripts/tests
         run: |
           sh tests.sh --kind
+        continue-on-error: true
+
+      - name: Collect events and logs
+        if: steps.test.outcome != 'success'
+        working-directory: ${{ github.workspace }}/.github/scripts/tests
+        run: |
+          ./collect_logs.sh --dspa-ns test-dspa --dspo-ns opendatahub
+          exit 1

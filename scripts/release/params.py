@@ -16,11 +16,11 @@ QUAY_REPOS = {
 
 TAGGED_REPOS = {
     "IMAGES_ARGO_WORKFLOWCONTROLLER" : {
-        "TAG": "3.3.10-upstream",
+        "TAG": "odh-v3.4.17-1",
         "REPO": "ds-pipelines-argo-workflowcontroller"
     },
     "IMAGES_ARGO_EXEC" : {
-        "TAG": "3.3.10-upstream",
+        "TAG": "odh-v3.4.17-1",
         "REPO": "ds-pipelines-argo-argoexec"
     },
     "IMAGES_MLMDGRPC": {
@@ -30,9 +30,9 @@ TAGGED_REPOS = {
 }
 
 STATIC_REPOS = {
-    "IMAGES_MLMDENVOY": "registry.redhat.io/openshift-service-mesh/proxyv2-rhel8@sha256:a744c1b386fd5e4f94e43543e829df1bfdd1b564137917372a11da06872f4bcb",
+    "IMAGES_MLMDENVOY": "registry.redhat.io/openshift-service-mesh/proxyv2-rhel8@sha256:02b834fd74da71ec37f6a5c0d10aac9a679d1a0f4e510c4f77723ef2367e858a",
     "IMAGES_MARIADB": "registry.redhat.io/rhel8/mariadb-103@sha256:3d30992e60774f887c4e7959c81b0c41b0d82d042250b3b56f05ab67fd4cdee1",
-    "IMAGES_OAUTHPROXY": "registry.redhat.io/openshift4/ose-oauth-proxy@sha256:ab112105ac37352a2a4916a39d6736f5db6ab4c29bad4467de8d613e80e9bb33",
+    "IMAGES_OAUTHPROXY": "registry.redhat.io/openshift4/ose-oauth-proxy@sha256:4f8d66597feeb32bb18699326029f9a71a5aca4a57679d636b876377c2e95695",
 }
 
 OTHER_OPTIONS = {
