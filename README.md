@@ -504,23 +504,7 @@ oc delete project ${ODH_NS}
 
 ## Run tests
 
-Simply clone the directory and execute `make test`.
-
-To run it without `make` you can run the following:
-
-```bash
-tmpFolder=$(mktemp -d)
-go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
-export KUBEBUILDER_ASSETS=$(${GOPATH}/bin/setup-envtest use 1.25.0 --bin-dir ${tmpFolder}/bin -p path)
-go test ./... -coverprofile cover.out
-
-# once $KUBEBUILDER_ASSETS you can also run the full test suite successfully by running:
-pre-commit run --all-files
-```
-
-You can find a more permanent location to install `setup-envtest` into on your local filesystem and export
-`KUBEBUILDER_ASSETS` into your `.bashrc` or equivalent. By doing this you can always run `pre-commit run --all-files`
-without having to repeat these steps.
+See `.github/scripts/tests/README.md`(https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/.github/scripts/tests/README.md)
 
 ## Metrics
 
