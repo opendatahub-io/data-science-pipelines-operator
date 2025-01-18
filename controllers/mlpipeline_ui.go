@@ -23,21 +23,21 @@ import (
 var mlPipelineUITemplatesDir = "mlpipelines-ui"
 
 func (r *DSPAReconciler) ReconcileUI(dsp *dspav1.DataSciencePipelinesApplication,
-	params *DSPAParams) error {
+	params *DSPAParams) (status string, err error) {
 
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
 
 	if dsp.Spec.MlPipelineUI == nil || !dsp.Spec.MlPipelineUI.Deploy {
 		log.Info("Skipping Application of MlPipelineUI Resources")
-		return nil
+		return "Skipped application of MlPipelineUI Resources", nil
 	}
 
 	log.Info("Applying MlPipelineUI Resources")
-	err := r.ApplyDir(dsp, params, mlPipelineUITemplatesDir)
+	err = r.ApplyDir(dsp, params, mlPipelineUITemplatesDir)
 	if err != nil {
-		return err
+		return "Failed to apply MlPipelineUI Resources", err
 	}
 
 	log.Info("Finished applying MlPipelineUI Resources")
-	return nil
+	return "MlPipelineUI Resources Applied", nil
 }

@@ -23,22 +23,22 @@ import (
 var workflowControllerTemplatesDir = "workflow-controller"
 
 func (r *DSPAReconciler) ReconcileWorkflowController(dsp *dspav1.DataSciencePipelinesApplication,
-	params *DSPAParams) error {
+	params *DSPAParams) (status string, err error) {
 
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
 
 	if dsp.Spec.WorkflowController == nil || !dsp.Spec.WorkflowController.Deploy {
 		log.Info("Skipping Application of WorkflowController Resources")
-		return nil
+		return "Skipped application of WorkflowController Resources", nil
 	}
 
 	log.Info("Applying WorkflowController Resources")
 
-	err := r.ApplyDir(dsp, params, workflowControllerTemplatesDir)
+	err = r.ApplyDir(dsp, params, workflowControllerTemplatesDir)
 	if err != nil {
-		return err
+		return "Failed to apply WorkflowController Resources", err
 	}
 
 	log.Info("Finished applying WorkflowController Resources")
-	return nil
+	return "WorkflowController Resources Applied", nil
 }

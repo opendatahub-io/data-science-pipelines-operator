@@ -39,31 +39,31 @@ var samplePipelineTemplates = map[string]string{
 	"sample-config":   "apiserver/sample-pipeline/sample-config.yaml.tmpl",
 }
 
-func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1.DataSciencePipelinesApplication, params *DSPAParams) error {
+func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1.DataSciencePipelinesApplication, params *DSPAParams) (status string, err error) {
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
 
 	if !dsp.Spec.APIServer.Deploy {
 		r.Log.Info("Skipping Application of APIServer Resources")
-		return nil
+		return "Skipped Application of APIServer Resources", nil
 	}
 
 	log.Info("Applying APIServer Resources")
-	err := r.ApplyDir(dsp, params, apiServerTemplatesDir)
+	err = r.ApplyDir(dsp, params, apiServerTemplatesDir)
 	if err != nil {
-		return err
+		return "Failed to apply APIServer Resources", err
 	}
 
 	if dsp.Spec.APIServer.EnableRoute {
 		err := r.Apply(dsp, params, serverRoute)
 		if err != nil {
-			return err
+			return "Failed to apply APIServer route", err
 		}
 	} else {
 		route := &v1.Route{}
 		namespacedNamed := types.NamespacedName{Name: "ds-pipeline-" + dsp.Name, Namespace: dsp.Namespace}
 		err := r.DeleteResourceIfItExists(ctx, route, namespacedNamed)
 		if err != nil {
-			return err
+			return "Failed to delete APIServer route", err
 		}
 	}
 
@@ -71,18 +71,18 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1.Dat
 		if dsp.Spec.APIServer.EnableSamplePipeline {
 			err := r.Apply(dsp, params, template)
 			if err != nil {
-				return err
+				return "Failed to apply sample pipeline", err
 			}
 		} else {
 			cm := &corev1.ConfigMap{}
 			namespacedNamed := types.NamespacedName{Name: cmName + "-" + dsp.Name, Namespace: dsp.Namespace}
 			err := r.DeleteResourceIfItExists(ctx, cm, namespacedNamed)
 			if err != nil {
-				return err
+				return "Failed to delete sample pipeline", err
 			}
 		}
 	}
 
 	log.Info("Finished applying APIServer Resources")
-	return nil
+	return "APIServer Resources Applied", nil
 }

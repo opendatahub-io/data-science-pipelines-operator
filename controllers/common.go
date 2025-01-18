@@ -23,21 +23,21 @@ var commonTemplatesDir = "common/default"
 
 const commonCusterRolebindingTemplate = "common/no-owner/clusterrolebinding.yaml.tmpl"
 
-func (r *DSPAReconciler) ReconcileCommon(dsp *dspav1.DataSciencePipelinesApplication, params *DSPAParams) error {
+func (r *DSPAReconciler) ReconcileCommon(dsp *dspav1.DataSciencePipelinesApplication, params *DSPAParams) (status string, err error) {
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
 
 	log.Info("Applying Common Resources")
-	err := r.ApplyDir(dsp, params, commonTemplatesDir)
+	err = r.ApplyDir(dsp, params, commonTemplatesDir)
 	if err != nil {
-		return err
+		return "Error Applying Common Resources", err
 	}
 	err = r.ApplyWithoutOwner(params, commonCusterRolebindingTemplate)
 	if err != nil {
-		return err
+		return "Error Applying clusterrolebinding", err
 	}
 
 	log.Info("Finished applying Common Resources")
-	return nil
+	return "Common Resources Applied", nil
 }
 
 func (r *DSPAReconciler) CleanUpCommon(params *DSPAParams) error {

@@ -25,22 +25,22 @@ var scheduledWorkflowTemplatesDir = "scheduled-workflow"
 const scheduledWorkflowDefaultResourceNamePrefix = "ds-pipeline-scheduledworkflow-"
 
 func (r *DSPAReconciler) ReconcileScheduledWorkflow(dsp *dspav1.DataSciencePipelinesApplication,
-	params *DSPAParams) error {
+	params *DSPAParams) (status string, err error) {
 
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
 
 	if !dsp.Spec.ScheduledWorkflow.Deploy {
 		log.Info("Skipping Application of ScheduledWorkflow Resources")
-		return nil
+		return "Skipped Application of ScheduledWorkflow Resources", nil
 	}
 
 	log.Info("Applying ScheduledWorkflow Resources")
 
-	err := r.ApplyDir(dsp, params, scheduledWorkflowTemplatesDir)
+	err = r.ApplyDir(dsp, params, scheduledWorkflowTemplatesDir)
 	if err != nil {
-		return err
+		return "Failed to apply ScheduledWorkflow Resources", err
 	}
 
 	log.Info("Finished applying ScheduledWorkflow Resources")
-	return nil
+	return "ScheduledWorkflow Resources Applied", nil
 }
