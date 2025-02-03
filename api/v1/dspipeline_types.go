@@ -69,9 +69,19 @@ type APIServer struct {
 	// Include sample pipelines with the deployment of this DSP API Server. Default: true
 	// +kubebuilder:default:=false
 	// +kubebuilder:validation:Optional
-	EnableSamplePipeline bool   `json:"enableSamplePipeline"`
-	ArgoLauncherImage    string `json:"argoLauncherImage,omitempty"`
-	ArgoDriverImage      string `json:"argoDriverImage,omitempty"`
+	EnableSamplePipeline bool `json:"enableSamplePipeline"`
+	// Launcher/Executor image used during pipeline execution.
+	ArgoLauncherImage string `json:"argoLauncherImage,omitempty"`
+	// Driver image used during pipeline execution.
+	ArgoDriverImage string `json:"argoDriverImage,omitempty"`
+	// Generic runtime image used for building managed pipelines during
+	// api server init, and for basic runtime operations.
+	RuntimeGenericImage string `json:"runtimeGenericImage,omitempty"`
+	// Toolbox image used for basic container spec runtime operations
+	// in managed pipelines.
+	ToolboxImage string `json:"toolboxImage,omitempty"`
+	// RhelAI image used for ilab tasks in managed pipelines.
+	RHELAIImage string `json:"rhelAIImage,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
 

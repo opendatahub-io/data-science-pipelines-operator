@@ -12,3 +12,6 @@ Images:
   MariaDB: mariadb:test1
   MlPipelineUI: frontend:test1
   Minio: minio:test1
+  RuntimeGeneric: runtimegeneric:test1
+  Toolbox: toolbox:test1
+  RHELAI: rhelai:test1

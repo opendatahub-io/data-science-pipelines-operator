@@ -100,6 +100,9 @@ const (
 	ArgoWorkflowControllerImagePath = "Images.ArgoWorkflowController"
 	MariaDBImagePath                = "Images.MariaDB"
 	OAuthProxyImagePath             = "Images.OAuthProxy"
+	RuntimeGenericPath              = "Images.RuntimeGeneric"
+	ToolboxImagePath                = "Images.Toolbox"
+	RHELAIImagePath                 = "Images.RHELAI"
 
 	// Other configs
 	ObjStoreConnectionTimeoutConfigName      = "DSPO.HealthCheck.ObjectStore.ConnectionTimeout"

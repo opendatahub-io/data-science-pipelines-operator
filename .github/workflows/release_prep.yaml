@@ -41,6 +41,7 @@ env:
   DSPO_REPOSITORY_FULL: ${{ inputs.gh_org }}/data-science-pipelines-operator
   DSP_REPOSITORY: data-science-pipelines
   DSP_REPOSITORY_FULL: ${{ inputs.gh_org }}/data-science-pipelines
+  DSP_PIPELINES_REPOSITORY_FULL: ${{ inputs.gh_org }}/ilab-on-ocp
   PREVIOUS_RELEASE_TAG: ${{ inputs.previous_release_tag }}
   OVERWRITE_IMAGES: ${{ inputs.overwrite_imgs }}
   CONFIG_TEMPLATE: "./.github/scripts/release_prep/templates/config.yaml"
@@ -66,6 +67,7 @@ jobs:
           MINOR_RELEASE_BRANCH: ${{ env.MINOR_RELEASE_BRANCH }}
           DSPO_REPOSITORY_FULL: ${{ env.DSPO_REPOSITORY_FULL }}
           DSPO_REPOSITORY: ${{ env.DSPO_REPOSITORY }}
+          DSP_PIPELINES_REPOSITORY_FULL: ${{ env.DSP_PIPELINES_REPOSITORY_FULL }}
         run: ./.github/scripts/release_prep/prereqs.sh
 
   create_branches:
@@ -86,6 +88,7 @@ jobs:
           MINOR_RELEASE_BRANCH: ${{ env.MINOR_RELEASE_BRANCH }}
           DSPO_REPOSITORY_FULL: ${{ env.DSPO_REPOSITORY_FULL }}
           DSP_REPOSITORY_FULL: ${{ env.DSP_REPOSITORY_FULL }}
+          DSP_PIPELINES_REPOSITORY_FULL: ${{ env.DSP_PIPELINES_REPOSITORY_FULL }}
           WORKING_DIR: ${{ github.workspace }}
         run: ./.github/scripts/release_prep/create_branches.sh
 
@@ -100,7 +103,8 @@ jobs:
       MINOR_RELEASE_BRANCH: ${{ env.MINOR_RELEASE_BRANCH }}
       MINOR_RELEASE_TAG: ${{ env.MINOR_RELEASE_TAG }}
       QUAY_ORG: ${{ env.QUAY_ORG }}
-      DSPO_GH_ORG: ${{ env.DSP_REPOSITORY_FULL }}
+      DSP_GH_ORG_REPO: ${{ env.DSP_REPOSITORY_FULL }}
+      DSP_PIPELINES_GH_ORG_REPO: ${{ env.DSP_PIPELINES_REPOSITORY_FULL }}
       OVERWRITE_IMAGES: ${{ env.OVERWRITE_IMAGES }}
     steps:
       - run: echo "Storing env vars for re-usable workflow."
@@ -113,9 +117,11 @@ jobs:
     with:
       src_dspo_branch: ${{  needs.get-env-vars.outputs.MINOR_RELEASE_BRANCH }}
       src_dsp_branch: ${{  needs.get-env-vars.outputs.MINOR_RELEASE_BRANCH }}
+      src_pipelines_branch: ${{  needs.get-env-vars.outputs.MINOR_RELEASE_BRANCH }}
       target_tag: ${{  needs.get-env-vars.outputs.MINOR_RELEASE_TAG }}
       quay_org: ${{  needs.get-env-vars.outputs.QUAY_ORG }}
-      dsp_org_repo: ${{  needs.get-env-vars.outputs.DSPO_GH_ORG }}
+      dsp_org_repo: ${{  needs.get-env-vars.outputs.DSP_GH_ORG_REPO }}
+      pipelines_org_repo: ${{ needs.get-env-vars.outputs.DSP_PIPELINES_GH_ORG_REPO }}
       overwrite_imgs: ${{  needs.get-env-vars.outputs.OVERWRITE_IMAGES }}
     secrets: inherit
 
