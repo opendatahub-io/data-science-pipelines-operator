@@ -34,6 +34,11 @@ func (in *APIServer) DeepCopyInto(out *APIServer) {
 		*out = new(ResourceRequirements)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.InitResources != nil {
+		in, out := &in.InitResources, &out.InitResources
+		*out = new(ResourceRequirements)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.CABundle != nil {
 		in, out := &in.CABundle, &out.CABundle
 		*out = new(CABundle)

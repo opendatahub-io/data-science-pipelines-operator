@@ -24,7 +24,7 @@ spec:
     spec:
       initContainers:
         - name: init-pipelines
-          image: runtimegeneric:test0
+          image: runtimegeneric:test2
           workingDir: /opt/app-root/src/pipelines/distributed-ilab
           command: ['/bin/sh', '-c']
           args:
@@ -40,11 +40,11 @@ spec:
               value: rhelai:test2
           resources:
             limits:
-              memory: 200Mi
-              cpu: '1'
+              memory: 6Gi
+              cpu: '2523m'
             requests:
-              memory: 200Mi
-              cpu: '1'
+              memory: 2Gi
+              cpu: '1232m'
           volumeMounts:
             - mountPath: /opt/app-root/src/build
               name: managed-pipelines

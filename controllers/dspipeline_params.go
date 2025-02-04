@@ -607,6 +607,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		setStringDefault(rhelAIImageFromConfig, &p.APIServer.RHELAIImage)
 
 		setResourcesDefault(config.APIServerResourceRequirements, &p.APIServer.Resources)
+		setResourcesDefault(config.APIServerInitResourceRequirements, &p.APIServer.InitResources)
 
 		if p.APIServer.CustomServerConfig == nil {
 			p.APIServer.CustomServerConfig = &dspa.ScriptConfigMap{

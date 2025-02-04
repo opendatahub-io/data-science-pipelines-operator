@@ -84,6 +84,9 @@ type APIServer struct {
 	RHELAIImage string `json:"rhelAIImage,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
+	// Specify init container resource requirements. The init container
+	// is used to build managed-pipelines and store them in a shared volume.
+	InitResources *ResourceRequirements `json:"initResources,omitempty"`
 
 	// If the Object store/DB is behind a TLS secured connection that is
 	// unrecognized by the host OpenShift/K8s cluster, then you can

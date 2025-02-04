@@ -165,6 +165,7 @@ func GetConfigRequiredFields() []string {
 // Default ResourceRequirements
 var (
 	APIServerResourceRequirements          = createResourceRequirement(resource.MustParse("250m"), resource.MustParse("500Mi"), resource.MustParse("500m"), resource.MustParse("1Gi"))
+	APIServerInitResourceRequirements      = createResourceRequirement(resource.MustParse("250m"), resource.MustParse("128Mi"), resource.MustParse("500m"), resource.MustParse("256Mi"))
 	PersistenceAgentResourceRequirements   = createResourceRequirement(resource.MustParse("120m"), resource.MustParse("500Mi"), resource.MustParse("250m"), resource.MustParse("1Gi"))
 	ScheduledWorkflowResourceRequirements  = createResourceRequirement(resource.MustParse("120m"), resource.MustParse("100Mi"), resource.MustParse("250m"), resource.MustParse("250Mi"))
 	WorkflowControllerResourceRequirements = createResourceRequirement(resource.MustParse("120m"), resource.MustParse("500Mi"), resource.MustParse("250m"), resource.MustParse("1Gi"))

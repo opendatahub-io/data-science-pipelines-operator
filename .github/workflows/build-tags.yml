@@ -90,7 +90,7 @@ env:
   IMAGE_REPO_SWF: ds-pipelines-scheduledworkflow
   IMAGE_REPO_LAUNCHER: ds-pipelines-launcher
   IMAGE_REPO_DRIVER: ds-pipelines-driver
-  IMAGE_REPO_PIELINES_RUNTIME_GENERIC: ds-pipelines-runtime-generic
+  IMAGE_REPO_PIPELINES_RUNTIME_GENERIC: ds-pipelines-runtime-generic
   SOURCE_DSPO_BRANCH: ${{ inputs.src_dspo_branch }}
   SOURCE_DSP_BRANCH: ${{ inputs.src_dsp_branch }}
   SOURCE_DSP_PIPELINES_BRANCH: ${{ inputs.src_pipelines_branch }}
@@ -223,7 +223,7 @@ jobs:
         env:
           SOURCE_BRANCH: ${{ env.SOURCE_DSP_PIPELINES_BRANCH }}
         with:
-          IMAGE_REPO: ${{ env.IMAGE_REPO_PIELINES_RUNTIME_GENERIC }}
+          IMAGE_REPO: ${{ env.IMAGE_REPO_PIPELINES_RUNTIME_GENERIC }}
           DOCKERFILE: Dockerfile
           GH_REPO: ${{ inputs.pipelines_org_repo }}
           OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
