@@ -10,6 +10,9 @@ Images:
   DriverImage: $(IMAGES_DRIVER)
   OAuthProxy: $(IMAGES_OAUTHPROXY)
   MariaDB: $(IMAGES_MARIADB)
+  RuntimeGeneric: $(IMAGES_PIPELINESRUNTIMEGENERIC)
+  Toolbox: $(IMAGES_TOOLBOX)
+  RHELAI: $(IMAGES_RHELAI)
 DSPO:
   HealthCheck:
     Database:

@@ -41,8 +41,10 @@ spec:
                 description: DS Pipelines API Server configuration.
                 properties:
                   argoDriverImage:
+                    description: Driver image used during pipeline execution.
                     type: string
                   argoLauncherImage:
+                    description: Launcher/Executor image used during pipeline execution.
                     type: string
                   artifactSignedURLExpirySeconds:
                     default: 60
@@ -118,6 +120,42 @@ spec:
                   image:
                     description: Specify a custom image for DSP API Server.
                     type: string
+                  initResources:
+                    description: Specify init container resource requirements. The
+                      init container is used to build managed-pipelines and store
+                      them in a shared volume.
+                    properties:
+                      limits:
+                        properties:
+                          cpu:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          memory:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                        type: object
+                      requests:
+                        properties:
+                          cpu:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          memory:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                        type: object
+                    type: object
                   resources:
                     description: Specify custom Pod resource requirements for this
                       component.
@@ -153,6 +191,17 @@ spec:
                             x-kubernetes-int-or-string: true
                         type: object
                     type: object
+                  rhelAIImage:
+                    description: RhelAI image used for ilab tasks in managed pipelines.
+                    type: string
+                  runtimeGenericImage:
+                    description: Generic runtime image used for building managed pipelines
+                      during api server init, and for basic runtime operations.
+                    type: string
+                  toolboxImage:
+                    description: Toolbox image used for basic container spec runtime
+                      operations in managed pipelines.
+                    type: string
                 type: object
               database:
                 default:
@@ -894,8 +943,10 @@ spec:
                       removed in the future.'
                     type: boolean
                   argoDriverImage:
+                    description: Driver image used during pipeline execution.
                     type: string
                   argoLauncherImage:
+                    description: Launcher/Executor image used during pipeline execution.
                     type: string
                   artifactImage:
                     description: 'Deprecated: DSP V1 only, will be removed in the
@@ -1003,6 +1054,42 @@ spec:
                   image:
                     description: Specify a custom image for DSP API Server.
                     type: string
+                  initResources:
+                    description: Specify init container resource requirements. The
+                      init container is used to build managed-pipelines and store
+                      them in a shared volume.
+                    properties:
+                      limits:
+                        properties:
+                          cpu:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          memory:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                        type: object
+                      requests:
+                        properties:
+                          cpu:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          memory:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                        type: object
+                    type: object
                   injectDefaultScript:
                     default: true
                     description: 'Inject the archive step script. Default: true Deprecated:
@@ -1049,6 +1136,13 @@ spec:
                             x-kubernetes-int-or-string: true
                         type: object
                     type: object
+                  rhelAIImage:
+                    description: RhelAI image used for ilab tasks in managed pipelines.
+                    type: string
+                  runtimeGenericImage:
+                    description: Generic runtime image used for building managed pipelines
+                      during api server init, and for basic runtime operations.
+                    type: string
                   stripEOF:
                     default: true
                     description: 'Default: true Deprecated: DSP V1 only, will be removed
@@ -1063,6 +1157,10 @@ spec:
                     - Cancelled
                     - StoppedRunFinally
                     - CancelledRunFinally
+                    type: string
+                  toolboxImage:
+                    description: Toolbox image used for basic container spec runtime
+                      operations in managed pipelines.
                     type: string
                   trackArtifacts:
                     default: true

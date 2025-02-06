@@ -13,6 +13,9 @@ Images:
   MariaDB: mariadb:test0
   MlPipelineUI: frontend:test0
   Minio: minio:test0
+  RuntimeGeneric: runtimegeneric:test0
+  Toolbox: toolbox:test0
+  RHELAI: rhelai:test0
 DSPO:
   ApiServer:
     IncludeOwnerReference: false
