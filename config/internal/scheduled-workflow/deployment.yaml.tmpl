@@ -33,6 +33,12 @@ spec:
           name: ds-pipeline-scheduledworkflow
           command:
             - controller
+            - "--mlPipelineAPIServerName={{.APIServerServiceDNSName}}"
+            - "--mlPipelineServiceGRPCPort=8887"
+            {{ if .PodToPodTLS }}
+            - "--mlPipelineServiceTLSEnabled=true"
+            - "--mlPipelineServiceTLSCert={{ .PiplinesCABundleMountPath }}"
+            {{ end }}
             - "--logtostderr=true"
             - "--namespace={{.Namespace}}"
           livenessProbe:
@@ -72,4 +78,15 @@ spec:
               memory: {{.ScheduledWorkflow.Resources.Limits.Memory}}
               {{ end }}
             {{ end }}
+          volumeMounts:
+            {{ if and .CustomCABundle .PodToPodTLS }}
+            - mountPath: {{ .CustomCABundleRootMountPath  }}
+              name: ca-bundle
+            {{ end }}
       serviceAccountName: {{.ScheduledWorkflowDefaultResourceName}}
+      volumes:
+        {{ if and .CustomCABundle .PodToPodTLS }}
+        - name: ca-bundle
+          configMap:
+            name: {{ .CustomCABundle.ConfigMapName }}
+        {{ end }}
