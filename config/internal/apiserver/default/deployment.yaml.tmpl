@@ -15,6 +15,8 @@ spec:
       dspa: {{.Name}}
   template:
     metadata:
+      annotations:
+        configHash: {{.APIServerConfigHash}}
       labels:
         app: {{.APIServerDefaultResourceName}}
         component: data-science-pipelines
@@ -330,4 +332,3 @@ spec:
         - name: sample-pipeline
           configMap:
             name: sample-pipeline-{{.Name}}
-

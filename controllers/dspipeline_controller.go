@@ -252,13 +252,6 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{Requeue: true, RequeueAfter: requeueTime}, nil
 	}
 
-	sampleConfigJSON, err := r.GetSampleConfig(ctx, dspa, params)
-	if err != nil {
-		log.Info(fmt.Sprintf("Encountered error while generating sample config: [%s]", err))
-		return ctrl.Result{Requeue: true, RequeueAfter: requeueTime}, nil
-	}
-	params.SampleConfigJSON = sampleConfigJSON
-
 	err = r.ReconcileDatabase(ctx, dspa, params)
 	if err != nil {
 		dspaStatus.SetDatabaseNotReady(err, config.FailingToDeploy)

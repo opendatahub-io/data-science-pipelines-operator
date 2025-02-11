@@ -55,15 +55,24 @@ type DSPASpec struct {
 	*WorkflowController `json:"workflowController,omitempty"`
 }
 
+// +kubebuilder:validation:Pattern=`^(Managed|Removed)$`
+type ManagedPipelineState string
+
 type ManagedPipelineOptions struct {
-	// Include managed pipelines with the deployment of this DSP API Server. Default: nil
-	// Applicable values:"Managed" or "Removed"
+	// Set to one of the following values:
+	//
+	// - "Managed" : This pipeline is automatically imported.
+	// - "Removed" : This pipeline is not automatically imported when a new pipeline server or DSPA is created. If previously set to "Managed", setting to "Removed" does not remove existing preloaded pipelines but does prevent future updates from being imported.
+	//
+	// +kubebuilder:validation:Enum=Managed;Removed
+	// +kubebuilder:default=Removed
 	// +kubebuilder:validation:Optional
-	State string `json:"state,omitempty"`
+	State ManagedPipelineState `json:"state,omitempty"`
 }
 
 type ManagedPipelinesSpec struct {
-	// Include instructlab multi-phase training pipelines with the deployment of this DSP API Server.
+	// Configures whether to automatically import the InstructLab pipeline.
+	// You must enable the trainingoperator component to run the InstructLab pipeline.
 	// +kubebuilder:validation:Optional
 	InstructLab *ManagedPipelineOptions `json:"instructLab,omitempty"`
 }
@@ -79,7 +88,7 @@ type APIServer struct {
 	// +kubebuilder:default:=true
 	// +kubebuilder:validation:Optional
 	EnableRoute bool `json:"enableOauth"`
-	// Include Iris sample pipeline with the deployment of this DSP API Server. Default: true
+	// Include the Iris sample pipeline with the deployment of this DSP API Server. Default: true
 	// +kubebuilder:default:=false
 	// +Deprecated
 	// +kubebuilder:validation:Optional
@@ -96,7 +105,7 @@ type APIServer struct {
 	ToolboxImage string `json:"toolboxImage,omitempty"`
 	// RhelAI image used for ilab tasks in managed pipelines.
 	RHELAIImage string `json:"rhelAIImage,omitempty"`
-	// Enable various pipelines with the deployment of this DSP API server.
+	// Enable various managed pipelines on this DSP API server.
 	ManagedPipelines *ManagedPipelinesSpec `json:"managedPipelines,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`

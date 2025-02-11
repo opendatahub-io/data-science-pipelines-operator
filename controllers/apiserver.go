@@ -17,6 +17,8 @@ package controllers
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -48,14 +50,15 @@ func (r *DSPAReconciler) GenerateSamplePipelineMetadataBlock(pipeline string) (m
 	item := make(map[string]string)
 
 	// Get Required Fields
-	pName, err := config.GetStringConfigOrDie(fmt.Sprintf("ManagedPipelinesMetadata.%s.Name", pipeline))
+	pName, err := config.GetStringConfigOrError(fmt.Sprintf("ManagedPipelinesMetadata.%s.Name", pipeline))
 	if err != nil {
 		return nil, err
 	}
-	pFile, err := config.GetStringConfigOrDie(fmt.Sprintf("ManagedPipelinesMetadata.%s.Filepath", pipeline))
+	pFile, err := config.GetStringConfigOrError(fmt.Sprintf("ManagedPipelinesMetadata.%s.Filepath", pipeline))
 	if err != nil {
 		return nil, err
 	}
+	platformVersion := config.GetStringConfigWithDefault("PlatformVersion", config.DefaultPlatformVersion)
 
 	// Get optional fields
 	pDesc := config.GetStringConfigWithDefault(fmt.Sprintf("ManagedPipelinesMetadata.%s.Description", pipeline), "")
@@ -66,7 +69,7 @@ func (r *DSPAReconciler) GenerateSamplePipelineMetadataBlock(pipeline string) (m
 	item["name"] = pName
 	item["file"] = pFile
 	item["description"] = pDesc
-	item["versionName"] = pVerName
+	item["versionName"] = fmt.Sprintf("%s - %s", pVerName, strings.Trim(platformVersion, "\""))
 	item["versionDescription"] = pVerDesc
 
 	return item, nil
@@ -74,43 +77,16 @@ func (r *DSPAReconciler) GenerateSamplePipelineMetadataBlock(pipeline string) (m
 }
 
 func (r *DSPAReconciler) GetSampleConfig(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, params *DSPAParams) (string, error) {
-	// TODO(gfrasca): do this more systematically and/or extendably
-	// enableInstructLabPipeline, err := r.IsPipelineEnabledByPlatform("instructlab")
-	// if err != nil {
-	// 	return "", err
-	// }
-	// enableIrisPipeline, err := r.IsPipelineEnabledByPlatform("iris")
-	// if err != nil {
-	// 	return "", err
-	// }
-
 	// Check if InstructLab Pipeline enabled in this DSPA
 	enableInstructLabPipeline := false
 	if dsp.Spec.APIServer.ManagedPipelines != nil && dsp.Spec.APIServer.ManagedPipelines.InstructLab != nil {
 		settingInDSPA := dsp.Spec.APIServer.ManagedPipelines.InstructLab.State
 		if settingInDSPA != "" {
-			enableInstructLabPipeline = strings.EqualFold(settingInDSPA, "Managed")
+			enableInstructLabPipeline = strings.EqualFold(string(settingInDSPA), "Managed")
 		}
 	}
 
 	return r.GenerateSampleConfigJSON(enableInstructLabPipeline, dsp.Spec.APIServer.EnableSamplePipeline)
-}
-
-func (r *DSPAReconciler) IsPipelineEnabledByPlatform(pipelineName string) (bool, error) {
-	var platformManagedPipelines map[string]map[string]string
-	platformPipelinesJSON := config.GetStringConfigWithDefault("ManagedPipelines", config.DefaultManagedPipelines)
-
-	err := json.Unmarshal([]byte(platformPipelinesJSON), &platformManagedPipelines)
-	if err != nil {
-		return false, err
-	}
-
-	for name, val := range platformManagedPipelines {
-		if strings.EqualFold(name, pipelineName) {
-			return strings.EqualFold(val["state"], "Managed"), nil
-		}
-	}
-	return false, nil
 }
 
 func (r *DSPAReconciler) GenerateSampleConfigJSON(enableInstructLabPipeline, enableIrisPipeline bool) (string, error) {
@@ -132,7 +108,7 @@ func (r *DSPAReconciler) GenerateSampleConfigJSON(enableInstructLabPipeline, ena
 		pipelineConfig = append(pipelineConfig, item)
 	}
 
-	var sampleConfig = make(map[string]interface{})
+	var sampleConfig = make(map[string]any)
 	sampleConfig["pipelines"] = pipelineConfig
 	sampleConfig["loadSamplesOnRestart"] = true
 
@@ -153,8 +129,21 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1.Dat
 		return nil
 	}
 
+	log.Info("Generating Sample Config")
+	sampleConfigJSON, err := r.GetSampleConfig(ctx, dsp, params)
+	if err != nil {
+		return err
+	}
+	params.SampleConfigJSON = sampleConfigJSON
+
+	// Generate configuration hash for rebooting on sample changes
+	hasher := sha256.New()
+	hasher.Write([]byte(sampleConfigJSON))
+	configHash := hex.EncodeToString(hasher.Sum(nil))
+	params.APIServerConfigHash = configHash
+
 	log.Info("Applying APIServer Resources")
-	err := r.ApplyDir(dsp, params, apiServerTemplatesDir)
+	err = r.ApplyDir(dsp, params, apiServerTemplatesDir)
 	if err != nil {
 		return err
 	}

@@ -55,15 +55,26 @@ type DSPASpec struct {
 	*WorkflowController `json:"workflowController,omitempty"`
 }
 
-type ManagedPipelines struct {
-	// Include instructlab multi-phase training pipelines with the deployment of this DSP API Server. Default: true
-	// Applicable values:"Managed" or "Removed"
+// +kubebuilder:validation:Pattern=`^(Managed|Removed)$`
+type ManagedPipelineState string
+
+type ManagedPipelineOptions struct {
+	// Set to one of the following values:
+	//
+	// - "Managed" : This pipeline is automatically imported.
+	// - "Removed" : This pipeline is not automatically imported when a new pipeline server or DSPA is created. If previously set to "Managed", setting to "Removed" does not remove existing preloaded pipelines but does prevent future updates from being imported.
+	//
+	// +kubebuilder:validation:Enum=Managed;Removed
+	// +kubebuilder:default=Removed
 	// +kubebuilder:validation:Optional
-	EnableInstructLabPipeline string `json:"enableInstructLabPipeline,omitempty"`
-	// Include sample pipelines with the deployment of this DSP API Server. Default: true
-	// Applicable values:"Managed" or "Removed"
+	State ManagedPipelineState `json:"state,omitempty"`
+}
+
+type ManagedPipelinesSpec struct {
+	// Configures whether to automatically import the InstructLab pipeline.
+	// You must enable the trainingoperator component to run the InstructLab pipeline.
 	// +kubebuilder:validation:Optional
-	EnableIrisPipeline string `json:"enableIrisPipeline,omitempty"`
+	InstructLab *ManagedPipelineOptions `json:"instructLab,omitempty"`
 }
 
 type APIServer struct {
@@ -77,8 +88,9 @@ type APIServer struct {
 	// +kubebuilder:default:=true
 	// +kubebuilder:validation:Optional
 	EnableRoute bool `json:"enableOauth"`
-	// Include sample pipelines with the deployment of this DSP API Server. Default: true
+	// Include the Iris sample pipeline with the deployment of this DSP API Server. Default: true
 	// +kubebuilder:default:=false
+	// +Deprecated
 	// +kubebuilder:validation:Optional
 	EnableSamplePipeline bool `json:"enableSamplePipeline"`
 	// Launcher/Executor image used during pipeline execution.
@@ -93,8 +105,8 @@ type APIServer struct {
 	ToolboxImage string `json:"toolboxImage,omitempty"`
 	// RhelAI image used for ilab tasks in managed pipelines.
 	RHELAIImage string `json:"rhelAIImage,omitempty"`
-	// Enable various pipelines with the deployment of this DSP API server.
-	ManagedPipelines *ManagedPipelines `json:"managedPipelines,omitempty"`
+	// Enable various managed pipelines on this DSP API server.
+	ManagedPipelines *ManagedPipelinesSpec `json:"managedPipelines,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
 	// Specify init container resource requirements. The init container
