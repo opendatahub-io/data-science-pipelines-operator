@@ -22,11 +22,13 @@ ManagedPipelinesMetadata:
     Description:
     Filepath: /pipelines/instructlab.yaml
     VersionName: "[InstructLab] LLM Training Pipeline - $(PLATFORMVERSION)"
+    # VersionDescription: "TODO - Add a Version Description"
   Iris: 
     Name: "[Demo] iris-training"
     Description: "[source code](https://github.com/opendatahub-io/data-science-pipelines/tree/master/samples/iris-sklearn) A simple pipeline to demonstrate a basic ML Training workflow"
     Filepath: /samples/iris-pipeline-compiled.yaml
     VersionName: "[Demo] iris-training - $(PLATFORMVERSION)"
+    # VersionDescription: "TODO - Add a Version Description"
 DSPO:
   HealthCheck:
     Database:

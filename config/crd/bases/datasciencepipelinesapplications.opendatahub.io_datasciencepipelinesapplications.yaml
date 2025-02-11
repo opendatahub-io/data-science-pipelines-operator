@@ -114,8 +114,8 @@ spec:
                     type: boolean
                   enableSamplePipeline:
                     default: false
-                    description: 'Include sample pipelines with the deployment of
-                      this DSP API Server. Default: true'
+                    description: 'Include Iris sample pipeline with the deployment
+                      of this DSP API Server. Default: true'
                     type: boolean
                   image:
                     description: Specify a custom image for DSP API Server.
@@ -160,16 +160,16 @@ spec:
                     description: Enable various pipelines with the deployment of this
                       DSP API server.
                     properties:
-                      enableInstructLabPipeline:
-                        description: 'Include instructlab multi-phase training pipelines
-                          with the deployment of this DSP API Server. Default: true
-                          Applicable values:"Managed" or "Removed"'
-                        type: string
-                      enableIrisPipeline:
-                        description: 'Include sample pipelines with the deployment
-                          of this DSP API Server. Default: true Applicable values:"Managed"
-                          or "Removed"'
-                        type: string
+                      instructLab:
+                        description: Include instructlab multi-phase training pipelines
+                          with the deployment of this DSP API Server.
+                        properties:
+                          state:
+                            description: 'Include managed pipelines with the deployment
+                              of this DSP API Server. Default: nil Applicable values:"Managed"
+                              or "Removed"'
+                            type: string
+                        type: object
                     type: object
                   resources:
                     description: Specify custom Pod resource requirements for this

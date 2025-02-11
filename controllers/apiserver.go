@@ -37,22 +37,6 @@ const apiServerDefaultResourceNamePrefix = "ds-pipeline-"
 // as such it is handled separately
 const serverRoute = "apiserver/route/route.yaml.tmpl"
 
-const FullSampleConfigJSON = "[{\"name\": \"Instructlab FOOOZ\", \"description\": \"Instructlab\", \"file\": \"/pipelines/instructlab.yaml\"}]"
-
-// [
-//           {
-//             "name": "[Demo] iris-training",
-//             "description": "[source code](https://github.com/opendatahub-io/data-science-pipelines/tree/master/samples/iris-sklearn) A simple pipeline to demonstrate a basic ML Training workflow",
-//             "file": "/samples/iris-pipeline-compiled.yaml"
-//           },
-//           {
-//             "name": "Instructlab FOOOOOOO",
-//             "description": "Instructlab",
-//             "file": "/pipelines/instructlab.yaml"
-//           }
-//         ]
-// `
-
 // Sample Pipeline and Config are resources deployed conditionally
 // as such it is handled separately
 var samplePipelineTemplates = map[string]string{
@@ -76,11 +60,15 @@ func (r *DSPAReconciler) GenerateSamplePipelineMetadataBlock(pipeline string) (m
 
 	// Get optional fields
 	pDesc := config.GetStringConfigWithDefault(fmt.Sprintf("ManagedPipelinesMetadata.%s.Description", pipeline), "")
+	pVerName := config.GetStringConfigWithDefault(fmt.Sprintf("ManagedPipelinesMetadata.%s.VersionName", pipeline), "")
+	pVerDesc := config.GetStringConfigWithDefault(fmt.Sprintf("ManagedPipelinesMetadata.%s.VersionDescription", pipeline), "")
 
 	// Create Sample Config item
 	item["name"] = pName
 	item["file"] = pFile
 	item["description"] = pDesc
+	item["versionName"] = pVerName
+	item["versionDescription"] = pVerDesc
 
 	return item, nil
 
@@ -88,39 +76,25 @@ func (r *DSPAReconciler) GenerateSamplePipelineMetadataBlock(pipeline string) (m
 
 func (r *DSPAReconciler) GetSampleConfig(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, params *DSPAParams) (string, error) {
 	// TODO(gfrasca): do this more systematically and/or extendably
-	enableInstructLabPipeline, err := r.IsPipelineEnabledByPlatform("instructlab")
-	if err != nil {
-		return "", err
-	}
-	enableIrisPipeline, err := r.IsPipelineEnabledByPlatform("iris")
-	if err != nil {
-		return "", err
-	}
+	// enableInstructLabPipeline, err := r.IsPipelineEnabledByPlatform("instructlab")
+	// if err != nil {
+	// 	return "", err
+	// }
+	// enableIrisPipeline, err := r.IsPipelineEnabledByPlatform("iris")
+	// if err != nil {
+	// 	return "", err
+	// }
 
 	// Check if InstructLab Pipeline enabled in this DSPA
-	if dsp.Spec.APIServer.ManagedPipelines != nil {
-		settingInDSPA := dsp.Spec.APIServer.ManagedPipelines.EnableInstructLabPipeline
-		if strings.EqualFold(settingInDSPA, "Managed") {
-			enableInstructLabPipeline = true
-		} else if strings.EqualFold(settingInDSPA, "Removed") {
-			enableInstructLabPipeline = false
+	enableInstructLabPipeline := false
+	if dsp.Spec.APIServer.ManagedPipelines != nil && dsp.Spec.APIServer.ManagedPipelines.InstructLab != nil {
+		settingInDSPA := dsp.Spec.APIServer.ManagedPipelines.InstructLab.State
+		if settingInDSPA != "" {
+			enableInstructLabPipeline = strings.EqualFold(settingInDSPA, "Managed")
 		}
 	}
 
-	// Check if Iris Pipeline enabled in this DSPA
-	// Legacy support case
-	if dsp.Spec.APIServer.EnableSamplePipeline {
-		enableIrisPipeline = true
-	} else if dsp.Spec.APIServer.ManagedPipelines != nil {
-		settingInDSPA := dsp.Spec.APIServer.ManagedPipelines.EnableIrisPipeline
-		if strings.EqualFold(settingInDSPA, "Managed") {
-			enableIrisPipeline = true
-		} else if strings.EqualFold(settingInDSPA, "Removed") {
-			enableIrisPipeline = false
-		}
-	}
-
-	return r.GenerateSampleConfigJSON(enableInstructLabPipeline, enableIrisPipeline)
+	return r.GenerateSampleConfigJSON(enableInstructLabPipeline, dsp.Spec.APIServer.EnableSamplePipeline)
 }
 
 func (r *DSPAReconciler) IsPipelineEnabledByPlatform(pipelineName string) (bool, error) {
@@ -143,21 +117,25 @@ func (r *DSPAReconciler) IsPipelineEnabledByPlatform(pipelineName string) (bool,
 func (r *DSPAReconciler) GenerateSampleConfigJSON(enableInstructLabPipeline, enableIrisPipeline bool) (string, error) {
 
 	// Now generate a sample config
-	var sampleConfig = make([]map[string]string, 0)
+	var pipelineConfig = make([]map[string]string, 0)
 	if enableInstructLabPipeline {
 		item, err := r.GenerateSamplePipelineMetadataBlock("instructlab")
 		if err != nil {
 			return "", err
 		}
-		sampleConfig = append(sampleConfig, item)
+		pipelineConfig = append(pipelineConfig, item)
 	}
 	if enableIrisPipeline {
 		item, err := r.GenerateSamplePipelineMetadataBlock("iris")
 		if err != nil {
 			return "", err
 		}
-		sampleConfig = append(sampleConfig, item)
+		pipelineConfig = append(pipelineConfig, item)
 	}
+
+	var sampleConfig = make(map[string]interface{})
+	sampleConfig["pipelines"] = pipelineConfig
+	sampleConfig["loadSamplesOnRestart"] = true
 
 	// Marshal into a JSON String
 	outputJSON, err := json.Marshal(sampleConfig)

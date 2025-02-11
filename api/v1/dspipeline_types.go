@@ -55,15 +55,17 @@ type DSPASpec struct {
 	*WorkflowController `json:"workflowController,omitempty"`
 }
 
-type ManagedPipelines struct {
-	// Include instructlab multi-phase training pipelines with the deployment of this DSP API Server. Default: true
+type ManagedPipelineOptions struct {
+	// Include managed pipelines with the deployment of this DSP API Server. Default: nil
 	// Applicable values:"Managed" or "Removed"
 	// +kubebuilder:validation:Optional
-	EnableInstructLabPipeline string `json:"enableInstructLabPipeline,omitempty"`
-	// Include sample pipelines with the deployment of this DSP API Server. Default: true
-	// Applicable values:"Managed" or "Removed"
+	State string `json:"state,omitempty"`
+}
+
+type ManagedPipelinesSpec struct {
+	// Include instructlab multi-phase training pipelines with the deployment of this DSP API Server.
 	// +kubebuilder:validation:Optional
-	EnableIrisPipeline string `json:"enableIrisPipeline,omitempty"`
+	InstructLab *ManagedPipelineOptions `json:"instructLab,omitempty"`
 }
 
 type APIServer struct {
@@ -77,8 +79,9 @@ type APIServer struct {
 	// +kubebuilder:default:=true
 	// +kubebuilder:validation:Optional
 	EnableRoute bool `json:"enableOauth"`
-	// Include sample pipelines with the deployment of this DSP API Server. Default: true
+	// Include Iris sample pipeline with the deployment of this DSP API Server. Default: true
 	// +kubebuilder:default:=false
+	// +Deprecated
 	// +kubebuilder:validation:Optional
 	EnableSamplePipeline bool `json:"enableSamplePipeline"`
 	// Launcher/Executor image used during pipeline execution.
@@ -94,7 +97,7 @@ type APIServer struct {
 	// RhelAI image used for ilab tasks in managed pipelines.
 	RHELAIImage string `json:"rhelAIImage,omitempty"`
 	// Enable various pipelines with the deployment of this DSP API server.
-	ManagedPipelines *ManagedPipelines `json:"managedPipelines,omitempty"`
+	ManagedPipelines *ManagedPipelinesSpec `json:"managedPipelines,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
 	// Specify init container resource requirements. The init container
