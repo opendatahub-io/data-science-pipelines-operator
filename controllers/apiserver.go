@@ -25,7 +25,6 @@ import (
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	v1 "github.com/openshift/api/route/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -174,20 +173,10 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1.Dat
 		}
 	}
 
-	for cmName, template := range samplePipelineTemplates {
-		//if dsp.Spec.APIServer.EnableSamplePipeline || dsp.Spec.APIServer.ManagedPipelines.EnableIrisPipeline || dsp.Spec.APIServer.ManagedPipelines.EnableInstructLabPipeline {
-		if dsp.Spec.APIServer.EnableSamplePipeline {
-			err := r.Apply(dsp, params, template)
-			if err != nil {
-				return err
-			}
-		} else {
-			cm := &corev1.ConfigMap{}
-			namespacedNamed := types.NamespacedName{Name: cmName + "-" + dsp.Name, Namespace: dsp.Namespace}
-			err := r.DeleteResourceIfItExists(ctx, cm, namespacedNamed)
-			if err != nil {
-				return err
-			}
+	for _, template := range samplePipelineTemplates {
+		err := r.Apply(dsp, params, template)
+		if err != nil {
+			return err
 		}
 	}
 

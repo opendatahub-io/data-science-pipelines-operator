@@ -185,9 +185,7 @@ spec:
           args:
             - --config=/config
             - -logtostderr=true
-            {{ if .APIServer.EnableSamplePipeline }}
             - --sampleconfig=/config/sample_config.json
-            {{ end }}
             {{ if .PodToPodTLS }}
             - --tlsCertPath=/etc/tls/private/tls.crt
             - --tlsCertKeyPath=/etc/tls/private/tls.key
@@ -246,19 +244,15 @@ spec:
             - mountPath: /etc/tls/private
               name: proxy-tls
           {{ end }}
-          {{ if or .APIServer.EnableSamplePipeline .CustomCABundle }}
-            {{ if .APIServer.EnableSamplePipeline }}
             - name: sample-config
               mountPath: /config/sample_config.json
               subPath: sample_config.json
             - name: sample-pipeline
               mountPath: /samples/
-            {{ end }}
             {{ if .CustomCABundle }}
             - mountPath: {{ .CustomCABundleRootMountPath  }}
               name: ca-bundle
             {{ end }}
-          {{ end }}
         {{ if .APIServer.EnableRoute }}
         - name: oauth-proxy
           args:
@@ -330,11 +324,10 @@ spec:
           configMap:
             name: {{ .CustomCABundle.ConfigMapName }}
         {{ end }}
-        {{ if .APIServer.EnableSamplePipeline }}
         - name: sample-config
           configMap:
             name: sample-config-{{.Name}}
         - name: sample-pipeline
           configMap:
             name: sample-pipeline-{{.Name}}
-        {{ end }}
+
