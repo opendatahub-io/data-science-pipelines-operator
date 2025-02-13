@@ -18,7 +18,6 @@ package controllers
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -50,19 +49,19 @@ func (r *DSPAReconciler) GenerateSamplePipelineMetadataBlock(pipeline string) (m
 	item := make(map[string]string)
 
 	// Get Required Fields
-	pName, err := config.GetStringConfigOrError(fmt.Sprintf("ManagedPipelinesMetadata.%s.Name", pipeline))
+	pName, err := config.GetStringConfig(fmt.Sprintf("ManagedPipelinesMetadata.%s.Name", pipeline))
 	if err != nil {
 		return nil, err
 	}
-	pFile, err := config.GetStringConfigOrError(fmt.Sprintf("ManagedPipelinesMetadata.%s.Filepath", pipeline))
+	pFile, err := config.GetStringConfig(fmt.Sprintf("ManagedPipelinesMetadata.%s.Filepath", pipeline))
 	if err != nil {
 		return nil, err
 	}
-	platformVersion := config.GetStringConfigWithDefault("PlatformVersion", config.DefaultPlatformVersion)
+	platformVersion := config.GetStringConfigWithDefault("DSPO.PlatformVersion", config.DefaultPlatformVersion)
 
 	// Get optional fields
 	pDesc := config.GetStringConfigWithDefault(fmt.Sprintf("ManagedPipelinesMetadata.%s.Description", pipeline), "")
-	pVerName := config.GetStringConfigWithDefault(fmt.Sprintf("ManagedPipelinesMetadata.%s.VersionName", pipeline), "")
+	pVerName := config.GetStringConfigWithDefault(fmt.Sprintf("ManagedPipelinesMetadata.%s.VersionName", pipeline), pName)
 	pVerDesc := config.GetStringConfigWithDefault(fmt.Sprintf("ManagedPipelinesMetadata.%s.VersionDescription", pipeline), "")
 
 	// Create Sample Config item
@@ -76,7 +75,7 @@ func (r *DSPAReconciler) GenerateSamplePipelineMetadataBlock(pipeline string) (m
 
 }
 
-func (r *DSPAReconciler) GetSampleConfig(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, params *DSPAParams) (string, error) {
+func (r *DSPAReconciler) GetSampleConfig(dsp *dspa.DataSciencePipelinesApplication) (string, error) {
 	// Check if InstructLab Pipeline enabled in this DSPA
 	enableInstructLabPipeline := false
 	if dsp.Spec.APIServer.ManagedPipelines != nil && dsp.Spec.APIServer.ManagedPipelines.InstructLab != nil {
@@ -86,10 +85,10 @@ func (r *DSPAReconciler) GetSampleConfig(ctx context.Context, dsp *dspa.DataScie
 		}
 	}
 
-	return r.GenerateSampleConfigJSON(enableInstructLabPipeline, dsp.Spec.APIServer.EnableSamplePipeline)
+	return r.generateSampleConfigJSON(enableInstructLabPipeline, dsp.Spec.APIServer.EnableSamplePipeline)
 }
 
-func (r *DSPAReconciler) GenerateSampleConfigJSON(enableInstructLabPipeline, enableIrisPipeline bool) (string, error) {
+func (r *DSPAReconciler) generateSampleConfigJSON(enableInstructLabPipeline, enableIrisPipeline bool) (string, error) {
 
 	// Now generate a sample config
 	var pipelineConfig = make([]map[string]string, 0)
@@ -130,17 +129,14 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1.Dat
 	}
 
 	log.Info("Generating Sample Config")
-	sampleConfigJSON, err := r.GetSampleConfig(ctx, dsp, params)
+	sampleConfigJSON, err := r.GetSampleConfig(dsp)
 	if err != nil {
 		return err
 	}
 	params.SampleConfigJSON = sampleConfigJSON
 
 	// Generate configuration hash for rebooting on sample changes
-	hasher := sha256.New()
-	hasher.Write([]byte(sampleConfigJSON))
-	configHash := hex.EncodeToString(hasher.Sum(nil))
-	params.APIServerConfigHash = configHash
+	params.APIServerConfigHash = fmt.Sprintf("%x", sha256.Sum256([]byte(sampleConfigJSON)))
 
 	log.Info("Applying APIServer Resources")
 	err = r.ApplyDir(dsp, params, apiServerTemplatesDir)

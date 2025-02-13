@@ -195,7 +195,7 @@ func createResourceRequirement(RequestsCPU resource.Quantity, RequestsMemory res
 	}
 }
 
-func GetStringConfigOrError(configName string) (string, error) {
+func GetStringConfig(configName string) (string, error) {
 	if !viper.IsSet(configName) {
 		return "", fmt.Errorf("value not set in config for configname %s", configName)
 	}

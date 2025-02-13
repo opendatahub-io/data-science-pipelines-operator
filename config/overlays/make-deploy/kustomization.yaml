@@ -9,4 +9,4 @@ patchesStrategicMerge:
 images:
 - name: controller
   newName: quay.io/gmfrasca/dspo
-  newTag: managed-pipelines-v0.0.3
+  newTag: managed-pipelines-v0.0.5

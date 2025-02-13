@@ -16,6 +16,8 @@ spec:
       dspa: testdsp5
   template:
     metadata:
+      annotations:
+        configHash: 9a8b56f5098a0d91d9db76d9c8b48e9872c0dbe71bcdc7f08f2c05bfe26c787f
       labels:
         dsp-version: v2
         app: ds-pipeline-testdsp5
@@ -145,6 +147,7 @@ spec:
           args:
             - --config=/config
             - -logtostderr=true
+            - --sampleconfig=/config/sample_config.json
             - --tlsCertPath=/etc/tls/private/tls.crt
             - --tlsCertKeyPath=/etc/tls/private/tls.key
           ports:
@@ -179,6 +182,11 @@ spec:
               name: managed-pipelines
             - mountPath: /etc/tls/private
               name: proxy-tls
+            - mountPath: /config/sample_config.json
+              name: sample-config
+              subPath: sample_config.json
+            - mountPath: /samples/
+              name: sample-pipeline
             - name: ca-bundle
               mountPath: /dsp-custom-certs
         - name: oauth-proxy
@@ -245,4 +253,12 @@ spec:
           configMap:
             name: dsp-trusted-ca-testdsp5
             defaultMode: 420
+        - configMap:
+            defaultMode: 420
+            name: sample-config-testdsp5
+          name: sample-config
+        - configMap:
+            defaultMode: 420
+            name: sample-pipeline-testdsp5
+          name: sample-pipeline
       serviceAccountName: ds-pipeline-testdsp5

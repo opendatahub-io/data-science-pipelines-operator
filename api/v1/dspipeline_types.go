@@ -62,7 +62,7 @@ type ManagedPipelineOptions struct {
 	// Set to one of the following values:
 	//
 	// - "Managed" : This pipeline is automatically imported.
-	// - "Removed" : This pipeline is not automatically imported when a new pipeline server or DSPA is created. If previously set to "Managed", setting to "Removed" does not remove existing preloaded pipelines but does prevent future updates from being imported.
+	// - "Removed" : This pipeline is not automatically imported. If previously set to "Managed", setting to "Removed" does not remove existing managed pipelines but does prevent future updates from being imported.
 	//
 	// +kubebuilder:validation:Enum=Managed;Removed
 	// +kubebuilder:default=Removed
@@ -90,7 +90,6 @@ type APIServer struct {
 	EnableRoute bool `json:"enableOauth"`
 	// Include the Iris sample pipeline with the deployment of this DSP API Server. Default: true
 	// +kubebuilder:default:=false
-	// +Deprecated
 	// +kubebuilder:validation:Optional
 	EnableSamplePipeline bool `json:"enableSamplePipeline"`
 	// Launcher/Executor image used during pipeline execution.
