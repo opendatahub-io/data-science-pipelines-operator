@@ -79,6 +79,10 @@ spec:
           # It must always be enabled in production
           - name: DSPO_APISERVER_INCLUDE_OWNERREFERENCE
             value: $(DSPO_APISERVER_INCLUDE_OWNERREFERENCE)
+          - name: MANAGEDPIPELINES
+            value: $(MANAGEDPIPELINES)
+          - name: PLATFORMVERSION
+            value: $(PLATFORMVERSION)
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

@@ -16,6 +16,8 @@ spec:
       dspa: testdsp4
   template:
     metadata:
+      annotations:
+        configHash: 9a8b56f5098a0d91d9db76d9c8b48e9872c0dbe71bcdc7f08f2c05bfe26c787f
       labels:
         dsp-version: v2
         app: ds-pipeline-testdsp4
@@ -133,6 +135,7 @@ spec:
           args:
             - --config=/config
             - -logtostderr=true
+            - --sampleconfig=/config/sample_config.json
           ports:
             - containerPort: 8888
               name: http
@@ -177,6 +180,11 @@ spec:
               subPath: config.json
             - mountPath: /config/managed-pipelines
               name: managed-pipelines
+            - mountPath: /config/sample_config.json
+              name: sample-config
+              subPath: sample_config.json
+            - mountPath: /samples/
+              name: sample-pipeline
         - name: oauth-proxy
           args:
             - --https-address=:8443
@@ -236,4 +244,12 @@ spec:
         - name: managed-pipelines
           emptyDir:
             sizeLimit: 10Mi
+        - configMap:
+            defaultMode: 420
+            name: sample-config-testdsp4
+          name: sample-config
+        - configMap:
+            defaultMode: 420
+            name: sample-pipeline-testdsp4
+          name: sample-pipeline
       serviceAccountName: ds-pipeline-testdsp4

@@ -158,6 +158,10 @@ const DefaultRequeueTime = time.Second * 20
 
 const DefaultApiServerIncludeOwnerReferenceConfigName = true
 
+const DefaultManagedPipelines = "{}"
+
+const DefaultPlatformVersion = "v0.0.0"
+
 func GetConfigRequiredFields() []string {
 	return requiredFields
 }
@@ -189,6 +193,14 @@ func createResourceRequirement(RequestsCPU resource.Quantity, RequestsMemory res
 			Memory: LimitsMemory,
 		},
 	}
+}
+
+func GetStringConfig(configName string) (string, error) {
+	if !viper.IsSet(configName) {
+		return "", fmt.Errorf("value not set in config for configname %s", configName)
+	}
+
+	return viper.GetString(configName), nil
 }
 
 func GetStringConfigWithDefault(configName, value string) string {

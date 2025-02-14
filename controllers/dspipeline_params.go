@@ -57,7 +57,9 @@ type DSPAParams struct {
 	APIServer                            *dspa.APIServer
 	APIServerDefaultResourceName         string
 	APIServerServiceName                 string
+	APIServerConfigHash                  string
 	OAuthProxy                           string
+	SampleConfigJSON                     string
 	ScheduledWorkflow                    *dspa.ScheduledWorkflow
 	ScheduledWorkflowDefaultResourceName string
 	PersistenceAgent                     *dspa.PersistenceAgent
