@@ -16,12 +16,40 @@ spec:
       dspa: testdsp4
   template:
     metadata:
+      annotations:
+        configHash: 9a8b56f5098a0d91d9db76d9c8b48e9872c0dbe71bcdc7f08f2c05bfe26c787f
       labels:
         dsp-version: v2
         app: ds-pipeline-testdsp4
         component: data-science-pipelines
         dspa: testdsp4
     spec:
+      initContainers:
+        - name: init-pipelines
+          image: runtimegeneric:test4
+          workingDir: /opt/app-root/src/pipelines/distributed-ilab
+          command: ['/bin/sh', '-c']
+          args:
+            - "make pipeline && cp pipeline.yaml ${BUILD_FOLDER}"
+          env:
+            - name: BUILD_FOLDER
+              value: /opt/app-root/src/build
+            - name: PYTHON_IMAGE
+              value: runtimegeneric:test4
+            - name: TOOLBOX_IMAGE
+              value: toolbox:test4
+            - name: RHELAI_IMAGE
+              value: rhelai:test4
+          resources:
+            limits:
+              memory: 256Mi
+              cpu: '500m'
+            requests:
+              memory: 128Mi
+              cpu: '250m'
+          volumeMounts:
+            - mountPath: /opt/app-root/src/build
+              name: managed-pipelines
       containers:
         - env:
             - name: POD_NAMESPACE
@@ -107,6 +135,7 @@ spec:
           args:
             - --config=/config
             - -logtostderr=true
+            - --sampleconfig=/config/sample_config.json
           ports:
             - containerPort: 8888
               name: http
@@ -149,6 +178,13 @@ spec:
             - mountPath: /config/config.json
               name: server-config
               subPath: config.json
+            - mountPath: /config/managed-pipelines
+              name: managed-pipelines
+            - mountPath: /config/sample_config.json
+              name: sample-config
+              subPath: sample_config.json
+            - mountPath: /samples/
+              name: sample-pipeline
         - name: oauth-proxy
           args:
             - --https-address=:8443
@@ -205,4 +241,15 @@ spec:
           configMap:
             defaultMode: 420
             name: ds-pipeline-server-config-testdsp4
+        - name: managed-pipelines
+          emptyDir:
+            sizeLimit: 10Mi
+        - configMap:
+            defaultMode: 420
+            name: sample-config-testdsp4
+          name: sample-config
+        - configMap:
+            defaultMode: 420
+            name: sample-pipeline-testdsp4
+          name: sample-pipeline
       serviceAccountName: ds-pipeline-testdsp4

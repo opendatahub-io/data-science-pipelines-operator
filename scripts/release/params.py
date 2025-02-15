@@ -12,6 +12,7 @@ QUAY_REPOS = {
     "IMAGES_SCHEDULEDWORKFLOW":  "ds-pipelines-scheduledworkflow",
     "IMAGES_LAUNCHER":  "ds-pipelines-launcher",
     "IMAGES_DRIVER":  "ds-pipelines-driver",
+    "IMAGES_PIPELINESRUNTIMEGENERIC":  "ds-pipelines-runtime-generic",
 }
 
 TAGGED_REPOS = {
@@ -30,9 +31,11 @@ TAGGED_REPOS = {
 }
 
 STATIC_REPOS = {
-    "IMAGES_MLMDENVOY": "registry.redhat.io/openshift-service-mesh/proxyv2-rhel8@sha256:02b834fd74da71ec37f6a5c0d10aac9a679d1a0f4e510c4f77723ef2367e858a",
-    "IMAGES_MARIADB": "registry.redhat.io/rhel8/mariadb-103@sha256:3d30992e60774f887c4e7959c81b0c41b0d82d042250b3b56f05ab67fd4cdee1",
-    "IMAGES_OAUTHPROXY": "registry.redhat.io/openshift4/ose-oauth-proxy@sha256:4f8d66597feeb32bb18699326029f9a71a5aca4a57679d636b876377c2e95695",
+    "IMAGES_MLMDENVOY": "registry.redhat.io/openshift-service-mesh/proxyv2-rhel8@sha256:b30d60cd458133430d4c92bf84911e03cecd02f60e88a58d1c6c003543cf833a",
+    "IMAGES_MARIADB": "registry.redhat.io/rhel8/mariadb-103@sha256:f0ee0d27bb784e289f7d88cc8ee0e085ca70e88a5d126562105542f259a1ac01",
+    "IMAGES_OAUTHPROXY": "registry.redhat.io/openshift4/ose-oauth-proxy@sha256:8ce44de8c683f198bf24ba36cd17e89708153d11f5b42c0a27e77f8fdb233551",
+    "IMAGES_TOOLBOX": "registry.redhat.io/ubi9/toolbox@sha256:da31dee8904a535d12689346e65e5b00d11a6179abf1fa69b548dbd755fa2770",
+    "IMAGES_RHELAI": "registry.redhat.io/rhelai1/instructlab-nvidia-rhel9@sha256:05cfba1fb13ed54b1de4d021da2a31dd78ba7d8cc48e10c7fe372815899a18ae",
 }
 
 OTHER_OPTIONS = {
@@ -41,7 +44,9 @@ OTHER_OPTIONS = {
     "DSPO_HEALTHCHECK_DATABASE_CONNECTIONTIMEOUT": "15s",
     "DSPO_HEALTHCHECK_OBJECTSTORE_CONNECTIONTIMEOUT": "15s",
     "DSPO_REQUEUE_TIME": "20s",
-    "DSPO_APISERVER_INCLUDE_OWNERREFERENCE": "true"
+    "DSPO_APISERVER_INCLUDE_OWNERREFERENCE": "true",
+    "MANAGEDPIPELINES": "\"{}\"",
+    "PLATFORMVERSION": "\"v0.0.0\""
 }
 
 

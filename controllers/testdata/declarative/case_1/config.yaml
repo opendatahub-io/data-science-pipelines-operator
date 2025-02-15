@@ -12,3 +12,19 @@ Images:
   MariaDB: mariadb:test1
   MlPipelineUI: frontend:test1
   Minio: minio:test1
+  RuntimeGeneric: runtimegeneric:test1
+  Toolbox: toolbox:test1
+  RHELAI: rhelai:test1
+ManagedPipelinesMetadata:
+  Instructlab:
+    Name: "[InstructLab] LLM Training Pipeline"
+    Description:
+    Filepath: /pipelines/instructlab.yaml
+    VersionName: "[InstructLab] LLM Training Pipeline"
+  Iris:
+    Name: "[Demo] iris-training"
+    Description: "[source code](https://github.com/opendatahub-io/data-science-pipelines/tree/master/samples/iris-sklearn) A simple pipeline to demonstrate a basic ML Training workflow"
+    Filepath: /samples/iris-pipeline-compiled.yaml
+    VersionName: "[Demo] iris-training"
+DSPO:
+  PlatformVersion: v0.0.0

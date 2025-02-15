@@ -13,6 +13,11 @@ on:
         default: 'v1.0.x'
         description: 'Source branch to build DSP from'
         required: true
+      src_pipelines_branch:
+        type: string
+        default: 'v1.0.x'
+        description: 'Source branch to build DSP Pipelines Generic Image from'
+        required: true
       target_tag:
         type: string
         default: 'vx.y.z'
@@ -27,6 +32,11 @@ on:
         type: string
         default: 'opendatahub-io/data-science-pipelines'
         description: 'DSP org/repo'
+        required: true
+      pipelines_org_repo:
+        type: string
+        default: 'opendatahub-io/ilab-on-ocp'
+        description: 'DSP Pipelines org/repo'
         required: true
       overwrite_imgs:
         type: string
@@ -45,6 +55,11 @@ on:
         default: 'v1.0.x'
         description: 'Source branch to build DSP from'
         required: true
+      src_pipelines_branch:
+        type: string
+        default: 'v1.0.x'
+        description: 'Source branch to build DSP Pipelines Generic Image from'
+        required: true
       target_tag:
         default: 'vx.y.z'
         description: 'Target Image Tag'
@@ -56,6 +71,11 @@ on:
       dsp_org_repo:
         default: 'opendatahub-io/data-science-pipelines'
         description: 'DSP org/repo'
+        required: true
+      pipelines_org_repo:
+        type: string
+        default: 'opendatahub-io/ilab-on-ocp'
+        description: 'DSP Pipelines org/repo'
         required: true
       overwrite_imgs:
         type: string
@@ -70,8 +90,10 @@ env:
   IMAGE_REPO_SWF: ds-pipelines-scheduledworkflow
   IMAGE_REPO_LAUNCHER: ds-pipelines-launcher
   IMAGE_REPO_DRIVER: ds-pipelines-driver
+  IMAGE_REPO_PIPELINES_RUNTIME_GENERIC: ds-pipelines-runtime-generic
   SOURCE_DSPO_BRANCH: ${{ inputs.src_dspo_branch }}
   SOURCE_DSP_BRANCH: ${{ inputs.src_dsp_branch }}
+  SOURCE_DSP_PIPELINES_BRANCH: ${{ inputs.src_pipelines_branch }}
   QUAY_ORG: ${{ inputs.quay_org }}
   QUAY_ID: ${{ secrets.QUAY_ID }}
   QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
@@ -188,4 +210,20 @@ jobs:
           IMAGE_REPO: ${{ env.IMAGE_REPO_LAUNCHER }}
           DOCKERFILE: backend/Dockerfile.launcher
           GH_REPO: ${{ inputs.dsp_org_repo }}
+          OVERWRITE: ${{ env.OVERWRITE_IMAGES }}
+
+  RUNTIME-GENERIC-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/build
+        name: Build Image
+        env:
+          SOURCE_BRANCH: ${{ env.SOURCE_DSP_PIPELINES_BRANCH }}
+        with:
+          IMAGE_REPO: ${{ env.IMAGE_REPO_PIPELINES_RUNTIME_GENERIC }}
+          DOCKERFILE: Dockerfile
+          GH_REPO: ${{ inputs.pipelines_org_repo }}
           OVERWRITE: ${{ env.OVERWRITE_IMAGES }}

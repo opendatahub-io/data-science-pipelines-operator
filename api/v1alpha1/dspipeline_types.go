@@ -55,6 +55,27 @@ type DSPASpec struct {
 	*WorkflowController `json:"workflowController,omitempty"`
 }
 
+// +kubebuilder:validation:Pattern=`^(Managed|Removed)$`
+type ManagedPipelineState string
+
+type ManagedPipelineOptions struct {
+	// Set to one of the following values:
+	//
+	// - "Managed" : This pipeline is automatically imported.
+	// - "Removed" : This pipeline is not automatically imported. If previously set to "Managed", setting to "Removed" does not remove existing managed pipelines but does prevent future updates from being imported.	//
+	// +kubebuilder:validation:Enum=Managed;Removed
+	// +kubebuilder:default=Removed
+	// +kubebuilder:validation:Optional
+	State ManagedPipelineState `json:"state,omitempty"`
+}
+
+type ManagedPipelinesSpec struct {
+	// Configures whether to automatically import the InstructLab pipeline.
+	// You must enable the trainingoperator component to run the InstructLab pipeline.
+	// +kubebuilder:validation:Optional
+	InstructLab *ManagedPipelineOptions `json:"instructLab,omitempty"`
+}
+
 type APIServer struct {
 	// Enable DS Pipelines Operator management of DSP API Server. Setting Deploy to false disables operator reconciliation. Default: true
 	// +kubebuilder:default:=true
@@ -66,14 +87,29 @@ type APIServer struct {
 	// +kubebuilder:default:=true
 	// +kubebuilder:validation:Optional
 	EnableRoute bool `json:"enableOauth"`
-	// Include sample pipelines with the deployment of this DSP API Server. Default: true
+	// Include the Iris sample pipeline with the deployment of this DSP API Server. Default: true
 	// +kubebuilder:default:=false
 	// +kubebuilder:validation:Optional
-	EnableSamplePipeline bool   `json:"enableSamplePipeline"`
-	ArgoLauncherImage    string `json:"argoLauncherImage,omitempty"`
-	ArgoDriverImage      string `json:"argoDriverImage,omitempty"`
+	EnableSamplePipeline bool `json:"enableSamplePipeline"`
+	// Launcher/Executor image used during pipeline execution.
+	ArgoLauncherImage string `json:"argoLauncherImage,omitempty"`
+	// Driver image used during pipeline execution.
+	ArgoDriverImage string `json:"argoDriverImage,omitempty"`
+	// Generic runtime image used for building managed pipelines during
+	// api server init, and for basic runtime operations.
+	RuntimeGenericImage string `json:"runtimeGenericImage,omitempty"`
+	// Toolbox image used for basic container spec runtime operations
+	// in managed pipelines.
+	ToolboxImage string `json:"toolboxImage,omitempty"`
+	// RhelAI image used for ilab tasks in managed pipelines.
+	RHELAIImage string `json:"rhelAIImage,omitempty"`
+	// Enable various managed pipelines on this DSP API server.
+	ManagedPipelines *ManagedPipelinesSpec `json:"managedPipelines,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
+	// Specify init container resource requirements. The init container
+	// is used to build managed-pipelines and store them in a shared volume.
+	InitResources *ResourceRequirements `json:"initResources,omitempty"`
 
 	// If the Object store/DB is behind a TLS secured connection that is
 	// unrecognized by the host OpenShift/K8s cluster, then you can

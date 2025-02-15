@@ -17,10 +17,15 @@ package controllers
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/json"
+	"fmt"
+	"strings"
 
+	dspa "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	v1 "github.com/openshift/api/route/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -39,6 +44,82 @@ var samplePipelineTemplates = map[string]string{
 	"sample-config":   "apiserver/sample-pipeline/sample-config.yaml.tmpl",
 }
 
+func (r *DSPAReconciler) GenerateSamplePipelineMetadataBlock(pipeline string) (map[string]string, error) {
+
+	item := make(map[string]string)
+
+	// Get Required Fields
+	pName, err := config.GetStringConfig(fmt.Sprintf("ManagedPipelinesMetadata.%s.Name", pipeline))
+	if err != nil {
+		return nil, err
+	}
+	pFile, err := config.GetStringConfig(fmt.Sprintf("ManagedPipelinesMetadata.%s.Filepath", pipeline))
+	if err != nil {
+		return nil, err
+	}
+	platformVersion := config.GetStringConfigWithDefault("DSPO.PlatformVersion", config.DefaultPlatformVersion)
+
+	// Get optional fields
+	pDesc := config.GetStringConfigWithDefault(fmt.Sprintf("ManagedPipelinesMetadata.%s.Description", pipeline), "")
+	pVerName := config.GetStringConfigWithDefault(fmt.Sprintf("ManagedPipelinesMetadata.%s.VersionName", pipeline), pName)
+	pVerDesc := config.GetStringConfigWithDefault(fmt.Sprintf("ManagedPipelinesMetadata.%s.VersionDescription", pipeline), "")
+
+	// Create Sample Config item
+	item["name"] = pName
+	item["file"] = pFile
+	item["description"] = pDesc
+	item["versionName"] = fmt.Sprintf("%s - %s", pVerName, strings.Trim(platformVersion, "\""))
+	item["versionDescription"] = pVerDesc
+
+	return item, nil
+
+}
+
+func (r *DSPAReconciler) GetSampleConfig(dsp *dspa.DataSciencePipelinesApplication) (string, error) {
+	// Check if InstructLab Pipeline enabled in this DSPA
+	enableInstructLabPipeline := false
+	if dsp.Spec.APIServer.ManagedPipelines != nil && dsp.Spec.APIServer.ManagedPipelines.InstructLab != nil {
+		settingInDSPA := dsp.Spec.APIServer.ManagedPipelines.InstructLab.State
+		if settingInDSPA != "" {
+			enableInstructLabPipeline = strings.EqualFold(string(settingInDSPA), "Managed")
+		}
+	}
+
+	return r.generateSampleConfigJSON(enableInstructLabPipeline, dsp.Spec.APIServer.EnableSamplePipeline)
+}
+
+func (r *DSPAReconciler) generateSampleConfigJSON(enableInstructLabPipeline, enableIrisPipeline bool) (string, error) {
+
+	// Now generate a sample config
+	var pipelineConfig = make([]map[string]string, 0)
+	if enableInstructLabPipeline {
+		item, err := r.GenerateSamplePipelineMetadataBlock("instructlab")
+		if err != nil {
+			return "", err
+		}
+		pipelineConfig = append(pipelineConfig, item)
+	}
+	if enableIrisPipeline {
+		item, err := r.GenerateSamplePipelineMetadataBlock("iris")
+		if err != nil {
+			return "", err
+		}
+		pipelineConfig = append(pipelineConfig, item)
+	}
+
+	var sampleConfig = make(map[string]any)
+	sampleConfig["pipelines"] = pipelineConfig
+	sampleConfig["loadSamplesOnRestart"] = true
+
+	// Marshal into a JSON String
+	outputJSON, err := json.Marshal(sampleConfig)
+	if err != nil {
+		return "", err
+	}
+
+	return string(outputJSON), nil
+}
+
 func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1.DataSciencePipelinesApplication, params *DSPAParams) error {
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
 
@@ -47,8 +128,18 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1.Dat
 		return nil
 	}
 
+	log.Info("Generating Sample Config")
+	sampleConfigJSON, err := r.GetSampleConfig(dsp)
+	if err != nil {
+		return err
+	}
+	params.SampleConfigJSON = sampleConfigJSON
+
+	// Generate configuration hash for rebooting on sample changes
+	params.APIServerConfigHash = fmt.Sprintf("%x", sha256.Sum256([]byte(sampleConfigJSON)))
+
 	log.Info("Applying APIServer Resources")
-	err := r.ApplyDir(dsp, params, apiServerTemplatesDir)
+	err = r.ApplyDir(dsp, params, apiServerTemplatesDir)
 	if err != nil {
 		return err
 	}
@@ -67,19 +158,10 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1.Dat
 		}
 	}
 
-	for cmName, template := range samplePipelineTemplates {
-		if dsp.Spec.APIServer.EnableSamplePipeline {
-			err := r.Apply(dsp, params, template)
-			if err != nil {
-				return err
-			}
-		} else {
-			cm := &corev1.ConfigMap{}
-			namespacedNamed := types.NamespacedName{Name: cmName + "-" + dsp.Name, Namespace: dsp.Namespace}
-			err := r.DeleteResourceIfItExists(ctx, cm, namespacedNamed)
-			if err != nil {
-				return err
-			}
+	for _, template := range samplePipelineTemplates {
+		err := r.Apply(dsp, params, template)
+		if err != nil {
+			return err
 		}
 	}
 

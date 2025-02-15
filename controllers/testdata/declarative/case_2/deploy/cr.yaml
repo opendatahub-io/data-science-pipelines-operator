@@ -13,6 +13,9 @@ spec:
     argoDriverImage: argodriverimage:test2
     enableOauth: true
     enableSamplePipeline: true
+    managedPipelines:
+      instructLab:
+        state: Managed
     customServerConfigMap:
       name: testserverconfigmapdspa2
       key: testserverconfigmapkeydspa2
@@ -23,6 +26,13 @@ spec:
       limits:
         cpu: "2522m"
         memory: "5Gi"
+    initResources:
+      requests:
+        cpu: "1232m"
+        memory: "2Gi"
+      limits:
+        cpu: "2523m"
+        memory: "6Gi"
   persistenceAgent:
     deploy: true
     image: persistenceagent:test2

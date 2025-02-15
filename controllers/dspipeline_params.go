@@ -57,7 +57,9 @@ type DSPAParams struct {
 	APIServer                            *dspa.APIServer
 	APIServerDefaultResourceName         string
 	APIServerServiceName                 string
+	APIServerConfigHash                  string
 	OAuthProxy                           string
+	SampleConfigJSON                     string
 	ScheduledWorkflow                    *dspa.ScheduledWorkflow
 	ScheduledWorkflowDefaultResourceName string
 	PersistenceAgent                     *dspa.PersistenceAgent
@@ -595,11 +597,19 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		serverImageFromConfig := config.GetStringConfigWithDefault(config.APIServerImagePath, config.DefaultImageValue)
 		argoLauncherImageFromConfig := config.GetStringConfigWithDefault(config.LauncherImagePath, config.DefaultImageValue)
 		argoDriverImageFromConfig := config.GetStringConfigWithDefault(config.DriverImagePath, config.DefaultImageValue)
+		runtimeGenericImageFromConfig := config.GetStringConfigWithDefault(config.RuntimeGenericPath, config.DefaultImageValue)
+		toolboxImageFromConfig := config.GetStringConfigWithDefault(config.ToolboxImagePath, config.DefaultImageValue)
+		rhelAIImageFromConfig := config.GetStringConfigWithDefault(config.RHELAIImagePath, config.DefaultImageValue)
 
 		setStringDefault(serverImageFromConfig, &p.APIServer.Image)
 		setStringDefault(argoLauncherImageFromConfig, &p.APIServer.ArgoLauncherImage)
 		setStringDefault(argoDriverImageFromConfig, &p.APIServer.ArgoDriverImage)
+		setStringDefault(runtimeGenericImageFromConfig, &p.APIServer.RuntimeGenericImage)
+		setStringDefault(toolboxImageFromConfig, &p.APIServer.ToolboxImage)
+		setStringDefault(rhelAIImageFromConfig, &p.APIServer.RHELAIImage)
+
 		setResourcesDefault(config.APIServerResourceRequirements, &p.APIServer.Resources)
+		setResourcesDefault(config.APIServerInitResourceRequirements, &p.APIServer.InitResources)
 
 		if p.APIServer.CustomServerConfig == nil {
 			p.APIServer.CustomServerConfig = &dspa.ScriptConfigMap{
