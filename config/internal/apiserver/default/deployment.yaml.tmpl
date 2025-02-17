@@ -28,7 +28,7 @@ spec:
           workingDir: /opt/app-root/src/pipelines/distributed-ilab
           command: [ '/bin/sh', '-c']
           args:
-            - "make pipeline && cp pipeline.yaml ${BUILD_FOLDER}"
+            - "make pipeline && mv pipeline.yaml ${BUILD_FOLDER}/instructlab.yaml"
           env:
             - name: BUILD_FOLDER
               value: /opt/app-root/src/build
