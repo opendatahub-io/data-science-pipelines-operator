@@ -17,7 +17,7 @@ ManagedPipelinesMetadata:
   Instructlab:
     Name: Instructlab
     Description: InstructLab fine-tunes models using synthetic data generation (SDG) techniques and a structured taxonomy to create diverse, high-quality training datasets.
-    Filepath: /pipelines/instructlab.yaml
+    Filepath: /config/managed-pipelines/instructlab.yaml
     VersionName: Instructlab
   Iris:
     Name: "[Demo] iris-training"
