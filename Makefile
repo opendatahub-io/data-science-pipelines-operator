@@ -128,6 +128,7 @@ unittest: manifests generate fmt vet envtest ## Run tests.
 functest: manifests generate fmt vet envtest ## Run tests.
 	export SSL_CERT_FILE=${ROOT_DIR}/controllers/testdata/tls/ca-bundle.crt && KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... --tags=test_functional -coverprofile cover.out
 
+#Just a comment to trigger and test CI
 .PHONY: integrationtest
 integrationtest: ## Run integration tests
 	cd tests && \
