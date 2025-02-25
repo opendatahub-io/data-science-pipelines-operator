@@ -23,13 +23,16 @@ import (
 	"crypto/tls"
 	"flag"
 	"fmt"
-	routev1 "github.com/openshift/api/route/v1"
 	"log"
 	"testing"
 	"time"
 
+	routev1 "github.com/openshift/api/route/v1"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"net/http"
 
 	"github.com/anthhub/forwarder"
 	"github.com/go-logr/logr"
@@ -43,7 +46,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -61,6 +63,7 @@ var (
 	k8sApiServerHost     string
 	DSPAPath             string
 	DSPANamespace        string
+	MinioNamespace       string
 	skipDeploy           bool
 	skipCleanup          bool
 	PortforwardLocalPort int
@@ -80,6 +83,7 @@ const (
 	DefaultKubeConfigPath       = "~/.kube/config"
 	Defaultk8sApiServerHost     = "localhost:6443"
 	DefaultDSPANamespace        = "default"
+	DefaultMinioNamespace       = "default"
 	DefaultDeployTimeout        = 240
 	DefaultPollInterval         = 2
 	DefaultDeleteTimeout        = 120
@@ -99,10 +103,11 @@ type ClientManager struct {
 
 type IntegrationTestSuite struct {
 	suite.Suite
-	Clientmgr     ClientManager
-	Ctx           context.Context
-	DSPANamespace string
-	DSPA          *dspav1.DataSciencePipelinesApplication
+	Clientmgr      ClientManager
+	Ctx            context.Context
+	DSPANamespace  string
+	MinioNamespace string
+	DSPA           *dspav1.DataSciencePipelinesApplication
 }
 
 type testLogWriter struct {
@@ -131,6 +136,7 @@ func init() {
 	flag.StringVar(&k8sApiServerHost, "k8sApiServerHost", Defaultk8sApiServerHost, "The k8s cluster api server host.")
 	flag.StringVar(&DSPAPath, "DSPAPath", DefaultDSPAPath, "The DSP resource file to deploy for testing.")
 	flag.StringVar(&DSPANamespace, "DSPANamespace", DefaultDSPANamespace, "The namespace to deploy DSPA.")
+	flag.StringVar(&MinioNamespace, "MinioNamespace", DefaultMinioNamespace, "The namespace where MinIO is deployed.")
 
 	flag.DurationVar(&DeployTimeout, "DeployTimeout", DefaultDeployTimeout, "Seconds to wait for deployments. Consider increasing this on resource starved environments.")
 	DeployTimeout *= time.Second
@@ -181,6 +187,7 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 	DSPA = testUtil.GetDSPAFromPath(suite.T(), clientmgr.mfopts, DSPAPath)
 
 	suite.DSPANamespace = DSPANamespace
+	suite.MinioNamespace = MinioNamespace
 	suite.DSPA = DSPA
 
 	if !skipDeploy {
