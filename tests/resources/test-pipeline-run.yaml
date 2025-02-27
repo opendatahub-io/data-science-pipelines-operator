@@ -58,8 +58,7 @@ root:
             producerSubtask: say-hello
     tasks:
       say-hello:
-        cachingOptions:
-          enableCache: true
+        cachingOptions: {}
         componentRef:
           name: comp-say-hello
         inputs:
