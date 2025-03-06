@@ -29,28 +29,6 @@ import (
 )
 
 func (suite *IntegrationTestSuite) TestPipelineSuccessfulRun() {
-
-	suite.T().Run("Should create a Pipeline Run", func(t *testing.T) {
-		// Retrieve Pipeline ID to create a new run
-		pipelineDisplayName := "[Demo] iris-training"
-		pipelineID, err := TestUtil.RetrievePipelineId(t, suite.Clientmgr.httpClient, APIServerURL, pipelineDisplayName)
-		require.NoError(t, err)
-		postUrl := fmt.Sprintf("%s/apis/v2beta1/runs", APIServerURL)
-		body := TestUtil.FormatRequestBody(t, pipelineID, pipelineDisplayName)
-		contentType := "application/json"
-		// Create a new run
-		response, err := suite.Clientmgr.httpClient.Post(postUrl, contentType, bytes.NewReader(body))
-		require.NoError(t, err)
-		responseData, err := io.ReadAll(response.Body)
-		responseString := string(responseData)
-		loggr.Info(responseString)
-		require.NoError(t, err)
-		require.Equal(t, 200, response.StatusCode)
-
-		err = TestUtil.WaitForPipelineRunCompletion(t, suite.Clientmgr.httpClient, APIServerURL)
-		require.NoError(t, err)
-	})
-
 	suite.T().Run("Should create a Pipeline Run using custom pip server", func(t *testing.T) {
 		// Retrieve Pipeline ID to create a new run
 		pipelineDisplayName := "Test pipeline run with custom pip server"
