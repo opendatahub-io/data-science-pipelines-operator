@@ -63,6 +63,7 @@ K8SAPISERVERHOST ?= http://localhost:6443
 DSPANAMESPACE ?= default
 DSPAPATH ?= resources/dspa-lite.yaml
 ENDPOINT_TYPE ?= service
+MINIONAMESPACE ?= default
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -131,7 +132,7 @@ functest: manifests generate fmt vet envtest ## Run tests.
 .PHONY: integrationtest
 integrationtest: ## Run integration tests
 	cd tests && \
-	go test ./... --tags=test_integration -v -kubeconfig=${KUBECONFIGPATH} -k8sApiServerHost=${K8SAPISERVERHOST} -DSPANamespace=${DSPANAMESPACE} -DSPAPath=${DSPAPATH} -endpointType=${ENDPOINT_TYPE}
+	go test ./... --tags=test_integration -v -kubeconfig=${KUBECONFIGPATH} -k8sApiServerHost=${K8SAPISERVERHOST} -DSPANamespace=${DSPANAMESPACE} -DSPAPath=${DSPAPATH} -endpointType=${ENDPOINT_TYPE} -MinioNamespace=${MINIONAMESPACE}
 
 ##@ Build
 
