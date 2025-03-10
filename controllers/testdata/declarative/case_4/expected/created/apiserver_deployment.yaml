@@ -32,6 +32,82 @@ spec:
           args:
             - "make pipeline && mv pipeline.yaml ${BUILD_FOLDER}/instructlab.yaml"
           env:
+            - name: POD_NAMESPACE
+              value: "default"
+            - name: DBCONFIG_USER
+              value: "testuser"
+            - name: DBCONFIG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: "password"
+                  name: "ds-pipeline-db-testdsp4"
+            - name: DBCONFIG_DBNAME
+              value: "randomDBName"
+            - name: DBCONFIG_HOST
+              value: "mariadb-testdsp4.default.svc.cluster.local"
+            - name: DBCONFIG_PORT
+              value: "3306"
+            - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_HOST
+              value: "ds-pipeline-visualizationserver"
+            - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
+              value: "8888"
+            - name: OBJECTSTORECONFIG_CREDENTIALSSECRET
+              value: "ds-pipeline-s3-testdsp4"
+            - name: OBJECTSTORECONFIG_CREDENTIALSACCESSKEYKEY
+              value: "accesskey"
+            - name: OBJECTSTORECONFIG_CREDENTIALSSECRETKEYKEY
+              value: "secretkey"
+            - name: DEFAULTPIPELINERUNNERSERVICEACCOUNT
+              value: "pipeline-runner-testdsp4"
+            - name: OBJECTSTORECONFIG_BUCKETNAME
+              value: "mlpipeline"
+            - name: OBJECTSTORECONFIG_ACCESSKEY
+              valueFrom:
+                secretKeyRef:
+                  key: "accesskey"
+                  name: "ds-pipeline-s3-testdsp4"
+            - name: OBJECTSTORECONFIG_SECRETACCESSKEY
+              valueFrom:
+                secretKeyRef:
+                  key: "secretkey"
+                  name: "ds-pipeline-s3-testdsp4"
+            - name: OBJECTSTORECONFIG_SECURE
+              value: "false"
+            - name: MINIO_SERVICE_SERVICE_HOST
+              value: "minio-testdsp4.default.svc.cluster.local"
+            - name: MINIO_SERVICE_SERVICE_PORT
+              value: "9000"
+            - name: V2_LAUNCHER_IMAGE
+              value: "this-argolauncher-image-from-cr-should-be-used:test4"
+            - name: V2_DRIVER_IMAGE
+              value: "this-argodriver-image-from-cr-should-be-used:test4"
+            - name: METADATA_GRPC_SERVICE_SERVICE_HOST
+              value: "ds-pipeline-metadata-grpc-testdsp4.default.svc.cluster.local"
+            - name: METADATA_GRPC_SERVICE_SERVICE_PORT
+              value: "8080"
+            - name: ML_PIPELINE_SERVICE_HOST
+              value: ds-pipeline-testdsp4.default.svc.cluster.local
+            - name: ML_PIPELINE_SERVICE_PORT_GRPC
+              value: "8887"
+            - name: SIGNED_URL_EXPIRY_TIME_SECONDS
+              value: "60"
+            - name: EXECUTIONTYPE
+              value: Workflow
+            - name: DB_DRIVER_NAME
+              value: mysql
+            - name: DBCONFIG_MYSQLCONFIG_USER
+              value: "testuser"
+            - name: DBCONFIG_MYSQLCONFIG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: "password"
+                  name: "ds-pipeline-db-testdsp4"
+            - name: DBCONFIG_MYSQLCONFIG_DBNAME
+              value: "randomDBName"
+            - name: DBCONFIG_MYSQLCONFIG_HOST
+              value: "mariadb-testdsp4.default.svc.cluster.local"
+            - name: DBCONFIG_MYSQLCONFIG_PORT
+              value: "3306"
             - name: BUILD_FOLDER
               value: /opt/app-root/src/build
             - name: PYTHON_IMAGE
@@ -128,6 +204,14 @@ spec:
               value: "mariadb-testdsp4.default.svc.cluster.local"
             - name: DBCONFIG_MYSQLCONFIG_PORT
               value: "3306"
+            - name: BUILD_FOLDER
+              value: /opt/app-root/src/build
+            - name: PYTHON_IMAGE
+              value: runtimegeneric:test4
+            - name: TOOLBOX_IMAGE
+              value: toolbox:test4
+            - name: RHELAI_IMAGE
+              value: rhelai:test4
           image: this-apiserver-image-from-cr-should-be-used:test4
           # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
           name: ds-pipeline-api-server

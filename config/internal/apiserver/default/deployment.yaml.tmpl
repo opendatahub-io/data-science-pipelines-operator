@@ -29,39 +29,7 @@ spec:
           command: [ '/bin/sh', '-c']
           args:
             - "make pipeline && mv pipeline.yaml ${BUILD_FOLDER}/instructlab.yaml"
-          env:
-            - name: BUILD_FOLDER
-              value: /opt/app-root/src/build
-            - name: PYTHON_IMAGE
-              value: {{.APIServer.RuntimeGenericImage}}
-            - name: TOOLBOX_IMAGE
-              value: {{.APIServer.ToolboxImage}}
-            - name: RHELAI_IMAGE
-              value: {{.APIServer.RHELAIImage}}
-          {{ if .APIServer.InitResources }}
-          resources:
-            requests:
-              {{ if .APIServer.InitResources.Requests.CPU }}
-              cpu: {{.APIServer.InitResources.Requests.CPU}}
-              {{ end }}
-              {{ if .APIServer.InitResources.Requests.Memory }}
-              memory: {{.APIServer.InitResources.Requests.Memory}}
-              {{ end }}
-            {{ end }}
-            {{ if .APIServer.InitResources.Limits }}
-            limits:
-              {{ if .APIServer.InitResources.Limits.CPU }}
-              cpu: {{.APIServer.InitResources.Limits.CPU}}
-              {{ end }}
-              {{ if .APIServer.InitResources.Limits.Memory }}
-              memory: {{.APIServer.InitResources.Limits.Memory}}
-              {{ end }}
-          {{ end }}
-          volumeMounts:
-            - mountPath: /opt/app-root/src/build
-              name: managed-pipelines
-      containers:
-        - env:
+          env: &apiserverEnvs
             {{ if .IncludeOwnerReference }}
             - name: OWNER_UID
               value: "{{.UID}}"
@@ -180,6 +148,38 @@ spec:
               value: "{{.DBConnection.Host}}"
             - name: DBCONFIG_MYSQLCONFIG_PORT
               value: "{{.DBConnection.Port}}"
+            - name: BUILD_FOLDER
+              value: /opt/app-root/src/build
+            - name: PYTHON_IMAGE
+              value: {{.APIServer.RuntimeGenericImage}}
+            - name: TOOLBOX_IMAGE
+              value: {{.APIServer.ToolboxImage}}
+            - name: RHELAI_IMAGE
+              value: {{.APIServer.RHELAIImage}}
+          {{ if .APIServer.InitResources }}
+          resources:
+            requests:
+              {{ if .APIServer.InitResources.Requests.CPU }}
+              cpu: {{.APIServer.InitResources.Requests.CPU}}
+              {{ end }}
+              {{ if .APIServer.InitResources.Requests.Memory }}
+              memory: {{.APIServer.InitResources.Requests.Memory}}
+              {{ end }}
+            {{ end }}
+            {{ if .APIServer.InitResources.Limits }}
+            limits:
+              {{ if .APIServer.InitResources.Limits.CPU }}
+              cpu: {{.APIServer.InitResources.Limits.CPU}}
+              {{ end }}
+              {{ if .APIServer.InitResources.Limits.Memory }}
+              memory: {{.APIServer.InitResources.Limits.Memory}}
+              {{ end }}
+          {{ end }}
+          volumeMounts:
+            - mountPath: /opt/app-root/src/build
+              name: managed-pipelines
+      containers:
+        - env: *apiserverEnvs
           image: {{.APIServer.Image}}
           # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
           name: ds-pipeline-api-server
