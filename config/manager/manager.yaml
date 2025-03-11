@@ -81,7 +81,7 @@ spec:
             value: $(DSPO_APISERVER_INCLUDE_OWNERREFERENCE)
           - name: MANAGEDPIPELINES
             value: $(MANAGEDPIPELINES)
-          - name: PLATFORMVERSION
+          - name: DSPO_PLATFORMVERSION
             value: $(PLATFORMVERSION)
         securityContext:
           allowPrivilegeEscalation: false
