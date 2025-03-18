@@ -173,6 +173,8 @@ func (r *DSPAReconciler) DeleteResourceIfItExists(ctx context.Context, obj clien
 //+kubebuilder:rbac:groups=core,resources=events,verbs=create;patch;list
 //+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=workload.codeflare.dev,resources=appwrappers;appwrappers/finalizers;appwrappers/status,verbs=create;delete;deletecollection;get;list;patch;update;watch
+//+kubebuilder:rbac:groups=pipelines.kubeflow.org,resources=pipelines;pipelines/status,verbs=create;get;list;watch;update;patch;delete
+//+kubebuilder:rbac:groups=pipelines.kubeflow.org,resources=pipelineversions;pipelineversions/status,verbs=create;get;list;watch;update;patch;delete
 
 func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("namespace", req.Namespace).WithValues("dspa_name", req.Name)
