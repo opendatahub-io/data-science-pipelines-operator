@@ -152,6 +152,8 @@ spec:
               value: /opt/app-root/src/build
             - name: PYTHON_IMAGE
               value: {{.APIServer.RuntimeGenericImage}}
+            - name: RUNTIME_GENERIC_IMAGE
+              value: {{.APIServer.RuntimeGenericImage}}
             - name: TOOLBOX_IMAGE
               value: {{.APIServer.ToolboxImage}}
             - name: RHELAI_IMAGE
