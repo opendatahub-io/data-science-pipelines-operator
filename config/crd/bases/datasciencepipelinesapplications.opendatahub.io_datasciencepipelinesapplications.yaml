@@ -192,6 +192,12 @@ spec:
                             type: string
                         type: object
                     type: object
+                  pipelineStorage:
+                    default: database
+                    description: |-
+                      The Pipeline Storage type for Pipelines and Pipeline Versions. It can be
+                      either 'database' or 'kubernetes'. Default to 'database'.
+                    type: string
                   resources:
                     description: Specify custom Pod resource requirements for this
                       component.
@@ -1169,6 +1175,12 @@ spec:
                     description: |-
                       Image used for internal artifact passing handling within Tekton taskruns. This field specifies the image used in the 'move-all-results-to-tekton-home' step.
                       Deprecated: DSP V1 only, will be removed in the future.
+                    type: string
+                  pipelineStorage:
+                    default: database
+                    description: |-
+                      The Pipeline Storage type for Pipelines and Pipeline Versions. It can be
+                      either 'database' or 'kubernetes'. Default to 'database'.
                     type: string
                   resources:
                     description: Specify custom Pod resource requirements for this

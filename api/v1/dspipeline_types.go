@@ -152,6 +152,12 @@ type APIServer struct {
 	// +kubebuilder:validation:Optional
 	ArtifactSignedURLExpirySeconds *int `json:"artifactSignedURLExpirySeconds"`
 
+	// The Pipeline Storage type for Pipelines and Pipeline Versions. It can be
+	// either 'database' or 'kubernetes'. Default to 'database'.
+	// +kubebuilder:default:=database
+	// +kubebuilder:validation:Optional
+	PipelineStorage string `json:"pipelineStorage"`
+
 	// Enable/disable caching in the DSP API server. Default: true
 	// +kubebuilder:default:=true
 	CacheEnabled *bool `json:"cacheEnabled,omitempty"`

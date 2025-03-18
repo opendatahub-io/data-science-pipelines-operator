@@ -44,6 +44,9 @@ var samplePipelineTemplates = map[string]string{
 	"sample-config":   "apiserver/sample-pipeline/sample-config.yaml.tmpl",
 }
 
+// If Kubernetes storage is set, DSPO should apply the CRDs
+var kubernetesTemplatesDir = "apiserver/kubernetes"
+
 func (r *DSPAReconciler) GenerateSamplePipelineMetadataBlock(pipeline string) (map[string]string, error) {
 
 	item := make(map[string]string)
@@ -126,6 +129,14 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1.Dat
 	if !dsp.Spec.APIServer.Deploy {
 		r.Log.Info("Skipping Application of APIServer Resources")
 		return nil
+	}
+
+	if dsp.Spec.APIServer.PipelineStorage == "kubernetes" {
+		r.Log.Info("API Server Pipeline Storage set to Kubernetes. Applying CRDs.")
+		err1 := r.ApplyDir(dsp, params, kubernetesTemplatesDir)
+		if err1 != nil {
+			return err1
+		}
 	}
 
 	log.Info("Generating Sample Config")
