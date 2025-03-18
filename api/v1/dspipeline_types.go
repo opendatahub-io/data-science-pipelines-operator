@@ -71,7 +71,7 @@ type ManagedPipelineOptions struct {
 }
 
 type ManagedPipelinesSpec struct {
-	// Configures whether to automatically import the InstructLab pipeline.
+	// Configures whether to automatically import the technical preview of the InstructLab pipeline.
 	// You must enable the trainingoperator component to run the InstructLab pipeline.
 	// +kubebuilder:validation:Optional
 	InstructLab *ManagedPipelineOptions `json:"instructLab,omitempty"`
