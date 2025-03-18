@@ -2,38 +2,15 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
+  creationTimestamp: null
   name: manager-role
 rules:
 - apiGroups:
-  - ""
+  - '*'
   resources:
-  - configmaps
-  - secrets
-  - serviceaccounts
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - events
-  verbs:
-  - create
-  - list
-  - patch
-- apiGroups:
-  - ""
-  resources:
-  - persistentvolumeclaims
-  - persistentvolumes
+  - deployments
   - services
   verbs:
-  - '*'
   - create
   - delete
   - get
@@ -42,52 +19,46 @@ rules:
   - update
   - watch
 - apiGroups:
-  - ""
+  - apiextensions.k8s.io
   resources:
-  - pods
-  - pods/exec
-  - pods/log
+  - customresourcedefinitions
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - update
 - apiGroups:
-  - ""
   - apps
+  resources:
+  - deployments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  - ""
   - extensions
   resources:
   - deployments
+  - deployments/finalizers
   - replicasets
   verbs:
   - '*'
-- apiGroups:
-  - '*'
-  resources:
-  - deployments
-  - services
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - apps
-  resources:
-  - deployments
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
 - apiGroups:
   - argoproj.io
   resources:
   - workflowartifactgctasks
   - workflowartifactgctasks/finalizers
+  verbs:
+  - '*'
+- apiGroups:
+  - argoproj.io
+  resources:
   - workflows
   verbs:
   - '*'
@@ -114,6 +85,47 @@ rules:
   - batch
   resources:
   - jobs
+  verbs:
+  - '*'
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - persistentvolumeclaims
+  - persistentvolumes
+  - secrets
+  - serviceaccounts
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - list
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - persistentvolumeclaims
+  - persistentvolumes
+  verbs:
+  - '*'
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - pods/exec
+  - pods/log
+  - services
   verbs:
   - '*'
 - apiGroups:
@@ -183,6 +195,32 @@ rules:
   - networking.k8s.io
   resources:
   - networkpolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - pipelines.kubeflow.org
+  resources:
+  - pipelines
+  - pipelines/status
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - pipelines.kubeflow.org
+  resources:
+  - pipelineversions
+  - pipelineversions/status
   verbs:
   - create
   - delete
