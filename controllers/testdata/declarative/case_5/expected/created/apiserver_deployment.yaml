@@ -124,6 +124,8 @@ spec:
               value: /opt/app-root/src/build
             - name: PYTHON_IMAGE
               value: runtimegeneric:test5
+            - name: RUNTIME_GENERIC_IMAGE
+              value: runtimegeneric:test5
             - name: TOOLBOX_IMAGE
               value: toolbox:test5
             - name: RHELAI_IMAGE
@@ -231,6 +233,8 @@ spec:
             - name: BUILD_FOLDER
               value: /opt/app-root/src/build
             - name: PYTHON_IMAGE
+              value: runtimegeneric:test5
+            - name: RUNTIME_GENERIC_IMAGE
               value: runtimegeneric:test5
             - name: TOOLBOX_IMAGE
               value: toolbox:test5
