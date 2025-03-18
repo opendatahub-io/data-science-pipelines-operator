@@ -55,6 +55,7 @@ rules:
   - extensions
   resources:
   - deployments
+  - deployments/finalizers
   - replicasets
   verbs:
   - '*'
@@ -183,6 +184,32 @@ rules:
   - networking.k8s.io
   resources:
   - networkpolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - pipelines.kubeflow.org
+  resources:
+  - pipelines
+  - pipelines/status
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - pipelines.kubeflow.org
+  resources:
+  - pipelineversions
+  - pipelineversions/status
   verbs:
   - create
   - delete
