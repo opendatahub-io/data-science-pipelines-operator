@@ -170,7 +170,7 @@ spec:
                     properties:
                       instructLab:
                         description: |-
-                          Configures whether to automatically import the InstructLab pipeline.
+                          Configures whether to automatically import the technical preview of the InstructLab pipeline.
                           You must enable the trainingoperator component to run the InstructLab pipeline.
                         properties:
                           state:
