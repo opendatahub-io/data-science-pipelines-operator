@@ -57,6 +57,7 @@ func NewFakeController() *DSPAReconciler {
 		Log:           ctrl.Log.WithName("controllers").WithName("ds-pipelines-controller"),
 		Scheme:        FakeScheme,
 		TemplatesPath: "../config/internal/",
+		DeployWebhook: true,
 	}
 
 	return r

@@ -144,6 +144,7 @@ func main() {
 		Log:                     ctrl.Log,
 		TemplatesPath:           "config/internal/",
 		MaxConcurrentReconciles: maxConcurrentReconciles,
+		DeployWebhook:           true,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DSPAParams")
 		os.Exit(1)
