@@ -15,10 +15,10 @@ Images:
   RHELAI: $(IMAGES_RHELAI)
 ManagedPipelinesMetadata:
   Instructlab:
-    Name: Instructlab
+    Name: InstructLab
     Description: InstructLab fine-tunes models using synthetic data generation (SDG) techniques and a structured taxonomy to create diverse, high-quality training datasets.
     Filepath: /config/managed-pipelines/instructlab.yaml
-    VersionName: Instructlab
+    VersionName: InstructLab
   Iris:
     Name: "[Demo] iris-training"
     Description: "[source code](https://github.com/opendatahub-io/data-science-pipelines/tree/master/samples/iris-sklearn) A simple pipeline to demonstrate a basic ML Training workflow"
