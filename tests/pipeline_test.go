@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// testing out CI
 func (suite *IntegrationTestSuite) TestAPIServerDeployment() {
 	suite.T().Run("Should successfully fetch pipelines", func(t *testing.T) {
 		response, err := suite.Clientmgr.httpClient.Get(fmt.Sprintf("%s/apis/v2beta1/pipelines", APIServerURL))
