@@ -46,6 +46,12 @@ rules:
       - update
       - patch
       - delete
+  - verbs:
+      - update
+    apiGroups:
+      - kubeflow.org
+    resources:
+      - scheduledworkflows/finalizers
   - apiGroups:
       - authorization.k8s.io
     resources:
