@@ -92,7 +92,7 @@ data:
                 '
               - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
                 \ *\n\ndef create_dataset(iris_dataset: Output[Dataset]):\n    import pandas\
-                \ as pd\n\n    csv_url = 'https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data'\n\
+                \ as pd\n\n    csv_url = 'https://raw.githubusercontent.com/opendatahub-io/dsp-dev-tools/refs/heads/main/datasets/iris.csv'\n\
                 \    col_names = [\n        'Sepal_Length', 'Sepal_Width', 'Petal_Length',\
                 \ 'Petal_Width', 'Labels'\n    ]\n    df = pd.read_csv(csv_url, names=col_names)\n\
                 \n    with open(iris_dataset.path, 'w') as f:\n        df.to_csv(f)\n\n"
