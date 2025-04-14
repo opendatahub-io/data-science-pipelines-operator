@@ -41,6 +41,9 @@ type Pipeline struct {
 		DisplayName string `json:"display_name"`
 	} `json:"pipelines"`
 }
+type PipelineRunResponse struct {
+	RunID string `json:"run_id"`
+}
 
 // FormFromFile creates a multipart form data from the provided form map where the values are paths to files.
 // It returns a buffer containing the encoded form data and the content type of the form.
@@ -151,4 +154,16 @@ func CheckPipelineRunStatus(t *testing.T, httpClient http.Client, APIServerURL s
 		state = runData["state"].(string)
 	}
 	return state, nil
+}
+
+// RetrieveRunID extracts the run ID from the pipeline run creation response.
+func RetrieveRunID(t *testing.T, responseData []byte) string {
+	var runResponse PipelineRunResponse
+	err := json.Unmarshal(responseData, &runResponse)
+	require.NoError(t, err, "Failed to parse run response JSON")
+
+	if runResponse.RunID == "" {
+		t.Fatalf("Run ID is empty in response: %s", string(responseData))
+	}
+	return runResponse.RunID
 }

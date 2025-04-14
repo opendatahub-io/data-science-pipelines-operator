@@ -113,13 +113,14 @@ func (suite *IntegrationTestSuite) TestFetchArtifacts() {
 		responseData, err = io.ReadAll(response.Body)
 		require.NoError(t, err, "Failed to read run response data")
 		require.Equal(t, http.StatusOK, response.StatusCode, "Unexpected HTTP status code")
+		runID := TestUtil.RetrieveRunID(t, responseData)
 		log.Println("Pipeline run created successfully.")
 
 		err = TestUtil.WaitForPipelineRunCompletion(t, suite.Clientmgr.httpClient, APIServerURL)
 		require.NoError(t, err, "Pipeline run did not complete successfully")
 
 		// Fetch artifacts from API
-		artifactsUrl := fmt.Sprintf("%s/apis/v2beta1/artifacts?namespace=%s", APIServerURL, suite.DSPANamespace)
+		artifactsUrl := fmt.Sprintf("%s/apis/v2beta1/artifacts?run_id=%s&namespace=%s", APIServerURL, runID, suite.DSPANamespace)
 		log.Printf("Fetching artifacts from URL: %s", artifactsUrl)
 		response, err = suite.Clientmgr.httpClient.Get(artifactsUrl)
 		require.NoError(t, err, "Failed to fetch artifacts")
