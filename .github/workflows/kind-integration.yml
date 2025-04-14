@@ -60,4 +60,5 @@ jobs:
         working-directory: ${{ github.workspace }}/.github/scripts/tests
         run: |
           ./collect_logs.sh --dspa-ns test-dspa --dspo-ns opendatahub
+          ./collect_logs.sh --dspa-ns dspa-ext --dspo-ns opendatahub
           exit 1

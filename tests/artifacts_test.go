@@ -33,7 +33,6 @@ import (
 	"testing"
 
 	TestUtil "github.com/opendatahub-io/data-science-pipelines-operator/tests/util"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -94,7 +93,7 @@ func (suite *IntegrationTestSuite) TestFetchArtifacts() {
 		require.NoError(t, err, "Failed to upload pipeline")
 		responseData, err := io.ReadAll(response.Body)
 		require.NoError(t, err, "Failed to read response data")
-		assert.Equal(t, http.StatusOK, response.StatusCode, "Unexpected HTTP status code")
+		require.Equal(t, http.StatusOK, response.StatusCode, "Unexpected HTTP status code")
 		log.Println("Pipeline uploaded successfully.")
 
 		// Retrieve Pipeline ID
@@ -113,19 +112,20 @@ func (suite *IntegrationTestSuite) TestFetchArtifacts() {
 		responseData, err = io.ReadAll(response.Body)
 		require.NoError(t, err, "Failed to read run response data")
 		require.Equal(t, http.StatusOK, response.StatusCode, "Unexpected HTTP status code")
+		runID := TestUtil.RetrieveRunID(t, responseData)
 		log.Println("Pipeline run created successfully.")
 
 		err = TestUtil.WaitForPipelineRunCompletion(t, suite.Clientmgr.httpClient, APIServerURL)
 		require.NoError(t, err, "Pipeline run did not complete successfully")
 
 		// Fetch artifacts from API
-		artifactsUrl := fmt.Sprintf("%s/apis/v2beta1/artifacts?namespace=%s", APIServerURL, suite.DSPANamespace)
+		artifactsUrl := fmt.Sprintf("%s/apis/v2beta1/artifacts?run_id=%s&namespace=%s", APIServerURL, runID, suite.DSPANamespace)
 		log.Printf("Fetching artifacts from URL: %s", artifactsUrl)
 		response, err = suite.Clientmgr.httpClient.Get(artifactsUrl)
 		require.NoError(t, err, "Failed to fetch artifacts")
 		responseData, err = io.ReadAll(response.Body)
 		require.NoError(t, err, "Failed to read artifacts response data")
-		assert.Equal(t, http.StatusOK, response.StatusCode, "Unexpected HTTP status code")
+		require.Equal(t, http.StatusOK, response.StatusCode, "Unexpected HTTP status code")
 
 		// Parse the artifact list
 		var responseArtifactsData struct {
@@ -135,7 +135,7 @@ func (suite *IntegrationTestSuite) TestFetchArtifacts() {
 		require.NoError(t, err, "Failed to parse artifacts response JSON")
 
 		for _, artifact := range responseArtifactsData.Artifacts {
-			if artifact.ArtifactType != "system.Model" {
+			if artifact.ArtifactType != "system.Model" && artifact.ArtifactType != "sytem.Dataset" {
 				continue
 			}
 
@@ -146,7 +146,7 @@ func (suite *IntegrationTestSuite) TestFetchArtifacts() {
 			require.NoError(t, err, "Failed to fetch download URL")
 			responseData, err = io.ReadAll(response.Body)
 			require.NoError(t, err, "Failed to read download URL response data")
-			assert.Equal(t, http.StatusOK, response.StatusCode, "Unexpected HTTP status code")
+			require.Equal(t, http.StatusOK, response.StatusCode, "Unexpected HTTP status code")
 
 			var artifactWithDownload ResponseArtifact
 			err = json.Unmarshal(responseData, &artifactWithDownload)
@@ -176,7 +176,7 @@ func (suite *IntegrationTestSuite) TestFetchArtifacts() {
 
 			downloadResp, err := httpClient.Do(req)
 			require.NoError(t, err, "Failed to perform request")
-			assert.Equal(t, http.StatusOK, downloadResp.StatusCode, "Download failed")
+			require.Equal(t, http.StatusOK, downloadResp.StatusCode, "Download failed")
 
 			log.Printf("Successfully downloaded artifact from %s", req.URL.String())
 		}
