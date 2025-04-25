@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   dspo-upgrade:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
       OLM_VERSION: v0.24.0
