@@ -131,3 +131,13 @@ rules:
     verbs:
       - get
       - list
+  - apiGroups:
+      - serving.kserve.io
+    resources:
+      - inferenceservices
+    verbs:
+      - create
+      - get
+      - list
+      - patch
+      - delete

@@ -241,6 +241,16 @@ rules:
   - update
   - watch
 - apiGroups:
+  - serving.kserve.io
+  resources:
+  - inferenceservices
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+- apiGroups:
   - snapshot.storage.k8s.io
   resources:
   - volumesnapshots
