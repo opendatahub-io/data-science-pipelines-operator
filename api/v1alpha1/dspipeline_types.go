@@ -203,6 +203,12 @@ type APIServer struct {
 	// +kubebuilder:default:=60
 	// +kubebuilder:validation:Optional
 	ArtifactSignedURLExpirySeconds *int `json:"artifactSignedURLExpirySeconds"`
+
+	// The Pipeline Storage type for Pipelines and Pipeline Versions. It can be
+	// either 'database' or 'kubernetes'. Default to 'database'.
+	// +kubebuilder:default:=database
+	// +kubebuilder:validation:Optional
+	PipelineStorage string `json:"pipelineStorage"`
 }
 
 type CABundle struct {

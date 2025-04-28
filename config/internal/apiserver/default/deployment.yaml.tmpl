@@ -258,6 +258,16 @@ spec:
               name: ca-bundle
             {{ end }}
         {{ if .APIServer.EnableRoute }}
+        {{ if eq .APIServer.PipelineStorage "kubernetes" }}
+          command:
+            - /bin/apiserver
+          args:
+            - '--config=/config'
+            - '--sampleconfig=/config/sample_config.json'
+            - '-logtostderr=true'
+            - '--logLevel=debug'
+            - '--pipelinesStoreKubernetes=true'
+        {{ end }}
         - name: oauth-proxy
           args:
             - --https-address=:8443
