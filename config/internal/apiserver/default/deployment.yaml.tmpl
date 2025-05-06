@@ -158,6 +158,10 @@ spec:
               value: {{.APIServer.ToolboxImage}}
             - name: RHELAI_IMAGE
               value: {{.APIServer.RHELAIImage}}
+            {{ if .FIPSEnabled }}
+            - name: V2_LAUNCHER_COMMAND
+              value: "launcher-v2-fips"
+            {{ end }}
           {{ if .APIServer.InitResources }}
           resources:
             requests:

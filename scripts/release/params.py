@@ -46,7 +46,8 @@ OTHER_OPTIONS = {
     "DSPO_REQUEUE_TIME": "20s",
     "DSPO_APISERVER_INCLUDE_OWNERREFERENCE": "true",
     "MANAGEDPIPELINES": "\"{}\"",
-    "PLATFORMVERSION": "\"v0.0.0\""
+    "PLATFORMVERSION": "\"v0.0.0\"",
+    "FIPSENABLED": "false"
 }
 
 

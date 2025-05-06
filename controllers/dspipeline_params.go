@@ -97,6 +97,7 @@ type DSPAParams struct {
 	PodToPodTLS bool
 
 	APIServerServiceDNSName string
+	FIPSEnabled             bool
 }
 
 type DBConnection struct {
@@ -582,6 +583,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.CustomCABundleRootMountPath = config.CustomCABundleRootMountPath
 	p.PiplinesCABundleMountPath = config.GetCABundleFileMountPath()
 	p.PodToPodTLS = false
+	p.FIPSEnabled = config.GetBoolConfigWithDefault(config.FIPSEnabledConfigName, config.DefaultFIPSEnabled)
 	dspTrustedCAConfigMapKey := config.CustomDSPTrustedCAConfigMapKey
 
 	// by default it's enabled when omitted

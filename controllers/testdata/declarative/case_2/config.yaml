@@ -29,5 +29,6 @@ ManagedPipelinesMetadata:
     VersionName: "[Demo] iris-training"
 DSPO:
   PlatformVersion: v1.2.3
+  FIPSEnabled: true
   ApiServer:
     IncludeOwnerReference: false

@@ -118,6 +118,8 @@ spec:
               value: toolbox:test2
             - name: RHELAI_IMAGE
               value: rhelai:test2
+            - name: V2_LAUNCHER_COMMAND
+              value: "launcher-v2-fips"
           resources:
             limits:
               memory: 6Gi
@@ -216,6 +218,8 @@ spec:
               value: toolbox:test2
             - name: RHELAI_IMAGE
               value: rhelai:test2
+            - name: V2_LAUNCHER_COMMAND
+              value: "launcher-v2-fips"
           image: api-server:test2
           # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
           name: ds-pipeline-api-server

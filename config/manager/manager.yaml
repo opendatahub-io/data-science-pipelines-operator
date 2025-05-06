@@ -83,6 +83,8 @@ spec:
             value: $(MANAGEDPIPELINES)
           - name: DSPO_PLATFORMVERSION
             value: $(PLATFORMVERSION)
+          - name: DSPO_FIPSENABLED
+            value: $(FIPSENABLED)
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

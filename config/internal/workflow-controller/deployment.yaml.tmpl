@@ -42,6 +42,10 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.name
+        {{ if .FIPSEnabled }}
+        - name: ARGO_EXEC_PATH
+          value: "/bin/argoexec-fips"
+        {{ end }}
         image: {{ .WorkflowController.Image }}
         livenessProbe:
           failureThreshold: 3
