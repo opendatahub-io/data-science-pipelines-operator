@@ -31,7 +31,7 @@ env:
 
 jobs:
   dspo-tests:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     timeout-minutes: 60
 
     steps:
@@ -60,4 +60,5 @@ jobs:
         working-directory: ${{ github.workspace }}/.github/scripts/tests
         run: |
           ./collect_logs.sh --dspa-ns test-dspa --dspo-ns opendatahub
+          ./collect_logs.sh --dspa-ns dspa-ext --dspo-ns opendatahub
           exit 1

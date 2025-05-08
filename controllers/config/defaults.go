@@ -109,6 +109,7 @@ const (
 	DBConnectionTimeoutConfigName            = "DSPO.HealthCheck.Database.ConnectionTimeout"
 	RequeueTimeConfigName                    = "DSPO.RequeueTime"
 	ApiServerIncludeOwnerReferenceConfigName = "DSPO.ApiServer.IncludeOwnerReference"
+	FIPSEnabledConfigName                    = "DSPO.FIPSEnabled"
 )
 
 // DSPA Status Condition Types
@@ -161,6 +162,8 @@ const DefaultApiServerIncludeOwnerReferenceConfigName = true
 const DefaultManagedPipelines = "{}"
 
 const DefaultPlatformVersion = "v0.0.0"
+
+const DefaultFIPSEnabled = false
 
 func GetConfigRequiredFields() []string {
 	return requiredFields

@@ -51,8 +51,25 @@ function display_pod_info {
     done
 }
 
+function collect_workflow_info {
+    local NAMESPACE=$1
+
+    echo "===== Collecting Argo Workflows in ${NAMESPACE} "
+    # List all workflows
+    kubectl -n "${NAMESPACE}" get workflows || echo "No workflows found in namespace '${NAMESPACE}'."
+
+    # Display detailed workflow YAML
+    kubectl -n "${NAMESPACE}" get workflow -o yaml || echo "Failed to retrieve workflows in '${NAMESPACE}'."
+
+    echo "====================================================="
+    echo ""
+}
+
 check_namespace "$DSPA_NS"
 check_namespace "$DSPO_NS"
 
 display_pod_info "$DSPA_NS"
 display_pod_info "$DSPO_NS"
+
+# Collect Argo Workflows for DSPA namespace
+collect_workflow_info "$DSPA_NS"
