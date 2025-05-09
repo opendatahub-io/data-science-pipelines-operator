@@ -1,4 +1,4 @@
-FROM docker.io/python:3.9.17
+FROM docker.io/python:3.13.3
 
 WORKDIR /
 RUN mkdir .cache .local minio /tmp/kfp s3
