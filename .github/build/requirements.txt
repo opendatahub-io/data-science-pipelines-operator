@@ -6,7 +6,7 @@
 #
 
 -i https://pypi.org/simple
-cfgv==3.3.1; python_full_version >= '3.6.1'
+cfgv==3.4.0; python_full_version >= '3.6.1'
 distlib==0.3.6
 filelock==3.9.0; python_version >= '3.7'
 identify==2.5.17; python_version >= '3.7'
