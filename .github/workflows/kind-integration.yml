@@ -61,4 +61,5 @@ jobs:
         run: |
           ./collect_logs.sh --dspa-ns test-dspa --dspo-ns opendatahub
           ./collect_logs.sh --dspa-ns dspa-ext --dspo-ns opendatahub
+          ./collect_logs.sh --dspa-ns test-k8s-dspa --dspo-ns opendatahub
           exit 1

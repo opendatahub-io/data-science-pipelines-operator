@@ -19,12 +19,13 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/golang/glog"
-	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
-	"github.com/spf13/viper"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/golang/glog"
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
+	"github.com/spf13/viper"
 
 	"github.com/fsnotify/fsnotify"
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
@@ -36,6 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -144,7 +146,6 @@ func main() {
 		Log:                     ctrl.Log,
 		TemplatesPath:           "config/internal/",
 		MaxConcurrentReconciles: maxConcurrentReconciles,
-		DeployWebhook:           true,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DSPAParams")
 		os.Exit(1)
