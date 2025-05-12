@@ -13,14 +13,12 @@ spec:
       component: data-science-pipelines
   template:
     metadata:
-      annotations:
-        configHash: {{.APIServerConfigHash}}
       labels:
         app: {{.WebhookName}}
         component: data-science-pipelines
     spec:
       containers:
-        - env:            
+        - env:
             - name: POD_NAMESPACE
               value: "{{.DSPONamespace}}"
           image: {{.APIServer.Image}}
@@ -45,4 +43,4 @@ spec:
       volumes:
           - name: webhook-tls
             secret:
-              secretName: ds-pipelines-webhook-tls-{{.WebhookName}}
+              secretName: {{.WebhookName}}-tls
