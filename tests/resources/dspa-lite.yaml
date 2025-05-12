@@ -9,6 +9,7 @@ spec:
     deploy: true
     enableOauth: false
     enableSamplePipeline: true
+    pipelineStorage: kubernetes
     cABundle:
       configMapName: nginx-tls-config
       configMapKey: rootCA.crt

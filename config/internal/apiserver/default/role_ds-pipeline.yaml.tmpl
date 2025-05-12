@@ -19,7 +19,7 @@ rules:
       - pipelines.kubeflow.org
     resources:
       - pipelines
-      - pipelines/status
+      - pipelines/finalizers
   - verbs:
       - create
       - get
@@ -33,6 +33,7 @@ rules:
     resources:
       - pipelineversions
       - pipelineversions/status
+      - pipelineversions/finalizers
   - apiGroups:
       - ""
     resources:
