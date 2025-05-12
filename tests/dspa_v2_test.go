@@ -149,9 +149,10 @@ func (suite *IntegrationTestSuite) TestDSPADeploymentWithK8sNativeApi() {
 							for _, arg := range pod.Spec.Containers[0].Args {
 								if arg == "--pipelinesStoreKubernetes=true" {
 									t.Log("API Server has K8s Native API configured")
-									break
+									return true
 								}
 							}
+							t.Log("API Server pod found, but flag not set")
 							return false
 						}
 					}
