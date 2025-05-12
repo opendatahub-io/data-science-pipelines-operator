@@ -52,6 +52,8 @@ IMG ?= quay.io/opendatahub/data-science-pipelines-operator:main
 ENVTEST_K8S_VERSION = 1.25.0
 # Namespace to deploy the operator
 OPERATOR_NS ?= opendatahub
+# Namespace where the webhook and related resources live
+DSPO_NAMESPACE ?= $(OPERATOR_NS)
 # Namespace to deploy v2 infrastructure
 V2INFRA_NS ?= openshift-pipelines
 # Namespace to deploy argo infrastructure
@@ -127,7 +129,7 @@ unittest: manifests generate fmt vet envtest ## Run tests.
 
 .PHONY: functest
 functest: manifests generate fmt vet envtest ## Run tests.
-	export SSL_CERT_FILE=${ROOT_DIR}/controllers/testdata/tls/ca-bundle.crt && KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... --tags=test_functional -coverprofile cover.out
+	export SSL_CERT_FILE=${ROOT_DIR}/controllers/testdata/tls/ca-bundle.crt && export DSPO_NAMESPACE=$(DSPO_NAMESPACE) && KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... --tags=test_functional -coverprofile cover.out
 
 .PHONY: integrationtest
 integrationtest: ## Run integration tests

@@ -14,7 +14,6 @@ spec:
     deploy: true
     enableSamplePipeline: true
     pipelineStorage: kubernetes
-    image: quay.io/vmudadla/data-science-pipelines-api:latest
   objectStorage:
     minio:
       image: quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance

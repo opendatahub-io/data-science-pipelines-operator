@@ -22,6 +22,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"os/exec"
 	"strings"
 	"testing"
 	"time"
@@ -166,4 +167,18 @@ func RetrieveRunID(t *testing.T, responseData []byte) string {
 		t.Fatalf("Run ID is empty in response: %s", string(responseData))
 	}
 	return runResponse.RunID
+}
+
+func ApplyPipelineYAML(t *testing.T, yamlPath, namespace string) {
+	// Validate inputs to prevent command injection
+	if strings.ContainsAny(yamlPath, "|;&$`") || strings.ContainsAny(namespace, "|;&$`") {
+		t.Fatalf("Invalid characters in yamlPath or namespace")
+	}
+	if !strings.HasSuffix(yamlPath, ".yaml") && !strings.HasSuffix(yamlPath, ".yml") {
+		t.Fatalf("yamlPath must be a YAML file")
+	}
+
+	cmd := exec.Command("kubectl", "apply", "-f", yamlPath, "-n", namespace)
+	out, err := cmd.CombinedOutput()
+	require.NoErrorf(t, err, "failed to apply pipeline YAML (%s):\n%s", yamlPath, string(out))
 }
