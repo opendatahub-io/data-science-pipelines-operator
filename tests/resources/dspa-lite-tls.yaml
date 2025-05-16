@@ -1,0 +1,80 @@
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: test-dspa
+spec:
+  dspVersion: v2
+  podToPodTLS: true
+  apiServer:
+    deploy: true
+    enableSamplePipeline: true
+    cABundle:
+      configMapName: nginx-tls-config
+      configMapKey: rootCA.crt
+    resources:
+      limits:
+        cpu: 20m
+        memory: 500Mi
+      requests:
+        cpu: 20m
+        memory: 100Mi
+  scheduledWorkflow:
+    deploy: true
+    resources:
+      limits:
+        cpu: 20m
+        memory: 500Mi
+      requests:
+        cpu: 20m
+        memory: 100Mi
+  persistenceAgent:
+    deploy: true
+    resources:
+      limits:
+        cpu: 20m
+        memory: 500Mi
+      requests:
+        cpu: 20m
+        memory: 100Mi
+  mlmd:
+    deploy: true
+    envoy:
+      deployRoute: false
+      resources:
+        limits:
+          cpu: 20m
+          memory: 500Mi
+        requests:
+          cpu: 20m
+          memory: 100Mi
+    grpc:
+      resources:
+        limits:
+          cpu: 20m
+          memory: 500Mi
+        requests:
+          cpu: 20m
+          memory: 100Mi
+  database:
+    mariaDB:
+      deploy: true
+      pvcSize: 500Mi
+      resources:
+        limits:
+          cpu: 60m
+          memory: 500Mi
+        requests:
+          cpu: 60m
+          memory: 500Mi
+  objectStorage:
+    minio:
+      deploy: true
+      image: 'quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance'
+      pvcSize: 500Mi
+      resources:
+        limits:
+          cpu: 20m
+          memory: 500Mi
+        requests:
+          cpu: 20m
+          memory: 100Mi

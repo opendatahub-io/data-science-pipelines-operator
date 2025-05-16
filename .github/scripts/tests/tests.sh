@@ -195,7 +195,7 @@ remove_namespace_created_for_rhoai() {
   kubectl delete projects $PYPISERVER_NAMESPACE --now || true
 }
 
-setup_kind_requirements() {
+setup_requirements() {
   apply_crd
   build_image
   create_opendatahub_namespace
@@ -230,6 +230,10 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
     --kind)
       TARGET="kind"
+      shift
+      ;;
+    --standard)
+      TARGET="standard"
       shift
       ;;
     --rhoai)
@@ -329,7 +333,9 @@ if [ "$TARGET" = "kind" ]; then
   if [ "$CLEAN_INFRA" = true ] ; then
       undeploy_kind_resources
   fi
-  setup_kind_requirements
+  setup_requirements
+elif [ "$TARGET" = "standard" ]; then
+  setup_requirements
 elif [ "$TARGET" = "rhoai" ]; then
   if [ "$CLEAN_INFRA" = true ] ; then
       remove_namespace_created_for_rhoai
