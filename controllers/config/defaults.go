@@ -120,6 +120,7 @@ const (
 	PersistenceAgentReady  = "PersistenceAgentReady"
 	ScheduledWorkflowReady = "ScheduledWorkflowReady"
 	MLMDProxyReady         = "MLMDProxyReady"
+	WebhookReady           = "WebhookReady"
 	CrReady                = "Ready"
 )
 
