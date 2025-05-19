@@ -13,6 +13,7 @@ spec:
     argoDriverImage: argodriverimage:test2
     enableOauth: true
     enableSamplePipeline: true
+    cacheEnabled: false
     managedPipelines:
       instructLab:
         state: Managed

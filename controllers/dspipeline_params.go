@@ -799,6 +799,10 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 			expiry := config.DefaultSignedUrlExpiryTimeSeconds
 			p.APIServer.ArtifactSignedURLExpirySeconds = &expiry
 		}
+
+		if dsp.Spec.APIServer.CacheEnabled != nil {
+			p.APIServer.CacheEnabled = dsp.Spec.APIServer.CacheEnabled
+		}
 	}
 
 	if p.PersistenceAgent != nil {
