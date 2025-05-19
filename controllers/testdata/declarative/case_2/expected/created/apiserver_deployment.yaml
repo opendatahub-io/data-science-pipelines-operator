@@ -120,6 +120,8 @@ spec:
               value: rhelai:test2
             - name: V2_LAUNCHER_COMMAND
               value: "launcher-v2-fips"
+            - name: CACHEENABLED
+              value: "false"
           resources:
             limits:
               memory: 6Gi
@@ -220,6 +222,8 @@ spec:
               value: rhelai:test2
             - name: V2_LAUNCHER_COMMAND
               value: "launcher-v2-fips"
+            - name: CACHEENABLED
+              value: "false"
           image: api-server:test2
           # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
           name: ds-pipeline-api-server
