@@ -130,6 +130,8 @@ spec:
               value: toolbox:test5
             - name: RHELAI_IMAGE
               value: rhelai:test5
+            - name: CACHEENABLED
+              value: "true"
           resources:
             limits:
               memory: 256Mi
@@ -240,6 +242,8 @@ spec:
               value: toolbox:test5
             - name: RHELAI_IMAGE
               value: rhelai:test5
+            - name: CACHEENABLED
+              value: "true"
           image: api-server:test5
           # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
           name: ds-pipeline-api-server
