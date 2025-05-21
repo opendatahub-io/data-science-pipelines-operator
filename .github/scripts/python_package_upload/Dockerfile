@@ -1,4 +1,4 @@
-FROM docker.io/python:3.9
+FROM docker.io/python:3.13
 
 # Set working directory
 WORKDIR /app
