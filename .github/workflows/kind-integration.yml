@@ -52,7 +52,7 @@ jobs:
         id: test
         working-directory: ${{ github.workspace }}/.github/scripts/tests
         run: |
-          sh tests.sh --standard
+          sh tests.sh --kind
         continue-on-error: true
 
       - name: Collect events and logs
