@@ -11,7 +11,7 @@ from kfp.dsl import ClassificationMetrics
 
 
 @dsl.component(
-    base_image="quay.io/opendatahub/ds-pipelines-sample-base:v1.0",
+    base_image="registry.access.redhat.com/ubi9/python-311:latest",
     packages_to_install=['pandas==2.2.0']
 )
 def create_dataset(iris_dataset: Output[Dataset]):
@@ -27,7 +27,7 @@ def create_dataset(iris_dataset: Output[Dataset]):
         df.to_csv(f)
 
 @dsl.component(
-    base_image="quay.io/opendatahub/ds-pipelines-sample-base:v1.0",
+    base_image="registry.access.redhat.com/ubi9/python-311:latest",
     packages_to_install=['pandas==2.2.0', 'scikit-learn==1.4.0']
 )
 def normalize_dataset(
@@ -54,7 +54,7 @@ def normalize_dataset(
 
 
 @dsl.component(
-    base_image="quay.io/opendatahub/ds-pipelines-sample-base:v1.0",
+    base_image="registry.access.redhat.com/ubi9/python-311:latest",
     packages_to_install=['pandas==2.2.0', 'scikit-learn==1.4.0']
 )
 def train_model(
