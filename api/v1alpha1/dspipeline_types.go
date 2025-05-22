@@ -203,6 +203,10 @@ type APIServer struct {
 	// +kubebuilder:default:=60
 	// +kubebuilder:validation:Optional
 	ArtifactSignedURLExpirySeconds *int `json:"artifactSignedURLExpirySeconds"`
+
+	// Enable/disable caching in the DSP API server. Default: true
+	// +kubebuilder:default:=true
+	CacheEnabled *bool `json:"cacheEnabled,omitempty"`
 }
 
 type CABundle struct {
