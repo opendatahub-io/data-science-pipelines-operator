@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/dspastatus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,6 +49,7 @@ import (
 const (
 	finalizerName              = "datasciencepipelinesapplications.opendatahub.io/finalizer"
 	errorUpdatingDspaStatusMsg = "Encountered error when updating the DSPA status"
+	k8sWebhookName             = "ds-pipelines-webhook"
 )
 
 // DSPAReconciler reconciles a DSPAParams object
@@ -162,7 +164,7 @@ func (r *DSPAReconciler) DeleteResourceIfItExists(ctx context.Context, obj clien
 //+kubebuilder:rbac:groups=argoproj.io,resources=workflowtaskresults,verbs=create;patch
 //+kubebuilder:rbac:groups=argoproj.io,resources=workflowartifactgctasks;workflowartifactgctasks/finalizers,verbs=*
 //+kubebuilder:rbac:groups=core,resources=pods;pods/exec;pods/log;services,verbs=*
-//+kubebuilder:rbac:groups=core;apps;extensions,resources=deployments;replicasets,verbs=*
+//+kubebuilder:rbac:groups=core;apps;extensions,resources=deployments;deployments/finalizers;replicasets,verbs=*
 //+kubebuilder:rbac:groups=kubeflow.org,resources=*,verbs=*
 //+kubebuilder:rbac:groups=batch,resources=jobs,verbs=*
 //+kubebuilder:rbac:groups=machinelearning.seldon.io,resources=seldondeployments,verbs=*
@@ -174,6 +176,9 @@ func (r *DSPAReconciler) DeleteResourceIfItExists(ctx context.Context, obj clien
 //+kubebuilder:rbac:groups=core,resources=events,verbs=create;patch;list
 //+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=workload.codeflare.dev,resources=appwrappers;appwrappers/finalizers;appwrappers/status,verbs=create;delete;deletecollection;get;list;patch;update;watch
+//+kubebuilder:rbac:groups=pipelines.kubeflow.org,resources=pipelines;pipelines/finalizers,verbs=create;get;list;watch;update;patch;delete
+//+kubebuilder:rbac:groups=pipelines.kubeflow.org,resources=pipelineversions;pipelineversions/status;pipelineversions/finalizers,verbs=create;get;list;watch;update;patch;delete
+//+kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=get;create;update;delete
 
 func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("namespace", req.Namespace).WithValues("dspa_name", req.Name)
@@ -231,9 +236,15 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		if controllerutil.ContainsFinalizer(dspa, finalizerName) {
 			params.Name = dspa.Name
 			params.Namespace = dspa.Namespace
+			params.DSPONamespace = os.Getenv("DSPO_NAMESPACE")
 			if err := r.cleanUpResources(params); err != nil {
 				return ctrl.Result{}, err
 			}
+
+			if err := r.CleanUpWebhookIfUnused(ctx, dspa, params); err != nil {
+				return ctrl.Result{}, err
+			}
+
 			controllerutil.RemoveFinalizer(dspa, finalizerName)
 			if err := r.Update(ctx, dspa); err != nil {
 				return ctrl.Result{}, err
@@ -292,6 +303,19 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		err = r.ReconcileCommon(dspa, params)
 		if err != nil {
 			return ctrl.Result{}, err
+		}
+
+		if dspa.Spec.APIServer.PipelineStorage == "kubernetes" {
+			err = r.ReconcileWebhook(ctx, dspa, params)
+			if err != nil {
+				dspaStatus.SetWebhookNotReady(err, config.FailingToDeploy)
+				return ctrl.Result{}, err
+			}
+			if r.checkWebhookStatus(ctx, params) {
+				dspaStatus.SetWebhookReady()
+			}
+		} else {
+			dspaStatus.SetWebhookNotApplicable()
 		}
 
 		err = r.ReconcileAPIServer(ctx, dspa, params)
@@ -385,6 +409,39 @@ func (r *DSPAReconciler) setStatus(ctx context.Context, resourceName string, con
 	if err != nil {
 		log.Error(err, fmt.Sprintf("Encountered error when creating the %s readiness condition", conditionType))
 	}
+}
+
+func (r *DSPAReconciler) checkWebhookStatus(ctx context.Context, params *DSPAParams) bool {
+	deployment := &appsv1.Deployment{}
+
+	err := r.Get(ctx, types.NamespacedName{Name: params.WebhookName, Namespace: params.DSPONamespace}, deployment)
+	if err != nil {
+		return false
+	}
+
+	availableCond := util.GetDeploymentCondition(deployment.Status, appsv1.DeploymentAvailable)
+	if availableCond != nil && availableCond.Status == corev1.ConditionTrue {
+		return true
+	}
+	return false
+}
+
+func (r *DSPAReconciler) checkAvailableKubernetesDSPAs(ctx context.Context, excludeName, excludeNamespace string) (bool, error) {
+	list := &dspav1.DataSciencePipelinesApplicationList{}
+	err := r.List(ctx, list)
+	if err != nil {
+		return false, err
+	}
+
+	for _, dspa := range list.Items {
+		if dspa.Name == excludeName && dspa.Namespace == excludeNamespace {
+			continue
+		}
+		if dspa.Spec.APIServer != nil && dspa.Spec.APIServer.PipelineStorage == "kubernetes" {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (r *DSPAReconciler) updateStatus(ctx context.Context, dspa *dspav1.DataSciencePipelinesApplication,

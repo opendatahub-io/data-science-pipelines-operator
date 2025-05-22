@@ -7,6 +7,33 @@ metadata:
     app: {{.APIServerDefaultResourceName}}
     component: data-science-pipelines
 rules:
+  - verbs:
+      - create
+      - get
+      - list
+      - watch
+      - update
+      - patch
+      - delete
+    apiGroups:
+      - pipelines.kubeflow.org
+    resources:
+      - pipelines
+      - pipelines/finalizers
+  - verbs:
+      - create
+      - get
+      - list
+      - watch
+      - update
+      - patch
+      - delete
+    apiGroups:
+      - pipelines.kubeflow.org
+    resources:
+      - pipelineversions
+      - pipelineversions/status
+      - pipelineversions/finalizers
   - apiGroups:
       - ""
     resources:
