@@ -29,6 +29,7 @@ OPENDATAHUB_NAMESPACE="opendatahub"
 RESOURCES_DIR_PYPI="${GIT_WORKSPACE}/.github/resources/pypiserver/base"
 ENDPOINT_TYPE="service"
 DSPO_IMAGE_REF="${DSPO_IMAGE_REF:-""}"
+CONTAINER_CLI="${CONTAINER_CLI:-docker}"
 
 get_dspo_image() {
   if [ ! -z "$DSPO_IMAGE_REF" ]; then
@@ -145,7 +146,7 @@ upload_python_packages_to_pypi_server() {
   echo "---------------------------------"
   echo "Upload Python Packages to pypi-server"
   echo "---------------------------------"
-  ( cd "${GIT_WORKSPACE}/.github/scripts/python_package_upload" && sh package_upload_run.sh )
+  ( cd "${GIT_WORKSPACE}/.github/scripts/python_package_upload" && sh package_upload_run.sh)
 }
 
 create_dspa_namespace() {

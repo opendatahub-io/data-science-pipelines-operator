@@ -2,11 +2,12 @@
 
 set -ex
 
-mkdir -p /tmp/packages
-docker rm package_upload_run || true
-docker build -t package_upload .
-docker run --name package_upload_run -v /tmp/packages:/app/packages package_upload
+CONTAINER_CLI="${CONTAINER_CLI:-docker}"
 
+mkdir -p /tmp/packages
+$CONTAINER_CLI rm package_upload_run || true
+$CONTAINER_CLI build -t package_upload .
+$CONTAINER_CLI run --name package_upload_run -v /tmp/packages:/app/packages package_upload
 # Print the pods in the namespace
 kubectl -n test-pypiserver get pods
 
