@@ -162,6 +162,8 @@ spec:
             - name: V2_LAUNCHER_COMMAND
               value: "launcher-v2-fips"
             {{ end }}
+            - name: CACHEENABLED
+              value: "{{.APIServer.CacheEnabled}}"
           {{ if .APIServer.InitResources }}
           resources:
             requests:
