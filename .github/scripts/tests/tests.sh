@@ -28,8 +28,9 @@ RESOURCES_DIR_CRD="${GIT_WORKSPACE}/.github/resources"
 OPENDATAHUB_NAMESPACE="opendatahub"
 RESOURCES_DIR_PYPI="${GIT_WORKSPACE}/.github/resources/pypiserver/base"
 ENDPOINT_TYPE="service"
-DSPO_IMAGE_REF="${DSPO_IMAGE_REF:-""}"
+DSPO_IMAGE_REF="${DSPO_IMAGE_REF:-}"
 CONTAINER_CLI="${CONTAINER_CLI:-docker}"
+PACKAGE_UPLOADER_IMAGE="${PACKAGE_UPLOADER_IMAGE:-}"
 
 get_dspo_image() {
   if [ ! -z "$DSPO_IMAGE_REF" ]; then
