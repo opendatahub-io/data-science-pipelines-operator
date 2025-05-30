@@ -73,7 +73,7 @@ deploy_argo_lite() {
   echo "---------------------------------"
   echo "Deploy Argo Lite"
   echo "---------------------------------"
-  ( cd "${GIT_WORKSPACE}/.github/resources/argo-lite" && kustomize build . | kubectl -n $OPENDATAHUB_NAMESPACE apply -f - )
+  ( cd "${GIT_WORKSPACE}/.github/resources/argo-lite" && kubectl -n $OPENDATAHUB_NAMESPACE apply -k . )
 }
 
 deploy_dspo() {
@@ -101,7 +101,7 @@ deploy_minio() {
   echo "---------------------------------"
   echo "Deploy Minio"
   echo "---------------------------------"
-  ( cd "${GIT_WORKSPACE}/.github/resources/minio" && kustomize build . | kubectl -n $MINIO_NAMESPACE apply -f - )
+  ( cd "${GIT_WORKSPACE}/.github/resources/minio" && kubectl -n $MINIO_NAMESPACE apply -k . )
 }
 
 deploy_mariadb() {
@@ -112,7 +112,7 @@ deploy_mariadb() {
   echo "---------------------------------"
   echo "Deploy MariaDB"
   echo "---------------------------------"
-  ( cd "${GIT_WORKSPACE}/.github/resources/mariadb" && kustomize build . | kubectl -n $MARIADB_NAMESPACE apply -f - )
+  ( cd "${GIT_WORKSPACE}/.github/resources/mariadb" && kubectl -n $MARIADB_NAMESPACE apply -k . )
 }
 
 deploy_pypi_server() {
@@ -123,7 +123,7 @@ deploy_pypi_server() {
   echo "---------------------------------"
   echo "Deploy pypi-server"
   echo "---------------------------------"
-  ( cd "${GIT_WORKSPACE}/.github/resources/pypiserver/base" && kustomize build . | kubectl -n $PYPISERVER_NAMESPACE apply -f - )
+  ( cd "${GIT_WORKSPACE}/.github/resources/pypiserver/base" && kubectl -n $PYPISERVER_NAMESPACE apply -k . )
 }
 
 wait_for_dspo_dependencies() {
@@ -167,7 +167,7 @@ apply_mariadb_minio_secrets_configmaps_external_namespace() {
   echo "---------------------------------"
   echo "Apply MariaDB and Minio Secrets and Configmaps in the External Namespace"
   echo "---------------------------------"
-  ( cd "${GIT_WORKSPACE}/.github/resources/external-pre-reqs" && kustomize build . |  kubectl -n $DSPA_EXTERNAL_NAMESPACE apply -f - )
+  ( cd "${GIT_WORKSPACE}/.github/resources/external-pre-reqs" && kubectl -n $DSPA_EXTERNAL_NAMESPACE apply -k . )
 }
 
 apply_pip_server_configmap() {
