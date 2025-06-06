@@ -30,7 +30,7 @@ function display_pod_info {
     local NAMESPACE=$1
     local POD_NAMES
 
-    POD_NAMES=$(kubectl -n "${DSPA_NS}" get pods -o custom-columns=":metadata.name")
+    POD_NAMES=$(kubectl -n "${NAMESPACE}" get pods -o custom-columns=":metadata.name")
 
     if [[ -z "${POD_NAMES}" ]]; then
         echo "No pods found in namespace '${NAMESPACE}'."

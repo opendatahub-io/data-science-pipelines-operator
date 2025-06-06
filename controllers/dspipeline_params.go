@@ -71,6 +71,7 @@ type DSPAParams struct {
 	MlmdProxyDefaultResourceName         string
 	MlmdGrpcCertificateContents          string
 	MlmdGrpcPrivateKeyContents           string
+	WebhookName                          string
 	WorkflowController                   *dspa.WorkflowController
 	CustomKfpLauncherConfigMapData       string
 	DBConnection
@@ -584,6 +585,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.PiplinesCABundleMountPath = config.GetCABundleFileMountPath()
 	p.PodToPodTLS = false
 	p.FIPSEnabled = config.GetBoolConfigWithDefault(config.FIPSEnabledConfigName, config.DefaultFIPSEnabled)
+	p.WebhookName = "ds-pipelines-webhook"
 	dspTrustedCAConfigMapKey := config.CustomDSPTrustedCAConfigMapKey
 
 	// by default it's enabled when omitted

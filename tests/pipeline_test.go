@@ -42,7 +42,7 @@ func (suite *IntegrationTestSuite) TestAPIServerDeployment() {
 
 	suite.T().Run("Should successfully upload a pipeline", func(t *testing.T) {
 
-		name := "Test Pipeline Run"
+		name := "test-pipeline-run"
 		postUrl := fmt.Sprintf("%s/apis/v2beta1/pipelines/upload?name=%s", APIServerURL, url.QueryEscape(name))
 		vals := map[string]string{
 			"uploadfile": "@resources/test-pipeline-run.yaml",
@@ -60,7 +60,7 @@ func (suite *IntegrationTestSuite) TestAPIServerDeployment() {
 
 	suite.T().Run("Should successfully upload a pipeline with custom pip server", func(t *testing.T) {
 
-		name := "Test pipeline run with custom pip server"
+		name := "test-pipeline-run-with-custom-pip-server"
 		postUrl := fmt.Sprintf("%s/apis/v2beta1/pipelines/upload?name=%s", APIServerURL, url.QueryEscape(name))
 		vals := map[string]string{
 			"uploadfile": "@resources/test-pipeline-with-custom-pip-server-run.yaml",
