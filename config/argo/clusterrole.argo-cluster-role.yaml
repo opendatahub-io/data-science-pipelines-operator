@@ -3,7 +3,7 @@ kind: ClusterRole
 metadata:
   name: argo-cluster-role
   annotations:
-    internal.kpt.dev/upstream-identifier: "rbac.authorization.k8s.io|ClusterRole|default|argo-cluster-role"
+    internal.kpt.dev/upstream-identifier: 'rbac.authorization.k8s.io|ClusterRole|default|argo-cluster-role'
 rules:
 - apiGroups:
   - ""
@@ -98,10 +98,18 @@ rules:
   - create
   - patch
 - apiGroups:
-  - policy
+  - "policy"
   resources:
   - poddisruptionbudgets
   verbs:
   - create
   - get
   - delete
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  resourceNames:
+  - argo-workflows-agent-ca-certificates
