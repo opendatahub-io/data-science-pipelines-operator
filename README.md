@@ -664,4 +664,4 @@ Refer to this [repo][kubeflow-pipelines-examples] to see examples of different p
 
 Refer to [RELEASE.md] for details on the release process
 
-[RELEASE.md]: ./docs/release/RELEASE.md
+[RELEASE.md]: ./docs/release/RELEASE.md 
