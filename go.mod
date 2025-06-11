@@ -1,5 +1,6 @@
 module github.com/opendatahub-io/data-science-pipelines-operator
 
+
 go 1.21
 
 require (
