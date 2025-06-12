@@ -2,10 +2,21 @@
 
 set -ex
 
+CONTAINER_CLI="${CONTAINER_CLI:-docker}"
+RUN_PKG_UPLOADER_IN_CONTAINER="${RUN_PKG_UPLOADER_IN_CONTAINER:-true}"
+
 mkdir -p /tmp/packages
-docker rm package_upload_run || true
-docker build -t package_upload .
-docker run --name package_upload_run -v /tmp/packages:/app/packages package_upload
+
+if [ "$RUN_PKG_UPLOADER_IN_CONTAINER" = "true" ]; then
+  echo "Running uploader in container..."
+  $CONTAINER_CLI rm package_upload_run || true
+  $CONTAINER_CLI build -t package_upload .
+  $CONTAINER_CLI run --name package_upload_run -v /tmp/packages:/app/packages package_upload
+else
+  echo "Running uploader..."
+  ./package_download.sh
+  mv packages /tmp
+fi
 
 # Print the pods in the namespace
 kubectl -n test-pypiserver get pods

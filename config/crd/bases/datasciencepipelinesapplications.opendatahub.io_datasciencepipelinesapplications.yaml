@@ -86,6 +86,11 @@ spec:
                       This is the filename of the ca bundle that will be created in the
                       pipeline server and user executor pods
                     type: string
+                  cacheEnabled:
+                    default: true
+                    description: 'Enable/disable caching in the DSP API server. Default:
+                      true'
+                    type: boolean
                   customKfpLauncherConfigMap:
                     description: |-
                       When specified, the `data` contents of the `kfp-launcher` ConfigMap that DSPO writes
@@ -1031,6 +1036,11 @@ spec:
                       This is the filename of the ca bundle that will be created in the
                       pipeline server and user executor pods
                     type: string
+                  cacheEnabled:
+                    default: true
+                    description: 'Enable/disable caching in the DSP API server. Default:
+                      true'
+                    type: boolean
                   cacheImage:
                     description: 'Deprecated: DSP V1 only, will be removed in the
                       future.'

@@ -28,16 +28,23 @@ RESOURCES_DIR_CRD="${GIT_WORKSPACE}/.github/resources"
 OPENDATAHUB_NAMESPACE="opendatahub"
 RESOURCES_DIR_PYPI="${GIT_WORKSPACE}/.github/resources/pypiserver/base"
 ENDPOINT_TYPE="service"
+DSPO_IMAGE_REF="${DSPO_IMAGE_REF:-}"
+CONTAINER_CLI="${CONTAINER_CLI:-docker}"
+RUN_PKG_UPLOADER_IN_CONTAINER="${RUN_PKG_UPLOADER_IN_CONTAINER:-true}"
 
 get_dspo_image() {
-  if [ "$REGISTRY_ADDRESS" = "" ]; then
-    # this function is called by `IMG=$(get_dspo_image)` that captures the standard output of get_dspo_image
-    set -x
-    echo "REGISTRY_ADDRESS variable not defined."
-    exit 1
+  if [ ! -z "$DSPO_IMAGE_REF" ]; then
+    echo $DSPO_IMAGE_REF
+  else
+    if [ -z "$REGISTRY_ADDRESS" ]; then
+      # this function is called by `IMG=$(get_dspo_image)` that captures the standard output of get_dspo_image
+      set -x
+      echo "REGISTRY_ADDRESS variable not defined."
+      exit 1
+    fi
+    local image="${REGISTRY_ADDRESS}/data-science-pipelines-operator"
+    echo $image
   fi
-  local image="${REGISTRY_ADDRESS}/data-science-pipelines-operator"
-  echo $image
 }
 
 apply_crd() {
@@ -67,13 +74,21 @@ deploy_argo_lite() {
   echo "---------------------------------"
   echo "Deploy Argo Lite"
   echo "---------------------------------"
-  ( cd "${GIT_WORKSPACE}/.github/resources/argo-lite" && kustomize build . | kubectl -n $OPENDATAHUB_NAMESPACE apply -f - )
+  ( cd "${GIT_WORKSPACE}/.github/resources/argo-lite" && kubectl -n $OPENDATAHUB_NAMESPACE apply -k . )
 }
 
 deploy_dspo() {
   IMG=$(get_dspo_image)
   echo "---------------------------------"
   echo "Deploying DSPO: $IMG"
+  echo "---------------------------------"
+  ( cd $GIT_WORKSPACE && make deploy -e IMG="$IMG" )
+}
+
+deploy_dspo_kind() {
+  IMG=$(get_dspo_image)
+  echo "---------------------------------"
+  echo "Push DSPO Image and Deploying DSPO on Kind: $IMG"
   echo "---------------------------------"
   ( cd $GIT_WORKSPACE && make podman-push -e IMG="$IMG" )
   ( cd $GIT_WORKSPACE && make deploy-kind -e IMG="$IMG" )
@@ -87,7 +102,7 @@ deploy_minio() {
   echo "---------------------------------"
   echo "Deploy Minio"
   echo "---------------------------------"
-  ( cd "${GIT_WORKSPACE}/.github/resources/minio" && kustomize build . | kubectl -n $MINIO_NAMESPACE apply -f - )
+  ( cd "${GIT_WORKSPACE}/.github/resources/minio" && kubectl -n $MINIO_NAMESPACE apply -k . )
 }
 
 deploy_mariadb() {
@@ -98,7 +113,7 @@ deploy_mariadb() {
   echo "---------------------------------"
   echo "Deploy MariaDB"
   echo "---------------------------------"
-  ( cd "${GIT_WORKSPACE}/.github/resources/mariadb" && kustomize build . | kubectl -n $MARIADB_NAMESPACE apply -f - )
+  ( cd "${GIT_WORKSPACE}/.github/resources/mariadb" && kubectl -n $MARIADB_NAMESPACE apply -k . )
 }
 
 deploy_pypi_server() {
@@ -109,7 +124,7 @@ deploy_pypi_server() {
   echo "---------------------------------"
   echo "Deploy pypi-server"
   echo "---------------------------------"
-  ( cd "${GIT_WORKSPACE}/.github/resources/pypiserver/base" && kustomize build . | kubectl -n $PYPISERVER_NAMESPACE apply -f - )
+  ( cd "${GIT_WORKSPACE}/.github/resources/pypiserver/base" && kubectl -n $PYPISERVER_NAMESPACE apply -k . )
 }
 
 wait_for_dspo_dependencies() {
@@ -132,7 +147,7 @@ upload_python_packages_to_pypi_server() {
   echo "---------------------------------"
   echo "Upload Python Packages to pypi-server"
   echo "---------------------------------"
-  ( cd "${GIT_WORKSPACE}/.github/scripts/python_package_upload" && sh package_upload_run.sh )
+  ( cd "${GIT_WORKSPACE}/.github/scripts/python_package_upload" && sh package_upload_run.sh)
 }
 
 create_dspa_namespace() {
@@ -153,7 +168,7 @@ apply_mariadb_minio_secrets_configmaps_external_namespace() {
   echo "---------------------------------"
   echo "Apply MariaDB and Minio Secrets and Configmaps in the External Namespace"
   echo "---------------------------------"
-  ( cd "${GIT_WORKSPACE}/.github/resources/external-pre-reqs" && kustomize build . |  kubectl -n $DSPA_EXTERNAL_NAMESPACE apply -f - )
+  ( cd "${GIT_WORKSPACE}/.github/resources/external-pre-reqs" && kubectl -n $DSPA_EXTERNAL_NAMESPACE apply -k . )
 }
 
 apply_pip_server_configmap() {
@@ -195,9 +210,26 @@ remove_namespace_created_for_rhoai() {
   kubectl delete projects $PYPISERVER_NAMESPACE --now || true
 }
 
-setup_requirements() {
+setup_kind_requirements() {
   apply_crd
   build_image
+  create_opendatahub_namespace
+  deploy_argo_lite
+  deploy_dspo_kind
+  deploy_minio
+  deploy_mariadb
+  deploy_pypi_server
+  wait_for_dspo_dependencies
+  wait_for_dependencies
+  upload_python_packages_to_pypi_server
+  create_dspa_namespace
+  create_namespace_dspa_external_connections
+  apply_mariadb_minio_secrets_configmaps_external_namespace
+  apply_pip_server_configmap
+}
+
+setup_openshift_ci_requirements() {
+  apply_crd
   create_opendatahub_namespace
   deploy_argo_lite
   deploy_dspo
@@ -232,8 +264,8 @@ while [ "$#" -gt 0 ]; do
       TARGET="kind"
       shift
       ;;
-    --standard)
-      TARGET="standard"
+    --openshift-ci)
+      TARGET="openshift-ci"
       shift
       ;;
     --rhoai)
@@ -333,9 +365,9 @@ if [ "$TARGET" = "kind" ]; then
   if [ "$CLEAN_INFRA" = true ] ; then
       undeploy_kind_resources
   fi
-  setup_requirements
-elif [ "$TARGET" = "standard" ]; then
-  setup_requirements
+  setup_kind_requirements
+elif [ "$TARGET" = "openshift-ci" ]; then
+  setup_openshift_ci_requirements
 elif [ "$TARGET" = "rhoai" ]; then
   if [ "$CLEAN_INFRA" = true ] ; then
       remove_namespace_created_for_rhoai
