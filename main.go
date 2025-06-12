@@ -148,12 +148,12 @@ func main() {
 		LeaderElectionID:       "f9eb95d5.opendatahub.io",
 		Cache: cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
-				// Limit the watches to the pipelineversions.pipelines.kubeflow.org webhooks in the DSPO namespace.
+				// Limit the watches to only the pipelineversions.pipelines.kubeflow.org webhooks.
 				&admv1.ValidatingWebhookConfiguration{}: {
-					Field: fields.SelectorFromSet(fields.Set{"metadata.name": webhookConfigName, "metadata.namespace": dspoNamespace}),
+					Field: fields.SelectorFromSet(fields.Set{"metadata.name": webhookConfigName}),
 				},
 				&admv1.MutatingWebhookConfiguration{}: {
-					Field: fields.SelectorFromSet(fields.Set{"metadata.name": webhookConfigName, "metadata.namespace": dspoNamespace}),
+					Field: fields.SelectorFromSet(fields.Set{"metadata.name": webhookConfigName}),
 				},
 			},
 		},

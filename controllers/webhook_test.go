@@ -67,7 +67,7 @@ func TestWebhookLifecycle(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("WebhookNotDeployedWithoutKubernetesPipelineStorage", func(t *testing.T) {
+	t.Run("WebhookNotDeployedWithoutKubernetesPipelineStore", func(t *testing.T) {
 		dspa := testutil.CreateEmptyDSPA()
 		dspa.Name = "dspa-non-k8s"
 		dspa.Namespace = "testnamespace"
@@ -147,7 +147,7 @@ func TestWebhookLifecycle(t *testing.T) {
 	})
 
 	t.Run("WebhookPersistsWhenNonKubernetesDSPADeleted", func(t *testing.T) {
-		// First: create a DSPA with kubernetes PipelineStorage to ensure webhook exists
+		// First: create a DSPA with kubernetes PipelineStore to ensure webhook exists
 		k8sDSPA := testutil.CreateTestDSPA()
 
 		os.Setenv("DSPO_NAMESPACE", "testDSPONamespace")
@@ -175,7 +175,7 @@ func TestWebhookLifecycle(t *testing.T) {
 		assert.True(t, created)
 		require.NoError(t, err)
 
-		//Create a DSPA with non-kubernetes PipelineStorage
+		//Create a DSPA with non-kubernetes PipelineStore
 		nonK8sDSPA := testutil.CreateEmptyDSPA()
 		nonK8sDSPA.Name = "dspa-non-k8s"
 		nonK8sDSPA.Namespace = "testnamespace"
