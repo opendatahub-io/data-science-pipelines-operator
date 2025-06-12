@@ -93,12 +93,12 @@ func (suite *IntegrationTestSuite) TestDSPADeployment() {
 }
 
 func (suite *IntegrationTestSuite) TestDSPADeploymentWithK8sNativeApi() {
-	// Skip the entire test if PipelineStorage is not set to kubernetes
-	if suite.DSPA.Spec.APIServer.PipelineStorage != "kubernetes" {
-		suite.T().Log("PipelineStorage is not set to kubernetes, skipping K8s Native API verification tests")
+	// Skip the entire test if PipelineStore is not set to kubernetes
+	if suite.DSPA.Spec.APIServer.PipelineStore != "kubernetes" {
+		suite.T().Log("PipelineStore is not set to kubernetes, skipping K8s Native API verification tests")
 		suite.T().SkipNow()
 	}
-	suite.T().Run("should verify API Server configuration based on PipelineStorage", func(t *testing.T) {
+	suite.T().Run("should verify API Server configuration based on PipelineStore", func(t *testing.T) {
 		timeout := time.Second * 120
 		interval := time.Second * 2
 

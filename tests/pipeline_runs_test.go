@@ -32,8 +32,8 @@ func (suite *IntegrationTestSuite) TestPipelineSuccessfulRun() {
 
 	suite.T().Run("Should create a Pipeline Run", func(t *testing.T) {
 
-		if suite.DSPA.Spec.APIServer.PipelineStorage == "kubernetes" {
-			t.Log("PipelineStorage is set to kubernetes, skipping this test.")
+		if suite.DSPA.Spec.APIServer.PipelineStore == "kubernetes" {
+			t.Log("PipelineStore is set to kubernetes, skipping this test.")
 			t.SkipNow()
 		}
 		suite.runPipelineTest(t, "[Demo] iris-training")
@@ -44,8 +44,8 @@ func (suite *IntegrationTestSuite) TestPipelineSuccessfulRun() {
 	})
 
 	suite.T().Run("Should create a k8s Pipeline Run", func(t *testing.T) {
-		if suite.DSPA.Spec.APIServer.PipelineStorage != "kubernetes" {
-			t.Log("PipelineStorage is not set to kubernetes, skipping k8s pipeline run")
+		if suite.DSPA.Spec.APIServer.PipelineStore != "kubernetes" {
+			t.Log("PipelineStore is not set to kubernetes, skipping k8s pipeline run")
 			t.SkipNow()
 		}
 		// Apply the Pipeline and PipelineVersion Kubernetes resources

@@ -304,7 +304,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			return ctrl.Result{}, err
 		}
 
-		if dspa.Spec.APIServer.PipelineStorage == "kubernetes" {
+		if dspa.Spec.APIServer.PipelineStore == "kubernetes" {
 			err = r.ReconcileWebhook(ctx, params)
 			if err != nil {
 				dspaStatus.SetWebhookNotReady(err, config.FailingToDeploy)
@@ -443,7 +443,7 @@ func (r *DSPAReconciler) checkAvailableKubernetesDSPAs(ctx context.Context, excl
 		if dspa.Name == excludeName && dspa.Namespace == excludeNamespace {
 			continue
 		}
-		if dspa.Spec.APIServer != nil && dspa.Spec.APIServer.PipelineStorage == "kubernetes" {
+		if dspa.Spec.APIServer != nil && dspa.Spec.APIServer.PipelineStore == "kubernetes" {
 			return true, nil
 		}
 	}

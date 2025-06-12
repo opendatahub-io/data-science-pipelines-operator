@@ -186,7 +186,7 @@ spec:
                             type: string
                         type: object
                     type: object
-                  pipelineStorage:
+                  pipelineStore:
                     default: database
                     description: The storage for pipeline definitions (pipelines and
                       pipeline versions). It can be either 'database' or 'kubernetes'
@@ -1175,7 +1175,7 @@ spec:
                       in the ''move-all-results-to-tekton-home'' step. Deprecated:
                       DSP V1 only, will be removed in the future.'
                     type: string
-                  pipelineStorage:
+                  pipelineStore:
                     default: database
                     description: The storage for pipeline definitions (pipelines and
                       pipeline versions). It can be either 'database' or 'kubernetes'

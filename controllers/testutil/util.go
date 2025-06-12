@@ -289,8 +289,8 @@ func CreateTestDSPA() *dspav1.DataSciencePipelinesApplication {
 	dspa.Spec = dspav1.DSPASpec{
 		PodToPodTLS: boolPtr(false),
 		APIServer: &dspav1.APIServer{
-			Deploy:          true,
-			PipelineStorage: "kubernetes",
+			Deploy:        true,
+			PipelineStore: "kubernetes",
 		},
 		MLMD: &dspav1.MLMD{
 			Deploy: true,

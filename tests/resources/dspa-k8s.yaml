@@ -12,7 +12,7 @@ spec:
     cABundle:
       configMapName: nginx-tls-config
       configMapKey: rootCA.crt
-    pipelineStorage: kubernetes
+    pipelineStore: kubernetes
     webhookAnnotations:
       cert-manager.io/inject-ca-from: opendatahub/dspa-webhook-cert
     resources:

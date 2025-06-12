@@ -62,7 +62,7 @@ func (r *DSPAReconciler) CleanUpWebhookIfUnused(ctx context.Context, dspa *dspav
 	}
 
 	if !hasK8sDSPAs {
-		log.Info("No other DSPAs with PipelineStorage 'kubernetes' found. Cleaning up webhook resources.")
+		log.Info("No other DSPAs with PipelineStore 'kubernetes' found. Cleaning up webhook resources.")
 		if err := r.cleanupWebhookResources(ctx, params.DSPONamespace); err != nil {
 			log.Error(err, "Failed to clean up webhook resources")
 			return err
