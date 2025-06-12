@@ -26,10 +26,10 @@ jobs:
       - name: checkout
         uses: actions/checkout@v3
       - name: 'Download artifact'
-        uses: actions/github-script@v3.1.0
+        uses: actions/github-script@v6
         with:
           script: |
-            let allArtifacts = await github.actions.listWorkflowRunArtifacts({
+            let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 run_id: ${{github.event.workflow_run.id}},
@@ -37,7 +37,7 @@ jobs:
             let matchArtifact = allArtifacts.data.artifacts.filter((artifact) => {
                 return artifact.name == "pr"
             })[0];
-            let download = await github.actions.downloadArtifact({
+            let download = await github.rest.actions.downloadArtifact({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 artifact_id: matchArtifact.id,
