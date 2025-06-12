@@ -39,14 +39,15 @@ Let `x.y.z` be the `latest` release that is highest DSPO/DSP version. These are 
 1. Ensure `compatibility.yaml` is upto date, and generate a new `compatibility.md`
    - Use [release-tools] to accomplish this
 1. If the changes include a code rebase from KFP repo, ensure `config/component_metadata.yaml` is updated with the respective KFP version
-
-#### 2a. GitHub Workflow
+#### 2. Create Release PR
+Create release PR either (a) automatically or (b) manually
+##### a. GitHub Workflow
 
 Run the
 [Release Prep](https://github.com/opendatahub-io/data-science-pipelines-operator/actions/workflows/release_prep.yaml)
 workflow to automate creating the release branch, building the images, and creating the release PR.
 
-#### 2b. Manual
+##### b. Manual
 
 1. Cut branch `vx.y+1` from `main/master`
    - Do this for DSPO and DSP repos
