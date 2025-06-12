@@ -26,7 +26,8 @@ To generate the version doc run the following:
 compatibility up to date.
 
 ```
-python release.py --input_file compatibility.yaml --out_file compatibility.md
+cd scripts/release
+python release.py version_doc --input_file ../../docs/release/compatibility.yaml --out_file ../../docs/release/compatibility.md
 ```
 
 
