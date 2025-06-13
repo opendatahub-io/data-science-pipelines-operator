@@ -51,6 +51,14 @@ function display_pod_info {
     done
 }
 
+function get_pods {
+    local NAMESPACE=$1
+    echo "===== kubectl get pods -n ${NAMESPACE} ====="
+    kubectl get pods -n "${NAMESPACE}"
+    echo "==========================="
+    done
+}
+
 function collect_workflow_info {
     local NAMESPACE=$1
 
@@ -67,6 +75,8 @@ function collect_workflow_info {
 
 check_namespace "$DSPA_NS"
 check_namespace "$DSPO_NS"
+
+get_pods "$DSPA_NS"
 
 display_pod_info "$DSPA_NS"
 display_pod_info "$DSPO_NS"
