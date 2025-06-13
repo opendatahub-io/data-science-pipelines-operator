@@ -19,16 +19,20 @@ package testutil
 import (
 	"context"
 	"fmt"
-	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"os"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"testing"
 	"time"
 
+	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
+
 	mf "github.com/manifestival/manifestival"
+	appsv1 "k8s.io/api/apps/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -275,4 +279,62 @@ func CreateDSPAWithCustomKfpLauncherConfigMap(configMapName string) *dspav1.Data
 		CustomKfpLauncherConfigMap: configMapName,
 	}
 	return dspa
+}
+
+func CreateTestDSPA() *dspav1.DataSciencePipelinesApplication {
+	dspa := CreateEmptyDSPA()
+	dspa.Name = "testdspa"
+	dspa.Namespace = "testnamespace"
+
+	dspa.Spec = dspav1.DSPASpec{
+		PodToPodTLS: boolPtr(false),
+		APIServer: &dspav1.APIServer{
+			Deploy:        true,
+			PipelineStore: "kubernetes",
+		},
+		MLMD: &dspav1.MLMD{
+			Deploy: true,
+		},
+		Database: &dspav1.Database{
+			DisableHealthCheck: false,
+			MariaDB: &dspav1.MariaDB{
+				Deploy: true,
+			},
+		},
+		ObjectStorage: &dspav1.ObjectStorage{
+			DisableHealthCheck: false,
+			Minio: &dspav1.Minio{
+				Deploy: false,
+				Image:  "someimage",
+			},
+		},
+		DSPVersion: "v2",
+	}
+
+	return dspa
+}
+
+func CreateTestDSPODeployment(namespace string) *appsv1.Deployment {
+	operatorName := "data-science-pipelines-operator-controller-manager"
+	return &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      operatorName,
+			Namespace: namespace,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"app": "dspo"},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{"app": "dspo"},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{Name: "manager", Image: "testimage"},
+					},
+				},
+			},
+		},
+	}
 }

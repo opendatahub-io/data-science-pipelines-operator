@@ -91,3 +91,86 @@ func (suite *IntegrationTestSuite) TestDSPADeployment() {
 		}
 	})
 }
+
+func (suite *IntegrationTestSuite) TestDSPADeploymentWithK8sNativeApi() {
+	// Skip the entire test if PipelineStore is not set to kubernetes
+	if suite.DSPA.Spec.APIServer.PipelineStore != "kubernetes" {
+		suite.T().Log("PipelineStore is not set to kubernetes, skipping K8s Native API verification tests")
+		suite.T().SkipNow()
+	}
+	suite.T().Run("should verify API Server configuration based on PipelineStore", func(t *testing.T) {
+		timeout := time.Second * 120
+		interval := time.Second * 2
+
+		// Verify API Server configuration
+		require.Eventually(t, func() bool {
+			podList := &corev1.PodList{}
+			err := suite.Clientmgr.k8sClient.List(suite.Ctx, podList,
+				client.InNamespace(suite.DSPANamespace),
+				client.MatchingLabels{
+					"app": fmt.Sprintf("ds-pipeline-%s", suite.DSPA.Name),
+				},
+			)
+			require.NoError(t, err)
+
+			if len(podList.Items) == 0 {
+				t.Logf("Expected at least 1 API Server pod, but found %d", len(podList.Items))
+				return false
+			}
+
+			pod := podList.Items[0]
+			if pod.Status.Phase != corev1.PodRunning {
+				t.Logf("API Server pod %s is not running (status: %s)", pod.Name, pod.Status.Phase)
+				return false
+			}
+
+			for _, container := range pod.Spec.Containers {
+				if container.Name == "ds-pipeline-api-server" {
+					// Look for the K8s Native API flag
+					for _, arg := range container.Args {
+						if arg == "--pipelinesStoreKubernetes=true" {
+							return true
+						}
+					}
+					return false
+				}
+			}
+			return false
+		}, timeout, interval)
+	})
+
+	suite.T().Run("should verify webhook pod is running in DSPO namespace", func(t *testing.T) {
+		timeout := 120 * time.Second
+		interval := 2 * time.Second
+		dspoNamespace := "opendatahub"
+		webhookName := "ds-pipelines-webhook"
+
+		require.Eventually(t, func() bool {
+			podList := &corev1.PodList{}
+			err := suite.Clientmgr.k8sClient.List(suite.Ctx, podList,
+				client.InNamespace(dspoNamespace),
+				client.MatchingLabels{
+					"app": webhookName,
+				},
+			)
+			if err != nil {
+				t.Logf("Error listing webhook pod: %v", err)
+				return false
+			}
+
+			if len(podList.Items) == 0 {
+				t.Log("No webhook pod found in DSPO namespace")
+				return false
+			}
+
+			for _, pod := range podList.Items {
+				if pod.Status.Phase != corev1.PodRunning {
+					t.Logf("Webhook pod %s is not running (status: %s)", pod.Name, pod.Status.Phase)
+					return false
+				}
+			}
+
+			return true
+		}, timeout, interval)
+	})
+}

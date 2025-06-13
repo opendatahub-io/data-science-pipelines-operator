@@ -15,6 +15,10 @@ type DSPAStatus interface {
 	SetObjStoreReady()
 	SetObjStoreNotReady(err error, reason string)
 
+	SetWebhookReady()
+	SetWebhookNotReady(err error, reason string)
+	SetWebhookNotApplicable()
+
 	SetApiServerStatus(apiServerReady metav1.Condition)
 
 	SetPersistenceAgentStatus(persistenceAgentReady metav1.Condition)
@@ -35,6 +39,7 @@ func NewDSPAStatus(dspa *dspav1.DataSciencePipelinesApplication) DSPAStatus {
 	persistenceAgentCondition := BuildUnknownCondition(config.PersistenceAgentReady)
 	scheduledWorkflowReadyCondition := BuildUnknownCondition(config.ScheduledWorkflowReady)
 	mlmdProxyReadyCondition := BuildUnknownCondition(config.MLMDProxyReady)
+	webhookReadyCondition := BuildUnknownCondition(config.WebhookReady)
 
 	return &dspaStatus{
 		dspa:                   dspa,
@@ -44,6 +49,7 @@ func NewDSPAStatus(dspa *dspav1.DataSciencePipelinesApplication) DSPAStatus {
 		persistenceAgentReady:  &persistenceAgentCondition,
 		scheduledWorkflowReady: &scheduledWorkflowReadyCondition,
 		mlmdProxyReady:         &mlmdProxyReadyCondition,
+		webhookReady:           &webhookReadyCondition,
 	}
 }
 
@@ -56,6 +62,7 @@ type dspaStatus struct {
 	scheduledWorkflowReady *metav1.Condition
 	mlmdProxyReady         *metav1.Condition
 	dspaReady              *metav1.Condition
+	webhookReady           *metav1.Condition
 }
 
 func (s *dspaStatus) SetDatabaseNotReady(err error, reason string) {
@@ -85,6 +92,25 @@ func (s *dspaStatus) SetObjStoreNotReady(err error, reason string) {
 
 	condition := BuildFalseCondition(config.ObjectStoreAvailable, reason, message)
 	s.objStoreAvailable = &condition
+}
+
+func (s *dspaStatus) SetWebhookNotReady(err error, reason string) {
+	message := ""
+	if err != nil {
+		message = err.Error()
+	}
+	condition := BuildFalseCondition(config.WebhookReady, reason, message)
+	s.webhookReady = &condition
+}
+
+func (s *dspaStatus) SetWebhookReady() {
+	condition := BuildTrueCondition(config.WebhookReady, "Webhook deployment successfully verified")
+	s.webhookReady = &condition
+}
+
+func (s *dspaStatus) SetWebhookNotApplicable() {
+	condition := BuildFalseCondition(config.WebhookReady, "NotApplicable", "Webhook deployment not applicable for pipeline storage other than 'kubernetes'")
+	s.webhookReady = &condition
 }
 
 func (s *dspaStatus) SetApiServerStatus(apiServerReady metav1.Condition) {
@@ -125,12 +151,13 @@ func (s *dspaStatus) GetConditions() []metav1.Condition {
 		*s.getPersistenceAgentReadyCondition(),
 		*s.getScheduledWorkflowReadyCondition(),
 		*s.getMLMDProxyReadyCondition(),
+		*s.getWebhookReadyCondition(),
 	}
 
 	allReady := true
 	failureMessages := ""
 	for _, c := range componentConditions {
-		if c.Status == metav1.ConditionFalse || c.Status == metav1.ConditionUnknown {
+		if (c.Status == metav1.ConditionFalse || c.Status == metav1.ConditionUnknown) && c.Reason != "NotApplicable" {
 			allReady = false
 			failureMessages += fmt.Sprintf("%s \n", c.Message)
 		}
@@ -168,6 +195,7 @@ func (s *dspaStatus) GetConditions() []metav1.Condition {
 		*s.persistenceAgentReady,
 		*s.scheduledWorkflowReady,
 		*s.mlmdProxyReady,
+		*s.webhookReady,
 		*crReady,
 	}
 
@@ -203,6 +231,10 @@ func (s *dspaStatus) getScheduledWorkflowReadyCondition() *metav1.Condition {
 
 func (s *dspaStatus) getMLMDProxyReadyCondition() *metav1.Condition {
 	return s.mlmdProxyReady
+}
+
+func (s *dspaStatus) getWebhookReadyCondition() *metav1.Condition {
+	return s.webhookReady
 }
 
 func BuildTrueCondition(conditionType string, message string) metav1.Condition {
