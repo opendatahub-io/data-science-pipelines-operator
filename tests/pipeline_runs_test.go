@@ -31,44 +31,46 @@ import (
 func (suite *IntegrationTestSuite) TestPipelineSuccessfulRun() {
 
 	suite.T().Run("Should create a Pipeline Run", func(t *testing.T) {
-		// Retrieve Pipeline ID to create a new run
-		pipelineDisplayName := "[Demo] iris-training"
-		pipelineID, err := TestUtil.RetrievePipelineId(t, suite.Clientmgr.httpClient, APIServerURL, pipelineDisplayName)
-		require.NoError(t, err)
-		postUrl := fmt.Sprintf("%s/apis/v2beta1/runs", APIServerURL)
-		body := TestUtil.FormatRequestBody(t, pipelineID, pipelineDisplayName)
-		contentType := "application/json"
-		// Create a new run
-		response, err := suite.Clientmgr.httpClient.Post(postUrl, contentType, bytes.NewReader(body))
-		require.NoError(t, err)
-		responseData, err := io.ReadAll(response.Body)
-		responseString := string(responseData)
-		loggr.Info(responseString)
-		require.NoError(t, err)
-		require.Equal(t, 200, response.StatusCode)
 
-		err = TestUtil.WaitForPipelineRunCompletion(t, suite.Clientmgr.httpClient, APIServerURL)
-		require.NoError(t, err)
+		if suite.DSPA.Spec.APIServer.PipelineStore == "kubernetes" {
+			t.Log("PipelineStore is set to kubernetes, skipping this test.")
+			t.SkipNow()
+		}
+		suite.runPipelineTest(t, "[Demo] iris-training")
 	})
 
 	suite.T().Run("Should create a Pipeline Run using custom pip server", func(t *testing.T) {
-		// Retrieve Pipeline ID to create a new run
-		pipelineDisplayName := "Test pipeline run with custom pip server"
-		pipelineID, err := TestUtil.RetrievePipelineId(t, suite.Clientmgr.httpClient, APIServerURL, pipelineDisplayName)
-		require.NoError(t, err)
-		postUrl := fmt.Sprintf("%s/apis/v2beta1/runs", APIServerURL)
-		body := TestUtil.FormatRequestBody(t, pipelineID, pipelineDisplayName)
-		contentType := "application/json"
-		// Create a new run
-		response, err := suite.Clientmgr.httpClient.Post(postUrl, contentType, bytes.NewReader(body))
-		require.NoError(t, err)
-		responseData, err := io.ReadAll(response.Body)
-		responseString := string(responseData)
-		loggr.Info(responseString)
-		require.NoError(t, err)
-		require.Equal(t, 200, response.StatusCode)
-
-		err = TestUtil.WaitForPipelineRunCompletion(t, suite.Clientmgr.httpClient, APIServerURL)
-		require.NoError(t, err)
+		suite.runPipelineTest(t, "test-pipeline-run-with-custom-pip-server")
 	})
+
+	suite.T().Run("Should create a k8s Pipeline Run", func(t *testing.T) {
+		if suite.DSPA.Spec.APIServer.PipelineStore != "kubernetes" {
+			t.Log("PipelineStore is not set to kubernetes, skipping k8s pipeline run")
+			t.SkipNow()
+		}
+		// Apply the Pipeline and PipelineVersion Kubernetes resources
+		yamlPath := "resources/test-k8s-pipeline.yaml"
+		TestUtil.ApplyPipelineYAML(t, yamlPath, suite.DSPANamespace)
+
+		suite.runPipelineTest(t, "test-k8s-pipeline-run")
+	})
+}
+
+func (suite *IntegrationTestSuite) runPipelineTest(t *testing.T, pipelineDisplayName string) {
+	pipelineID, err := TestUtil.RetrievePipelineId(t, suite.Clientmgr.httpClient, APIServerURL, pipelineDisplayName)
+	require.NoError(t, err)
+	postUrl := fmt.Sprintf("%s/apis/v2beta1/runs", APIServerURL)
+	body := TestUtil.FormatRequestBody(t, pipelineID, pipelineDisplayName)
+	contentType := "application/json"
+
+	response, err := suite.Clientmgr.httpClient.Post(postUrl, contentType, bytes.NewReader(body))
+	require.NoError(t, err)
+	responseData, err := io.ReadAll(response.Body)
+	responseString := string(responseData)
+	loggr.Info(responseString)
+	require.NoError(t, err)
+	require.Equal(t, 200, response.StatusCode)
+
+	err = TestUtil.WaitForPipelineRunCompletion(t, suite.Clientmgr.httpClient, APIServerURL)
+	require.NoError(t, err)
 }

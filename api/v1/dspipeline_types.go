@@ -152,9 +152,20 @@ type APIServer struct {
 	// +kubebuilder:validation:Optional
 	ArtifactSignedURLExpirySeconds *int `json:"artifactSignedURLExpirySeconds"`
 
+	// The storage for pipeline definitions (pipelines and pipeline versions). It can be
+	// either 'database' or 'kubernetes' (Pipeline and PipelineVersion kinds). Defaults to 'database'.
+	// +kubebuilder:default:=database
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum=database;kubernetes
+	PipelineStore string `json:"pipelineStore,omitempty"`
+
 	// Enable/disable caching in the DSP API server. Default: true
 	// +kubebuilder:default:=true
 	CacheEnabled *bool `json:"cacheEnabled,omitempty"`
+
+	// WebhookAnnotations is a map of annotations to add to the validating and mutating webhooks.
+	// +kubebuilder:validation:Optional
+	WebhookAnnotations map[string]string `json:"webhookAnnotations,omitempty"`
 }
 
 type CABundle struct {

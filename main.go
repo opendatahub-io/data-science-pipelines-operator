@@ -19,12 +19,13 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/golang/glog"
-	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
-	"github.com/spf13/viper"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/golang/glog"
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
+	"github.com/spf13/viper"
 
 	"github.com/fsnotify/fsnotify"
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
@@ -33,13 +34,18 @@ import (
 	imagev1 "github.com/openshift/api/image/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	"go.uber.org/zap/zapcore"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
+	admv1 "k8s.io/api/admissionregistration/v1"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	//+kubebuilder:scaffold:imports
@@ -120,10 +126,18 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
+	dspoNamespace := os.Getenv("DSPO_NAMESPACE")
+	if dspoNamespace == "" {
+		setupLog.Error(fmt.Errorf("missing environment variable"), "DSPO_NAMESPACE must be set")
+		os.Exit(1)
+	}
+
 	err := initConfig(configPath)
 	if err != nil {
 		glog.Fatal(err)
 	}
+
+	webhookConfigName := "pipelineversions.pipelines.kubeflow.org"
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -132,6 +146,17 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "f9eb95d5.opendatahub.io",
+		Cache: cache.Options{
+			ByObject: map[client.Object]cache.ByObject{
+				// Limit the watches to only the pipelineversions.pipelines.kubeflow.org webhooks.
+				&admv1.ValidatingWebhookConfiguration{}: {
+					Field: fields.SelectorFromSet(fields.Set{"metadata.name": webhookConfigName}),
+				},
+				&admv1.MutatingWebhookConfiguration{}: {
+					Field: fields.SelectorFromSet(fields.Set{"metadata.name": webhookConfigName}),
+				},
+			},
+		},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

@@ -200,6 +200,10 @@ spec:
             - --tlsCertPath=/etc/tls/private/tls.crt
             - --tlsCertKeyPath=/etc/tls/private/tls.key
             {{ end }}
+            {{ if eq .APIServer.PipelineStore "kubernetes" }}
+            - --pipelinesStoreKubernetes=true
+            - --disableWebhook=true
+            {{ end }}
           ports:
             - containerPort: 8888
               name: http
