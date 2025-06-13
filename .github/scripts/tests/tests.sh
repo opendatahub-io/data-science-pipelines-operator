@@ -34,8 +34,23 @@ ENDPOINT_TYPE="service"
 DSPO_IMAGE_REF="${DSPO_IMAGE_REF:-}"
 CONTAINER_CLI="${CONTAINER_CLI:-docker}"
 RUN_PKG_UPLOADER_IN_CONTAINER="${RUN_PKG_UPLOADER_IN_CONTAINER:-true}"
+DSPO_IMAGE_REF="${DSPO_IMAGE_REF:-}"
+CONTAINER_CLI="${CONTAINER_CLI:-docker}"
+RUN_PKG_UPLOADER_IN_CONTAINER="${RUN_PKG_UPLOADER_IN_CONTAINER:-true}"
 
 get_dspo_image() {
+  if [ ! -z "$DSPO_IMAGE_REF" ]; then
+    echo $DSPO_IMAGE_REF
+  else
+    if [ -z "$REGISTRY_ADDRESS" ]; then
+      # this function is called by `IMG=$(get_dspo_image)` that captures the standard output of get_dspo_image
+      set -x
+      echo "REGISTRY_ADDRESS variable not defined."
+      exit 1
+    fi
+    local image="${REGISTRY_ADDRESS}/data-science-pipelines-operator"
+    echo $image
+  fi
   if [ ! -z "$DSPO_IMAGE_REF" ]; then
     echo $DSPO_IMAGE_REF
   else
@@ -78,12 +93,21 @@ deploy_argo_lite() {
   echo "Deploy Argo Lite"
   echo "---------------------------------"
   ( cd "${GIT_WORKSPACE}/.github/resources/argo-lite" && kubectl -n $OPENDATAHUB_NAMESPACE apply -k . )
+  ( cd "${GIT_WORKSPACE}/.github/resources/argo-lite" && kubectl -n $OPENDATAHUB_NAMESPACE apply -k . )
 }
 
 deploy_dspo() {
   IMG=$(get_dspo_image)
   echo "---------------------------------"
   echo "Deploying DSPO: $IMG"
+  echo "---------------------------------"
+  ( cd $GIT_WORKSPACE && make deploy -e IMG="$IMG" )
+}
+
+deploy_dspo_kind() {
+  IMG=$(get_dspo_image)
+  echo "---------------------------------"
+  echo "Push DSPO Image and Deploying DSPO on Kind: $IMG"
   echo "---------------------------------"
   ( cd $GIT_WORKSPACE && make deploy -e IMG="$IMG" )
 }
@@ -106,6 +130,7 @@ deploy_minio() {
   echo "Deploy Minio"
   echo "---------------------------------"
   ( cd "${GIT_WORKSPACE}/.github/resources/minio" && kubectl -n $MINIO_NAMESPACE apply -k . )
+  ( cd "${GIT_WORKSPACE}/.github/resources/minio" && kubectl -n $MINIO_NAMESPACE apply -k . )
 }
 
 deploy_mariadb() {
@@ -116,6 +141,7 @@ deploy_mariadb() {
   echo "---------------------------------"
   echo "Deploy MariaDB"
   echo "---------------------------------"
+  ( cd "${GIT_WORKSPACE}/.github/resources/mariadb" && kubectl -n $MARIADB_NAMESPACE apply -k . )
   ( cd "${GIT_WORKSPACE}/.github/resources/mariadb" && kubectl -n $MARIADB_NAMESPACE apply -k . )
 }
 
@@ -162,6 +188,7 @@ upload_python_packages_to_pypi_server() {
   echo "Upload Python Packages to pypi-server"
   echo "---------------------------------"
   ( cd "${GIT_WORKSPACE}/.github/scripts/python_package_upload" && sh package_upload_run.sh)
+  ( cd "${GIT_WORKSPACE}/.github/scripts/python_package_upload" && sh package_upload_run.sh)
 }
 
 create_dspa_namespace() {
@@ -189,6 +216,7 @@ apply_mariadb_minio_secrets_configmaps_external_namespace() {
   echo "---------------------------------"
   echo "Apply MariaDB and Minio Secrets and Configmaps in the External Namespace"
   echo "---------------------------------"
+  ( cd "${GIT_WORKSPACE}/.github/resources/external-pre-reqs" && kubectl -n $DSPA_EXTERNAL_NAMESPACE apply -k . )
   ( cd "${GIT_WORKSPACE}/.github/resources/external-pre-reqs" && kubectl -n $DSPA_EXTERNAL_NAMESPACE apply -k . )
 }
 
@@ -257,6 +285,7 @@ remove_namespace_created_for_rhoai() {
 }
 
 setup_kind_requirements() {
+setup_kind_requirements() {
   apply_crd
   build_image
   create_opendatahub_namespace
@@ -313,6 +342,8 @@ while [ "$#" -gt 0 ]; do
       TARGET="kind"
       shift
       ;;
+    --openshift-ci)
+      TARGET="openshift-ci"
     --openshift-ci)
       TARGET="openshift-ci"
       shift
@@ -434,6 +465,9 @@ if [ "$TARGET" = "kind" ]; then
   if [ "$CLEAN_INFRA" = true ] ; then
       undeploy_kind_resources
   fi
+  setup_kind_requirements
+elif [ "$TARGET" = "openshift-ci" ]; then
+  setup_openshift_ci_requirements
   setup_kind_requirements
 elif [ "$TARGET" = "openshift-ci" ]; then
   setup_openshift_ci_requirements
