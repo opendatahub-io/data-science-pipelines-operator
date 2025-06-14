@@ -241,12 +241,6 @@ spec:
                     description: Toolbox image used for basic container spec runtime
                       operations in managed pipelines.
                     type: string
-                  webhookAnnotations:
-                    additionalProperties:
-                      type: string
-                    description: WebhookAnnotations is a map of annotations to add
-                      to the validating and mutating webhooks.
-                    type: object
                 type: object
               database:
                 default:
@@ -1250,12 +1244,6 @@ spec:
                     description: 'Default: true Deprecated: DSP V1 only, will be removed
                       in the future.'
                     type: boolean
-                  webhookAnnotations:
-                    additionalProperties:
-                      type: string
-                    description: WebhookAnnotations is a map of annotations to add
-                      to the validating and mutating webhooks.
-                    type: object
                 type: object
               database:
                 default:

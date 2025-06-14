@@ -25,6 +25,7 @@ import (
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	admv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -203,5 +204,40 @@ func TestWebhookLifecycle(t *testing.T) {
 		created, err = reconciler.IsResourceCreated(ctx, deployment, testWebhookName, testDSPONamespace)
 		assert.True(t, created)
 		require.NoError(t, err)
+	})
+
+	t.Run("WebhookAnnotationsAreSet", func(t *testing.T) {
+		dspa := testutil.CreateTestDSPA()
+
+		ctx, params, reconciler := CreateNewTestObjects()
+		err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+		require.NoError(t, err)
+
+		dspoDeployment := testutil.CreateTestDSPODeployment(params.DSPONamespace)
+		err = reconciler.Client.Create(ctx, dspoDeployment)
+		assert.NoError(t, err)
+
+		params.WebhookAnnotations = map[string]string{
+			"test.annotation/key1": "value1",
+			"test.annotation/key2": "value2",
+		}
+
+		// Run test reconciliation
+		err = reconciler.ReconcileWebhook(ctx, params)
+		require.NoError(t, err)
+
+		// Verify ValidatingWebhookConfiguration has annotations
+		validatingWebhook := &admv1.ValidatingWebhookConfiguration{}
+		err = reconciler.Client.Get(ctx, types.NamespacedName{Name: "pipelineversions.pipelines.kubeflow.org"}, validatingWebhook)
+		require.NoError(t, err)
+		assert.Equal(t, "value1", validatingWebhook.Annotations["test.annotation/key1"])
+		assert.Equal(t, "value2", validatingWebhook.Annotations["test.annotation/key2"])
+
+		// Verify MutatingWebhookConfiguration has annotations
+		mutatingWebhook := &admv1.MutatingWebhookConfiguration{}
+		err = reconciler.Client.Get(ctx, types.NamespacedName{Name: "pipelineversions.pipelines.kubeflow.org"}, mutatingWebhook)
+		require.NoError(t, err)
+		assert.Equal(t, "value1", mutatingWebhook.Annotations["test.annotation/key1"])
+		assert.Equal(t, "value2", mutatingWebhook.Annotations["test.annotation/key2"])
 	})
 }
