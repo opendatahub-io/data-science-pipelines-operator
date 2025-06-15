@@ -121,7 +121,7 @@ vet: ## Run go vet against code.
 
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
-	export SSL_CERT_FILE=${ROOT_DIR}/controllers/testdata/tls/ca-bundle.crt && KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... --tags=test_all -coverprofile cover.out
+	export SSL_CERT_FILE=${ROOT_DIR}/controllers/testdata/tls/ca-bundle.crt && export DSPO_NAMESPACE=$(DSPO_NAMESPACE) && KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... --tags=test_all -coverprofile cover.out
 
 .PHONY: unittest
 unittest: manifests generate fmt vet envtest ## Run tests.

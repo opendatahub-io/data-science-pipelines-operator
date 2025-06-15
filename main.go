@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -163,12 +164,23 @@ func main() {
 		os.Exit(1)
 	}
 
+	webhookAnnotations := map[string]string{}
+
+	if os.Getenv("WEBHOOK_ANNOTATIONS") != "" {
+		err := json.Unmarshal([]byte(os.Getenv("WEBHOOK_ANNOTATIONS")), &webhookAnnotations)
+		if err != nil {
+			setupLog.Error(err, "the WEBHOOK_ANNOTATIONS environment variable is not a valid JSON object")
+			os.Exit(1)
+		}
+	}
+
 	if err = (&controllers.DSPAReconciler{
 		Client:                  mgr.GetClient(),
 		Scheme:                  mgr.GetScheme(),
 		Log:                     ctrl.Log,
 		TemplatesPath:           "config/internal/",
 		MaxConcurrentReconciles: maxConcurrentReconciles,
+		WebhookAnnotations:      webhookAnnotations,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DSPAParams")
 		os.Exit(1)

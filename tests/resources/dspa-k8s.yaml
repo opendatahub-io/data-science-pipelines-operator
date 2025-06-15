@@ -13,8 +13,6 @@ spec:
       configMapName: nginx-tls-config
       configMapKey: rootCA.crt
     pipelineStore: kubernetes
-    webhookAnnotations:
-      cert-manager.io/inject-ca-from: opendatahub/dspa-webhook-cert
     resources:
       limits:
         cpu: 20m
