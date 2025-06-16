@@ -4,8 +4,8 @@ metadata:
   name: pipelineversions.pipelines.kubeflow.org
   annotations:
     service.beta.openshift.io/inject-cabundle: "true"
-    {{ if .APIServer.WebhookAnnotations }}
-    {{ range $key, $value := .APIServer.WebhookAnnotations }}
+    {{ if .WebhookAnnotations }}
+    {{ range $key, $value := .WebhookAnnotations }}
     {{ printf "%q" $key }}: {{ printf "%q" $value }}
     {{ end }}
     {{end}}

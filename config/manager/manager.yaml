@@ -85,6 +85,8 @@ spec:
             value: $(PLATFORMVERSION)
           - name: DSPO_FIPSENABLED
             value: $(FIPSENABLED)
+          - name: WEBHOOK_ANNOTATIONS
+            value: $(WEBHOOK_ANNOTATIONS)
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

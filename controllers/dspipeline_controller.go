@@ -59,6 +59,7 @@ type DSPAReconciler struct {
 	Log                     logr.Logger
 	TemplatesPath           string
 	MaxConcurrentReconciles int
+	WebhookAnnotations      map[string]string
 }
 
 func (r *DSPAReconciler) ApplyDir(owner mf.Owner, params *DSPAParams, directory string, fns ...mf.Transformer) error {
@@ -184,7 +185,9 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	log.V(1).Info("DataSciencePipelinesApplication Reconciler called.")
 
-	params := &DSPAParams{}
+	params := &DSPAParams{
+		WebhookAnnotations: r.WebhookAnnotations,
+	}
 
 	dspa := &dspav1.DataSciencePipelinesApplication{}
 	err := r.Get(ctx, req.NamespacedName, dspa)
