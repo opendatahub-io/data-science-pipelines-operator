@@ -34,12 +34,15 @@ between each `MAJOR` release. As such, each `MAJOR` release should have a specif
 
 Let `x.y.z` be the `latest` release that is highest DSPO/DSP version. These are steps on how to release `x.y+1`.
 
-#### 1. Update the Compatibility Document
+#### 1. If applicable, update Argo Workflows version
+If argo needs to be updated, manually trigger the [Build Images](https://github.com/opendatahub-io/argo-workflows/actions/workflows/build-main.yml) workflow with the new tag
+
+#### 2. Update the Compatibility Document
 
 1. Ensure `compatibility.yaml` is upto date, and generate a new `compatibility.md`
    - Use [release-tools] to accomplish this
 1. If the changes include a code rebase from KFP repo, ensure `config/component_metadata.yaml` is updated with the respective KFP version
-#### 2. Create Release PR
+#### 3. Create Release PR
 Create release PR either (a) automatically or (b) manually
 ##### a. GitHub Workflow
 
