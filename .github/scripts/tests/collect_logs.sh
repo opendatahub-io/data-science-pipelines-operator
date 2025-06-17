@@ -53,7 +53,7 @@ function display_pod_info {
 
 function get_pods {
     local NAMESPACE=$1
-    echo "===== kubectl get pods -n ${NAMESPACE} ====="
+    echo "===== List of pods in the '${NAMESPACE}' namespace ====="
     kubectl get pods -n "${NAMESPACE}"
     echo "==========================="
 }
