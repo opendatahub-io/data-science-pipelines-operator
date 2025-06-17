@@ -22,7 +22,16 @@ COPY controllers/ controllers/
 # the docker BUILDPLATFORM arg will be linux/arm64 when for Apple x86 it will be linux/amd64. Therefore,
 # by leaving it empty we can ensure that the container and binary shipped on it will have the same platform.
 USER root
-RUN CGO_ENABLED=1 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} GO111MODULE=on GOEXPERIMENT=strictfipsruntime go build -tags strictfipsruntime -a -o manager main.go
+
+# Accept an optional prebuilt Go binary
+ARG PREBUILT_BINARY=unset
+
+# If PREBUILT_BINARY is set, use it; otherwise, build from source
+RUN if [ "$PREBUILT_BINARY" = "unset" ]; then \
+      CGO_ENABLED=1 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} GO111MODULE=on GOEXPERIMENT=strictfipsruntime go build -tags strictfipsruntime -a -o manager main.go; \
+    else \
+      cp ${PREBUILT_BINARY} /workspace/manager; \
+    fi
 
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
 WORKDIR /
