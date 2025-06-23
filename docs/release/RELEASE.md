@@ -38,6 +38,7 @@ Let `x.y.z` be the `latest` release that is highest DSPO/DSP version. These are 
 If argo needs to be updated, manually trigger the [Build Images](https://github.com/opendatahub-io/argo-workflows/actions/workflows/build-main.yml) workflow with the new tag
 
 #### 2. Update the Compatibility Document
+1. Ensure the `params.py` dictionary [OTHER_OPTIONS](https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/scripts/release/params.py#L41) is up to date.
 
 1. Ensure `compatibility.yaml` is upto date, and generate a new `compatibility.md`
    - Use [release-tools] to accomplish this
