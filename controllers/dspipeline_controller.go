@@ -135,6 +135,24 @@ func (r *DSPAReconciler) DeleteResource(params *DSPAParams, template string, fns
 	return tmplManifest.Delete()
 }
 
+func (r *DSPAReconciler) DeleteResourceDir(owner mf.Owner, params *DSPAParams, directory string, fns ...mf.Transformer) error {
+	templates, err := util.GetTemplatesInDir(r.TemplatesPath, directory)
+	if err != nil {
+		return err
+	}
+	return r.DeleteResourceAll(owner, params, templates)
+}
+
+func (r *DSPAReconciler) DeleteResourceAll(owner mf.Owner, params *DSPAParams, templates []string, fns ...mf.Transformer) error {
+	for _, template := range templates {
+		err := r.DeleteResource(params, template)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *DSPAReconciler) DeleteResourceIfItExists(ctx context.Context, obj client.Object, nn types.NamespacedName) error {
 	err := r.Get(ctx, nn, obj)
 	if err == nil {
