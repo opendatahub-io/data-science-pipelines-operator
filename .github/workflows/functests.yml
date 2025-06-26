@@ -7,9 +7,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Setup Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
-          go-version: '1.21.x'
+          go-version-file: go.mod
       - name: Run Functional Tests
         env:
           SSL_CERT_FILE: ${{ github.workspace }}/controllers/testdata/tls/ca-bundle.crt
