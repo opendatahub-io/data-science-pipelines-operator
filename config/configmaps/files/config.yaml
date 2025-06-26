@@ -25,6 +25,7 @@ ManagedPipelinesMetadata:
     Filepath: /samples/iris-pipeline-compiled.yaml
     VersionName: "[Demo] iris-training"
 DSPO:
+  ArgoWorkflowsControllers: $(ARGOWORKFLOWSCONTROLLERS)
   HealthCheck:
     Database:
       ConnectionTimeout: $(DSPO_HEALTHCHECK_DATABASE_CONNECTIONTIMEOUT)
