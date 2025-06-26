@@ -17,7 +17,11 @@ limitations under the License.
 package controllers
 
 import (
+	"encoding/json"
+	"fmt"
+
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 )
 
 var workflowControllerTemplatesDir = "workflow-controller"
@@ -27,15 +31,43 @@ func (r *DSPAReconciler) ReconcileWorkflowController(dsp *dspav1.DataSciencePipe
 
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
 
-	if dsp.Spec.WorkflowController == nil || !dsp.Spec.WorkflowController.Deploy {
-		log.Info("Skipping Application of WorkflowController Resources")
-		return nil
+	dspoArgoWorkflowsControllersJSON := config.GetStringConfigWithDefault("DSPO.ArgoWorkflowsControllers", config.DefaultArgoWorkflowsControllers)
+
+	argoWorkflowsControllersConfig := map[string]string{}
+	var argoWorkflowsControllerManagementState string
+
+	err := json.Unmarshal([]byte(dspoArgoWorkflowsControllersJSON), &argoWorkflowsControllersConfig)
+	if err != nil {
+		log.Info(fmt.Sprintf("Unable to parse Argo Workflows Controller management state, using default value: %s", config.DefaultArgoWorkflowsControllersManagementState))
+		argoWorkflowsControllerManagementState = config.DefaultArgoWorkflowsControllersManagementState
+	} else {
+		argoWorkflowsControllerManagementState = argoWorkflowsControllersConfig["managementState"]
 	}
 
-	log.Info("Applying WorkflowController Resources")
+	switch argoWorkflowsControllerManagementState {
+	case "Managed", "":
 
-	err := r.ApplyDir(dsp, params, workflowControllerTemplatesDir)
-	if err != nil {
+		if dsp.Spec.WorkflowController == nil || !dsp.Spec.WorkflowController.Deploy {
+			log.Info("Skipping Application of WorkflowController Resources")
+			return nil
+		}
+
+		log.Info("Applying WorkflowController Resources")
+
+		err = r.ApplyDir(dsp, params, workflowControllerTemplatesDir)
+		if err != nil {
+			return err
+		}
+
+	case "Removed":
+		log.Info("Removing WorkflowController Resources (if present)")
+		err = r.DeleteResourceDir(dsp, params, workflowControllerTemplatesDir)
+		if err != nil {
+			return err
+		}
+
+	default:
+		err = fmt.Errorf("invalid management state for WorkflowController Resources: %s", argoWorkflowsControllerManagementState)
 		return err
 	}
 
