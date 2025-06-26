@@ -79,6 +79,8 @@ spec:
           # It must always be enabled in production
           - name: DSPO_APISERVER_INCLUDE_OWNERREFERENCE
             value: $(DSPO_APISERVER_INCLUDE_OWNERREFERENCE)
+          - name: DSPO_ARGOWORKFLOWSCONTROLLERS
+            value: $(ARGOWORKFLOWSCONTROLLERS)
           - name: MANAGEDPIPELINES
             value: $(MANAGEDPIPELINES)
           - name: DSPO_PLATFORMVERSION
