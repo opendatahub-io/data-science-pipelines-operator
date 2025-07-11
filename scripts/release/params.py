@@ -47,7 +47,8 @@ OTHER_OPTIONS = {
     "DSPO_APISERVER_INCLUDE_OWNERREFERENCE": "true",
     "MANAGEDPIPELINES": "\"{}\"",
     "PLATFORMVERSION": "\"v0.0.0\"",
-    "FIPSENABLED": "false"
+    "FIPSENABLED": "false",
+    "WEBHOOK_ANNOTATIONS": ""
 }
 
 
