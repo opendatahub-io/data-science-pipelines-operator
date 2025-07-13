@@ -166,6 +166,9 @@ const DefaultPlatformVersion = "v0.0.0"
 
 const DefaultFIPSEnabled = false
 
+const DefaultArgoWorkflowsControllersManagementState = "Managed"
+const DefaultArgoWorkflowsControllers = "{\"managementState\":\"" + DefaultArgoWorkflowsControllersManagementState + "\"}"
+
 func GetConfigRequiredFields() []string {
 	return requiredFields
 }
