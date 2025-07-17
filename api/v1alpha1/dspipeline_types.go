@@ -211,7 +211,10 @@ type APIServer struct {
 	// +kubebuilder:validation:Enum=database;kubernetes
 	PipelineStore string `json:"pipelineStore,omitempty"`
 
-	// Enable/disable caching in the DSP API server. Default: true
+	// Allows/disallows caching in the DSP API server.
+	// When true, cache is allowed and works according to the underlying configurations (pipeline and task levels).
+	// When false, cache is not allowed and overrides the underlying configurations.
+	// Default: true
 	// +kubebuilder:default:=true
 	CacheEnabled *bool `json:"cacheEnabled,omitempty"`
 }
