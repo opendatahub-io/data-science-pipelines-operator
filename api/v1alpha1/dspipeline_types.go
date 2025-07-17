@@ -213,7 +213,7 @@ type APIServer struct {
 
 	// Allows/disallows caching in the DSP API server.
 	// When true, cache options are permitted for Pipelines and Task configurations made via the KFP sdk at compile time.
-	// When false, cache is not allowed and overrides the underlying configurations.
+	// When false, caching is always disabled and overrides the Pipelines and Task configurations.
 	// Default: true
 	// +kubebuilder:default:=true
 	CacheEnabled *bool `json:"cacheEnabled,omitempty"`
