@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 )
@@ -117,5 +118,202 @@ func TestDontDeployWorkflowController(t *testing.T) {
 	deployment = &appsv1.Deployment{}
 	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedWorkflowControllerName, testNamespace)
 	assert.False(t, created)
+	assert.Nil(t, err)
+}
+
+func TestChangeManagementStateWorkflowController(t *testing.T) {
+
+	testNamespace := "testnamespace"
+	testDSPAName := "testdspa"
+	expectedWorkflowControllerName := "ds-pipeline-workflow-controller-testdspa"
+
+	// Construct DSPASpec with deployed WorkflowController
+	dspa := &dspav1.DataSciencePipelinesApplication{
+		Spec: dspav1.DSPASpec{
+			PodToPodTLS: boolPtr(false),
+			APIServer:   &dspav1.APIServer{},
+			WorkflowController: &dspav1.WorkflowController{
+				Deploy: true,
+			},
+			Database: &dspav1.Database{
+				DisableHealthCheck: false,
+				MariaDB: &dspav1.MariaDB{
+					Deploy: true,
+				},
+			},
+			MLMD: &dspav1.MLMD{Deploy: true},
+			ObjectStorage: &dspav1.ObjectStorage{
+				DisableHealthCheck: false,
+				Minio: &dspav1.Minio{
+					Deploy: false,
+					Image:  "someimage",
+				},
+			},
+		},
+	}
+
+	// Enrich DSPA with name+namespace
+	dspa.Namespace = testNamespace
+	dspa.Name = testDSPAName
+
+	// Create Context, Fake Controller and Params
+	ctx, params, reconciler := CreateNewTestObjects()
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	assert.Nil(t, err)
+
+	// Ensure WorkflowController Deployment doesn't yet exist
+	deployment := &appsv1.Deployment{}
+	created, err := reconciler.IsResourceCreated(ctx, deployment, expectedWorkflowControllerName, testNamespace)
+	assert.False(t, created)
+	assert.Nil(t, err)
+
+	// Run test reconciliation using default global managementState for WorkflowController
+	err = reconciler.ReconcileWorkflowController(dspa, params)
+	assert.Nil(t, err)
+
+	// Ensure WorkflowController Deployment now exists
+	deployment = &appsv1.Deployment{}
+	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedWorkflowControllerName, testNamespace)
+	assert.True(t, created)
+	assert.Nil(t, err)
+
+	// Now set the global ManagementState of the WorkflowControllers to Removed
+	viper.Set("DSPO.ArgoWorkflowsControllers", "{\"managementState\":\"Removed\"}")
+
+	// Run test reconciliation
+	err = reconciler.ReconcileWorkflowController(dspa, params)
+	assert.Nil(t, err)
+
+	// Ensure WorkflowController Deployment now removed
+	deployment = &appsv1.Deployment{}
+	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedWorkflowControllerName, testNamespace)
+	assert.False(t, created)
+	assert.Nil(t, err)
+
+	// Set the global ManagementState of the WorkflowControllers to Managed
+	viper.Set("DSPO.ArgoWorkflowsControllers", "{\"managementState\":\"Managed\"}")
+
+	// Run test reconciliation
+	err = reconciler.ReconcileWorkflowController(dspa, params)
+	assert.Nil(t, err)
+
+	// Ensure WorkflowController Deployment now exists again
+	deployment = &appsv1.Deployment{}
+	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedWorkflowControllerName, testNamespace)
+	assert.True(t, created)
+	assert.Nil(t, err)
+}
+
+func TestBadManagementStateWorkflowController(t *testing.T) {
+
+	testNamespace := "testnamespace"
+	testDSPAName := "testdspa"
+	expectedWorkflowControllerName := "ds-pipeline-workflow-controller-testdspa"
+
+	// Construct DSPASpec with deployed WorkflowController
+	dspa := &dspav1.DataSciencePipelinesApplication{
+		Spec: dspav1.DSPASpec{
+			PodToPodTLS: boolPtr(false),
+			APIServer:   &dspav1.APIServer{},
+			WorkflowController: &dspav1.WorkflowController{
+				Deploy: true,
+			},
+			Database: &dspav1.Database{
+				DisableHealthCheck: false,
+				MariaDB: &dspav1.MariaDB{
+					Deploy: true,
+				},
+			},
+			MLMD: &dspav1.MLMD{Deploy: true},
+			ObjectStorage: &dspav1.ObjectStorage{
+				DisableHealthCheck: false,
+				Minio: &dspav1.Minio{
+					Deploy: false,
+					Image:  "someimage",
+				},
+			},
+		},
+	}
+
+	// Enrich DSPA with name+namespace
+	dspa.Namespace = testNamespace
+	dspa.Name = testDSPAName
+
+	// Create Context, Fake Controller and Params
+	ctx, params, reconciler := CreateNewTestObjects()
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	assert.Nil(t, err)
+
+	// Ensure WorkflowController Deployment doesn't yet exist
+	deployment := &appsv1.Deployment{}
+	created, err := reconciler.IsResourceCreated(ctx, deployment, expectedWorkflowControllerName, testNamespace)
+	assert.False(t, created)
+	assert.Nil(t, err)
+
+	// Now set the global ManagementState of the WorkflowControllers to Removed
+	viper.Set("DSPO.ArgoWorkflowsControllers", "{\"managementState\":\"InvalidState\"}")
+
+	// Run test reconciliation
+	err = reconciler.ReconcileWorkflowController(dspa, params)
+	assert.NotNil(t, err)
+}
+
+func TestManagementStateWorkflowControllerInvalidJSONRecovery(t *testing.T) {
+
+	testNamespace := "testnamespace"
+	testDSPAName := "testdspa"
+	expectedWorkflowControllerName := "ds-pipeline-workflow-controller-testdspa"
+
+	// Construct DSPASpec with deployed WorkflowController
+	dspa := &dspav1.DataSciencePipelinesApplication{
+		Spec: dspav1.DSPASpec{
+			PodToPodTLS: boolPtr(false),
+			APIServer:   &dspav1.APIServer{},
+			WorkflowController: &dspav1.WorkflowController{
+				Deploy: true,
+			},
+			Database: &dspav1.Database{
+				DisableHealthCheck: false,
+				MariaDB: &dspav1.MariaDB{
+					Deploy: true,
+				},
+			},
+			MLMD: &dspav1.MLMD{Deploy: true},
+			ObjectStorage: &dspav1.ObjectStorage{
+				DisableHealthCheck: false,
+				Minio: &dspav1.Minio{
+					Deploy: false,
+					Image:  "someimage",
+				},
+			},
+		},
+	}
+
+	// Enrich DSPA with name+namespace
+	dspa.Namespace = testNamespace
+	dspa.Name = testDSPAName
+
+	// Create Context, Fake Controller and Params
+	ctx, params, reconciler := CreateNewTestObjects()
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	assert.Nil(t, err)
+
+	// Ensure WorkflowController Deployment doesn't yet exist
+	deployment := &appsv1.Deployment{}
+	created, err := reconciler.IsResourceCreated(ctx, deployment, expectedWorkflowControllerName, testNamespace)
+	assert.False(t, created)
+	assert.Nil(t, err)
+
+	// Now set the global ManagementState of the WorkflowControllers to Removed
+	viper.Set("DSPO.ArgoWorkflowsControllers", "{invalidJSON: 'foo")
+
+	// Run test reconciliation
+	err = reconciler.ReconcileWorkflowController(dspa, params)
+	assert.Nil(t, err)
+
+	// Ensure WorkflowController Deployment still created
+	deployment = &appsv1.Deployment{}
+	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedWorkflowControllerName, testNamespace)
+	assert.True(t, created)
 	assert.Nil(t, err)
 }
