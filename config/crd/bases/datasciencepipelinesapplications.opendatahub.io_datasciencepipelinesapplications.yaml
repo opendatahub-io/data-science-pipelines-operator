@@ -88,8 +88,11 @@ spec:
                     type: string
                   cacheEnabled:
                     default: true
-                    description: 'Enable/disable caching in the DSP API server. Default:
-                      true'
+                    description: |-
+                      Allows/disallows caching in the DSP API server.
+                      When true, cache options are permitted for Pipelines and Task configurations made via the KFP SDK at compile time.
+                      When false, caching is always disabled and overrides the Pipelines and Task configurations.
+                      Default: true
                     type: boolean
                   customKfpLauncherConfigMap:
                     description: |-
@@ -1047,8 +1050,11 @@ spec:
                     type: string
                   cacheEnabled:
                     default: true
-                    description: 'Enable/disable caching in the DSP API server. Default:
-                      true'
+                    description: |-
+                      Allows/disallows caching in the DSP API server.
+                      When true, cache options are permitted for Pipelines and Task configurations made via the KFP SDK at compile time.
+                      When false, caching is always disabled and overrides the Pipelines and Task configurations.
+                      Default: true
                     type: boolean
                   cacheImage:
                     description: 'Deprecated: DSP V1 only, will be removed in the
