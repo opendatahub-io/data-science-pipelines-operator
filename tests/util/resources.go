@@ -16,10 +16,11 @@ package testUtil
 import (
 	"context"
 	"fmt"
-	v1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
-	routev1 "github.com/openshift/api/route/v1"
 	"testing"
 	"time"
+
+	v1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
+	routev1 "github.com/openshift/api/route/v1"
 
 	mf "github.com/manifestival/manifestival"
 	"github.com/stretchr/testify/require"
@@ -36,7 +37,6 @@ func DeployDSPA(t *testing.T, ctx context.Context, client client.Client, deployD
 	deployDSPA.ObjectMeta.Namespace = dspaNS
 	err := client.Create(ctx, deployDSPA)
 	require.NoError(t, err)
-
 	nsn := types.NamespacedName{
 		Name:      deployDSPA.ObjectMeta.Name,
 		Namespace: dspaNS,
@@ -139,6 +139,30 @@ func TestForSuccessfulDeployment(t *testing.T, ctx context.Context, namespace, d
 		}
 	}
 	require.True(t, deploymentAvailable)
+}
+
+func TestForDeploymentAbsence(t *testing.T, ctx context.Context, namespace, deploymentName string, client client.Client) {
+	deployment := &appsv1.Deployment{}
+	nsn := types.NamespacedName{
+		Name:      deploymentName,
+		Namespace: namespace,
+	}
+	err := client.Get(ctx, nsn, deployment)
+	if err != nil {
+		if !apierrs.IsNotFound((err)) {
+			require.NoError(t, err)
+		}
+	} else {
+		require.NoError(t, err)
+	}
+	deploymentAvailable := false
+	for _, condition := range deployment.Status.Conditions {
+		if condition.Reason == "MinimumReplicasAvailable" && condition.Type == appsv1.DeploymentAvailable {
+			deploymentAvailable = true
+			break
+		}
+	}
+	require.False(t, deploymentAvailable)
 }
 
 func GetDSPAFromPath(t *testing.T, opts mf.Option, path string) *v1.DataSciencePipelinesApplication {
