@@ -58,18 +58,19 @@ var (
 	cancel    context.CancelFunc
 	clientmgr ClientManager
 
-	APIServerURL         string
-	kubeconfig           string
-	k8sApiServerHost     string
-	DSPAPath             string
-	DSPANamespace        string
-	MinioNamespace       string
-	skipDeploy           bool
-	skipCleanup          bool
-	PortforwardLocalPort int
-	DSPA                 *dspav1.DataSciencePipelinesApplication
-	forwarderResult      *forwarder.Result
-	endpointType         string
+	APIServerURL                            string
+	kubeconfig                              string
+	k8sApiServerHost                        string
+	DSPAPath                                string
+	DSPANamespace                           string
+	MinioNamespace                          string
+	ArgoWorkflowsControllersManagementState string
+	skipDeploy                              bool
+	skipCleanup                             bool
+	PortforwardLocalPort                    int
+	DSPA                                    *dspav1.DataSciencePipelinesApplication
+	forwarderResult                         *forwarder.Result
+	endpointType                            string
 )
 
 var (
@@ -79,19 +80,20 @@ var (
 )
 
 const (
-	APIServerPort               = 8888
-	DefaultKubeConfigPath       = "~/.kube/config"
-	Defaultk8sApiServerHost     = "localhost:6443"
-	DefaultDSPANamespace        = "default"
-	DefaultMinioNamespace       = "default"
-	DefaultDeployTimeout        = 240
-	DefaultPollInterval         = 2
-	DefaultDeleteTimeout        = 120
-	DefaultPortforwardLocalPort = 8888
-	DefaultSkipDeploy           = false
-	DefaultSkipCleanup          = false
-	DefaultDSPAPath             = ""
-	DefaultEndpointType         = "service"
+	APIServerPort                                  = 8888
+	DefaultKubeConfigPath                          = "~/.kube/config"
+	Defaultk8sApiServerHost                        = "localhost:6443"
+	DefaultDSPANamespace                           = "default"
+	DefaultMinioNamespace                          = "default"
+	DefaultArgoWorkflowsControllersManagementState = "Managed"
+	DefaultDeployTimeout                           = 240
+	DefaultPollInterval                            = 2
+	DefaultDeleteTimeout                           = 120
+	DefaultPortforwardLocalPort                    = 8888
+	DefaultSkipDeploy                              = false
+	DefaultSkipCleanup                             = false
+	DefaultDSPAPath                                = ""
+	DefaultEndpointType                            = "service"
 )
 
 type ClientManager struct {
@@ -103,11 +105,12 @@ type ClientManager struct {
 
 type IntegrationTestSuite struct {
 	suite.Suite
-	Clientmgr      ClientManager
-	Ctx            context.Context
-	DSPANamespace  string
-	MinioNamespace string
-	DSPA           *dspav1.DataSciencePipelinesApplication
+	Clientmgr                               ClientManager
+	Ctx                                     context.Context
+	DSPANamespace                           string
+	MinioNamespace                          string
+	ArgoWorkflowsControllersManagementState string
+	DSPA                                    *dspav1.DataSciencePipelinesApplication
 }
 
 type testLogWriter struct {
@@ -137,6 +140,7 @@ func init() {
 	flag.StringVar(&DSPAPath, "DSPAPath", DefaultDSPAPath, "The DSP resource file to deploy for testing.")
 	flag.StringVar(&DSPANamespace, "DSPANamespace", DefaultDSPANamespace, "The namespace to deploy DSPA.")
 	flag.StringVar(&MinioNamespace, "MinioNamespace", DefaultMinioNamespace, "The namespace where MinIO is deployed.")
+	flag.StringVar(&ArgoWorkflowsControllersManagementState, "ArgoWorkflowsControllersManagementState", DefaultArgoWorkflowsControllersManagementState, "The global management state of the DSPA-owned Argo WorkflowsControllers. Options: 'Managed' or 'Removed'.")
 
 	flag.DurationVar(&DeployTimeout, "DeployTimeout", DefaultDeployTimeout, "Seconds to wait for deployments. Consider increasing this on resource starved environments.")
 	DeployTimeout *= time.Second
@@ -188,6 +192,7 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 
 	suite.DSPANamespace = DSPANamespace
 	suite.MinioNamespace = MinioNamespace
+	suite.ArgoWorkflowsControllersManagementState = ArgoWorkflowsControllersManagementState
 	suite.DSPA = DSPA
 
 	if !skipDeploy {
