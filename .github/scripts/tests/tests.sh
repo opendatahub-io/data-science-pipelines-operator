@@ -13,6 +13,8 @@ if [ "$GIT_WORKSPACE" = "" ]; then
 fi
 
 CLEAN_INFRA=false
+SKIP_DEPLOY=false
+SKIP_CLEANUP=false
 K8SAPISERVERHOST=""
 DSPA_NAMESPACE="test-dspa"
 DSPA_EXTERNAL_NAMESPACE="dspa-ext"
@@ -21,6 +23,10 @@ MINIO_NAMESPACE="test-minio"
 MARIADB_NAMESPACE="test-mariadb"
 PYPISERVER_NAMESPACE="test-pypiserver"
 CERT_MANAGER_NAMESPACE="cert-manager"
+ARGO_NAMESPACE="argo"
+ARGO_VERSION="v3.6.7"
+DEPLOY_EXTERNAL_ARGO=false
+AWFMANAGEMENTSTATE="Managed"
 DSPA_DEPLOY_WAIT_TIMEOUT="300"
 INTEGRATION_TESTS_DIR="${GIT_WORKSPACE}/tests"
 DSPA_PATH="${GIT_WORKSPACE}/tests/resources/dspa-lite.yaml"
@@ -73,11 +79,25 @@ create_opendatahub_namespace() {
   kubectl create namespace $OPENDATAHUB_NAMESPACE
 }
 
+create_argo_namespace() {
+  echo "---------------------------------"
+  echo "Create Argo namespace"
+  echo "---------------------------------"
+  kubectl create namespace $ARGO_NAMESPACE
+}
+
 deploy_argo_lite() {
   echo "---------------------------------"
   echo "Deploy Argo Lite"
   echo "---------------------------------"
   ( cd "${GIT_WORKSPACE}/.github/resources/argo-lite" && kubectl -n $OPENDATAHUB_NAMESPACE apply -k . )
+}
+
+deploy_argo_external() {
+  echo "---------------------------------"
+  echo "Deploy External Argo"
+  echo "---------------------------------"
+  kubectl apply -n $ARGO_NAMESPACE -f https://github.com/argoproj/argo-workflows/releases/download/$ARGO_VERSION/install.yaml
 }
 
 deploy_dspo() {
@@ -213,14 +233,21 @@ run_tests() {
   echo "---------------------------------"
   echo "Run tests"
   echo "---------------------------------"
-  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_NAMESPACE} DSPAPATH=${DSPA_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} )
+  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_NAMESPACE} DSPAPATH=${DSPA_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} INTTEST_AWFMANAGEMENTSTATE=${AWFMANAGEMENTSTATE} INTTEST_SKIP_DEPLOY=${SKIP_DEPLOY} INTTEST_SKIP_CLEANUP=${SKIP_CLEANUP} )
+}
+
+run_tests_external_argo() {
+  echo "---------------------------------"
+  echo "Run tests"
+  echo "---------------------------------"
+  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_NAMESPACE} DSPAPATH=${DSPA_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} INTTEST_AWFMANAGEMENTSTATE=${AWFMANAGEMENTSTATE} INTTEST_SKIP_DEPLOY=${SKIP_DEPLOY} INTTEST_SKIP_CLEANUP=${SKIP_CLEANUP} )
 }
 
 run_tests_dspa_external_connections() {
   echo "---------------------------------"
   echo "Run tests for DSPA with External Connections"
   echo "---------------------------------"
-  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_EXTERNAL_NAMESPACE} DSPAPATH=${DSPA_EXTERNAL_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} MINIONAMESPACE=${MINIO_NAMESPACE} )
+  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_EXTERNAL_NAMESPACE} DSPAPATH=${DSPA_EXTERNAL_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} MINIONAMESPACE=${MINIO_NAMESPACE} INTTEST_AWFMANAGEMENTSTATE=${AWFMANAGEMENTSTATE} INTTEST_SKIP_DEPLOY=${SKIP_DEPLOY} INTTEST_SKIP_CLEANUP=${SKIP_CLEANUP})
 }
 
 run_tests_dspa_k8s() {
@@ -234,7 +261,17 @@ run_tests_dspa_k8s() {
     kubectl wait -n $CERT_MANAGER_NAMESPACE --timeout=90s --for=condition=Ready pods --all
     apply_webhook_certs
   fi
-  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_K8S_NAMESPACE} DSPAPATH=${DSPA_K8S_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE})
+  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_K8S_NAMESPACE} DSPAPATH=${DSPA_K8S_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} INTTEST_AWFMANAGEMENTSTATE=${AWFMANAGEMENTSTATE} INTTEST_SKIP_DEPLOY=${SKIP_DEPLOY} INTTEST_SKIP_CLEANUP=${SKIP_CLEANUP})
+}
+
+update_dspo_env() {
+  echo "---------------------------------"
+  echo "Update DSPO Environment Variable"
+  echo "---------------------------------"
+  envkey=$1
+  envval=$2
+  echo "Updating DSPO Environment Variable: $envkey to $envval"
+  kubectl set env -n $OPENDATAHUB_NAMESPACE deployment/data-science-pipelines-operator-controller-manager $envkey="$envval"
 }
 
 undeploy_kind_resources() {
@@ -306,9 +343,25 @@ setup_rhoai_requirements() {
   apply_pip_server_configmap
 }
 
+setup_external_argo() {
+  # update_dspo_env "ArgoWorkflowsControllersManagementState" $AWFMANAGEMENTSTATE
+  update_dspo_env "DSPO_ARGOWORKFLOWSCONTROLLERS" "{\"managementState\": \"$AWFMANAGEMENTSTATE\"}"
+  create_argo_namespace
+  deploy_argo_external
+  wait_for_dspo_redeploy
+}
+
 # Run
 while [ "$#" -gt 0 ]; do
   case "$1" in
+    --skip-deploy)
+      SKIP_DEPLOY=true
+      shift
+      ;;
+    --skip-cleanup)
+      SKIP_CLEANUP=true
+      shift
+      ;;
     --kind)
       TARGET="kind"
       shift
@@ -398,6 +451,21 @@ while [ "$#" -gt 0 ]; do
         exit 1
       fi
       ;;
+    --deploy-external-argo)
+      DEPLOY_EXTERNAL_ARGO=true
+      AWFMANAGEMENTSTATE=Removed
+      shift
+      ;;
+    --external-argo-version)
+      shift
+      if [[ -n "$" ]]; then
+	 ARGO_VERSION="$1"
+	 shift
+      else
+	 echo "Error: --external-argo-version requires a value (in form of vX.Y.Z)"
+	 exit 1
+      fi
+      ;;
     --kube-config)
       shift
       if [[ -n "$1" ]]; then
@@ -430,18 +498,27 @@ if [ "$K8SAPISERVERHOST" = "" ]; then
   echo "If the TARGET is OpenShift or RHOAI. You can use: oc whoami --show-server"
 fi
 
-if [ "$TARGET" = "kind" ]; then
-  if [ "$CLEAN_INFRA" = true ] ; then
-      undeploy_kind_resources
+if [ "$SKIP_DEPLOY" = true ]; then
+  echo "Skipping deployment"
+else
+  if [ "$TARGET" = "kind" ]; then
+    if [ "$CLEAN_INFRA" = true ] ; then
+        undeploy_kind_resources
+    fi
+    setup_kind_requirements
+  elif [ "$TARGET" = "openshift-ci" ]; then
+    setup_openshift_ci_requirements
+  elif [ "$TARGET" = "rhoai" ]; then
+    if [ "$CLEAN_INFRA" = true ] ; then
+        remove_namespace_created_for_rhoai
+    fi
+    setup_rhoai_requirements
   fi
-  setup_kind_requirements
-elif [ "$TARGET" = "openshift-ci" ]; then
-  setup_openshift_ci_requirements
-elif [ "$TARGET" = "rhoai" ]; then
-  if [ "$CLEAN_INFRA" = true ] ; then
-      remove_namespace_created_for_rhoai
+
+  # Update to remove on-board Argo Workflow Controllers for BYOArgo test cases
+  if [ "$DEPLOY_EXTERNAL_ARGO" = true ]; then
+    setup_external_argo
   fi
-  setup_rhoai_requirements
 fi
 
 run_tests
