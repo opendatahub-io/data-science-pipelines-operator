@@ -67,6 +67,11 @@ DSPAPATH ?= resources/dspa-lite.yaml
 ENDPOINT_TYPE ?= service
 MINIONAMESPACE ?= default
 
+# Integration Testing EnvVars
+INTTEST_SKIP_DEPLOY ?= false
+INTTEST_SKIP_CLEANUP ?= false
+INTTEST_AWFMANAGEMENTSTATE ?= Managed
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -134,7 +139,7 @@ functest: manifests generate fmt vet envtest ## Run tests.
 .PHONY: integrationtest
 integrationtest: ## Run integration tests
 	cd tests && \
-	go test ./... --tags=test_integration -v -kubeconfig=${KUBECONFIGPATH} -k8sApiServerHost=${K8SAPISERVERHOST} -DSPANamespace=${DSPANAMESPACE} -DSPAPath=${DSPAPATH} -endpointType=${ENDPOINT_TYPE} -MinioNamespace=${MINIONAMESPACE}
+	go test ./... --tags=test_integration -v -kubeconfig=${KUBECONFIGPATH} -k8sApiServerHost=${K8SAPISERVERHOST} -DSPANamespace=${DSPANAMESPACE} -DSPAPath=${DSPAPATH} -endpointType=${ENDPOINT_TYPE} -MinioNamespace=${MINIONAMESPACE} -ArgoWorkflowsControllersManagementState=$(INTTEST_AWFMANAGEMENTSTATE) -skipDeploy=$(INTTEST_SKIP_DEPLOY) -skipCleanup=$(INTTEST_SKIP_CLEANUP)
 
 ##@ Build
 
