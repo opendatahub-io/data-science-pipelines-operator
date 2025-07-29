@@ -168,6 +168,30 @@ wait_for_dspo_dependencies() {
   kubectl wait -n $OPENDATAHUB_NAMESPACE --timeout=60s --for=condition=Available=true deployment data-science-pipelines-operator-controller-manager
 }
 
+wait_for_dspo_redeploy() {
+  echo "---------------------------------"
+  echo "Wait for DSPO Redeploy"
+  echo "---------------------------------"
+  sleep_amount=10
+  counter=0
+  max_counter=20
+  sleep $sleep_amount  # Initial sleep to allow for deployment to roll out new pod
+  while [ $counter -lt $max_counter ]; do
+    echo "Waiting for DSPO to redeploy, attempt $counter out of $max_counter..."
+    num_pods=`kubectl get pods -n $OPENDATAHUB_NAMESPACE -l app.kubernetes.io/name=data-science-pipelines-operator --no-headers | wc -l`
+    if [ $num_pods -eq 1 ]; then
+      break
+    fi
+    counter=$((counter+1))
+    sleep $sleep_amount
+  done
+  if [ $counter -eq $max_counter ]; then
+    echo "Error:DSPO did not redeploy $(($counter * $sleep_amount)) seconds."
+    exit 1
+  fi
+  echo "DSPO redeployed after $(($counter * $sleep_amount)) seconds."
+}
+
 wait_for_dependencies() {
   echo "---------------------------------"
   echo "Wait for Dependencies (Minio, Mariadb, Pypi server)"
