@@ -12,7 +12,7 @@ on:
       - tests/**
       - .github/resources/**
       - .github/actions/**
-      - '.github/workflows/kind-integration.yml'
+      - '.github/workflows/kind-integration-byoargo.yml'
       - '.github/scripts/tests/tests.sh'
       - '.github/scripts/python_package_upload/**'
       - Makefile
@@ -62,4 +62,5 @@ jobs:
           ./collect_logs.sh --dspa-ns test-dspa --dspo-ns opendatahub
           ./collect_logs.sh --dspa-ns dspa-ext --dspo-ns opendatahub
           ./collect_logs.sh --dspa-ns test-k8s-dspa --dspo-ns opendatahub
+          ./collect_logs.sh --dspa-ns argo --dspo-ns opendatahub
           exit 1
