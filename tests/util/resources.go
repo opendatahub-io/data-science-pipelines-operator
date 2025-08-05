@@ -149,11 +149,10 @@ func TestForDeploymentAbsence(t *testing.T, ctx context.Context, namespace, depl
 	}
 	err := client.Get(ctx, nsn, deployment)
 	if err != nil {
-		if !apierrs.IsNotFound((err)) {
+		if !apierrs.IsNotFound(err) {
 			require.NoError(t, err)
 		}
-	} else {
-		require.NoError(t, err)
+		return
 	}
 	deploymentAvailable := false
 	for _, condition := range deployment.Status.Conditions {

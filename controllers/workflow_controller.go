@@ -31,6 +31,8 @@ func (r *DSPAReconciler) ReconcileWorkflowController(dsp *dspav1.DataSciencePipe
 
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
 
+	// Get the management state for the WorkflowController subcomponent from the config
+	// Expected format example: {"managementState":"Managed"}
 	dspoArgoWorkflowsControllersJSON := config.GetStringConfigWithDefault("DSPO.ArgoWorkflowsControllers", config.DefaultArgoWorkflowsControllers)
 
 	argoWorkflowsControllersConfig := map[string]string{}
@@ -39,11 +41,16 @@ func (r *DSPAReconciler) ReconcileWorkflowController(dsp *dspav1.DataSciencePipe
 	err := json.Unmarshal([]byte(dspoArgoWorkflowsControllersJSON), &argoWorkflowsControllersConfig)
 	if err != nil {
 		log.Info(fmt.Sprintf("Unable to parse Argo Workflows Controller management state, using default value: %s", config.DefaultArgoWorkflowsControllersManagementState))
+		log.Info(fmt.Sprintf("Error: %s", err))
 		argoWorkflowsControllerManagementState = config.DefaultArgoWorkflowsControllersManagementState
 	} else {
 		argoWorkflowsControllerManagementState = argoWorkflowsControllersConfig["managementState"]
 	}
 
+	// Conditionally deploy the WorkflowController resource depending on the speciified management state
+	// Managed (or blank) - deploy the WorkflowController subcomponent
+	// Removed - skip deploying, and remove if already present, the WorkflowController subcomponent
+	// All other values - Invalid configuration, return an error
 	switch argoWorkflowsControllerManagementState {
 	case "Managed", "":
 
@@ -61,7 +68,7 @@ func (r *DSPAReconciler) ReconcileWorkflowController(dsp *dspav1.DataSciencePipe
 
 	case "Removed":
 		log.Info("Removing WorkflowController Resources (if present)")
-		err = r.DeleteResourceDir(dsp, params, workflowControllerTemplatesDir)
+		err = r.DeleteResourceDir(params, workflowControllerTemplatesDir)
 		if err != nil {
 			return err
 		}
