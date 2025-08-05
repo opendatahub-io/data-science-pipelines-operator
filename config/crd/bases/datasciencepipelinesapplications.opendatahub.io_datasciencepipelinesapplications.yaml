@@ -821,6 +821,9 @@ spec:
                     type: string
                   deploy:
                     default: true
+                    description: |-
+                      Enable deployment of th Argo WorkflowController for this DSPA, if the DSPO's global management state for
+                      WorkflowControllers is also set to Managed. Is overriden by the global management state is set to Removed. Default: true
                     type: boolean
                   image:
                     type: string
@@ -1879,6 +1882,9 @@ spec:
                     type: string
                   deploy:
                     default: true
+                    description: |-
+                      Enable deployment of th Argo WorkflowController for this DSPA, if the DSPO's global management state for
+                      WorkflowControllers is also set to Managed. Is overriden by the global management state is set to Removed. Default: true
                     type: boolean
                   image:
                     type: string

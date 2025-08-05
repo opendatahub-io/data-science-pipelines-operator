@@ -250,7 +250,7 @@ func TestBadManagementStateWorkflowController(t *testing.T) {
 	assert.False(t, created)
 	assert.Nil(t, err)
 
-	// Now set the global ManagementState of the WorkflowControllers to Removed
+	// Now set the global ManagementState of the WorkflowControllers to invalid state
 	viper.Set("DSPO.ArgoWorkflowsControllers", "{\"managementState\":\"InvalidState\"}")
 
 	// Run test reconciliation

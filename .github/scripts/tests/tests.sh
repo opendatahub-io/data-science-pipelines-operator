@@ -26,7 +26,7 @@ CERT_MANAGER_NAMESPACE="cert-manager"
 ARGO_NAMESPACE="argo"
 ARGO_VERSION="v3.6.7"
 DEPLOY_EXTERNAL_ARGO=false
-AWFMANAGEMENTSTATE="Managed"
+AWF_MANAGEMENT_STATE="Managed"
 DSPA_DEPLOY_WAIT_TIMEOUT="300"
 INTEGRATION_TESTS_DIR="${GIT_WORKSPACE}/tests"
 DSPA_PATH="${GIT_WORKSPACE}/tests/resources/dspa-lite.yaml"
@@ -257,21 +257,21 @@ run_tests() {
   echo "---------------------------------"
   echo "Run tests"
   echo "---------------------------------"
-  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_NAMESPACE} DSPAPATH=${DSPA_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} INTTEST_AWFMANAGEMENTSTATE=${AWFMANAGEMENTSTATE} INTTEST_SKIP_DEPLOY=${SKIP_DEPLOY} INTTEST_SKIP_CLEANUP=${SKIP_CLEANUP} )
+  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_NAMESPACE} DSPAPATH=${DSPA_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} INTTEST_AWF_MANAGEMENT_STATE=${AWF_MANAGEMENT_STATE} INTTEST_SKIP_DEPLOY=${SKIP_DEPLOY} INTTEST_SKIP_CLEANUP=${SKIP_CLEANUP} )
 }
 
 run_tests_external_argo() {
   echo "---------------------------------"
   echo "Run tests"
   echo "---------------------------------"
-  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_NAMESPACE} DSPAPATH=${DSPA_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} INTTEST_AWFMANAGEMENTSTATE=${AWFMANAGEMENTSTATE} INTTEST_SKIP_DEPLOY=${SKIP_DEPLOY} INTTEST_SKIP_CLEANUP=${SKIP_CLEANUP} )
+  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_NAMESPACE} DSPAPATH=${DSPA_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} INTTEST_AWF_MANAGEMENT_STATE=${AWF_MANAGEMENT_STATE} INTTEST_SKIP_DEPLOY=${SKIP_DEPLOY} INTTEST_SKIP_CLEANUP=${SKIP_CLEANUP} )
 }
 
 run_tests_dspa_external_connections() {
   echo "---------------------------------"
   echo "Run tests for DSPA with External Connections"
   echo "---------------------------------"
-  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_EXTERNAL_NAMESPACE} DSPAPATH=${DSPA_EXTERNAL_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} MINIONAMESPACE=${MINIO_NAMESPACE} INTTEST_AWFMANAGEMENTSTATE=${AWFMANAGEMENTSTATE} INTTEST_SKIP_DEPLOY=${SKIP_DEPLOY} INTTEST_SKIP_CLEANUP=${SKIP_CLEANUP})
+  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_EXTERNAL_NAMESPACE} DSPAPATH=${DSPA_EXTERNAL_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} MINIONAMESPACE=${MINIO_NAMESPACE} INTTEST_AWF_MANAGEMENT_STATE=${AWF_MANAGEMENT_STATE} INTTEST_SKIP_DEPLOY=${SKIP_DEPLOY} INTTEST_SKIP_CLEANUP=${SKIP_CLEANUP})
 }
 
 run_tests_dspa_k8s() {
@@ -285,7 +285,7 @@ run_tests_dspa_k8s() {
     kubectl wait -n $CERT_MANAGER_NAMESPACE --timeout=90s --for=condition=Ready pods --all
     apply_webhook_certs
   fi
-  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_K8S_NAMESPACE} DSPAPATH=${DSPA_K8S_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} INTTEST_AWFMANAGEMENTSTATE=${AWFMANAGEMENTSTATE} INTTEST_SKIP_DEPLOY=${SKIP_DEPLOY} INTTEST_SKIP_CLEANUP=${SKIP_CLEANUP})
+  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_K8S_NAMESPACE} DSPAPATH=${DSPA_K8S_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} INTTEST_AWF_MANAGEMENT_STATE=${AWF_MANAGEMENT_STATE} INTTEST_SKIP_DEPLOY=${SKIP_DEPLOY} INTTEST_SKIP_CLEANUP=${SKIP_CLEANUP})
 }
 
 update_dspo_env() {
@@ -368,8 +368,7 @@ setup_rhoai_requirements() {
 }
 
 setup_external_argo() {
-  # update_dspo_env "ArgoWorkflowsControllersManagementState" $AWFMANAGEMENTSTATE
-  update_dspo_env "DSPO_ARGOWORKFLOWSCONTROLLERS" "{\"managementState\": \"$AWFMANAGEMENTSTATE\"}"
+  update_dspo_env "DSPO_ARGOWORKFLOWSCONTROLLERS" "{\"managementState\": \"$AWF_MANAGEMENT_STATE\"}"
   create_argo_namespace
   deploy_argo_external
   wait_for_dspo_redeploy
@@ -477,17 +476,17 @@ while [ "$#" -gt 0 ]; do
       ;;
     --deploy-external-argo)
       DEPLOY_EXTERNAL_ARGO=true
-      AWFMANAGEMENTSTATE=Removed
+      AWF_MANAGEMENT_STATE=Removed
       shift
       ;;
     --external-argo-version)
       shift
-      if [[ -n "$" ]]; then
-	 ARGO_VERSION="$1"
-	 shift
+      if [[ -n "$1" ]]; then
+	      ARGO_VERSION="$1"
+	      shift
       else
-	 echo "Error: --external-argo-version requires a value (in form of vX.Y.Z)"
-	 exit 1
+	      echo "Error: --external-argo-version requires a value (in form of vX.Y.Z)"
+	      exit 1
       fi
       ;;
     --kube-config)

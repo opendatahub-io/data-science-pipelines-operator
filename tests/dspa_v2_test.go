@@ -32,10 +32,10 @@ import (
 func (suite *IntegrationTestSuite) TestDSPADeployment() {
 	podCount := 8
 	if suite.DSPA.Spec.ObjectStorage.ExternalStorage != nil {
-		podCount = podCount - 1
+		podCount--
 	}
 	if suite.DSPA.Spec.Database.ExternalDB != nil {
-		podCount = podCount - 1
+		podCount--
 	}
 	deployments := []string{
 		fmt.Sprintf("ds-pipeline-%s", suite.DSPA.Name),
@@ -43,7 +43,7 @@ func (suite *IntegrationTestSuite) TestDSPADeployment() {
 		fmt.Sprintf("ds-pipeline-scheduledworkflow-%s", suite.DSPA.Name),
 	}
 
-	skipped_deployments := []string{}
+	skippedDeployments := []string{}
 
 	if suite.DSPA.Spec.ObjectStorage.ExternalStorage == nil && suite.DSPA.Spec.Database.ExternalDB == nil {
 		deployments = append(deployments,
@@ -57,8 +57,8 @@ func (suite *IntegrationTestSuite) TestDSPADeployment() {
 			fmt.Sprintf("ds-pipeline-workflow-controller-%s", suite.DSPA.Name),
 		)
 	} else {
-		podCount = podCount - 1
-		skipped_deployments = append(skipped_deployments,
+		podCount--
+		skippedDeployments = append(skippedDeployments,
 			fmt.Sprintf("ds-pipeline-workflow-controller-%s", suite.DSPA.Name),
 		)
 	}
@@ -98,12 +98,15 @@ func (suite *IntegrationTestSuite) TestDSPADeployment() {
 				}
 			}, timeout, interval)
 		})
+
+		testUtil.WaitForDSPAReady(t, suite.Ctx, suite.Clientmgr.k8sClient, suite.DSPA.Name, suite.DSPANamespace, suite.DeployTimeout, suite.PollInterval)
+
 		for _, deployment := range deployments {
 			t.Run(fmt.Sprintf("should have a ready %s deployment", deployment), func(t *testing.T) {
 				testUtil.TestForSuccessfulDeployment(t, suite.Ctx, suite.DSPANamespace, deployment, suite.Clientmgr.k8sClient)
 			})
 		}
-		for _, deployment := range skipped_deployments {
+		for _, deployment := range skippedDeployments {
 			t.Run(fmt.Sprintf("should not have a ready %s deployment", deployment), func(t *testing.T) {
 				testUtil.TestForDeploymentAbsence(t, suite.Ctx, suite.DSPANamespace, deployment, suite.Clientmgr.k8sClient)
 			})
