@@ -46,35 +46,36 @@ import (
 const MlmdIsRequired = "MLMD explicitly disabled in DSPA, but is a required component for DSP"
 
 type DSPAParams struct {
-	IncludeOwnerReference                bool
-	UID                                  types.UID
-	Name                                 string
-	APIVersion                           string
-	Kind                                 string
-	Namespace                            string
-	Owner                                mf.Owner
-	DSPVersion                           string
-	APIServer                            *dspa.APIServer
-	APIServerDefaultResourceName         string
-	APIServerServiceName                 string
-	APIServerConfigHash                  string
-	OAuthProxy                           string
-	SampleConfigJSON                     string
-	ScheduledWorkflow                    *dspa.ScheduledWorkflow
-	ScheduledWorkflowDefaultResourceName string
-	PersistenceAgent                     *dspa.PersistenceAgent
-	PersistentAgentDefaultResourceName   string
-	MlPipelineUI                         *dspa.MlPipelineUI
-	MariaDB                              *dspa.MariaDB
-	Minio                                *dspa.Minio
-	MLMD                                 *dspa.MLMD
-	MlmdProxyDefaultResourceName         string
-	MlmdGrpcCertificateContents          string
-	MlmdGrpcPrivateKeyContents           string
-	WebhookName                          string
-	WorkflowController                   *dspa.WorkflowController
-	CustomKfpLauncherConfigMapData       string
-	WebhookAnnotations                   map[string]string
+	IncludeOwnerReference                 bool
+	UID                                   types.UID
+	Name                                  string
+	APIVersion                            string
+	Kind                                  string
+	Namespace                             string
+	Owner                                 mf.Owner
+	DSPVersion                            string
+	APIServer                             *dspa.APIServer
+	APIServerDefaultResourceName          string
+	APIServerServiceName                  string
+	APIServerConfigHash                   string
+	OAuthProxy                            string
+	SampleConfigJSON                      string
+	ScheduledWorkflow                     *dspa.ScheduledWorkflow
+	ScheduledWorkflowDefaultResourceName  string
+	PersistenceAgent                      *dspa.PersistenceAgent
+	PersistentAgentDefaultResourceName    string
+	WorkflowControllerDefaultResourceName string
+	MlPipelineUI                          *dspa.MlPipelineUI
+	MariaDB                               *dspa.MariaDB
+	Minio                                 *dspa.Minio
+	MLMD                                  *dspa.MLMD
+	MlmdProxyDefaultResourceName          string
+	MlmdGrpcCertificateContents           string
+	MlmdGrpcPrivateKeyContents            string
+	WebhookName                           string
+	WorkflowController                    *dspa.WorkflowController
+	CustomKfpLauncherConfigMapData        string
+	WebhookAnnotations                    map[string]string
 	DBConnection
 	ObjectStorageConnection
 
@@ -574,6 +575,8 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.APIServerServiceDNSName = fmt.Sprintf("%s.%s.svc.cluster.local", p.APIServerServiceName, p.Namespace)
 	p.ScheduledWorkflow = dsp.Spec.ScheduledWorkflow.DeepCopy()
 	p.ScheduledWorkflowDefaultResourceName = scheduledWorkflowDefaultResourceNamePrefix + dsp.Name
+	p.WorkflowController = dsp.Spec.WorkflowController.DeepCopy()
+	p.WorkflowControllerDefaultResourceName = workflowControllerDefaultResourceNamePrefix + dsp.Name
 	p.PersistenceAgent = dsp.Spec.PersistenceAgent.DeepCopy()
 	p.PersistentAgentDefaultResourceName = persistenceAgentDefaultResourceNamePrefix + dsp.Name
 	p.MlPipelineUI = dsp.Spec.MlPipelineUI.DeepCopy()

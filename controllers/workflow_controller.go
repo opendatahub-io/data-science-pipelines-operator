@@ -26,6 +26,8 @@ import (
 
 var workflowControllerTemplatesDir = "workflow-controller"
 
+const workflowControllerDefaultResourceNamePrefix = "ds-pipeline-workflow-controller-"
+
 type ArgoWorkflowsControllersConfig struct {
 	ManagementState string `json:"managementState"`
 }
@@ -38,7 +40,7 @@ func (c *ArgoWorkflowsControllersConfig) GetManagementState() string {
 }
 
 func (r *DSPAReconciler) ReconcileWorkflowController(dsp *dspav1.DataSciencePipelinesApplication,
-	params *DSPAParams) error {
+	params *DSPAParams) (bool, error) {
 
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
 
@@ -59,33 +61,33 @@ func (r *DSPAReconciler) ReconcileWorkflowController(dsp *dspav1.DataSciencePipe
 	// Managed (or blank) - deploy the WorkflowController subcomponent
 	// Removed - skip deploying, and remove if already present, the WorkflowController subcomponent
 	// All other values - Invalid configuration, return an error
+	workflowControllerEnabled := false
 	switch argoWorkflowsControllersConfig.GetManagementState() {
 	case "Managed", "":
-
 		if dsp.Spec.WorkflowController == nil || !dsp.Spec.WorkflowController.Deploy {
 			log.Info("Skipping Application of WorkflowController Resources")
-			return nil
+			return workflowControllerEnabled, nil
 		}
 
 		log.Info("Applying WorkflowController Resources")
-
+		workflowControllerEnabled = true
 		err := r.ApplyDir(dsp, params, workflowControllerTemplatesDir)
 		if err != nil {
-			return err
+			return workflowControllerEnabled, err
 		}
 
 	case "Removed":
 		log.Info("Removing WorkflowController Resources (if present)")
 		err := r.DeleteResourceDir(params, workflowControllerTemplatesDir)
 		if err != nil {
-			return err
+			return workflowControllerEnabled, err
 		}
 
 	default:
 		err := fmt.Errorf("invalid management state for WorkflowController Resources: %s", argoWorkflowsControllersConfig.GetManagementState())
-		return err
+		return workflowControllerEnabled, err
 	}
 
 	log.Info("Finished applying WorkflowController Resources")
-	return nil
+	return workflowControllerEnabled, nil
 }
