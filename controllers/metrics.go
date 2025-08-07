@@ -73,6 +73,16 @@ var (
 			"dspa_namespace",
 		},
 	)
+	WorkflowControllerReadyMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "data_science_pipelines_application_workflowcontroller_ready",
+			Help: "Data Science Pipelines Application - WorkflowController Ready Status",
+		},
+		[]string{
+			"dspa_name",
+			"dspa_namespace",
+		},
+	)
 	MLMDProxyReadyMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "data_science_pipelines_application_mlmdproxy_ready",
@@ -102,6 +112,7 @@ func InitMetrics() {
 		APIServerReadyMetric,
 		PersistenceAgentReadyMetric,
 		ScheduledWorkflowReadyMetric,
+		WorkflowControllerReadyMetric,
 		MLMDProxyReadyMetric,
 		CrReadyMetric)
 }

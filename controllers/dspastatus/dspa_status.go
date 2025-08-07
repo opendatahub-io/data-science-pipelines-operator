@@ -25,6 +25,11 @@ type DSPAStatus interface {
 
 	SetScheduledWorkflowStatus(scheduledWorkflowReady metav1.Condition)
 
+	SetWorkflowControllerStatus(workflowControllerReady metav1.Condition)
+	SetWorkflowControllerNotReady(err error, reason string)
+	SetWorkflowControllerReady()
+	SetWorkflowControllerNotApplicable()
+
 	SetMLMDProxyStatus(mlmdProxyReady metav1.Condition)
 
 	SetDSPANotReady(err error, reason string)
@@ -38,31 +43,34 @@ func NewDSPAStatus(dspa *dspav1.DataSciencePipelinesApplication) DSPAStatus {
 	apiServerCondition := BuildUnknownCondition(config.APIServerReady)
 	persistenceAgentCondition := BuildUnknownCondition(config.PersistenceAgentReady)
 	scheduledWorkflowReadyCondition := BuildUnknownCondition(config.ScheduledWorkflowReady)
+	workflowControllerReadyCondition := BuildUnknownCondition(config.WorkflowControllerReady)
 	mlmdProxyReadyCondition := BuildUnknownCondition(config.MLMDProxyReady)
 	webhookReadyCondition := BuildUnknownCondition(config.WebhookReady)
 
 	return &dspaStatus{
-		dspa:                   dspa,
-		databaseAvailable:      &databaseCondition,
-		objStoreAvailable:      &objStoreCondition,
-		apiServerReady:         &apiServerCondition,
-		persistenceAgentReady:  &persistenceAgentCondition,
-		scheduledWorkflowReady: &scheduledWorkflowReadyCondition,
-		mlmdProxyReady:         &mlmdProxyReadyCondition,
-		webhookReady:           &webhookReadyCondition,
+		dspa:                    dspa,
+		databaseAvailable:       &databaseCondition,
+		objStoreAvailable:       &objStoreCondition,
+		apiServerReady:          &apiServerCondition,
+		persistenceAgentReady:   &persistenceAgentCondition,
+		scheduledWorkflowReady:  &scheduledWorkflowReadyCondition,
+		workflowControllerReady: &workflowControllerReadyCondition,
+		mlmdProxyReady:          &mlmdProxyReadyCondition,
+		webhookReady:            &webhookReadyCondition,
 	}
 }
 
 type dspaStatus struct {
-	dspa                   *dspav1.DataSciencePipelinesApplication
-	databaseAvailable      *metav1.Condition
-	objStoreAvailable      *metav1.Condition
-	apiServerReady         *metav1.Condition
-	persistenceAgentReady  *metav1.Condition
-	scheduledWorkflowReady *metav1.Condition
-	mlmdProxyReady         *metav1.Condition
-	dspaReady              *metav1.Condition
-	webhookReady           *metav1.Condition
+	dspa                    *dspav1.DataSciencePipelinesApplication
+	databaseAvailable       *metav1.Condition
+	objStoreAvailable       *metav1.Condition
+	apiServerReady          *metav1.Condition
+	persistenceAgentReady   *metav1.Condition
+	scheduledWorkflowReady  *metav1.Condition
+	workflowControllerReady *metav1.Condition
+	mlmdProxyReady          *metav1.Condition
+	dspaReady               *metav1.Condition
+	webhookReady            *metav1.Condition
 }
 
 func (s *dspaStatus) SetDatabaseNotReady(err error, reason string) {
@@ -125,6 +133,29 @@ func (s *dspaStatus) SetScheduledWorkflowStatus(scheduledWorkflowReady metav1.Co
 	s.scheduledWorkflowReady = &scheduledWorkflowReady
 }
 
+func (s *dspaStatus) SetWorkflowControllerStatus(workflowControllerReady metav1.Condition) {
+	s.workflowControllerReady = &workflowControllerReady
+}
+
+func (s *dspaStatus) SetWorkflowControllerNotReady(err error, reason string) {
+	message := ""
+	if err != nil {
+		message = err.Error()
+	}
+	condition := BuildFalseCondition(config.WorkflowControllerReady, reason, message)
+	s.workflowControllerReady = &condition
+}
+
+func (s *dspaStatus) SetWorkflowControllerReady() {
+	condition := BuildTrueCondition(config.WorkflowControllerReady, "WorkflowController deployment successfully verified")
+	s.workflowControllerReady = &condition
+}
+
+func (s *dspaStatus) SetWorkflowControllerNotApplicable() {
+	condition := BuildFalseCondition(config.WorkflowControllerReady, "NotApplicable", "WorkflowController deployment disabled by Pipelines Operator")
+	s.workflowControllerReady = &condition
+}
+
 func (s *dspaStatus) SetMLMDProxyStatus(mlmdProxyReady metav1.Condition) {
 	s.mlmdProxyReady = &mlmdProxyReady
 }
@@ -150,6 +181,7 @@ func (s *dspaStatus) GetConditions() []metav1.Condition {
 		*s.getApiServerReadyCondition(),
 		*s.getPersistenceAgentReadyCondition(),
 		*s.getScheduledWorkflowReadyCondition(),
+		*s.getWorkflowControllerReadyCondition(),
 		*s.getMLMDProxyReadyCondition(),
 		*s.getWebhookReadyCondition(),
 	}
@@ -194,6 +226,7 @@ func (s *dspaStatus) GetConditions() []metav1.Condition {
 		*s.apiServerReady,
 		*s.persistenceAgentReady,
 		*s.scheduledWorkflowReady,
+		*s.workflowControllerReady,
 		*s.mlmdProxyReady,
 		*s.webhookReady,
 		*crReady,
@@ -227,6 +260,10 @@ func (s *dspaStatus) getPersistenceAgentReadyCondition() *metav1.Condition {
 
 func (s *dspaStatus) getScheduledWorkflowReadyCondition() *metav1.Condition {
 	return s.scheduledWorkflowReady
+}
+
+func (s *dspaStatus) getWorkflowControllerReadyCondition() *metav1.Condition {
+	return s.workflowControllerReady
 }
 
 func (s *dspaStatus) getMLMDProxyReadyCondition() *metav1.Condition {

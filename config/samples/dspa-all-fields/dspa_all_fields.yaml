@@ -209,6 +209,12 @@ status:
       status: 'True'
       type: ScheduledWorkflowReady
     - lastTransitionTime: '2024-03-14T22:04:30Z'
+      message: 'Component [ds-pipeline-workflowcontroller-test] is minimally available.'
+      observedGeneration: 3
+      reason: MinimumReplicasAvailable
+      status: 'True'
+      type: WorkflowControllerReady
+    - lastTransitionTime: '2024-03-14T22:04:30Z'
       message: 'Component [ds-pipeline-metadata-envoy] is minimally available.'
       observedGeneration: 3
       reason: MinimumReplicasAvailable
