@@ -26,6 +26,17 @@ import (
 
 var workflowControllerTemplatesDir = "workflow-controller"
 
+type ArgoWorkflowsControllersConfig struct {
+	ManagementState string `json:"managementState"`
+}
+
+func (c *ArgoWorkflowsControllersConfig) GetManagementState() string {
+	if c.ManagementState == "" {
+		return config.DefaultArgoWorkflowsControllersManagementState
+	}
+	return c.ManagementState
+}
+
 func (r *DSPAReconciler) ReconcileWorkflowController(dsp *dspav1.DataSciencePipelinesApplication,
 	params *DSPAParams) error {
 
@@ -35,23 +46,20 @@ func (r *DSPAReconciler) ReconcileWorkflowController(dsp *dspav1.DataSciencePipe
 	// Expected format example: {"managementState":"Managed"}
 	dspoArgoWorkflowsControllersJSON := config.GetStringConfigWithDefault("DSPO.ArgoWorkflowsControllers", config.DefaultArgoWorkflowsControllers)
 
-	argoWorkflowsControllersConfig := map[string]string{}
-	var argoWorkflowsControllerManagementState string
-
-	err := json.Unmarshal([]byte(dspoArgoWorkflowsControllersJSON), &argoWorkflowsControllersConfig)
-	if err != nil {
+	var argoWorkflowsControllersConfig ArgoWorkflowsControllersConfig
+	if err := json.Unmarshal([]byte(dspoArgoWorkflowsControllersJSON), &argoWorkflowsControllersConfig); err != nil {
 		log.Info(fmt.Sprintf("Unable to parse Argo Workflows Controller management state, using default value: %s", config.DefaultArgoWorkflowsControllersManagementState))
 		log.Info(fmt.Sprintf("Error: %s", err))
-		argoWorkflowsControllerManagementState = config.DefaultArgoWorkflowsControllersManagementState
-	} else {
-		argoWorkflowsControllerManagementState = argoWorkflowsControllersConfig["managementState"]
+		argoWorkflowsControllersConfig = ArgoWorkflowsControllersConfig{
+			ManagementState: config.DefaultArgoWorkflowsControllersManagementState,
+		}
 	}
 
 	// Conditionally deploy the WorkflowController resource depending on the speciified management state
 	// Managed (or blank) - deploy the WorkflowController subcomponent
 	// Removed - skip deploying, and remove if already present, the WorkflowController subcomponent
 	// All other values - Invalid configuration, return an error
-	switch argoWorkflowsControllerManagementState {
+	switch argoWorkflowsControllersConfig.GetManagementState() {
 	case "Managed", "":
 
 		if dsp.Spec.WorkflowController == nil || !dsp.Spec.WorkflowController.Deploy {
@@ -61,20 +69,20 @@ func (r *DSPAReconciler) ReconcileWorkflowController(dsp *dspav1.DataSciencePipe
 
 		log.Info("Applying WorkflowController Resources")
 
-		err = r.ApplyDir(dsp, params, workflowControllerTemplatesDir)
+		err := r.ApplyDir(dsp, params, workflowControllerTemplatesDir)
 		if err != nil {
 			return err
 		}
 
 	case "Removed":
 		log.Info("Removing WorkflowController Resources (if present)")
-		err = r.DeleteResourceDir(params, workflowControllerTemplatesDir)
+		err := r.DeleteResourceDir(params, workflowControllerTemplatesDir)
 		if err != nil {
 			return err
 		}
 
 	default:
-		err = fmt.Errorf("invalid management state for WorkflowController Resources: %s", argoWorkflowsControllerManagementState)
+		err := fmt.Errorf("invalid management state for WorkflowController Resources: %s", argoWorkflowsControllersConfig.GetManagementState())
 		return err
 	}
 
