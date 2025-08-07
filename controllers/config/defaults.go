@@ -114,14 +114,15 @@ const (
 
 // DSPA Status Condition Types
 const (
-	DatabaseAvailable      = "DatabaseAvailable"
-	ObjectStoreAvailable   = "ObjectStoreAvailable"
-	APIServerReady         = "APIServerReady"
-	PersistenceAgentReady  = "PersistenceAgentReady"
-	ScheduledWorkflowReady = "ScheduledWorkflowReady"
-	MLMDProxyReady         = "MLMDProxyReady"
-	WebhookReady           = "WebhookReady"
-	CrReady                = "Ready"
+	DatabaseAvailable       = "DatabaseAvailable"
+	ObjectStoreAvailable    = "ObjectStoreAvailable"
+	APIServerReady          = "APIServerReady"
+	PersistenceAgentReady   = "PersistenceAgentReady"
+	ScheduledWorkflowReady  = "ScheduledWorkflowReady"
+	WorkflowControllerReady = "WorkflowControllerReady"
+	MLMDProxyReady          = "MLMDProxyReady"
+	WebhookReady            = "WebhookReady"
+	CrReady                 = "Ready"
 )
 
 // DSPA Ready Status Condition Reasons

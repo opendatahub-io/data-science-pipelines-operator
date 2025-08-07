@@ -99,7 +99,7 @@ func (suite *IntegrationTestSuite) TestDSPADeployment() {
 			}, timeout, interval)
 		})
 
-		testUtil.WaitForDSPAReady(t, suite.Ctx, suite.Clientmgr.k8sClient, suite.DSPA.Name, suite.DSPANamespace, suite.DeployTimeout, suite.PollInterval)
+		testUtil.WaitForDSPAReady(t, suite.Ctx, suite.Clientmgr.k8sClient, suite.DSPA.Name, suite.DSPANamespace, DeployTimeout, PollInterval)
 
 		for _, deployment := range deployments {
 			t.Run(fmt.Sprintf("should have a ready %s deployment", deployment), func(t *testing.T) {

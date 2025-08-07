@@ -72,8 +72,9 @@ func TestDeployWorkflowController(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Run test reconciliation
-	err = reconciler.ReconcileWorkflowController(dspa, params)
+	workflowControllerEnabled, err := reconciler.ReconcileWorkflowController(dspa, params)
 	assert.Nil(t, err)
+	assert.True(t, workflowControllerEnabled)
 
 	// Ensure WorkflowController Deployment now exists
 	deployment = &appsv1.Deployment{}
@@ -111,8 +112,9 @@ func TestDontDeployWorkflowController(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Run test reconciliation
-	err = reconciler.ReconcileWorkflowController(dspa, params)
+	workflowControllerEnabled, err := reconciler.ReconcileWorkflowController(dspa, params)
 	assert.Nil(t, err)
+	assert.False(t, workflowControllerEnabled)
 
 	// Ensure WorkflowController Deployment still doesn't exist
 	deployment = &appsv1.Deployment{}
@@ -168,8 +170,9 @@ func TestChangeManagementStateWorkflowController(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Run test reconciliation using default global managementState for WorkflowController
-	err = reconciler.ReconcileWorkflowController(dspa, params)
+	workflowControllerEnabled, err := reconciler.ReconcileWorkflowController(dspa, params)
 	assert.Nil(t, err)
+	assert.True(t, workflowControllerEnabled)
 
 	// Ensure WorkflowController Deployment now exists
 	deployment = &appsv1.Deployment{}
@@ -181,8 +184,9 @@ func TestChangeManagementStateWorkflowController(t *testing.T) {
 	viper.Set("DSPO.ArgoWorkflowsControllers", "{\"managementState\":\"Removed\"}")
 
 	// Run test reconciliation
-	err = reconciler.ReconcileWorkflowController(dspa, params)
+	workflowControllerEnabled, err = reconciler.ReconcileWorkflowController(dspa, params)
 	assert.Nil(t, err)
+	assert.False(t, workflowControllerEnabled)
 
 	// Ensure WorkflowController Deployment now removed
 	deployment = &appsv1.Deployment{}
@@ -194,8 +198,9 @@ func TestChangeManagementStateWorkflowController(t *testing.T) {
 	viper.Set("DSPO.ArgoWorkflowsControllers", "{\"managementState\":\"Managed\"}")
 
 	// Run test reconciliation
-	err = reconciler.ReconcileWorkflowController(dspa, params)
+	workflowControllerEnabled, err = reconciler.ReconcileWorkflowController(dspa, params)
 	assert.Nil(t, err)
+	assert.True(t, workflowControllerEnabled)
 
 	// Ensure WorkflowController Deployment now exists again
 	deployment = &appsv1.Deployment{}
@@ -254,8 +259,9 @@ func TestBadManagementStateWorkflowController(t *testing.T) {
 	viper.Set("DSPO.ArgoWorkflowsControllers", "{\"managementState\":\"InvalidState\"}")
 
 	// Run test reconciliation
-	err = reconciler.ReconcileWorkflowController(dspa, params)
+	workflowControllerEnabled, err := reconciler.ReconcileWorkflowController(dspa, params)
 	assert.NotNil(t, err)
+	assert.False(t, workflowControllerEnabled)
 }
 
 func TestManagementStateWorkflowControllerInvalidJSONRecovery(t *testing.T) {
@@ -308,8 +314,9 @@ func TestManagementStateWorkflowControllerInvalidJSONRecovery(t *testing.T) {
 	viper.Set("DSPO.ArgoWorkflowsControllers", "{invalidJSON: 'foo")
 
 	// Run test reconciliation
-	err = reconciler.ReconcileWorkflowController(dspa, params)
+	workflowControllerEnabled, err := reconciler.ReconcileWorkflowController(dspa, params)
 	assert.Nil(t, err)
+	assert.True(t, workflowControllerEnabled)
 
 	// Ensure WorkflowController Deployment still created
 	deployment = &appsv1.Deployment{}
