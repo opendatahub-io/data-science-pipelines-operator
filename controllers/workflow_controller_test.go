@@ -124,6 +124,7 @@ func TestDontDeployWorkflowController(t *testing.T) {
 }
 
 func TestChangeManagementStateWorkflowController(t *testing.T) {
+	t.Cleanup(func() { viper.Reset() })
 
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
@@ -210,6 +211,7 @@ func TestChangeManagementStateWorkflowController(t *testing.T) {
 }
 
 func TestBadManagementStateWorkflowController(t *testing.T) {
+	t.Cleanup(func() { viper.Reset() })
 
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
@@ -265,6 +267,7 @@ func TestBadManagementStateWorkflowController(t *testing.T) {
 }
 
 func TestManagementStateWorkflowControllerInvalidJSONRecovery(t *testing.T) {
+	t.Cleanup(func() { viper.Reset() })
 
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
