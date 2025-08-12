@@ -347,8 +347,8 @@ type Writer struct {
 }
 
 type WorkflowController struct {
-	// Enable deployment of th Argo WorkflowController for this DSPA, if the DSPO's global management state for
-	// WorkflowControllers is also set to Managed. Is overriden by the global management state is set to Removed. Default: true
+	// Enable deployment of the Argo Workflow Controller for this DSPA, if the DSPO's global management state for
+	// WorkflowControllers is also set to Managed (default). It is overriden by the global management state if it is set to Removed. Default: true
 	// +kubebuilder:default:=true
 	// +kubebuilder:validation:Optional
 	Deploy        bool   `json:"deploy"`
