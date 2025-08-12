@@ -147,12 +147,12 @@ func (s *dspaStatus) SetWorkflowControllerNotReady(err error, reason string) {
 }
 
 func (s *dspaStatus) SetWorkflowControllerReady() {
-	condition := BuildTrueCondition(config.WorkflowControllerReady, "WorkflowController deployment successfully verified")
+	condition := BuildTrueCondition(config.WorkflowControllerReady, "Argo Workflows Controller deployment successfully verified")
 	s.workflowControllerReady = &condition
 }
 
 func (s *dspaStatus) SetWorkflowControllerNotApplicable() {
-	condition := BuildFalseCondition(config.WorkflowControllerReady, "NotApplicable", "WorkflowController deployment disabled by Pipelines Operator")
+	condition := BuildFalseCondition(config.WorkflowControllerReady, "NotApplicable", "WorkflowController deployment disabled by the operator")
 	s.workflowControllerReady = &condition
 }
 

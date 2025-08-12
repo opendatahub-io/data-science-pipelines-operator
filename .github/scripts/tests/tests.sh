@@ -76,6 +76,7 @@ create_opendatahub_namespace() {
   echo "---------------------------------"
   echo "Create opendatahub namespace"
   echo "---------------------------------"
+  kubectl get namespace $OPENDATAHUB_NAMESPACE >/dev/null 2>&1 || \
   kubectl create namespace $OPENDATAHUB_NAMESPACE
 }
 
@@ -83,6 +84,7 @@ create_argo_namespace() {
   echo "---------------------------------"
   echo "Create Argo namespace"
   echo "---------------------------------"
+  kubectl get namespace $ARGO_NAMESPACE >/dev/null 2>&1 || \
   kubectl create namespace $ARGO_NAMESPACE
 }
 
@@ -212,6 +214,7 @@ create_dspa_namespace() {
   echo "---------------------------------"
   echo "Create DSPA Namespace"
   echo "---------------------------------"
+  kubectl get namespace $DSPA_NAMESPACE >/dev/null 2>&1 || \
   kubectl create namespace $DSPA_NAMESPACE
 }
 
@@ -226,6 +229,7 @@ create_dspa_k8s_namespace() {
   echo "---------------------------------"
   echo "Create DSPA Namespace with Kubernetes Pipeline Storage"
   echo "---------------------------------"
+  kubectl get namespace $DSPA_K8S_NAMESPACE >/dev/null 2>&1 || \
   kubectl create namespace $DSPA_K8S_NAMESPACE
 }
 
