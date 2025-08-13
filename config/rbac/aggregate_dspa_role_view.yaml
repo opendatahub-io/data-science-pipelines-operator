@@ -13,3 +13,12 @@ rules:
       - get
       - list
       - watch
+  - apiGroups:
+      - pipelines.kubeflow.org
+    resources:
+      - pipelines
+      - pipelineversions
+    verbs:
+      - get
+      - list
+      - watch
