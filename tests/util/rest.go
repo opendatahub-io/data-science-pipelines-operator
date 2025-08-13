@@ -76,7 +76,29 @@ func FormFromFile(t *testing.T, form map[string]string) (*bytes.Buffer, string) 
 }
 
 func RetrievePipelineId(t *testing.T, httpClient http.Client, APIServerURL string, PipelineDisplayName string) (string, error) {
-	response, err := httpClient.Get(fmt.Sprintf("%s/apis/v2beta1/pipelines", APIServerURL))
+	// Retry the GET request to handle race conditions in Kubernetes native API mode
+	var response *http.Response
+	var err error
+
+	timeout := time.After(10 * time.Second)
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	success := false
+	for !success {
+		select {
+		case <-timeout:
+			return "", fmt.Errorf("timed out retrieving pipelines after 10 seconds, last error: %w", err)
+		case <-ticker.C:
+			response, err = httpClient.Get(fmt.Sprintf("%s/apis/v2beta1/pipelines", APIServerURL))
+			if err == nil {
+				success = true
+				break
+			}
+			t.Logf("Retrying GET request due to error: %v", err)
+		}
+	}
+
 	require.NoError(t, err)
 	responseData, err := io.ReadAll(response.Body)
 	require.NoError(t, err)
