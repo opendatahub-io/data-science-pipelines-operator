@@ -12,7 +12,7 @@ Given a version number MAJOR.MINOR.PATCH, increment the:
     PATCH version when you make backward compatible bug fixes
 ```
 
-DSPO and DSP versioning is tied together, and DSP `MAJOR` versions are tied to [kfp-tekton] upstream.
+DSPO and DSP versioning is tied together
 
 > Note: In main branch all images should point to `latest` and not any specific versions, as `main` is rapidly moving,
 > it is likely to quickly become incompatible with any specific tags/shas that are hardcoded.
@@ -35,31 +35,31 @@ between each `MAJOR` release. As such, each `MAJOR` release should have a specif
 Let `x.y.z` be the `latest` release that is highest DSPO/DSP version. These are steps on how to release `x.y+1`.
 
 #### 1. If applicable, update Argo Workflows version
-If argo needs to be updated, manually trigger the [Build Images](https://github.com/opendatahub-io/argo-workflows/actions/workflows/build-main.yml) workflow with the new tag
+If argo needs to be updated:
+1. Cut branch `vx.y+1` from `main`
+2. Use the [Konflux release onboarder](https://github.com/opendatahub-io/odh-konflux-central/actions/workflows/odh-konflux-release-onboarder.yml) workflow, specifying the release branch and image tag
+3. Merge the PR raised by the above workflow to the release branch
+4. Retrieve the sha images from the resulting workflow (check [konflux](https://konflux-ui.apps.stone-prd-rh01.pg1f.p1.openshiftapps.com/ns/open-data-hub-tenant/applications/opendatahub-release/components?name=odh-data-science-pipelines-argo) for the digests for every DSP component)
 
-#### 2. Update the Compatibility Document
-1. Ensure the `params.py` dictionary [OTHER_OPTIONS](https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/scripts/release/params.py#L41) is up to date.
 
-1. Ensure `compatibility.yaml` is upto date, and generate a new `compatibility.md`
-   - Use [release-tools] to accomplish this
-1. If the changes include a code rebase from KFP repo, ensure `config/component_metadata.yaml` is updated with the respective KFP version
-#### 3. Create Release PR
-Create release PR either (a) automatically or (b) manually
-##### a. GitHub Workflow
+#### 2. Create and Onboard Release Branch
 
-Run the
-[Release Prep](https://github.com/opendatahub-io/data-science-pipelines-operator/actions/workflows/release_prep.yaml)
-workflow to automate creating the release branch, building the images, and creating the release PR.
+##### 1. Data Science Pipelines
 
-##### b. Manual
+1. Cut branch `vx.y+1` from `master`
+2. Use the [Konflux release onboarder](https://github.com/opendatahub-io/odh-konflux-central/actions/workflows/odh-konflux-release-onboarder.yml) workflow, specifying the release branch and image tag
+3. Merge the PR raised by the above workflow to the release branch
+4. Retrieve the sha images from the resulting workflow (check [konflux](https://konflux-ui.apps.stone-prd-rh01.pg1f.p1.openshiftapps.com/ns/open-data-hub-tenant/applications/opendatahub-release/components?name=odh-ml-pipe) for the digests for every DSP component)
 
-1. Cut branch `vx.y+1` from `main/master`
-   - Do this for DSPO and DSP repos
-1. Build images. Use the [build-tags] workflow, specifying the branches from above
-1. Retrieve the sha images from the resulting workflow (check quay.io for the digests)
-   - Using [release-tools] generate a `params.env` and submit a new pr to `vx.y+1` branch
-   - For images pulled from registry, ensure latest images are upto date
-1. Perform any tests on the branch, confirm stability
+##### 2. Data Science Pipelines Operator
+
+1. Cut branch `vx.y+1` from `main`
+2. Update `params.env` with the retrieved sha's from DSP (and Argo) components build in [konflux](https://konflux-ui.apps.stone-prd-rh01.pg1f.p1.openshiftapps.com/ns/open-data-hub-tenant/applications/opendatahub-release/components?name=odh-ml-pipe)
+3. Submit a new pr to `vx.y+1` branch
+4. Use the [Konflux release onboarder](https://github.com/opendatahub-io/odh-konflux-central/actions/workflows/odh-konflux-release-onboarder.yml) workflow, specifying the release branch and image tag
+5. Merge the PR raised by the above workflow to the release branch
+6. Create a new PR with update DSPO image in `params.env` with the retrieved image sha from [konflux](https://konflux-ui.apps.stone-prd-rh01.pg1f.p1.openshiftapps.com/ns/open-data-hub-tenant/applications/opendatahub-release/components/odh-data-science-pipelines-operator-controller)
+7. Perform any tests on the branch, confirm stability
    - If issues are found, they should be corrected in `main/master` and be cherry-picked into this branch.
 
 #### 3. Tag the Release
@@ -94,12 +94,7 @@ And suppose that commit `08eb98d` in `main` has resolved this issue.
 Then the commit `08eb98d` needs to trickle to `vx.y.z` and `vx.y-1.a` as `PATCH` (z) releases: `vx.y.z+1` and `vx.y-1.a+1`
 
 1. Cherry-pick commit `08eb98d` onto relevant minor branches `vx.y` and `vx.y-1`
-2. Build images for `vx.y.z+1` and `vx.y-1.a+1` (e.g. `v1.2.1` and `v1.1.1`) DSPO and DSP
-   - Images should be built off the `vx.y` and `vx.y-1` branches respectively
-   - Use the [build-tags] workflow
-3. Retrieve the sha image digests from the resulting workflow
-   - Using [release-tools] generate a params.env and submit a new pr to `vx.y` and `vx.y-1` branches
-4. Cut `vx.y.z+1` and `vx.y-1.a+1` releases in DSP and DSPO
+2. Perform the same steps as described in [Minor Release](#2-create-and-onboard-release-branch)
 
 ### Downstream Specifics
 
