@@ -89,7 +89,7 @@ This section covers tests for different cluster configurations to ensure BYOAWF 
 | **Test Steps**        | <ol><li>Configure cluster for Kubernetes Native Mode</li><li>Install external Argo Workflows</li><li>Disable DSP WorkflowControllers globally</li><li>Create DSPA</li><li>Create Pipeline via CR and create a pipeline run</li></ol> |
 | **Expected Results**  | <ul><li>Kubernetes Native Mode works with external Argo</li><li>Pipeline execution uses Kubernetes-native constructs</li><li>No conflicts between modes</li></ul>                                                                    |
 
-| Test Case ID          | TC-CC-003                                                                                                                                                                                                                                |
+| Test Case ID          | TC-CC-004                                                                                                                                                                                                                                |
 |-----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Verify BYOAWF compatibility with Kubernetes Native Mode - Create Pipeline via API                                                                                                                                                        |
 | **Test Steps**        | <ol><li>Configure cluster for Kubernetes Native Mode</li><li>Install external Argo Workflows</li><li>Disable DSP WorkflowControllers globally</li><li>Create DSPA</li><li>Create Pipeline via API/UI and create a pipeline run</li></ol> |
@@ -97,18 +97,18 @@ This section covers tests for different cluster configurations to ensure BYOAWF 
 
 ### 1.3 FIPS Mode Compatibility
 
-| Test Case ID          | TC-CC-004                                                                                                                                                                                                         |
+| Test Case ID          | TC-CC-005                                                                                                                                                                                                         |
 |-----------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Verify BYOAWF works in FIPS-enabled clusters                                                                                                                                                                      |
-| **Test Steps**        | <ol><li>Configure FIPS-enabled cluster</li><li>Install FIPS-compatible external Argo</li><li>Configure DSPA with external Argo</li><li>Execute pipeline suite</li><li>Verify FIPS compliance maintained</li></ol> |
+| **Test Steps**        | <ol><li>Configure FIPS-enabled cluster</li><li>Install FIPS-compatible external Argo</li><li>Configure DSPO for BYOArgo mode</li><li> Deploy DSPA (with no internal WC)</li><li>Execute pipeline suite</li><li>Verify FIPS compliance maintained</li></ol> |
 | **Expected Results**  | <ul><li>External Argo respects FIPS requirements</li><li>Pipeline execution maintains FIPS compliance</li><li>No cryptographic violations</li></ul>                                                               |
 
 ### 1.4 Disconnected Cluster Support
 
-| Test Case ID          | TC-CC-005                                                                                                                                                                                                                                |
+| Test Case ID          | TC-CC-006                                                                                                                                                                                                                                |
 |-----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Verify BYOAWF functionality in disconnected environments                                                                                                                                                                                 |
-| **Test Steps**        | <ol><li>Configure disconnected cluster environment</li><li>Install external Argo from local registry</li><li>Configure DSPA for external Argo</li><li>Execute pipelines using local artifacts</li><li>Verify offline operation</li></ol> |
+| **Test Steps**        | <ol><li>Configure disconnected cluster environment</li><li>Install external Argo from local registry</li><li>Configure DSPO for BYOArgo mode</li><li> Deploy DSPA (with no internal WC)</li><li>Execute pipelines using local artifacts</li><li>Verify offline operation</li></ol> |
 | **Expected Results**  | <ul><li>External Argo operates in disconnected mode</li><li>Pipeline execution works without external connectivity</li><li>Local registries and artifacts accessible</li></ul>                                                           |
 
 ## 2. Positive Functional Tests
@@ -119,7 +119,7 @@ This section covers all positive functional tests to make sure that feature work
 | Test Case ID          | TC-PF-001                                                                                                                                                                                                      |
 |-----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Verify basic pipeline execution with external Argo                                                                                                                                                             |
-| **Test Steps**        | <ol><li>Configure DSPA with external Argo</li><li>Submit simple addition pipeline</li><li> Monitor execution through DSP UI</li><li> Verify completion and results</li><li> Check logs and artifacts</li></ol> |
+| **Test Steps**        | <ol><li>Configure DSPO for BYOArgo mode</li><li> Deploy DSPA (with no internal WC)</li><li>Submit simple addition pipeline</li><li> Monitor execution through DSP UI</li><li> Verify completion and results</li><li> Check logs and artifacts</li></ol> |
 | **Expected Results**  | <ul><li>Pipeline submits successfully</li><li>Execution progresses normally</li><li>Results accessible through DSP interface</li><li>Logs and monitoring functional</li></ul>                                  |
 
 ### 2.2 Complex Pipeline Types
@@ -128,100 +128,100 @@ Runs of different types of pipeline specs executes successfully. Pipelines that 
 | Test Case ID          | TC-PF-002                                                                                                                                                                                                                        |
 |-----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Verify run of "Pipelines with artifacts" pipeline                                                                                                                                                                                |
-| **Test Steps**        | <ol><li>Configure DSPA with external Argo </li><li> Execute pipeline - Pipelines with artifacts</li><li> Verify each pipeline type executes correctly</li><li> Validate artifacts, metadata, and custom configurations</li></ol> |
-| **Expected Results**  | <ul><li>Pipeline execute successfully</li><li>Artifacts are produced to the right s3 location and are consumed correctly </li></ul>                                                                                              |
+| **Test Steps**        | <ol><li>Configure DSPO for BYOArgo mode</li><li> Deploy DSPA (with no internal WC) </li><li> Execute pipeline - Pipelines with artifacts</li><li> Verify each pipeline type executes correctly</li><li> Validate artifacts, metadata, and custom configurations</li></ol> |
+| **Expected Results**  | <ul><li>Pipeline execute successfully</li><li>Artifacts are stored to the right s3 location and are consumed correctly </li></ul>                                                                                              |
 
 | Test Case ID          | TC-PF-003                                                                                                                                                           |
 |-----------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Verify run of "Pipelines without artifacts" pipeline                                                                                                                |
-| **Test Steps**        | <ol><li> Configure DSPA with external Argo </li><li> Execute Pipeline - Pipelines without artifacts</li><li> Verify each pipeline type executes correctly</li></ol> |                                                                                                                                                                                   |
-| **Expected Results**  | <ul><li>Pipeline runs successfully</li><li>No artifacts are produced to S3</li></ul>                                                                                |
+| **Test Steps**        | <ol><li> Configure DSPO for BYOArgo mode</li><li> Deploy DSPA (with no internal WC) </li><li> Execute Pipeline - Pipelines without artifacts</li><li> Verify each pipeline type executes correctly</li></ol> |                                                                                                                                                                                   |
+| **Expected Results**  | <ul><li>Pipeline runs successfully</li><li>No artifacts are stored into S3</li></ul>                                                                                |
 
 | Test Case ID          | TC-PF-004                                                                                                                                                   |
 |-----------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Verify run of "For loop constructs" pipeline                                                                                                                |
-| **Test Steps**        | <ol><li> Configure DSPA with external Argo </li><li> Execute Pipeline - For loop constructs</li><li> Verify each pipeline type executes correctly</li></ol> |                                                                                                                                                                                   |
+| **Test Steps**        | <ol><li> Configure DSPO for BYOArgo mode</li><li> Deploy DSPA (with no internal WC) </li><li> Execute Pipeline - For loop constructs</li><li> Verify each pipeline type executes correctly</li></ol> |                                                                                                                                                                                   |
 | **Expected Results**  | <ul><li>Pipeline runs successfully</li><li>DAGs inside the for loop are interated over correctly</li></ul>                                                  |
 
 
 | Test Case ID          | TC-PF-005                                                                                                                                                      |
 |-----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Verify run of "Parallel for execution" pipeline                                                                                                                |
-| **Test Steps**        | <ol><li> Configure DSPA with external Argo </li><li> Execute Pipeline - Parallel for execution</li><li> Verify each pipeline type executes correctly</li></ol> |                                                                                                                                                                                   |
-| **Expected Results**  | <ul><li>Pipeline runs successfully</li><li>Parallel DAGs running in parallel and completes successfully</li></ul>                                              |
+| **Test Steps**        | <ol><li> Configure DSPO for BYOArgo mode</li><li> Deploy DSPA (with no internal WC) </li><li> Execute Pipeline - Parallel for execution</li><li> Verify each pipeline type executes correctly</li></ol> |                                                                                                                                                                                   |
+| **Expected Results**  | <ul><li>Pipeline runs successfully</li><li>DAG steps within ParallelFor loops run simultaneously with each other, and the workflow completes successfully</li></ul>                                              |
 
 
 | Test Case ID          | TC-PF-006                                                                                                                                                                                       |
 |-----------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Verify run of "Custom root KFP components" pipeline                                                                                                                                             |
-| **Test Steps**        | <ol><li> Configure DSPA with external Argo </li><li> Execute Pipeline - Custom root KFP components </li><li> Verify each pipeline type executes correctly </li></ol>                            |
-| **Expected Results**  | <ul><li>Pipeline runs successfully</li><li>Artifcats are uploaded in the custom S3 bucket rather than the default, and downstream components are consuming from this custom location</li></ul>  |
+| **Test Steps**        | <ol><li> Configure DSPO for BYOArgo mode</li><li> Deploy DSPA (with no internal WC) </li><li> Execute Pipeline - Custom root KFP components </li><li> Verify each pipeline type executes correctly </li></ol>                            |
+| **Expected Results**  | <ul><li>Pipeline runs successfully</li><li>Artifacts are uploaded to the custom S3 bucket rather than the default, and downstream components are consumed from this custom location</li></ul>  |
 
 | Test Case ID          | TC-PF-007                                                                                                                                                               |
 |-----------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Verify run of "Custom python package indexes" pipeline                                                                                                                  |
-| **Test Steps**        | <ol><li> Configure DSPA with external Argo </li><li> Execute Pipeline - Custom python package indexes </li><li> Verify each pipeline type executes correctly </li></ol> |
+| **Test Steps**        | <ol><li> Configure DSPO for BYOArgo mode</li><li> Deploy DSPA (with no internal WC) </li><li> Execute Pipeline - Custom python package indexes </li><li> Verify each pipeline type executes correctly </li></ol> |
 | **Expected Results**  | <ul><li>Pipeline runs successfully</li><li>When driver and launcher downloads python packages, it downloads from the custom index rather than pypi</li></ul>            |
 
 | Test Case ID          | TC-PF-008                                                                                                                                                                 |
 |-----------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Verify run of "Pipelines with input parameters" pipeline                                                                                                                  |
-| **Test Steps**        | <ol><li> Configure DSPA with external Argo </li><li> Execute Pipeline - Pipelines with input parameters </li><li> Verify each pipeline type executes correctly </li></ol> |
+| **Test Steps**        | <ol><li> Configure DSPO for BYOArgo mode</li><li> Deploy DSPA (with no internal WC) </li><li> Execute Pipeline - Pipelines with input parameters </li><li> Verify each pipeline type executes correctly </li></ol> |
 | **Expected Results**  | <ul><li>Pipeline runs successfully<br/> Components are consuming the right parameters (verify it in the logs or input resolution in the Argo Workflow Status)</li></ul>   |
 
 | Test Case ID          | TC-PF-009                                                                                                                                                   |
 |-----------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Verify run of "Custom base images" pipeline                                                                                                                 |
-| **Test Steps**        | <ol><li> Configure DSPA with external Argo </li><li> Execute Pipeline - Custom base images </li><li> Verify each pipeline type executes correctly</li></ol> |
+| **Test Steps**        | <ol><li> Configure DSPO for BYOArgo mode</li><li> Deploy DSPA (with no internal WC) </li><li> Execute Pipeline - Custom base images </li><li> Verify each pipeline type executes correctly</li></ol> |
 | **Expected Results**  | <ul><li>Pipeline runs successfully</li><li>Components are downloading custom base images</li></ul>                                                          |
 
 | Test Case ID          | TC-PF-010                                                                                                                                                                               |
 |-----------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Verify run of "Pipelines with both input and output artifacts" pipeline                                                                                                                 |
-| **Test Steps**        | <ol><li> Configure DSPA with external Argo </li><li> Execute Pipeline - Pipelines with both input and output artifacts </li><li> Verify each pipeline type executes correctly</li></ol> |
+| **Test Steps**        | <ol><li> Configure DSPO for BYOArgo mode</li><li> Deploy DSPA (with no internal WC) </li><li> Execute Pipeline - Pipelines with both input and output artifacts </li><li> Verify each pipeline type executes correctly</li></ol> |
 | **Expected Results**  | <ul><li>Pipeline runs successfully</li><li>Upstream and Downstream components can produce & consume artifacts</li></ul>                                                                 |
 
 | Test Case ID          | TC-PF-011                                                                                                                                                                   |
 |-----------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Verify run of "Pipelines without input parameters" pipeline                                                                                                                 |
-| **Test Steps**        | <ol><li> Configure DSPA with external Argo </li><li> Execute Pipeline - Pipelines without input parameters </li><li> Verify each pipeline type executes correctly</li></ol> |
+| **Test Steps**        | <ol><li> Configure DSPO for BYOArgo mode</li><li> Deploy DSPA (with no internal WC) </li><li> Execute Pipeline - Pipelines without input parameters </li><li> Verify each pipeline type executes correctly</li></ol> |
 | **Expected Results**  | <ul><li>Pipeline runs successfully </li></ul>                                                                                                                               |
 
 | Test Case ID          | TC-PF-012                                                                                                                                                                |
 |-----------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Verify run of "Pipelines with NO input artifacts, but just output artifacts" pipeline                                                                                    |
-| **Test Steps**        | <ol><li> Configure DSPA with external Argo </li><li> Execute Pipeline - Pipelines with output artifacts </li><li> Verify each pipeline type executes correctly</li></ol> |
-| **Expected Results**  | <ul><li>Pipeline runs successfully</li><li>Output artifacts (like a model/trained data) are produced to S3 correctly</li></ul>                                           |
+| **Test Steps**        | <ol><li> Configure DSPO for BYOArgo mode</li><li> Deploy DSPA (with no internal WC) </li><li> Execute Pipeline - Pipelines with output artifacts </li><li> Verify each pipeline type executes correctly</li></ol> |
+| **Expected Results**  | <ul><li>Pipeline runs successfully</li><li>Output artifacts (like a model/trained data) are stored to S3 correctly</li></ul>                                           |
 
 | Test Case ID          | TC-PF-013                                                                                                                                                                   |
 |-----------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Verify run of "Pipelines without output artifacts" pipeline                                                                                                                 |
-| **Test Steps**        | <ol><li> Configure DSPA with external Argo </li><li> Execute Pipeline - Pipelines without output artifacts </li><li> Verify each pipeline type executes correctly</li></ol> |
+| **Test Steps**        | <ol><li> Configure DSPO for BYOArgo mode</li><li> Deploy DSPA (with no internal WC) </li><li> Execute Pipeline - Pipelines without output artifacts </li><li> Verify each pipeline type executes correctly</li></ol> |
 | **Expected Results**  | <ul><li>Pipeline runs successfully </li></ul>                                                                                                                               |
 
 | Test Case ID          | TC-PF-014                                                                                                                                                              |
 |-----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Verify run of "Pipelines with iteration count" pipeline                                                                                                                |
-| **Test Steps**        | <ol><li> Configure DSPA with external Argo </li><li> Execute Pipeline - Pipelines with iteration count </li><li>Verify each pipeline type executes correctly</li></ol> |
+| **Test Steps**        | <ol><li> Configure DSPO for BYOArgo mode</li><li> Deploy DSPA (with no internal WC) </li><li> Execute Pipeline - Pipelines with iteration count </li><li>Verify each pipeline type executes correctly</li></ol> |
 | **Expected Results**  | <ul><li>Pipeline runs successfully</li><li>DAGs are iterated over for the correct number of iterations </li></ul>                                                      |
 
 | Test Case ID          | TC-PF-015                                                                                                                                                               |
 |-----------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Verify run of "Pipelines with retry mechanisms" pipeline                                                                                                                |
-| **Test Steps**        | <ol><li> Configure DSPA with external Argo </li><li> Execute Pipeline - Pipelines with retry mechanisms </li><li>Verify each pipeline type executes correctly</li></ol> |
+| **Test Steps**        | <ol><li> Configure DSPO for BYOArgo mode</li><li> Deploy DSPA (with no internal WC) </li><li> Execute Pipeline - Pipelines with retry mechanisms </li><li>Verify each pipeline type executes correctly</li></ol> |
 | **Expected Results**  | <ul><li>Pipeline runs successfully</li><li>Components are retried the correct number of times in case of any failure </li></ul>                                         |
 
 | Test Case ID          | TC-PF-016                                                                                                                                                                   |
 |-----------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Verify run of "Pipelines with certificate handling" pipeline                                                                                                                |
-| **Test Steps**        | <ol><li> Configure DSPA with external Argo </li><li> Execute Pipeline - Pipelines with certificate handling </li><li>Verify each pipeline type executes correctly</li></ol> |
+| **Test Steps**        | <ol><li> Configure DSPO for BYOArgo mode</li><li> Deploy DSPA (with no internal WC) </li><li> Execute Pipeline - Pipelines with certificate handling </li><li>Verify each pipeline type executes correctly</li></ol> |
 | **Expected Results**  | <ul><li>Pipeline runs successfully</li><li>Components gets the right certificate installed </li></ul>                                                                       |
 
 | Test Case ID          | TC-PF-017                                                                                                                                                               |
 |-----------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Verify run of "Conditional branching pipelines" pipeline                                                                                                                |
-| **Test Steps**        | <ol><li> Configure DSPA with external Argo </li><li> Execute Pipeline - Conditional branching pipelines </li><li>Verify each pipeline type executes correctly</li></ol> |
-| **Expected Results**  | <ul><li>Pipeline runs successfully</li><li>Nested DAGs runs only if the expected condition is true</li></ul>                                                            |
+| **Test Steps**        | <ol><li> Configure DSPO for BYOArgo mode</li><li> Deploy DSPA (with no internal WC) </li><li> Execute Pipeline - Conditional branching pipelines </li><li>Verify each pipeline type executes correctly</li></ol> |
+| **Expected Results**  | <ul><li>Pipeline runs successfully</li><li>Nested DAGs run only if the expected condition is true</li></ul>                                                            |
 
 ### 2.3 Pod Spec Override Testing
 Tests to validate that if you override Pod Spec, then correct kubernetes properties gets applied when the pods are created
@@ -282,7 +282,7 @@ This section overs error handling scenarios to make sure we are handling non-ide
 | Test Case ID          | TC-NF-002                                                                                                                                                                                            |
 |-----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Verify behavior with unsupported Argo versions                                                                                                                                                       |
-| **Test Steps**        | <ol><li> Install unsupported Argo version</li><li>Configure DSPA for external Argo</li><li>Attempt pipeline execution</li><li>Document error messages</li><li>Verify graceful degradation </li></ol> |
+| **Test Steps**        | <ol><li> Install unsupported Argo version</li><li>Configure DSPO for BYOArgo mode</li><li> Deploy DSPA (with no internal WC)</li><li>Attempt pipeline execution</li><li>Document error messages</li><li>Verify graceful degradation </li></ol> |
 | **Expected Results**  | <ul><li>Clear incompatibility errors</li><li>Graceful failure without corruption</li><li>Helpful guidance for resolution </li></ul>                                                                  |
 
 ### 3.3 Missing External Argo
@@ -290,7 +290,7 @@ This section overs error handling scenarios to make sure we are handling non-ide
 | Test Case ID          | TC-NF-003                                                                                                                                                                                                |
 |-----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Verify behavior when external Argo unavailable                                                                                                                                                           |
-| **Test Steps**        | <ol><li> Configure DSPA for external Argo</li><li>Stop/remove external Argo service</li><li>Attempt pipeline submission</li><li>Restore Argo and verify recovery</li><li>Check data integrity </li></ol> |
+| **Test Steps**        | <ol><li> Configure DSPO for BYOArgo mode</li><li> Deploy DSPA (with no internal WC) service</li><li>Attempt pipeline submission</li><li>Restore Argo and verify recovery</li><li>Check data integrity </li></ol> |
 | **Expected Results**  | <ul><li>Clear error messages when Argo unavailable</li><li>Graceful recovery when restored</li><li>No permanent data loss</li></ul>                                                                      |
 
 ### 3.4 Invalid Pipeline Submissions
@@ -414,16 +414,16 @@ Based on the compatability matrix as defined in #Test Environments
 | Test Case ID          | TC-CM-001                                                                                                                                                                                                                                       |
 |-----------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Validate compatibility with current supported Argo version                                                                                                                                                                                      |
-| **Test Steps**        | <ol><li> Install current supported Argo version (e.g., 3.4.16)</li><li>Configure DSPA for external Argo</li><li>Execute comprehensive pipeline test suite</li><li>Verify all features work correctly</li><li>Document any limitations</li></ol> |
-| **Expected Results**  | <ul><li>Full compatibility with current version</li><li>All pipeline features operational</li><li>No breaking changes or issues</li><li>Performance within acceptable range </li></ul>                                                          |
+| **Test Steps**        | <ol><li> Install current supported Argo version (e.g., 3.4.16)</li><li>Configure DSPO for BYOArgo mode</li><li> Deploy DSPA (with no internal WC)</li><li>Execute comprehensive pipeline test suite</li><li>Verify all features work correctly</li><li>Document any limitations</li></ol> |
+| **Expected Results**  | <ul><li>Full compatibility with current Argo version</li><li>All pipeline features operational</li><li>No breaking changes or issues</li><li>Performance within acceptable range </li></ul>                                                          |
 
 ### 7.2 Previous Version (N-1) Compatibility
 
 | Test Case ID          | TC-CM-002                                                                                                                                                                                                                                                    |
 |-----------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Validate compatibility with previous supported Argo version                                                                                                                                                                                                  |
-| **Test Steps**        | <ol><li> Install previous supported Argo version (e.g., 3.4.15)</li><li>Configure DSPA for external Argo</li><li>Execute comprehensive pipeline test suite</li><li>Document compatibility differences</li><li>Verify core functionality maintained</li></ol> |
-| **Expected Results**  | <ul><li>Core functionality works with N-1 version</li><li>Any limitations clearly documented</li><li>No critical failures or data loss</li><li>Upgrade path available </li></ul>                                                                             |
+| **Test Steps**        | <ol><li> Install previous supported Argo version (e.g., 3.4.15)</li><li>Configure DSPO for BYOArgo mode</li><li> Deploy DSPA (with no internal WC)</li><li>Execute comprehensive pipeline test suite</li><li>Document compatibility differences</li><li>Verify core functionality maintained</li></ol> |
+| **Expected Results**  | <ul><li>Core functionality works with N-1 Argo version</li><li>Any limitations clearly documented</li><li>No critical failures or data loss</li><li>Upgrade path available </li></ul>                                                                             |
 
 ### 7.2.1 Z-Stream Version Compatibility
 
@@ -431,7 +431,7 @@ Based on the compatability matrix as defined in #Test Environments
 |-----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Validate compatibility with z-stream (patch) versions of Argo                                                                                                                                                                                                                                                                                                              |
 | **Test Steps**        | <ol><li> Test current DSP with multiple z-stream versions of same minor Argo release</li><li>Example: Test DSP v3.4.17 with Argo v3.4.16, v3.4.17, v3.4.18</li><li>Execute standard pipeline test suite for each z-stream version</li><li>Document any breaking changes in patch versions</li><li>Verify backward and forward compatibility within minor version</li></ol> |
-| **Expected Results**  | <ul><li>Z-stream versions maintain compatibility</li><li>No breaking changes in patch releases</li><li>Smooth operation across patch versions</li><li>Clear documentation of any exceptions </li></ul>                                                                                                                                                                     |
+| **Expected Results**  | <ul><li>Z-stream Argo versions maintain compatibility</li><li>No breaking changes in patch releases</li><li>Smooth operation across patch versions</li><li>Clear documentation of any exceptions </li></ul>                                                                                                                                                                     |
 
 ### 7.4 DSP and External Argo Co-existence Validation
 
@@ -441,14 +441,6 @@ Based on the compatability matrix as defined in #Test Environments
 | **Test Steps**        | <ol><li> Deploy DSPA with internal WorkflowController</li><li>Install external Argo WorkflowController on same cluster</li><li>Submit simple hello world pipeline through DSP</li><li>Verify pipeline executes successfully using DSP controller</li><li>Verify external Argo remains unaffected</li><li>Test pipeline monitoring and status reporting</li><li>Validate artifact handling and logs access</li></ol> |
 | **Expected Results**  | <ul><li>Hello world pipeline executes successfully</li><li>DSP WorkflowController processes the pipeline</li><li>External Argo WorkflowController unaffected</li><li>No resource conflicts or interference</li><li>Pipeline status and logs accessible</li><li>Artifacts properly stored and retrievable </li></ul>                                                                                                 |
 
-### 7.5 API Server and WorkflowController Compatibility
-
-| Test Case ID          | TC-CM-005                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-|-----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Test Case Summary** | Verify DSP API Server compatibility with different external WorkflowController versions                                                                                                                                                                                                                                                                                                                                                                              |
-| **Test Steps**        | <ol><li> Deploy DSP API Server with specific Argo library dependencies</li><li>Install external Argo WorkflowController with different version</li><li>Test API Server to WorkflowController communication</li><li>Verify Kubernetes API interactions (CRs, status updates)</li><li>Test pipeline submission, execution, and status reporting</li><li>Monitor for API compatibility issues or version mismatches</li><li>Document API compatibility matrix</li></ol> |
-| **Expected Results**  | <ul><li>API Server communicates successfully with external WC</li><li>Kubernetes API interactions work correctly</li><li>Pipeline lifecycle management functions properly</li><li>Status updates and monitoring work correctly</li><li>API compatibility documented and validated </li></ul>                                                                                                                                                                         |
-
 ## 8. Uninstall and Data Preservation Tests
 Verify that if you uninstall DSPA or Argo Workflow Controller, then the data is still preserved, so that the next time deployment happens, things continue - this includes use case for different deployment strategies
 
@@ -457,15 +449,15 @@ Verify that if you uninstall DSPA or Argo Workflow Controller, then the data is 
 | Test Case ID          | TC-UP-001                                                                                                                                                                                                                                                                                                                         |
 |-----------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Verify DSPA uninstall behavior with external Argo                                                                                                                                                                                                                                                                                 |
-| **Test Steps**        | <ol><li> Configure DSPA with external Argo (no internal WC)</li><li>Execute multiple pipelines and generate data</li><li>Delete DSPA</li><li>Verify external Argo WorkflowController remains intact</li><li>Verify DSPA-specific resources are cleaned up</li><li>Check that pipeline history is appropriately handled </li></ol> |
-| **Expected Results**  | <ul><li>DSPA removes cleanly</li><li>External Argo WorkflowController unaffected</li><li>No impact on other DSPAs using same external Argo</li><li>Pipeline data handling follows standard procedures </li></ul>                                                                                                                  |
+| **Test Steps**        | <ol><li> Configure DSPO for BYOArgo mode</li><li> Deploy DSPA (with no internal WC) WorkflowController remains intact</li><li>Verify DSPA-specific resources are cleaned up</li><li>Check that pipeline history is appropriately handled </li></ol> |
+| **Expected Results**  | <ul><li>DSPA removed cleanly</li><li>External Argo WorkflowController unaffected</li><li>No impact on other DSPAs using same external Argo</li><li>Pipeline data handling follows standard procedures </li></ul>                                                                                                                  |
 
 ### 8.2 DSPA Uninstall with Internal WorkflowController
 
 | Test Case ID          | TC-UP-002                                                                                                                                                                                                                                                                             |
 |-----------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Verify standard DSPA uninstall with internal WorkflowController                                                                                                                                                                                                                       |
-| **Test Steps**        | <ol><li> Configure DSPA with internal WorkflowController</li><li>Execute pipelines and generate data</li><li>Delete DSPA</li><li>Verify WorkflowController is removed with DSPA</li><li>Verify proper cleanup of all DSPA components</li><li>Ensure no external Argo impact</li></ol> |
+| **Test Steps**        | <ol><li> Configure DSPO for BYOArgo mode</li><li> Deploy DSPA (with no internal WC) impact</li></ol> |
 | **Expected Results**  | <ul><li>DSPA and WorkflowController removed completely</li><li>Standard cleanup procedures followed</li><li>No resource leaks or orphaned components</li><li>External Argo installations unaffected </li></ul>                                                                        |
 
 ### 8.3 Data Preservation During WorkflowController Transitions
@@ -500,7 +492,7 @@ Covers migration from internal to external WC and vice versa. Also covers upgrad
 | Test Case ID          | TC-MU-002                                                                                                                                                                                                            |
 |-----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Verify migration from external to DSP-managed Argo                                                                                                                                                                   |
-| **Test Steps**        | <ol><li> Configure DSPA with external Argo</li><li>Execute pipelines and verify data</li><li>Re-enable internal WCs globally</li><li>Remove external Argo configuration</li><li>Verify continued operation</li></ol> |
+| **Test Steps**        | <ol><li> Configure DSPO for BYOArgo mode</li><li> Deploy DSPA (with no internal WC) configuration</li><li>Verify continued operation</li></ol> |
 | **Expected Results**  | <ul><li>Migration to internal WC successful</li><li>Pipeline history preserved</li><li>New pipelines use internal WC</li><li>No service interruption </li></ul>                                                      |
 
 ### 9.3 ODH Upgrade Scenarios
@@ -516,7 +508,7 @@ Covers migration from internal to external WC and vice versa. Also covers upgrad
 | Test Case ID          | TC-MU-004                                                                                                                                                                                                                                                                                |
 |-----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Verify external Argo version upgrade scenarios                                                                                                                                                                                                                                           |
-| **Test Steps**        | <ol><li> Configure DSPA with external Argo version N-1</li><li>Execute baseline pipeline tests</li><li>Upgrade external Argo to version N</li><li>Verify compatibility matrix adherence</li><li>Test pipeline execution post-upgrade</li><li>Document any required ODH updates</li></ol> |
+| **Test Steps**        | <ol><li> Configure DSPO for BYOArgo mode</li><li> Deploy DSPA (with no internal WC) to version N</li><li>Verify compatibility matrix adherence</li><li>Test pipeline execution post-upgrade</li><li>Document any required ODH updates</li></ol> |
 | **Expected Results**  | <ul><li>External Argo upgrade completes successfully</li><li>Compatibility maintained within support matrix</li><li>Clear guidance for required ODH updates</li><li>Pipeline functionality preserved </li></ul>                                                                          |
 
 ### 9.5 Independent Lifecycle Management
@@ -544,7 +536,7 @@ Anything that we did cover in the above sections and do not fall under a certain
 |-----------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Test Case Summary** | Verify sub-component removal functionality for WorkflowControllers                                                                                                                                                                                                                                                                                                  |
 | **Test Steps**        | <ol><li>Deploy DSPA with WorkflowController enabled</li><li>Execute pipelines and accumulate run data</li><li>Disable WorkflowController globally</li><li>Verify WorkflowController is removed but data preserved</li><li>Verify backing data (run details, metrics) remains intact</li><li>Test re-enabling WorkflowController preserves historical data</li></ol> |
-| **Expected Results**  | <ul><li>WorkflowController removed cleanly</li><li>Run details and metrics preserved</li><li>Historical pipeline data remains accessible</li><li>Re-enabling restores full functionality </li></ul>                                                                                                                                                                 |
+| **Expected Results**  | <ul><li>WorkflowController removed cleanly</li><li>Run details and metrics preserved</li><li>Historical pipeline data remains accessible</li><li>Re-enabling restores full functionality of the DSPA </li></ul>                                                                                                                                                                 |
 
 ### 1.7 Pre-existing Argo Detection and Prevention
 
@@ -569,19 +561,19 @@ This is to verify that the integration of this feature with other product compon
 |-----------------------|----------------------------------------------------------------|
 | **Test Case Summary** | Verify that Iris Pipeline Runs on a **standard** RHOAI cluster |
 | **Test Steps**        | <ol><li> Run an IRIS pipeline</li></ol>                        |
-| **Expected Results**  | Verify that the pipeline run succeeds </li></ul>               |
+| **Expected Results**  | <ul><li>Verify that the pipeline run succeeds </li></ul>               |
 
 | Test Case ID          | TC-IL-002                                                          |
 |-----------------------|--------------------------------------------------------------------|
 | **Test Case Summary** | Verify that Iris Pipeline Runs on a **FIPS Enabled** RHOAI cluster |
 | **Test Steps**        | <ol><li> Run an IRIS pipeline</li></ol>                            |
-| **Expected Results**  | Verify that the pipeline run succeeds </li></ul>                   |
+| **Expected Results**  | <ul><li>Verify that the pipeline run succeeds </li></ul>                   |
 
 | Test Case ID          | TC-IL-003                                                          |
 |-----------------------|--------------------------------------------------------------------|
 | **Test Case Summary** | Verify that Iris Pipeline Runs on a **Disconnected** RHOAI cluster |
 | **Test Steps**        | <ol><li> Run an IRIS pipeline</li></ol>                            |
-| **Expected Results**  | Verify that the pipeline run succeeds </li></ul>                   |
+| **Expected Results**  | <ul><li>Verify that the pipeline run succeeds </li></ul>                   |
 
 ## Success Criteria
 
