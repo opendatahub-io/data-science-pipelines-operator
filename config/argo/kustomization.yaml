@@ -11,7 +11,7 @@ resources:
 - clusterrole.argo-aggregate-to-edit.yaml
 - clusterrole.argo-aggregate-to-view.yaml
 - clusterrole.argo-cluster-role.yaml
-- clusterrolebinding.argo-binding.yaml
+- clusterrolebinding.ds-pipeline-argo-binding.yaml
 - configmap.workflow-controller-configmap.yaml
 # - deployment.workflow-controller.yaml
 # - priorityclass.yaml
