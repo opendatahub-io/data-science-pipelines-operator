@@ -5,8 +5,6 @@ metadata:
   labels:
     rbac.authorization.k8s.io/aggregate-to-edit: "true"
   name: argo-aggregate-to-edit
-  annotations:
-    internal.kpt.dev/upstream-identifier: "rbac.authorization.k8s.io|ClusterRole|default|argo-aggregate-to-edit"
 rules:
 - apiGroups:
   - argoproj.io
