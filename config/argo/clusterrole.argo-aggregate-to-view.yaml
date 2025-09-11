@@ -5,8 +5,6 @@ metadata:
   labels:
     rbac.authorization.k8s.io/aggregate-to-view: "true"
   name: argo-aggregate-to-view
-  annotations:
-    internal.kpt.dev/upstream-identifier: "rbac.authorization.k8s.io|ClusterRole|default|argo-aggregate-to-view"
 rules:
 - apiGroups:
   - argoproj.io
