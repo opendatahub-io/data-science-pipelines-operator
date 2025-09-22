@@ -59,12 +59,6 @@ spec:
             value: $(IMAGES_OAUTHPROXY)
           - name: IMAGES_MARIADB
             value: $(IMAGES_MARIADB)
-          - name: IMAGES_RUNTIMEGENERIC
-            value: $(IMAGES_PIPELINESRUNTIMEGENERIC)
-          - name: IMAGES_TOOLBOX
-            value: $(IMAGES_TOOLBOX)
-          - name: IMAGES_RHELAI
-            value: $(IMAGES_RHELAI)
           - name: ZAP_LOG_LEVEL
             value: $(ZAP_LOG_LEVEL)
           - name: MAX_CONCURRENT_RECONCILES

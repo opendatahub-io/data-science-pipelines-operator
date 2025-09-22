@@ -19,13 +19,6 @@ spec:
       requests:
         cpu: 20m
         memory: 100m
-    initResources:
-      limits:
-        cpu: 20m
-        memory: 200Mi
-      requests:
-        cpu: 20m
-        memory: 100Mi
   scheduledWorkflow:
     deploy: true
     resources:
