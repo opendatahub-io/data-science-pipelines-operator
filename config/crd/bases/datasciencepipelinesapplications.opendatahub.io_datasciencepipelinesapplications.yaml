@@ -136,64 +136,10 @@ spec:
                   image:
                     description: Specify a custom image for DSP API Server.
                     type: string
-                  initResources:
-                    description: |-
-                      Specify init container resource requirements. The init container
-                      is used to build managed-pipelines and store them in a shared volume.
-                    properties:
-                      limits:
-                        properties:
-                          cpu:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                            x-kubernetes-int-or-string: true
-                          memory:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                            x-kubernetes-int-or-string: true
-                        type: object
-                      requests:
-                        properties:
-                          cpu:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                            x-kubernetes-int-or-string: true
-                          memory:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                            x-kubernetes-int-or-string: true
-                        type: object
-                    type: object
                   managedPipelines:
-                    description: Enable various managed pipelines on this DSP API
-                      server.
-                    properties:
-                      instructLab:
-                        description: |-
-                          Configures whether to automatically import the technical preview of the InstructLab pipeline.
-                          You must enable the trainingoperator component to run the InstructLab pipeline.
-                        properties:
-                          state:
-                            default: Removed
-                            description: |-
-                              Set to one of the following values:
-
-                              - "Managed" : This pipeline is automatically imported.
-                              - "Removed" : This pipeline is not automatically imported. If previously set to "Managed", setting to "Removed" does not remove existing managed pipelines but does prevent future updates from being imported.
-                            enum:
-                            - Managed
-                            - Removed
-                            pattern: ^(Managed|Removed)$
-                            type: string
-                        type: object
+                    description: |-
+                      The technology preview InstructLab pipeline was removed and this field is reserved for future managed pipeline
+                      options.
                     type: object
                   pipelineStore:
                     default: database
@@ -239,19 +185,6 @@ spec:
                             x-kubernetes-int-or-string: true
                         type: object
                     type: object
-                  rhelAIImage:
-                    description: RhelAI image used for ilab tasks in managed pipelines.
-                    type: string
-                  runtimeGenericImage:
-                    description: |-
-                      Generic runtime image used for building managed pipelines during
-                      api server init, and for basic runtime operations.
-                    type: string
-                  toolboxImage:
-                    description: |-
-                      Toolbox image used for basic container spec runtime operations
-                      in managed pipelines.
-                    type: string
                 type: object
               database:
                 default:
@@ -1117,42 +1050,6 @@ spec:
                   image:
                     description: Specify a custom image for DSP API Server.
                     type: string
-                  initResources:
-                    description: |-
-                      Specify init container resource requirements. The init container
-                      is used to build managed-pipelines and store them in a shared volume.
-                    properties:
-                      limits:
-                        properties:
-                          cpu:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                            x-kubernetes-int-or-string: true
-                          memory:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                            x-kubernetes-int-or-string: true
-                        type: object
-                      requests:
-                        properties:
-                          cpu:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                            x-kubernetes-int-or-string: true
-                          memory:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                            x-kubernetes-int-or-string: true
-                        type: object
-                    type: object
                   injectDefaultScript:
                     default: true
                     description: |-
@@ -1160,28 +1057,9 @@ spec:
                       Deprecated: DSP V1 only, will be removed in the future.
                     type: boolean
                   managedPipelines:
-                    description: Enable various managed pipelines on this DSP API
-                      server.
-                    properties:
-                      instructLab:
-                        description: |-
-                          Configures whether to automatically import the InstructLab pipeline.
-                          You must enable the trainingoperator component to run the InstructLab pipeline.
-                        properties:
-                          state:
-                            default: Removed
-                            description: "Set to one of the following values:\n\n-
-                              \"Managed\" : This pipeline is automatically imported.\n-
-                              \"Removed\" : This pipeline is not automatically imported.
-                              If previously set to \"Managed\", setting to \"Removed\"
-                              does not remove existing managed pipelines but does
-                              prevent future updates from being imported.\t//"
-                            enum:
-                            - Managed
-                            - Removed
-                            pattern: ^(Managed|Removed)$
-                            type: string
-                        type: object
+                    description: |-
+                      The technology preview InstructLab pipeline was removed and this field is reserved for future managed pipeline
+                      options.
                     type: object
                   moveResultsImage:
                     description: |-
@@ -1232,14 +1110,6 @@ spec:
                             x-kubernetes-int-or-string: true
                         type: object
                     type: object
-                  rhelAIImage:
-                    description: RhelAI image used for ilab tasks in managed pipelines.
-                    type: string
-                  runtimeGenericImage:
-                    description: |-
-                      Generic runtime image used for building managed pipelines during
-                      api server init, and for basic runtime operations.
-                    type: string
                   stripEOF:
                     default: true
                     description: |-
@@ -1255,11 +1125,6 @@ spec:
                     - Cancelled
                     - StoppedRunFinally
                     - CancelledRunFinally
-                    type: string
-                  toolboxImage:
-                    description: |-
-                      Toolbox image used for basic container spec runtime operations
-                      in managed pipelines.
                     type: string
                   trackArtifacts:
                     default: true

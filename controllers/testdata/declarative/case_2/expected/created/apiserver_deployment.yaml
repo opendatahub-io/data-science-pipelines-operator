@@ -17,121 +17,13 @@ spec:
   template:
     metadata:
       annotations:
-        configHash: 0a9567df0bc820e0007b6c626b514f8b6ec5cef0c7badd566e6d063e049a5394
+        configHash: dc6461be9ead393cdabbefaa0db94b1788b655dabeb411b7dd33454a215bc527
       labels:
         dsp-version: v2
         app: ds-pipeline-testdsp2
         component: data-science-pipelines
         dspa: testdsp2
     spec:
-      initContainers:
-        - name: init-pipelines
-          image: runtimegeneric:test2
-          workingDir: /opt/app-root/src/pipelines/distributed-ilab
-          command: ['/bin/sh', '-c']
-          args:
-            - "make pipeline && mv pipeline.yaml ${BUILD_FOLDER}/instructlab.yaml"
-          env:
-            - name: POD_NAMESPACE
-              value: "default"
-            - name: DBCONFIG_USER
-              value: "testuser"
-            - name: DBCONFIG_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  key: "password"
-                  name: "ds-pipeline-db-testdsp2"
-            - name: DBCONFIG_DBNAME
-              value: "randomDBName"
-            - name: DBCONFIG_HOST
-              value: "mariadb-testdsp2.default.svc.cluster.local"
-            - name: DBCONFIG_PORT
-              value: "3306"
-            - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_HOST
-              value: "ds-pipeline-visualizationserver"
-            - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
-              value: "8888"
-            - name: OBJECTSTORECONFIG_CREDENTIALSSECRET
-              value: "ds-pipeline-s3-testdsp2"
-            - name: OBJECTSTORECONFIG_CREDENTIALSACCESSKEYKEY
-              value: "accesskey"
-            - name: OBJECTSTORECONFIG_CREDENTIALSSECRETKEYKEY
-              value: "secretkey"
-            - name: DEFAULTPIPELINERUNNERSERVICEACCOUNT
-              value: "pipeline-runner-testdsp2"
-            - name: OBJECTSTORECONFIG_BUCKETNAME
-              value: "mlpipeline"
-            - name: OBJECTSTORECONFIG_ACCESSKEY
-              valueFrom:
-                secretKeyRef:
-                  key: "accesskey"
-                  name: "ds-pipeline-s3-testdsp2"
-            - name: OBJECTSTORECONFIG_SECRETACCESSKEY
-              valueFrom:
-                secretKeyRef:
-                  key: "secretkey"
-                  name: "ds-pipeline-s3-testdsp2"
-            - name: OBJECTSTORECONFIG_SECURE
-              value: "false"
-            - name: MINIO_SERVICE_SERVICE_HOST
-              value: "minio-testdsp2.default.svc.cluster.local"
-            - name: MINIO_SERVICE_SERVICE_PORT
-              value: "9000"
-            - name: V2_LAUNCHER_IMAGE
-              value: "argolauncherimage:test2"
-            - name: V2_DRIVER_IMAGE
-              value: "argodriverimage:test2"
-            - name: METADATA_GRPC_SERVICE_SERVICE_HOST
-              value: "ds-pipeline-metadata-grpc-testdsp2.default.svc.cluster.local"
-            - name: METADATA_GRPC_SERVICE_SERVICE_PORT
-              value: "8080"
-            - name: ML_PIPELINE_SERVICE_HOST
-              value: ds-pipeline-testdsp2.default.svc.cluster.local
-            - name: ML_PIPELINE_SERVICE_PORT_GRPC
-              value: "8887"
-            - name: SIGNED_URL_EXPIRY_TIME_SECONDS
-              value: "60"
-            - name: EXECUTIONTYPE
-              value: Workflow
-            - name: DB_DRIVER_NAME
-              value: mysql
-            - name: DBCONFIG_MYSQLCONFIG_USER
-              value: "testuser"
-            - name: DBCONFIG_MYSQLCONFIG_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  key: "password"
-                  name: "ds-pipeline-db-testdsp2"
-            - name: DBCONFIG_MYSQLCONFIG_DBNAME
-              value: "randomDBName"
-            - name: DBCONFIG_MYSQLCONFIG_HOST
-              value: "mariadb-testdsp2.default.svc.cluster.local"
-            - name: DBCONFIG_MYSQLCONFIG_PORT
-              value: "3306"
-            - name: BUILD_FOLDER
-              value: /opt/app-root/src/build
-            - name: PYTHON_IMAGE
-              value: runtimegeneric:test2
-            - name: RUNTIME_GENERIC_IMAGE
-              value: runtimegeneric:test2
-            - name: TOOLBOX_IMAGE
-              value: toolbox:test2
-            - name: RHELAI_IMAGE
-              value: rhelai:test2
-            - name: V2_LAUNCHER_COMMAND
-              value: "launcher-v2-fips"
-            - name: CACHEENABLED
-              value: "false"
-          resources:
-            limits:
-              memory: 6Gi
-              cpu: '2523m'
-            requests:
-              memory: 2Gi
-              cpu: '1232m'
-          volumeMounts:
-            - mountPath: /opt/app-root/src/build
-              name: managed-pipelines
       containers:
         - env:
             - name: POD_NAMESPACE
@@ -210,16 +102,6 @@ spec:
               value: "mariadb-testdsp2.default.svc.cluster.local"
             - name: DBCONFIG_MYSQLCONFIG_PORT
               value: "3306"
-            - name: BUILD_FOLDER
-              value: /opt/app-root/src/build
-            - name: PYTHON_IMAGE
-              value: runtimegeneric:test2
-            - name: RUNTIME_GENERIC_IMAGE
-              value: runtimegeneric:test2
-            - name: TOOLBOX_IMAGE
-              value: toolbox:test2
-            - name: RHELAI_IMAGE
-              value: rhelai:test2
             - name: V2_LAUNCHER_COMMAND
               value: "launcher-v2-fips"
             - name: CACHEENABLED
@@ -274,8 +156,6 @@ spec:
             - name: server-config
               mountPath: /config/config.json
               subPath: testserverconfigmapkeydspa2
-            - mountPath: /config/managed-pipelines
-              name: managed-pipelines
             - mountPath: /config/sample_config.json
               name: sample-config
               subPath: sample_config.json
@@ -337,9 +217,6 @@ spec:
           configMap:
             defaultMode: 420
             name: testserverconfigmapdspa2
-        - name: managed-pipelines
-          emptyDir:
-            sizeLimit: 10Mi
         - configMap:
             defaultMode: 420
             name: sample-config-testdsp2

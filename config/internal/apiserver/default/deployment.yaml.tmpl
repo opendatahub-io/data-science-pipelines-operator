@@ -22,14 +22,8 @@ spec:
         component: data-science-pipelines
         dspa: {{.Name}}
     spec:
-      initContainers:
-        - name: init-pipelines
-          image: {{.APIServer.RuntimeGenericImage}}
-          workingDir: /opt/app-root/src/pipelines/distributed-ilab
-          command: [ '/bin/sh', '-c']
-          args:
-            - "make pipeline && mv pipeline.yaml ${BUILD_FOLDER}/instructlab.yaml"
-          env: &apiserverEnvs
+      containers:
+        - env:
             {{ if .IncludeOwnerReference }}
             - name: OWNER_UID
               value: "{{.UID}}"
@@ -148,46 +142,12 @@ spec:
               value: "{{.DBConnection.Host}}"
             - name: DBCONFIG_MYSQLCONFIG_PORT
               value: "{{.DBConnection.Port}}"
-            - name: BUILD_FOLDER
-              value: /opt/app-root/src/build
-            - name: PYTHON_IMAGE
-              value: {{.APIServer.RuntimeGenericImage}}
-            - name: RUNTIME_GENERIC_IMAGE
-              value: {{.APIServer.RuntimeGenericImage}}
-            - name: TOOLBOX_IMAGE
-              value: {{.APIServer.ToolboxImage}}
-            - name: RHELAI_IMAGE
-              value: {{.APIServer.RHELAIImage}}
             {{ if .FIPSEnabled }}
             - name: V2_LAUNCHER_COMMAND
               value: "launcher-v2-fips"
             {{ end }}
             - name: CACHEENABLED
               value: "{{.APIServer.CacheEnabled}}"
-          {{ if .APIServer.InitResources }}
-          resources:
-            requests:
-              {{ if .APIServer.InitResources.Requests.CPU }}
-              cpu: {{.APIServer.InitResources.Requests.CPU}}
-              {{ end }}
-              {{ if .APIServer.InitResources.Requests.Memory }}
-              memory: {{.APIServer.InitResources.Requests.Memory}}
-              {{ end }}
-            {{ end }}
-            {{ if .APIServer.InitResources.Limits }}
-            limits:
-              {{ if .APIServer.InitResources.Limits.CPU }}
-              cpu: {{.APIServer.InitResources.Limits.CPU}}
-              {{ end }}
-              {{ if .APIServer.InitResources.Limits.Memory }}
-              memory: {{.APIServer.InitResources.Limits.Memory}}
-              {{ end }}
-          {{ end }}
-          volumeMounts:
-            - mountPath: /opt/app-root/src/build
-              name: managed-pipelines
-      containers:
-        - env: *apiserverEnvs
           image: {{.APIServer.Image}}
           # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
           name: ds-pipeline-api-server
@@ -252,8 +212,6 @@ spec:
             - name: server-config
               mountPath: /config/config.json
               subPath: {{ .APIServer.CustomServerConfig.Key }}
-            - mountPath: /config/managed-pipelines
-              name: managed-pipelines
           {{ if .PodToPodTLS }}
             - mountPath: /etc/tls/private
               name: proxy-tls
@@ -330,9 +288,6 @@ spec:
         - name: server-config
           configMap:
             name: {{ .APIServer.CustomServerConfig.Name }}
-        - name: managed-pipelines
-          emptyDir:
-            sizeLimit: 10Mi
         {{ if .CustomCABundle }}
         - name: ca-bundle
           configMap:
