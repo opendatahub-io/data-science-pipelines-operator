@@ -70,12 +70,9 @@ type ManagedPipelineOptions struct {
 	State ManagedPipelineState `json:"state,omitempty"`
 }
 
-type ManagedPipelinesSpec struct {
-	// Configures whether to automatically import the technical preview of the InstructLab pipeline.
-	// You must enable the trainingoperator component to run the InstructLab pipeline.
-	// +kubebuilder:validation:Optional
-	InstructLab *ManagedPipelineOptions `json:"instructLab,omitempty"`
-}
+// The technology preview InstructLab pipeline was removed and this field is reserved for future managed pipeline
+// options.
+type ManagedPipelinesSpec struct{}
 
 type APIServer struct {
 	// Enable DS Pipelines Operator management of DSP API Server. Setting Deploy to false disables operator reconciliation. Default: true
@@ -96,21 +93,11 @@ type APIServer struct {
 	ArgoLauncherImage string `json:"argoLauncherImage,omitempty"`
 	// Driver image used during pipeline execution.
 	ArgoDriverImage string `json:"argoDriverImage,omitempty"`
-	// Generic runtime image used for building managed pipelines during
-	// api server init, and for basic runtime operations.
-	RuntimeGenericImage string `json:"runtimeGenericImage,omitempty"`
-	// Toolbox image used for basic container spec runtime operations
-	// in managed pipelines.
-	ToolboxImage string `json:"toolboxImage,omitempty"`
-	// RhelAI image used for ilab tasks in managed pipelines.
-	RHELAIImage string `json:"rhelAIImage,omitempty"`
-	// Enable various managed pipelines on this DSP API server.
+	// The technology preview InstructLab pipeline was removed and this field is reserved for future managed pipeline
+	// options.
 	ManagedPipelines *ManagedPipelinesSpec `json:"managedPipelines,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
-	// Specify init container resource requirements. The init container
-	// is used to build managed-pipelines and store them in a shared volume.
-	InitResources *ResourceRequirements `json:"initResources,omitempty"`
 
 	// If the Object store/DB is behind a TLS secured connection that is
 	// unrecognized by the host OpenShift/K8s cluster, then you can

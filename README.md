@@ -254,10 +254,10 @@ configuration for a DSPA that does this is found in `config/samples/v2/external-
 needed, and deploy this DSPA by running the following:
 
 ```bash
-DSP_Namespace_3=test-ds-project-4
+DSP_Namespace_4=test-ds-project-4
 oc new-project ${DSP_Namespace_4}
 cd ${WORKING_DIR}/config/samples/v2/external-object-storage
-kustomize build . | oc -n ${DSP_Namespace_3} apply -f -
+kustomize build . | oc -n ${DSP_Namespace_4} apply -f -
 ```
 
 ## DataSciencePipelinesApplication Component Overview

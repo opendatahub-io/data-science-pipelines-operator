@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"strings"
 
-	dspa "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	v1 "github.com/openshift/api/route/v1"
@@ -72,33 +71,15 @@ func (r *DSPAReconciler) GenerateSamplePipelineMetadataBlock(pipeline string) (m
 	item["versionDescription"] = pVerDesc
 
 	return item, nil
-
 }
 
-func (r *DSPAReconciler) GetSampleConfig(dsp *dspa.DataSciencePipelinesApplication) (string, error) {
-	// Check if InstructLab Pipeline enabled in this DSPA
-	enableInstructLabPipeline := false
-	if dsp.Spec.APIServer.ManagedPipelines != nil && dsp.Spec.APIServer.ManagedPipelines.InstructLab != nil {
-		settingInDSPA := dsp.Spec.APIServer.ManagedPipelines.InstructLab.State
-		if settingInDSPA != "" {
-			enableInstructLabPipeline = strings.EqualFold(string(settingInDSPA), "Managed")
-		}
-	}
-
-	return r.generateSampleConfigJSON(enableInstructLabPipeline, dsp.Spec.APIServer.EnableSamplePipeline)
+func (r *DSPAReconciler) GetSampleConfig(dsp *dspav1.DataSciencePipelinesApplication) (string, error) {
+	return r.generateSampleConfigJSON(dsp.Spec.APIServer.EnableSamplePipeline)
 }
 
-func (r *DSPAReconciler) generateSampleConfigJSON(enableInstructLabPipeline, enableIrisPipeline bool) (string, error) {
-
+func (r *DSPAReconciler) generateSampleConfigJSON(enableIrisPipeline bool) (string, error) {
 	// Now generate a sample config
-	var pipelineConfig = make([]map[string]string, 0)
-	if enableInstructLabPipeline {
-		item, err := r.GenerateSamplePipelineMetadataBlock("instructlab")
-		if err != nil {
-			return "", err
-		}
-		pipelineConfig = append(pipelineConfig, item)
-	}
+	pipelineConfig := make([]map[string]string, 0)
 	if enableIrisPipeline {
 		item, err := r.GenerateSamplePipelineMetadataBlock("iris")
 		if err != nil {
