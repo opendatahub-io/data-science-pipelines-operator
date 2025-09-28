@@ -100,9 +100,6 @@ const (
 	ArgoWorkflowControllerImagePath = "Images.ArgoWorkflowController"
 	MariaDBImagePath                = "Images.MariaDB"
 	OAuthProxyImagePath             = "Images.OAuthProxy"
-	RuntimeGenericPath              = "Images.RuntimeGeneric"
-	ToolboxImagePath                = "Images.Toolbox"
-	RHELAIImagePath                 = "Images.RHELAI"
 
 	// Other configs
 	ObjStoreConnectionTimeoutConfigName      = "DSPO.HealthCheck.ObjectStore.ConnectionTimeout"
@@ -161,8 +158,6 @@ const DefaultRequeueTime = time.Second * 20
 
 const DefaultApiServerIncludeOwnerReferenceConfigName = true
 
-const DefaultManagedPipelines = "{}"
-
 const DefaultPlatformVersion = "v0.0.0"
 
 const DefaultFIPSEnabled = false
@@ -177,7 +172,6 @@ func GetConfigRequiredFields() []string {
 // Default ResourceRequirements
 var (
 	APIServerResourceRequirements          = createResourceRequirement(resource.MustParse("250m"), resource.MustParse("500Mi"), resource.MustParse("500m"), resource.MustParse("1Gi"))
-	APIServerInitResourceRequirements      = createResourceRequirement(resource.MustParse("250m"), resource.MustParse("128Mi"), resource.MustParse("500m"), resource.MustParse("256Mi"))
 	PersistenceAgentResourceRequirements   = createResourceRequirement(resource.MustParse("120m"), resource.MustParse("500Mi"), resource.MustParse("250m"), resource.MustParse("1Gi"))
 	ScheduledWorkflowResourceRequirements  = createResourceRequirement(resource.MustParse("120m"), resource.MustParse("100Mi"), resource.MustParse("250m"), resource.MustParse("250Mi"))
 	WorkflowControllerResourceRequirements = createResourceRequirement(resource.MustParse("120m"), resource.MustParse("500Mi"), resource.MustParse("250m"), resource.MustParse("1Gi"))
