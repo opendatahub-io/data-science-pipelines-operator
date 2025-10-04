@@ -317,21 +317,6 @@ spec:
 
 ### ML Pipelines UI
 
-To deploy the standalone DS Pipelines UI component, simply add a `spec.mlpipelineUI` item to your DSPA with an `image` key set to a valid ui component container image.  All other fields are defaultable/optional, see [All Fields DSPA Example](config/samples/v2/dspa-all-fields/dspa_all_fields.yaml) for full details.
-
-```yaml
-apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
-kind: DataSciencePipelinesApplication
-metadata:
-  name: sample
-spec:
-   ...
-  mlpipelineUI:
-    deploy: true
-    # Image field is required
-    image: 'quay.io/opendatahub/odh-ml-pipelines-frontend-container:beta-ui'
-```
-
 ### ML Metadata
 
 To deploy the ML Metadata artifact linage/metadata component, simply add a `spec.mlmd` item to your DSPA with `deploy` set to `true`.  All other fields are defaultable/optional, see [All Fields DSPA Example](config/samples/v2/dspa-all-fields/dspa_all_fields.yaml) for full details.
@@ -348,36 +333,6 @@ spec:
 ```
 
 ## Using a DataSciencePipelinesApplication
-
-When a `DataSciencePipelinesApplication` is deployed, use the MLPipelines UI endpoint to interact with DSP, either via a GUI or via API calls.
-
-You can retrieve this route by running the following in your terminal:
-
-```bash
-DSP_CR_NAME=sample
-DSP_Namespace=test-ds-project-1
-echo https://$(oc get routes -n ${DSP_Namespace} ds-pipeline-ui-${DSP_CR_NAME} --template={{.spec.host}})
-```
-
-## Using the Graphical UI
-
-> Note the UI presented below is the upstream Kubeflow Pipelines UI, this is not supported in DSP and will be replaced
-> with the ODH Dashboard UI. Until then, this UI can be deployed via DSPO for experimentation/development purposes.
-> Note however that this UI is not a supported feature of DSPO/ODH.
-
-Navigate to the route retrieved in the last step. You will be presented with the MLPipelines UI. In this walkthrough we
-will upload a pipeline and start a run based off it.
-
-To start, click the "Upload Pipeline" button.
-
-![pipeline](docs/images/upload_pipeline.png)
-
-Choose a file, you can use the [flipcoin example]. Download this example and select it for the first step. Then click
-"Create" for the second step.
-
-![flipcoin](docs/images/upload_flipcoin.png)
-
-Once done, you can now use this `Pipeline` to create a `Run`, do this by pressing "+ Create Run".
 
 ![create](docs/images/create_run.png)
 
@@ -449,7 +404,7 @@ Retrieve your token and DSP route:
 DSP_Namespace=test-ds-project-1
 # This is the metadata.name of that DataSciencePipelinesApplication Custom Resource
 DSP_CR_NAME=sample
-export DSP_ROUTE="https://$(oc get routes -n ${DSP_Namespace} ds-pipeline-ui-${DSP_CR_NAME} --template={{.spec.host}})"
+export DSP_ROUTE="$(oc get routes -n ${DSP_Namespace} ds-pipeline-${DSP_CR_NAME} --template={{.spec.host}})"
 export OCP_AUTH_TOKEN=$(oc whoami --show-token)
 ```
 
@@ -561,7 +516,7 @@ Below is the sample config file (the tags for the images can be edited as requir
 Images:
   ApiServer: quay.io/opendatahub/ds-pipelines-api-server:latest
   Artifact: quay.io/opendatahub/ds-pipelines-artifact-manager:latest
-  OAuthProxy: registry.redhat.io/openshift4/ose-oauth-proxy:v4.12.0
+  KubeRBACProxy: registry.redhat.io/openshift4/ose-kube-rbac-proxy-rhel9:latest
   PersistenceAgent: quay.io/opendatahub/ds-pipelines-persistenceagent:latest
   ScheduledWorkflow: quay.io/opendatahub/ds-pipelines-scheduledworkflow:latest
   Cache: registry.access.redhat.com/ubi8/ubi-minimal

@@ -20,7 +20,3 @@ spec:
     minio:
       # Image field is required
       image: 'quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance'
-  # Optional
-  mlpipelineUI:
-    # Image field is required
-    image: 'quay.io/opendatahub/odh-ml-pipelines-frontend-container:beta-ui'

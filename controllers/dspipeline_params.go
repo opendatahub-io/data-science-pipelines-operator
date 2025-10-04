@@ -58,14 +58,13 @@ type DSPAParams struct {
 	APIServerDefaultResourceName          string
 	APIServerServiceName                  string
 	APIServerConfigHash                   string
-	OAuthProxy                            string
+	KubeRBACProxy                         string
 	SampleConfigJSON                      string
 	ScheduledWorkflow                     *dspa.ScheduledWorkflow
 	ScheduledWorkflowDefaultResourceName  string
 	PersistenceAgent                      *dspa.PersistenceAgent
 	PersistentAgentDefaultResourceName    string
 	WorkflowControllerDefaultResourceName string
-	MlPipelineUI                          *dspa.MlPipelineUI
 	MariaDB                               *dspa.MariaDB
 	Minio                                 *dspa.Minio
 	MLMD                                  *dspa.MLMD
@@ -579,10 +578,9 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.WorkflowControllerDefaultResourceName = workflowControllerDefaultResourceNamePrefix + dsp.Name
 	p.PersistenceAgent = dsp.Spec.PersistenceAgent.DeepCopy()
 	p.PersistentAgentDefaultResourceName = persistenceAgentDefaultResourceNamePrefix + dsp.Name
-	p.MlPipelineUI = dsp.Spec.MlPipelineUI.DeepCopy()
 	p.MariaDB = dsp.Spec.Database.MariaDB.DeepCopy()
 	p.Minio = dsp.Spec.ObjectStorage.Minio.DeepCopy()
-	p.OAuthProxy = config.GetStringConfigWithDefault(config.OAuthProxyImagePath, config.DefaultImageValue)
+	p.KubeRBACProxy = config.GetStringConfigWithDefault(config.KubeRBACProxyImagePath, config.DefaultImageValue)
 	p.MLMD = dsp.Spec.MLMD.DeepCopy()
 	p.MlmdProxyDefaultResourceName = mlmdProxyDefaultResourceNamePrefix + dsp.Name
 	p.CustomCABundleRootMountPath = config.CustomCABundleRootMountPath
@@ -814,15 +812,6 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		setStringDefault(scheduledWorkflowImageFromConfig, &p.ScheduledWorkflow.Image)
 		setResourcesDefault(config.ScheduledWorkflowResourceRequirements, &p.ScheduledWorkflow.Resources)
 	}
-	if p.MlPipelineUI != nil {
-		if dsp.Spec.MlPipelineUI.Image == "" {
-			return fmt.Errorf("mlPipelineUI specified, but no image provided in the DSPA CR Spec")
-		}
-		p.MlPipelineUI.Image = dsp.Spec.MlPipelineUI.Image
-		setStringDefault(config.MLPipelineUIConfigMapPrefix+dsp.Name, &p.MlPipelineUI.ConfigMapName)
-		setResourcesDefault(config.MlPipelineUIResourceRequirements, &p.MlPipelineUI.Resources)
-	}
-
 	// If user did not specify WorkflowController
 	if dsp.Spec.WorkflowController == nil {
 		dsp.Spec.WorkflowController = &dspa.WorkflowController{

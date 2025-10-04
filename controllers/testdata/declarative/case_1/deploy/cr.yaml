@@ -10,9 +10,6 @@ spec:
     deploy: false
   scheduledWorkflow:
     deploy: false
-  mlpipelineUI:
-    deploy: false
-    image: frontend:test0
   database:
     mariaDB:
       deploy: false
