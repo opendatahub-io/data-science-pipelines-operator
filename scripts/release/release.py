@@ -24,8 +24,8 @@ def main():
                         help="ubi-micro version tag in rh registry")
     parser_params.add_argument("--mariadb", dest="mariadb_tag", default="1",
                         help="mariadb version tag in rh registry")
-    parser_params.add_argument("--oauthproxy", dest="oauth_proxy_tag", default="v4.10",
-                        help="oauthproxy version tag in rh registry")
+    parser_params.add_argument("--kube-rbac-proxy", dest="kube_rbac_proxy_tag", default="v4.17",
+                        help="kube-rbac-proxy version tag in rh registry")
 
     parser_params.add_argument("--override", dest="overrides",
                                help="Override an env var with a manually submitted digest "

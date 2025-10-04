@@ -1,30 +1,32 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ds-pipeline-metadata-envoy-{{.Name}}
-  namespace: {{.Namespace}}
+  name: ds-pipeline-metadata-envoy-testdsp6
+  namespace: default
   labels:
-    app: ds-pipeline-metadata-envoy-{{.Name}}
+    dsp-version: v2
+    app: ds-pipeline-metadata-envoy-testdsp6
     component: data-science-pipelines
-    dspa: {{.Name}}
+    dspa: testdsp6
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: ds-pipeline-metadata-envoy-{{.Name}}
+      app: ds-pipeline-metadata-envoy-testdsp6
       component: data-science-pipelines
-      dspa: {{.Name}}
+      dspa: testdsp6
   template:
     metadata:
       annotations:
         sidecar.istio.io/inject: "false"
       labels:
-        app: ds-pipeline-metadata-envoy-{{.Name}}
+        dsp-version: v2
+        app: ds-pipeline-metadata-envoy-testdsp6
         component: data-science-pipelines
-        dspa: {{.Name}}
+        dspa: testdsp6
     spec:
       containers:
-        - image: {{.MLMD.Envoy.Image}}
+        - image: mlmdenvoy:test6
           name: container
           command: ["/usr/local/bin/envoy"]
           args: [
@@ -34,8 +36,10 @@ spec:
           ports:
             - containerPort: 9090
               name: md-envoy
+              protocol: TCP
             - containerPort: 9901
               name: envoy-admin
+              protocol: TCP
           livenessProbe:
             initialDelaySeconds: 30
             periodSeconds: 5
@@ -49,34 +53,18 @@ spec:
               port: md-envoy
             timeoutSeconds: 2
           resources:
-            {{ if .MLMD.Envoy.Resources.Requests }}
             requests:
-              {{ if .MLMD.Envoy.Resources.Requests.CPU }}
-              cpu: {{.MLMD.Envoy.Resources.Requests.CPU}}
-              {{ end }}
-              {{ if .MLMD.Envoy.Resources.Requests.Memory }}
-              memory: {{.MLMD.Envoy.Resources.Requests.Memory}}
-              {{ end }}
-            {{ end }}
-            {{ if .MLMD.Envoy.Resources.Limits }}
+              cpu: 100m
+              memory: 256Mi
             limits:
-              {{ if .MLMD.Envoy.Resources.Limits.CPU }}
-              cpu: {{.MLMD.Envoy.Resources.Limits.CPU}}
-              {{ end }}
-              {{ if .MLMD.Envoy.Resources.Limits.Memory }}
-              memory: {{.MLMD.Envoy.Resources.Limits.Memory}}
-              {{ end }}
-            {{ end }}
+              cpu: 100m
+              memory: 256Mi
           volumeMounts:
             - mountPath: /etc/envoy.yaml
               name: envoy-config
               subPath: envoy.yaml
-            {{ if .PodToPodTLS }}
-            - name: proxy-tls-upstream
-              mountPath: "/etc/ssl/certs/"
-            {{ end }}
-        {{ if .MLMD.Envoy.DeployRoute }}
         - name: kube-rbac-proxy
+          image: kube-rbac-proxy:test6
           args:
             - --secure-listen-address=0.0.0.0:8443
             - --proxy-endpoints-port=8444
@@ -85,7 +73,6 @@ spec:
             - --tls-cert-file=/etc/tls/private/tls.crt
             - --tls-private-key-file=/etc/tls/private/tls.key
             - --ignore-paths=/healthz,/apis/v1beta1/healthz,/metrics
-          image: {{.KubeRBACProxy}}
           ports:
             - containerPort: 8443
               name: proxy
@@ -99,25 +86,21 @@ spec:
               port: proxy-metrics
               scheme: HTTPS
             initialDelaySeconds: 30
-            timeoutSeconds: 1
             periodSeconds: 5
-            successThreshold: 1
-            failureThreshold: 3
+            timeoutSeconds: 1
           readinessProbe:
             httpGet:
               path: /healthz
               port: proxy-metrics
               scheme: HTTPS
             initialDelaySeconds: 5
-            timeoutSeconds: 1
             periodSeconds: 5
-            successThreshold: 1
-            failureThreshold: 3
+            timeoutSeconds: 1
           resources:
-            limits:
+            requests:
               cpu: 100m
               memory: 256Mi
-            requests:
+            limits:
               cpu: 100m
               memory: 256Mi
           volumeMounts:
@@ -125,29 +108,21 @@ spec:
               name: proxy-tls
             - mountPath: /etc/kube-rbac-proxy
               name: proxy-config
-            {{ if and .CustomCABundle .PodToPodTLS }}
-            - mountPath: {{ .CustomCABundleRootMountPath }}
-              name: ca-bundle
-            {{ end }}
-        {{ end }}
-      serviceAccountName: ds-pipeline-metadata-envoy-{{.Name}}
+      serviceAccountName: ds-pipeline-metadata-envoy-testdsp6
       volumes:
         - name: envoy-config
           configMap:
-            name: ds-pipeline-metadata-envoy-config-{{.Name}}
+            name: ds-pipeline-metadata-envoy-config-testdsp6
+            defaultMode: 420
         - name: proxy-tls
           secret:
-            secretName: ds-pipelines-envoy-proxy-tls-{{.Name}}
+            secretName: ds-pipelines-envoy-proxy-tls-testdsp6
+            defaultMode: 420
         - name: proxy-tls-upstream
           configMap:
-            name: dsp-trusted-ca-{{.Name}}
-        {{ if .MLMD.Envoy.DeployRoute }}
+            name: dsp-trusted-ca-testdsp6
+            defaultMode: 420
         - name: proxy-config
           configMap:
-            name: kube-rbac-proxy-metadata-config-{{.Name}}
-        {{ end }}
-        {{ if and .CustomCABundle .PodToPodTLS }}
-        - name: ca-bundle
-          configMap:
-            name: {{ .CustomCABundle.ConfigMapName }}
-        {{ end }}
+            name: kube-rbac-proxy-metadata-config-testdsp6
+            defaultMode: 420

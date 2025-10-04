@@ -40,18 +40,6 @@ spec:
       limits:
         cpu: 250m
         memory: 250Mi
-  mlpipelineUI:
-    deploy: true
-    # image is required
-    image: quay.io/opendatahub/ds-pipelines-frontend:latest
-    resources:
-      limits:
-        cpu: 100m
-        memory: 256Mi
-      requests:
-        cpu: 100m
-        memory: 256Mi
-    configMap: custom-ui-configmap
   database:
     mariaDB:
       deploy: true

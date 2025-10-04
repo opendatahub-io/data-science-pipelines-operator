@@ -47,17 +47,6 @@ spec:
       limits:
         cpu: "2526m"
         memory: "5Gi"
-  mlpipelineUI:
-    deploy: true
-    image: frontend:test2
-    configMap: some-test-configmap
-    resources:
-      requests:
-        cpu: "1239m"
-        memory: "1Gi"
-      limits:
-        cpu: "2530m"
-        memory: "5Gi"
   database:
     mariaDB:
       deploy: true

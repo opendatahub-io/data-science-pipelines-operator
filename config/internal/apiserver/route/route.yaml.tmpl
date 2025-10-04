@@ -14,7 +14,7 @@ spec:
     name: {{.APIServerDefaultResourceName}}
     weight: 100
   port:
-    targetPort: oauth
+    targetPort: proxy
   tls:
     termination: Reencrypt
     insecureEdgeTerminationPolicy: Redirect

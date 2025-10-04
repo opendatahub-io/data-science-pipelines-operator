@@ -8,9 +8,8 @@ Images:
   ArgoWorkflowController: argowfcontroller:test4
   LauncherImage: launcherimage:test4
   DriverImage: driverimage:test4
-  OAuthProxy: oauth-proxy:test4
+  KubeRBACProxy: kube-rbac-proxy:test4
   MariaDB: mariadb:test4
-  MlPipelineUI: frontend:test4
   Minio: minio:test4
 ManagedPipelinesMetadata:
   Iris:
