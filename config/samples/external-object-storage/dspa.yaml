@@ -16,7 +16,3 @@ spec:
         secretKey: k8ssecretkey
         secretName: aws-bucket-creds
       scheme: https
-  # Optional
-  mlpipelineUI:
-    # Image field is required
-    image: gcr.io/ml-pipeline/frontend:2.0.2

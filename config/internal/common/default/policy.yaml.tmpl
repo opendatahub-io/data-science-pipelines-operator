@@ -11,12 +11,12 @@ spec:
   policyTypes:
     - Ingress
   ingress:
-    # Match all sources for oauth endpoint
+    # Match all sources for the proxy endpoint
     - ports:
         - protocol: TCP
           port: 8443
     # The components that are permitted to directly communicate with API Server
-    # Note: all other external traffic should go through oauth proxy
+    # Note: all other external traffic should go through the proxy
     - ports:
         - protocol: TCP
           port: 8888
@@ -40,10 +40,6 @@ spec:
         - podSelector:
             matchLabels:
               app: minio-{{.Name}}
-              component: data-science-pipelines
-        - podSelector:
-            matchLabels:
-              app: ds-pipeline-ui-{{.Name}}
               component: data-science-pipelines
         - podSelector:
             matchLabels:

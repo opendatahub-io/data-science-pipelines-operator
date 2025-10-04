@@ -9,6 +9,7 @@ rules:
       - datasciencepipelinesapplications.opendatahub.io
     resources:
       - datasciencepipelinesapplications
+      - datasciencepipelinesapplications/api
     verbs:
       - get
       - list
