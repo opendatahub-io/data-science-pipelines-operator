@@ -55,8 +55,8 @@ spec:
             value: $(IMAGES_LAUNCHER)
           - name: IMAGES_DRIVER
             value: $(IMAGES_DRIVER)
-          - name: IMAGES_OAUTHPROXY
-            value: $(IMAGES_OAUTHPROXY)
+          - name: IMAGES_KUBE_RBAC_PROXY
+            value: $(kube-rbac-proxy)
           - name: IMAGES_MARIADB
             value: $(IMAGES_MARIADB)
           - name: ZAP_LOG_LEVEL

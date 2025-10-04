@@ -226,33 +226,36 @@ spec:
               name: ca-bundle
             {{ end }}
         {{ if .APIServer.EnableRoute }}
-        - name: oauth-proxy
+        - name: kube-rbac-proxy
           args:
-            - --https-address=:8443
-            - --provider=openshift
-            - --openshift-service-account={{.APIServerDefaultResourceName}}
+            - --secure-listen-address=0.0.0.0:8443
+            - --proxy-endpoints-port=8444
             {{ if .PodToPodTLS }}
             # because we use certs signed by openshift, these certs are not valid for
             # localhost, thus we have to use the service name
             - --upstream=https://{{.APIServerServiceDNSName}}:8888
-            - --upstream-ca=/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
+            {{ if .CustomCABundle }}
+            - --upstream-ca-file={{ .PiplinesCABundleMountPath }}
+            {{ else }}
+            - --upstream-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
+            {{ end }}
             {{ else }}
             - --upstream=http://localhost:8888
             {{ end }}
-            - --tls-cert=/etc/tls/private/tls.crt
-            - --tls-key=/etc/tls/private/tls.key
-            - --cookie-secret=SECRET
-            - '--openshift-delegate-urls={"/": {"group":"route.openshift.io","resource":"routes","verb":"get","name":"{{.APIServerDefaultResourceName}}","namespace":"{{.Namespace}}"}}'
-            - '--openshift-sar={"namespace":"{{.Namespace}}","resource":"routes","resourceName":"{{.APIServerDefaultResourceName}}","verb":"get","resourceAPIGroup":"route.openshift.io"}'
-            - --skip-auth-regex='(^/metrics|^/apis/v1beta1/healthz)'
-          image: {{.OAuthProxy}}
+            - --tls-cert-file=/etc/tls/private/tls.crt
+            - --tls-private-key-file=/etc/tls/private/tls.key
+            - --config-file=/etc/kube-rbac-proxy/config-file.yaml
+            - --ignore-paths=/healthz,/apis/v1beta1/healthz,/metrics
+          image: {{.KubeRBACProxy}}
           ports:
             - containerPort: 8443
-              name: oauth
+              name: proxy
+            - containerPort: 8444
+              name: proxy-metrics
           livenessProbe:
             httpGet:
-              path: /oauth/healthz
-              port: oauth
+              path: /healthz
+              port: proxy-metrics
               scheme: HTTPS
             initialDelaySeconds: 30
             timeoutSeconds: 1
@@ -261,8 +264,8 @@ spec:
             failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /oauth/healthz
-              port: oauth
+              path: /healthz
+              port: proxy-metrics
               scheme: HTTPS
             initialDelaySeconds: 5
             timeoutSeconds: 1
@@ -279,12 +282,21 @@ spec:
           volumeMounts:
             - mountPath: /etc/tls/private
               name: proxy-tls
+            - mountPath: /etc/kube-rbac-proxy
+              name: proxy-config
+            {{ if .CustomCABundle }}
+            - mountPath: {{ .CustomCABundleRootMountPath  }}
+              name: ca-bundle
+            {{ end }}
         {{ end }}
       serviceAccountName: {{.APIServerDefaultResourceName}}
       volumes:
         - name: proxy-tls
           secret:
             secretName: ds-pipelines-proxy-tls-{{.Name}}
+        - name: proxy-config
+          configMap:
+            name: kube-rbac-proxy-config-{{.APIServerDefaultResourceName}}
         - name: server-config
           configMap:
             name: {{ .APIServer.CustomServerConfig.Name }}

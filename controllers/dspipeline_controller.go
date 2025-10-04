@@ -371,11 +371,6 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 				dspaStatus.SetScheduledWorkflowStatus, log)
 		}
 
-		err = r.ReconcileUI(dspa, params)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-
 		workflowControllerEnabled, err := r.ReconcileWorkflowController(dspa, params)
 		if err != nil {
 			dspaStatus.SetWorkflowControllerNotReady(err, config.FailingToDeploy)

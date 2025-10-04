@@ -22,8 +22,6 @@ spec:
   objectStorage:
     minio:
       image: minio:test4
-  mlpipelineUI:
-    image: frontend:test4
 ```
 </details>
 
@@ -87,7 +85,6 @@ Images:
   ScheduledWorkflow: scheduledworkflow:test4
   Cache: ubi-minimal:test4
   MoveResultsImage: busybox:test4
-  MlPipelineUI: frontend:test4
   MariaDB: mariadb:test4
   Minio: minio:test4
 ```

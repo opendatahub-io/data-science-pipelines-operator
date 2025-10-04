@@ -11,10 +11,10 @@ metadata:
 spec:
   ports:
     {{ if .APIServer.EnableRoute }}
-    - name: oauth
+    - name: proxy
       port: 8443
       protocol: TCP
-      targetPort: oauth
+      targetPort: proxy
     {{ end }}
     - name: http
       port: 8888

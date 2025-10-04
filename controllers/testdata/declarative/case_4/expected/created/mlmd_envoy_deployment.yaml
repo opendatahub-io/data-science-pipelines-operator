@@ -63,53 +63,51 @@ spec:
             - mountPath: /etc/envoy.yaml
               name: envoy-config
               subPath: envoy.yaml
-        - name: oauth-proxy
+        - name: kube-rbac-proxy
+          image: kube-rbac-proxy:test4
           args:
-            - --https-address=:8443
-            - --provider=openshift
-            - --openshift-service-account=ds-pipeline-metadata-envoy-testdsp4
-            - --upstream=http://localhost:9090
-            - --tls-cert=/etc/tls/private/tls.crt
-            - --tls-key=/etc/tls/private/tls.key
-            - --cookie-secret=SECRET
-            - '--openshift-delegate-urls={"/": {"group":"route.openshift.io","resource":"routes","verb":"get","name":"ds-pipeline-metadata-envoy-testdsp4","namespace":"default"}}'
-            - '--openshift-sar={"namespace":"default","resource":"routes","resourceName":"ds-pipeline-metadata-envoy-testdsp4","verb":"get","resourceAPIGroup":"route.openshift.io"}'
-            - --skip-auth-regex='(^/metrics|^/apis/v1beta1/healthz)'
-          image: oauth-proxy:test4
+            - --secure-listen-address=0.0.0.0:8443
+            - --proxy-endpoints-port=8444
+            - --upstream=http://127.0.0.1:9090
+            - --config-file=/etc/kube-rbac-proxy/config-file.yaml
+            - --tls-cert-file=/etc/tls/private/tls.crt
+            - --tls-private-key-file=/etc/tls/private/tls.key
+            - --ignore-paths=/healthz,/apis/v1beta1/healthz,/metrics
           ports:
             - containerPort: 8443
-              name: oauth2-proxy
+              name: proxy
+              protocol: TCP
+            - containerPort: 8444
+              name: proxy-metrics
               protocol: TCP
           livenessProbe:
             httpGet:
-              path: /oauth/healthz
-              port: oauth2-proxy
+              path: /healthz
+              port: proxy-metrics
               scheme: HTTPS
             initialDelaySeconds: 30
-            timeoutSeconds: 1
             periodSeconds: 5
-            successThreshold: 1
-            failureThreshold: 3
+            timeoutSeconds: 1
           readinessProbe:
             httpGet:
-              path: /oauth/healthz
-              port: oauth2-proxy
+              path: /healthz
+              port: proxy-metrics
               scheme: HTTPS
             initialDelaySeconds: 5
-            timeoutSeconds: 1
             periodSeconds: 5
-            successThreshold: 1
-            failureThreshold: 3
+            timeoutSeconds: 1
           resources:
-            limits:
+            requests:
               cpu: 100m
               memory: 256Mi
-            requests:
+            limits:
               cpu: 100m
               memory: 256Mi
           volumeMounts:
             - mountPath: /etc/tls/private
               name: proxy-tls
+            - mountPath: /etc/kube-rbac-proxy
+              name: proxy-config
       serviceAccountName: ds-pipeline-metadata-envoy-testdsp4
       volumes:
         - name: envoy-config
@@ -123,4 +121,8 @@ spec:
         - name: proxy-tls-upstream
           configMap:
             name: dsp-trusted-ca-testdsp4
+            defaultMode: 420
+        - name: proxy-config
+          configMap:
+            name: kube-rbac-proxy-metadata-config-testdsp4
             defaultMode: 420

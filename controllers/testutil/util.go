@@ -214,15 +214,11 @@ func GenerateDeclarativeTestCases(t *testing.T) []Case {
 func CreateEmptyDSPA() *dspav1.DataSciencePipelinesApplication {
 	dspa := &dspav1.DataSciencePipelinesApplication{
 		Spec: dspav1.DSPASpec{
-			PodToPodTLS:       boolPtr(false),
-			APIServer:         &dspav1.APIServer{Deploy: false},
-			MLMD:              &dspav1.MLMD{Deploy: true}, // MLMD is required
-			PersistenceAgent:  &dspav1.PersistenceAgent{Deploy: false},
-			ScheduledWorkflow: &dspav1.ScheduledWorkflow{Deploy: false},
-			MlPipelineUI: &dspav1.MlPipelineUI{
-				Deploy: false,
-				Image:  "testimage-MlPipelineUI:test",
-			},
+			PodToPodTLS:        boolPtr(false),
+			APIServer:          &dspav1.APIServer{Deploy: false},
+			MLMD:               &dspav1.MLMD{Deploy: true}, // MLMD is required
+			PersistenceAgent:   &dspav1.PersistenceAgent{Deploy: false},
+			ScheduledWorkflow:  &dspav1.ScheduledWorkflow{Deploy: false},
 			WorkflowController: &dspav1.WorkflowController{Deploy: false},
 			Database:           &dspav1.Database{DisableHealthCheck: false, MariaDB: &dspav1.MariaDB{Deploy: false}},
 			ObjectStorage: &dspav1.ObjectStorage{

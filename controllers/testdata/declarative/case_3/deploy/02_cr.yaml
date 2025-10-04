@@ -33,6 +33,3 @@ spec:
         secretKey: testsecretkey3
         secretName: teststoragesecretname3
       scheme: https
-  mlpipelineUI:
-    deploy: false
-    image: frontend:test3

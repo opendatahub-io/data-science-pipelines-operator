@@ -11,10 +11,10 @@ digests will be used. The following command will generate the `params.env`:
 **Pre-condition**: All DSP/DSPO images should have been build with tag <DSP_TAG>
 ```
 python release.py params --tag v1.2.0 --out_file params.env \
-    --override="IMAGES_OAUTHPROXY=registry.redhat.io/openshift4/ose-oauth-proxy@sha256:ab112105ac37352a2a4916a39d6736f5db6ab4c29bad4467de8d613e80e9bb33"
+    --override="kube-rbac-proxy=registry.redhat.io/openshift4/ose-kube-rbac-proxy-rhel9@<digest>"
 ```
 
-See `--help` for more options like specifying tags for images not tied to DSP (ubi, mariadb, oauth proxy, etc.)
+See `--help` for more options like specifying tags for images not tied to DSP (ubi, mariadb, kube-rbac-proxy, etc.)
 
 ### Compatibility Doc generation
 Before each release, ensure that the [compatibility doc] is upto date. This doc is auto generated, the version compatibility 

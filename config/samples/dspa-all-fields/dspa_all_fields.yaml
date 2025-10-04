@@ -55,18 +55,6 @@ spec:
       limits:
         cpu: 250m
         memory: 250Mi
-  mlpipelineUI:
-    deploy: true
-    image: quay.io/opendatahub/odh-ml-pipelines-frontend-container:beta-ui
-    resources:
-      limits:
-        cpu: 100m
-        memory: 256Mi
-      requests:
-        cpu: 100m
-        memory: 256Mi
-    # requires this configmap to be created beforehandd
-    configMap: ds-pipeline-ui-configmap
   # deploys an optional ML-Metadata Component
   mlmd:
     deploy: true

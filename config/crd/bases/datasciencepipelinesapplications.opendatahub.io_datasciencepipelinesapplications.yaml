@@ -125,8 +125,9 @@ spec:
                     type: boolean
                   enableOauth:
                     default: true
-                    description: 'Create an Openshift Route for this DSP API Server.
-                      Default: true'
+                    description: |-
+                      Create an Openshift Route for this DSP API Server. Note, this doesn't provide OAuth functionality but is
+                      protected by authorization. Default: true
                     type: boolean
                   enableSamplePipeline:
                     default: false
@@ -420,60 +421,6 @@ spec:
                             type: object
                         type: object
                     type: object
-                type: object
-              mlpipelineUI:
-                description: Deploy the KFP UI with DS Pipelines UI. This feature
-                  is unsupported, and primarily used for exploration, testing, and
-                  development purposes.
-                properties:
-                  configMap:
-                    type: string
-                  deploy:
-                    default: true
-                    description: 'Enable DS Pipelines Operator management of KFP UI.
-                      Setting Deploy to false disables operator reconciliation. Default:
-                      true'
-                    type: boolean
-                  image:
-                    description: Specify a custom image for KFP UI pod.
-                    type: string
-                  resources:
-                    description: Specify custom Pod resource requirements for this
-                      component.
-                    properties:
-                      limits:
-                        properties:
-                          cpu:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                            x-kubernetes-int-or-string: true
-                          memory:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                            x-kubernetes-int-or-string: true
-                        type: object
-                      requests:
-                        properties:
-                          cpu:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                            x-kubernetes-int-or-string: true
-                          memory:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                            x-kubernetes-int-or-string: true
-                        type: object
-                    type: object
-                required:
-                - image
                 type: object
               objectStorage:
                 description: ObjectStorage specifies Object Store configurations,

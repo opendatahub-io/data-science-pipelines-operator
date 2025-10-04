@@ -8,7 +8,7 @@ Images:
   ArgoWorkflowController: $(IMAGES_ARGO_WORKFLOWCONTROLLER)
   LauncherImage: $(IMAGES_LAUNCHER)
   DriverImage: $(IMAGES_DRIVER)
-  OAuthProxy: $(IMAGES_OAUTHPROXY)
+  KubeRBACProxy: $(kube-rbac-proxy)
   MariaDB: $(IMAGES_MARIADB)
 ManagedPipelinesMetadata:
   Iris:

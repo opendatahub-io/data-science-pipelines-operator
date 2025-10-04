@@ -27,8 +27,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-const DSPV2VersionString = "v2"
-const DSPVersionk8sLabel = "dsp-version"
+const (
+	DSPV2VersionString = "v2"
+	DSPVersionk8sLabel = "dsp-version"
+)
 
 var SupportedDSPVersions = []string{DSPV2VersionString}
 
@@ -52,8 +54,6 @@ const (
 
 	DefaultSystemSSLCertFile     = "SSL_CERT_FILE"
 	DefaultSystemSSLCertFilePath = "/etc/pki/tls/certs/ca-bundle.crt" // Fedora/RHEL 6
-
-	MLPipelineUIConfigMapPrefix = "ds-pipeline-ui-configmap-"
 
 	CustomServerConfigMapNamePrefix = "ds-pipeline-server-config-"
 	CustomServerConfigMapNameKey    = "config.json"
@@ -99,7 +99,7 @@ const (
 	ArgoExecImagePath               = "Images.ArgoExecImage"
 	ArgoWorkflowControllerImagePath = "Images.ArgoWorkflowController"
 	MariaDBImagePath                = "Images.MariaDB"
-	OAuthProxyImagePath             = "Images.OAuthProxy"
+	KubeRBACProxyImagePath          = "Images.KubeRBACProxy"
 
 	// Other configs
 	ObjStoreConnectionTimeoutConfigName      = "DSPO.HealthCheck.ObjectStore.ConnectionTimeout"
@@ -143,7 +143,7 @@ var requiredFields = []string{
 	PersistenceAgentImagePath,
 	ScheduledWorkflowImagePath,
 	MariaDBImagePath,
-	OAuthProxyImagePath,
+	KubeRBACProxyImagePath,
 }
 
 // DefaultDBConnectionTimeout is the default DB storage healthcheck timeout
@@ -162,8 +162,10 @@ const DefaultPlatformVersion = "v0.0.0"
 
 const DefaultFIPSEnabled = false
 
-const DefaultArgoWorkflowsControllersManagementState = "Managed"
-const DefaultArgoWorkflowsControllers = "{\"managementState\":\"" + DefaultArgoWorkflowsControllersManagementState + "\"}"
+const (
+	DefaultArgoWorkflowsControllersManagementState = "Managed"
+	DefaultArgoWorkflowsControllers                = "{\"managementState\":\"" + DefaultArgoWorkflowsControllersManagementState + "\"}"
+)
 
 func GetConfigRequiredFields() []string {
 	return requiredFields
@@ -177,7 +179,6 @@ var (
 	WorkflowControllerResourceRequirements = createResourceRequirement(resource.MustParse("120m"), resource.MustParse("500Mi"), resource.MustParse("250m"), resource.MustParse("1Gi"))
 	MariaDBResourceRequirements            = createResourceRequirement(resource.MustParse("300m"), resource.MustParse("800Mi"), resource.MustParse("1"), resource.MustParse("1Gi"))
 	MinioResourceRequirements              = createResourceRequirement(resource.MustParse("200m"), resource.MustParse("100Mi"), resource.MustParse("250m"), resource.MustParse("1Gi"))
-	MlPipelineUIResourceRequirements       = createResourceRequirement(resource.MustParse("100m"), resource.MustParse("256Mi"), resource.MustParse("100m"), resource.MustParse("256Mi"))
 	MlmdEnvoyResourceRequirements          = createResourceRequirement(resource.MustParse("100m"), resource.MustParse("256Mi"), resource.MustParse("100m"), resource.MustParse("256Mi"))
 	MlmdGRPCResourceRequirements           = createResourceRequirement(resource.MustParse("100m"), resource.MustParse("256Mi"), resource.MustParse("100m"), resource.MustParse("256Mi"))
 )

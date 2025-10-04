@@ -34,9 +34,6 @@ type DSPASpec struct {
 	// Database specifies database configurations, used for DS Pipelines metadata tracking. Specify either the default MariaDB deployment, or configure your own External SQL DB.
 	// +kubebuilder:default:={mariaDB: {deploy: true}}
 	*Database `json:"database,omitempty"`
-	// Deploy the KFP UI with DS Pipelines UI. This feature is unsupported, and primarily used for exploration, testing, and development purposes.
-	// +kubebuilder:validation:Optional
-	*MlPipelineUI `json:"mlpipelineUI"`
 	// ObjectStorage specifies Object Store configurations, used for DS Pipelines artifact passing and storage. Specify either the your own External Storage (e.g. AWS S3), or use the default Minio deployment (unsupported, primarily for development, and testing) .
 	// +kubebuilder:validation:Required
 	*ObjectStorage `json:"objectStorage"`
@@ -81,7 +78,8 @@ type APIServer struct {
 	Deploy bool `json:"deploy"`
 	// Specify a custom image for DSP API Server.
 	Image string `json:"image,omitempty"`
-	// Create an Openshift Route for this DSP API Server. Default: true
+	// Create an Openshift Route for this DSP API Server. Note, this doesn't provide OAuth functionality but is
+	// protected by authorization. Default: true
 	// +kubebuilder:default:=true
 	// +kubebuilder:validation:Optional
 	EnableRoute bool `json:"enableOauth"`
@@ -194,19 +192,6 @@ type ScheduledWorkflow struct {
 	CronScheduleTimezone string `json:"cronScheduleTimezone,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
-}
-
-type MlPipelineUI struct {
-	// Enable DS Pipelines Operator management of KFP UI. Setting Deploy to false disables operator reconciliation. Default: true
-	// +kubebuilder:default:=true
-	// +kubebuilder:validation:Optional
-	Deploy        bool   `json:"deploy"`
-	ConfigMapName string `json:"configMap,omitempty"`
-	// Specify custom Pod resource requirements for this component.
-	Resources *ResourceRequirements `json:"resources,omitempty"`
-	// Specify a custom image for KFP UI pod.
-	// +kubebuilder:validation:Required
-	Image string `json:"image"`
 }
 
 type Database struct {

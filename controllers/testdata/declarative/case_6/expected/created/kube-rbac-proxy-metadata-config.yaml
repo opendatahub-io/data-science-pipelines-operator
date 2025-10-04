@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kube-rbac-proxy-metadata-config-testdsp6
+  namespace: default
+  labels:
+    app: ds-pipeline-metadata-envoy-testdsp6
+    component: data-science-pipelines
+data:
+  config-file.yaml: |-
+    authorization:
+      resourceAttributes:
+        namespace: default
+        apiGroup: datasciencepipelinesapplications.opendatahub.io
+        resource: datasciencepipelinesapplications
+        subresource: api
+        name: testdsp6

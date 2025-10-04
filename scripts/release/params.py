@@ -32,7 +32,7 @@ TAGGED_REPOS = {
 STATIC_REPOS = {
     "IMAGES_MLMDENVOY": "registry.redhat.io/openshift-service-mesh/proxyv2-rhel8@sha256:b30d60cd458133430d4c92bf84911e03cecd02f60e88a58d1c6c003543cf833a",
     "IMAGES_MARIADB": "registry.redhat.io/rhel8/mariadb-103@sha256:f0ee0d27bb784e289f7d88cc8ee0e085ca70e88a5d126562105542f259a1ac01",
-    "IMAGES_OAUTHPROXY": "registry.redhat.io/openshift4/ose-oauth-proxy@sha256:8ce44de8c683f198bf24ba36cd17e89708153d11f5b42c0a27e77f8fdb233551",
+    "kube-rbac-proxy": "registry.redhat.io/openshift4/ose-kube-rbac-proxy-rhel9@sha256:784c4667a867abdbec6d31a4bbde52676a0f37f8e448eaae37568a46fcdeace7",
 }
 
 OTHER_OPTIONS = {
@@ -101,8 +101,8 @@ def generate_params(args):
             entry = override.split('=')
             if len(entry) != 2:
                 print("--override values must be of the form var=digest,\n"
-                      "e.g: IMAGES_OAUTHPROXY=registry.redhat.io/openshift4/ose-oauth-proxy"
-                      "@sha256:ab112105ac37352a2a4916a39d6736f5db6ab4c29bad4467de8d613e80e9bb33", file=sys.stderr)
+                      "e.g: kube-rbac-proxy=registry.redhat.io/openshift4/ose-kube-rbac-proxy-rhel9"
+                      "@sha256:784c4667a867abdbec6d31a4bbde52676a0f37f8e448eaae37568a46fcdeace7", file=sys.stderr)
                 exit(1)
             overrides[entry[0]] = entry[1]
 

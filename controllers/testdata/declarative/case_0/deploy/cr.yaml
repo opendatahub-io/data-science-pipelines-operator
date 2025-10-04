@@ -11,7 +11,5 @@ spec:
   objectStorage:
     minio:
       image: minio:test0
-  mlpipelineUI:
-    image: frontend:test0
   mlmd:
     deploy: true

@@ -12,9 +12,6 @@ spec:
   database:
     mariaDB:
       deploy: true
-  mlpipelineUI:
-    deploy: true
-    image: frontend:test6
   mlmd:
     deploy: true
   apiServer:

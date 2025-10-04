@@ -14,7 +14,7 @@ spec:
     name: ds-pipeline-metadata-envoy-{{.Name}}
     weight: 100
   port:
-    targetPort: oauth2-proxy
+    targetPort: proxy
   tls:
     termination: Reencrypt
     insecureEdgeTerminationPolicy: Redirect

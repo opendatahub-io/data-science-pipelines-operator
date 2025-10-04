@@ -30,7 +30,5 @@ spec:
     disableHealthCheck: true
     minio:
       image: quay.io/opendatahub/minio:RELEASE.2019-08-14T20-37-41Z-license-compliance
-  mlpipelineUI:
-    image: gcr.io/ml-pipeline/frontend:2.0.2
   workflowController:
     image: gcr.io/ml-pipeline/workflow-controller:v3.3.10-license-compliance
