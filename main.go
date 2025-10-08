@@ -138,6 +138,12 @@ func main() {
 		glog.Fatal(err)
 	}
 
+	// Lease is valid for 60 seconds, but renew it after 15 seconds and then give up after 50 seconds.
+	// This will lessen the load on the Kubernetes API server and help reduce the number of restarts on the pod.
+	leaseDuration := 60 * time.Second
+	retryPeriod := 15 * time.Second
+	renewDeadline := 50 * time.Second
+
 	webhookConfigName := "pipelineversions.pipelines.kubeflow.org"
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
@@ -147,6 +153,9 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "f9eb95d5.opendatahub.io",
+		LeaseDuration:          &leaseDuration,
+		RenewDeadline:          &renewDeadline,
+		RetryPeriod:            &retryPeriod,
 		Cache: cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
 				// Limit the watches to only the pipelineversions.pipelines.kubeflow.org webhooks.
