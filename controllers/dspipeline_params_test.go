@@ -25,6 +25,7 @@ import (
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -283,4 +284,35 @@ func TestExtractParams_WithCustomKfpLauncherConfigMap(t *testing.T) {
 
 	cmDataExpectedJson, err := json.Marshal(cmDataExpected)
 	require.Equal(t, string(cmDataExpectedJson), params.CustomKfpLauncherConfigMapData)
+}
+
+func TestExtractParams_WithWorkspace(t *testing.T) {
+	ctx, params, client := CreateNewTestObjects()
+
+	storageClass := "standard-csi"
+	block := corev1.PersistentVolumeBlock
+
+	workspace := &dspav1.APIServerWorkspace{
+		VolumeClaimTemplateSpec: corev1.PersistentVolumeClaimSpec{
+			AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+			VolumeMode:       &block,
+			StorageClassName: &storageClass,
+		},
+	}
+
+	dspa := testutil.CreateEmptyDSPA()
+	dspa.Spec.APIServer = &dspav1.APIServer{Deploy: true, Workspace: workspace}
+
+	err := params.ExtractParams(ctx, dspa, client.Client, client.Log)
+	require.NoError(t, err)
+	require.NotEmpty(t, params.APIServerWorkspaceJSON)
+
+	unmarshalled := map[string]corev1.PersistentVolumeClaimSpec{"VolumeClaimTemplateSpec": {}}
+	err = json.Unmarshal([]byte(params.APIServerWorkspaceJSON), &unmarshalled)
+
+	require.NoError(t, err)
+	require.Equal(t, workspace.VolumeClaimTemplateSpec.AccessModes, unmarshalled["VolumeClaimTemplateSpec"].AccessModes)
+	require.NotNil(t, unmarshalled["VolumeClaimTemplateSpec"].VolumeMode)
+	require.Equal(t, *workspace.VolumeClaimTemplateSpec.VolumeMode, *unmarshalled["VolumeClaimTemplateSpec"].VolumeMode)
+	require.Equal(t, *workspace.VolumeClaimTemplateSpec.StorageClassName, *unmarshalled["VolumeClaimTemplateSpec"].StorageClassName)
 }
