@@ -17,6 +17,7 @@ limitations under the License.
 package v1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -150,6 +151,22 @@ type APIServer struct {
 	// Default: true
 	// +kubebuilder:default:=true
 	CacheEnabled *bool `json:"cacheEnabled,omitempty"`
+
+	// Workspace config defines the default pipeline run workspace (PVC) specification applied to runs.
+	// The workspace provides ephemeral shared storage that lives for the duration of a pipeline run so
+	// components can exchange large intermediate data without repeatedly uploading to object storage.
+	// The user specifies the workspace size with:
+	// @dsl.pipeline(pipeline_config=dsl.PipelineConfig(workspace=dsl.WorkspaceConfig(size="25Mi"))).
+	// +kubebuilder:validation:Optional
+	Workspace *APIServerWorkspace `json:"workspace,omitempty"`
+}
+
+type APIServerWorkspace struct {
+	// VolumeClaimTemplateSpec defaults workspace PVC for pipeline runs. accessModes and storageClassName must be provided.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:XValidation:rule="has(self.accessModes) && size(self.accessModes) > 0",message="spec.apiServer.workspace.volumeClaimTemplateSpec.accessModes must be provided"
+	// +kubebuilder:validation:XValidation:rule="has(self.storageClassName) && self.storageClassName != \"\"",message="spec.apiServer.workspace.volumeClaimTemplateSpec.storageClassName must be provided"
+	VolumeClaimTemplateSpec corev1.PersistentVolumeClaimSpec `json:"volumeClaimTemplateSpec"`
 }
 
 type CABundle struct {

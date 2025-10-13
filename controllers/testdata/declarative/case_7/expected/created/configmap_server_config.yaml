@@ -1,17 +1,17 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: ds-pipeline-server-config-{{.Name}}
-  namespace: {{.Namespace}}
   labels:
-    app: {{.APIServerDefaultResourceName}}
+    app: ds-pipeline-testdspa
     component: data-science-pipelines
+  name: ds-pipeline-server-config-testdspa
+  namespace: testnamespace
 data:
-  config.json: |
+  config.json: |-
     {
       "DBConfig": {
         "MySQLConfig": {
-          "ExtraParams": {{ .DBConnection.ExtraParams }},
+          "ExtraParams": {"tls":"false"},
           "GroupConcatMaxLen": "4194304"
          },
         "PostgreSQLConfig": {},
@@ -23,6 +23,6 @@ data:
       "DBDriverName": "mysql",
       "ARCHIVE_CONFIG_LOG_FILE_NAME": "main.log",
       "ARCHIVE_CONFIG_LOG_PATH_PREFIX": "/artifacts",
-      "InitConnectionTimeout": "6m"{{ if .APIServerWorkspaceJSON }},
-      "Workspace": {{ .APIServerWorkspaceJSON }}{{ end }}
+      "InitConnectionTimeout": "6m",
+      "Workspace": {"VolumeClaimTemplateSpec":{"accessModes":["ReadWriteOnce"],"resources":{},"storageClassName":"standard-csi"}}
     }
