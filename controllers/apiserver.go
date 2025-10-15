@@ -116,8 +116,13 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1.Dat
 	}
 	params.SampleConfigJSON = sampleConfigJSON
 
+	combinedConfigHashInput := sampleConfigJSON
+	if params.APIServerWorkspaceJSON != "" {
+		combinedConfigHashInput = sampleConfigJSON + params.APIServerWorkspaceJSON
+	}
+
 	// Generate configuration hash for rebooting on sample changes
-	params.APIServerConfigHash = fmt.Sprintf("%x", sha256.Sum256([]byte(sampleConfigJSON)))
+	params.APIServerConfigHash = fmt.Sprintf("%x", sha256.Sum256([]byte(combinedConfigHashInput)))
 
 	log.Info("Applying APIServer Resources")
 	err = r.ApplyDir(dsp, params, apiServerTemplatesDir)

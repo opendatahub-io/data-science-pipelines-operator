@@ -74,6 +74,7 @@ type DSPAParams struct {
 	WebhookName                           string
 	WorkflowController                    *dspa.WorkflowController
 	CustomKfpLauncherConfigMapData        string
+	APIServerWorkspaceJSON                string
 	WebhookAnnotations                    map[string]string
 	DBConnection
 	ObjectStorageConnection
@@ -799,6 +800,17 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 
 		if dsp.Spec.APIServer.CacheEnabled != nil {
 			p.APIServer.CacheEnabled = dsp.Spec.APIServer.CacheEnabled
+		}
+
+		if p.APIServer.Workspace != nil {
+			workspaceConfig := map[string]interface{}{
+				"VolumeClaimTemplateSpec": p.APIServer.Workspace.VolumeClaimTemplateSpec,
+			}
+			workspaceJSON, err := json.Marshal(workspaceConfig)
+			if err != nil {
+				return fmt.Errorf("unable to marshal workspace configuration: %w", err)
+			}
+			p.APIServerWorkspaceJSON = string(workspaceJSON)
 		}
 	}
 
