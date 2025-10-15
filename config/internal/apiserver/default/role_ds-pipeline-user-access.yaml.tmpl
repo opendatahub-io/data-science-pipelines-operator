@@ -8,8 +8,14 @@ metadata:
     component: data-science-pipelines
 rules:
 - apiGroups:
-  - route.openshift.io
+  - datasciencepipelinesapplications.opendatahub.io
   resources:
-  - routes
+  - datasciencepipelinesapplications/api
+  resourceNames:
+  - {{.Name}}
   verbs:
   - get
+  - create
+  - update
+  - patch
+  - delete
