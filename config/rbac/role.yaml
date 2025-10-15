@@ -142,6 +142,7 @@ rules:
   - datasciencepipelinesapplications.opendatahub.io
   resources:
   - datasciencepipelinesapplications
+  - datasciencepipelinesapplications/api
   verbs:
   - create
   - delete
