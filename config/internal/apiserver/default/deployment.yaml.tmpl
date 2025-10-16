@@ -94,9 +94,9 @@ spec:
             - name: OBJECTSTORECONFIG_PIPELINEPATH
               value: "{{.ObjectStorageConnection.BasePath}}"
             {{ end }}
-            - name: MINIO_SERVICE_SERVICE_HOST
+            - name: OBJECTSTORECONFIG_HOST
               value: "{{.ObjectStorageConnection.Host}}"
-            - name: MINIO_SERVICE_SERVICE_PORT
+            - name: OBJECTSTORECONFIG_PORT
               value: "{{.ObjectStorageConnection.Port}}"
             - name: V2_LAUNCHER_IMAGE
               value: "{{.APIServer.ArgoLauncherImage}}"
