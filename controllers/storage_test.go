@@ -271,7 +271,7 @@ func TestDefaultDeployBehaviorStorage(t *testing.T) {
 
 func TestIsDatabaseAccessibleTrue(t *testing.T) {
 	// Override the live connection function with a mock version
-	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts [][]byte, objStoreConnectionTimeout time.Duration) (bool, error) {
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts [][]byte, proxyConfig *dspav1.ProxyConfig, objStoreConnectionTimeout time.Duration) (bool, error) {
 		return true, nil
 	}
 
@@ -309,7 +309,7 @@ func TestIsDatabaseAccessibleTrue(t *testing.T) {
 
 func TestIsDatabaseNotAccessibleFalse(t *testing.T) {
 	// Override the live connection function with a mock version
-	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts [][]byte, objStoreConnectionTimeout time.Duration) (bool, error) {
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts [][]byte, proxyConfig *dspav1.ProxyConfig, objStoreConnectionTimeout time.Duration) (bool, error) {
 		return false, errors.New("Object Store is not Accessible")
 	}
 
@@ -347,7 +347,7 @@ func TestIsDatabaseNotAccessibleFalse(t *testing.T) {
 
 func TestDisabledHealthCheckReturnsTrue(t *testing.T) {
 	// Override the live connection function with a mock version that would always return false if called
-	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts [][]byte, objStoreConnectionTimeout time.Duration) (bool, error) {
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts [][]byte, proxyConfig *dspav1.ProxyConfig, objStoreConnectionTimeout time.Duration) (bool, error) {
 		return false, errors.New("Object Store is not Accessible")
 	}
 
@@ -387,7 +387,7 @@ func TestDisabledHealthCheckReturnsTrue(t *testing.T) {
 
 func TestIsDatabaseAccessibleBadAccessKey(t *testing.T) {
 	// Override the live connection function with a mock version
-	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts [][]byte, objStoreConnectionTimeout time.Duration) (bool, error) {
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts [][]byte, proxyConfig *dspav1.ProxyConfig, objStoreConnectionTimeout time.Duration) (bool, error) {
 		return true, nil
 	}
 
@@ -425,7 +425,7 @@ func TestIsDatabaseAccessibleBadAccessKey(t *testing.T) {
 
 func TestIsDatabaseAccessibleBadSecretKey(t *testing.T) {
 	// Override the live connection function with a mock version
-	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts [][]byte, objStoreConnectionTimeout time.Duration) (bool, error) {
+	ConnectAndQueryObjStore = func(ctx context.Context, log logr.Logger, endpoint, bucket string, accesskey, secretkey []byte, secure bool, pemCerts [][]byte, proxyConfig *dspav1.ProxyConfig, objStoreConnectionTimeout time.Duration) (bool, error) {
 		return true, nil
 	}
 

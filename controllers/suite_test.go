@@ -20,6 +20,11 @@ package controllers
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+
 	"github.com/go-logr/logr"
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	buildv1 "github.com/openshift/api/build/v1"
@@ -31,13 +36,9 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	"os"
-	"path/filepath"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"testing"
-	"time"
 
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -77,6 +78,7 @@ func (s *ControllerSuite) SetupTest() {
 		port, username, password, dbname, tls string,
 		dbConnectionTimeout time.Duration,
 		pemCerts [][]byte,
+		proxyConfig *dspav1.ProxyConfig,
 		extraParams map[string]string) (bool, error) {
 		return true, nil
 	}
@@ -87,6 +89,7 @@ func (s *ControllerSuite) SetupTest() {
 		accesskey, secretkey []byte,
 		secure bool,
 		pemCerts [][]byte,
+		proxyConfig *dspav1.ProxyConfig,
 		objStoreConnectionTimeout time.Duration) (bool, error) {
 		return true, nil
 	}

@@ -46,6 +46,20 @@ spec:
         - name: ARGO_EXEC_PATH
           value: "/bin/argoexec-fips"
         {{ end }}
+        {{ if .ProxyConfig }}
+        {{ if .ProxyConfig.HTTPProxy }}
+        - name: HTTP_PROXY
+          value: "{{.ProxyConfig.HTTPProxy}}"
+        {{ end }}
+        {{ if .ProxyConfig.HTTPSProxy }}
+        - name: HTTPS_PROXY
+          value: "{{.ProxyConfig.HTTPSProxy}}"
+        {{ end }}
+        {{ if and .ProxyConfig.NoProxy (or .ProxyConfig.HTTPProxy .ProxyConfig.HTTPSProxy) }}
+        - name: NO_PROXY
+          value: "{{.ProxyConfig.NoProxy}}"
+        {{ end }}
+        {{ end }}
         image: {{ .WorkflowController.Image }}
         livenessProbe:
           failureThreshold: 3

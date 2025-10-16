@@ -1,0 +1,224 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ds-pipeline-testdsp8
+  namespace: default
+  labels:
+    dsp-version: v2
+    app: ds-pipeline-testdsp8
+    component: data-science-pipelines
+    dspa: testdsp8
+spec:
+  selector:
+    matchLabels:
+      app: ds-pipeline-testdsp8
+      component: data-science-pipelines
+      dspa: testdsp8
+  template:
+    metadata:
+      annotations:
+        configHash: 9a8b56f5098a0d91d9db76d9c8b48e9872c0dbe71bcdc7f08f2c05bfe26c787f
+      labels:
+        dsp-version: v2
+        app: ds-pipeline-testdsp8
+        component: data-science-pipelines
+        dspa: testdsp8
+    spec:
+      containers:
+        - env:
+            - name: POD_NAMESPACE
+              value: "default"
+            - name: DBCONFIG_USER
+              value: "mlpipeline"
+            - name: DBCONFIG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: "password"
+                  name: "ds-pipeline-db-testdsp8"
+            - name: DBCONFIG_DBNAME
+              value: "mlpipeline"
+            - name: DBCONFIG_HOST
+              value: "mariadb-testdsp8.default.svc.cluster.local"
+            - name: DBCONFIG_PORT
+              value: "3306"
+            - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_HOST
+              value: "ds-pipeline-visualizationserver"
+            - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
+              value: "8888"
+            - name: OBJECTSTORECONFIG_CREDENTIALSSECRET
+              value: "ds-pipeline-s3-testdsp8"
+            - name: OBJECTSTORECONFIG_CREDENTIALSACCESSKEYKEY
+              value: "accesskey"
+            - name: OBJECTSTORECONFIG_CREDENTIALSSECRETKEYKEY
+              value: "secretkey"
+            - name: DEFAULTPIPELINERUNNERSERVICEACCOUNT
+              value: "pipeline-runner-testdsp8"
+            - name: OBJECTSTORECONFIG_BUCKETNAME
+              value: "mlpipeline"
+            - name: OBJECTSTORECONFIG_ACCESSKEY
+              valueFrom:
+                secretKeyRef:
+                  key: "accesskey"
+                  name: "ds-pipeline-s3-testdsp8"
+            - name: OBJECTSTORECONFIG_SECRETACCESSKEY
+              valueFrom:
+                secretKeyRef:
+                  key: "secretkey"
+                  name: "ds-pipeline-s3-testdsp8"
+            - name: OBJECTSTORECONFIG_SECURE
+              value: "false"
+            - name: OBJECTSTORECONFIG_HOST
+              value: "minio-testdsp8.default.svc.cluster.local"
+            - name: OBJECTSTORECONFIG_PORT
+              value: "9000"
+            - name: V2_LAUNCHER_IMAGE
+              value: "launcherimage:test8"
+            - name: V2_DRIVER_IMAGE
+              value: "driverimage:test8"
+            - name: METADATA_GRPC_SERVICE_SERVICE_HOST
+              value: "ds-pipeline-metadata-grpc-testdsp8.default.svc.cluster.local"
+            - name: METADATA_GRPC_SERVICE_SERVICE_PORT
+              value: "8080"
+            - name: ML_PIPELINE_SERVICE_HOST
+              value: ds-pipeline-testdsp8.default.svc.cluster.local
+            - name: ML_PIPELINE_SERVICE_PORT_GRPC
+              value: "8887"
+            - name: SIGNED_URL_EXPIRY_TIME_SECONDS
+              value: "60"
+            - name: EXECUTIONTYPE
+              value: Workflow
+            - name: DB_DRIVER_NAME
+              value: mysql
+            - name: DBCONFIG_MYSQLCONFIG_USER
+              value: mlpipeline
+            - name: DBCONFIG_MYSQLCONFIG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: "password"
+                  name: "ds-pipeline-db-testdsp8"
+            - name: DBCONFIG_MYSQLCONFIG_DBNAME
+              value: "mlpipeline"
+            - name: DBCONFIG_MYSQLCONFIG_HOST
+              value: "mariadb-testdsp8.default.svc.cluster.local"
+            - name: DBCONFIG_MYSQLCONFIG_PORT
+              value: "3306"
+            - name: CACHEENABLED
+              value: "true"
+            - name: HTTP_PROXY
+              value: "http://proxy.example:8080"
+            - name: HTTPS_PROXY
+              value: "http://proxy.example:8080"
+            - name: NO_PROXY
+              value: "localhost,127.0.0.1,.svc.cluster.local,kubernetes.default.svc"
+          image: api-server:test8
+          # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
+          name: ds-pipeline-api-server
+          command: ['/bin/apiserver']
+          args:
+            - --config=/config
+            - -logtostderr=true
+            - --sampleconfig=/config/sample_config.json
+          ports:
+            - containerPort: 8888
+              name: http
+              protocol: TCP
+            - containerPort: 8887
+              name: grpc
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /apis/v1beta1/healthz
+              port: http
+              scheme: HTTPS
+          readinessProbe:
+            httpGet:
+              path: /apis/v1beta1/healthz
+              port: http
+              scheme: HTTPS
+          resources:
+            requests:
+              cpu: 250m
+              memory: 500Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          volumeMounts:
+            - name: server-config
+              mountPath: /config/config.json
+              subPath: config.json
+            - mountPath: /config/sample_config.json
+              name: sample-config
+              subPath: sample_config.json
+            - mountPath: /samples/
+              name: sample-pipeline
+        - name: kube-rbac-proxy
+          args:
+            - --secure-listen-address=0.0.0.0:8443
+            - --proxy-endpoints-port=8444
+            - --upstream=http://localhost:8888
+            - --tls-cert-file=/etc/tls/private/tls.crt
+            - --tls-private-key-file=/etc/tls/private/tls.key
+            - --config-file=/etc/kube-rbac-proxy/config-file.yaml
+            - --ignore-paths=/healthz,/apis/v1beta1/healthz,/metrics
+          image: kube-rbac-proxy:test8
+          ports:
+            - containerPort: 8443
+              name: proxy
+              protocol: TCP
+            - containerPort: 8444
+              name: proxy-metrics
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: proxy-metrics
+              scheme: HTTPS
+            initialDelaySeconds: 30
+            timeoutSeconds: 1
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: proxy-metrics
+              scheme: HTTPS
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          resources:
+            limits:
+              cpu: 100m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          volumeMounts:
+            - mountPath: /etc/tls/private
+              name: proxy-tls
+            - mountPath: /etc/kube-rbac-proxy
+              name: proxy-config
+      volumes:
+        - name: proxy-tls
+          secret:
+            secretName: ds-pipelines-proxy-tls-testdsp8
+            defaultMode: 420
+        - name: proxy-config
+          configMap:
+            defaultMode: 420
+            name: kube-rbac-proxy-config-ds-pipeline-testdsp8
+        - name: server-config
+          configMap:
+            name: ds-pipeline-server-config-testdsp8
+            defaultMode: 420
+        - name: sample-config
+          configMap:
+            name: sample-config-testdsp8
+            defaultMode: 420
+        - name: sample-pipeline
+          configMap:
+            name: sample-pipeline-testdsp8
+            defaultMode: 420
+      serviceAccountName: ds-pipeline-testdsp8
