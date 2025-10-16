@@ -861,6 +861,22 @@ spec:
                   TLS communication between DSPA components (pods). Defaults to "true"
                   to enable TLS between all pods. Only supported in DSP V2 on OpenShift.
                 type: boolean
+              proxy:
+                description: Proxy configuration for all DSPA components to enable
+                  usage in environments requiring proxy access
+                properties:
+                  httpProxy:
+                    description: HTTP proxy URL for outbound HTTP connections
+                    type: string
+                  httpsProxy:
+                    description: HTTPS proxy URL for outbound HTTPS connections
+                    type: string
+                  noProxy:
+                    description: |-
+                      Comma-separated list of hostnames, IP addresses, or IP ranges
+                      that should not use the proxy. Use "*" to match any hostname (e.g. "localhost,127.0.0.1,10.0.0.0/8,*.example.com")
+                    type: string
+                type: object
               scheduledWorkflow:
                 default:
                   deploy: true

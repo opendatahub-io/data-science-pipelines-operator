@@ -18,11 +18,13 @@ package controllers
 
 import (
 	"context"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"time"
 
@@ -32,6 +34,7 @@ import (
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/util"
+	"golang.org/x/net/http/httpproxy"
 )
 
 const storageSecret = "minio/generated-secret/secret.yaml.tmpl"
@@ -98,6 +101,58 @@ func getHttpsTransportWithCACert(log logr.Logger, pemCerts [][]byte) (*http.Tran
 	return transport, nil
 }
 
+func getTransportWithProxyAndCACert(log logr.Logger, pemCerts [][]byte, proxyConfig *dspav1.ProxyConfig, secure bool) (*http.Transport, error) {
+	var transport *http.Transport
+	var err error
+
+	if secure {
+		transport, err = getHttpsTransportWithCACert(log, pemCerts)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		transport, err = minio.DefaultTransport(false)
+		if err != nil {
+			return nil, fmt.Errorf("error creating default transport : %s", err)
+		}
+
+		if len(pemCerts) != 0 {
+			if transport.TLSClientConfig == nil {
+				transport.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS12}
+			}
+			if transport.TLSClientConfig.RootCAs == nil {
+				pool, err := x509.SystemCertPool()
+				if err != nil {
+					log.Error(err, "error initializing TLS Pool: %s")
+					transport.TLSClientConfig.RootCAs = x509.NewCertPool()
+				} else {
+					transport.TLSClientConfig.RootCAs = pool
+				}
+			}
+			for _, pem := range pemCerts {
+				if ok := transport.TLSClientConfig.RootCAs.AppendCertsFromPEM(pem); !ok {
+					return nil, fmt.Errorf("error parsing CA Certificate, ensure provided certs are in valid PEM format")
+				}
+			}
+		}
+	}
+
+	// Configure proxy settings if provided
+	if proxyConfig != nil {
+		cfg := httpproxy.Config{
+			HTTPProxy:  proxyConfig.HTTPProxy,
+			HTTPSProxy: proxyConfig.HTTPSProxy,
+			NoProxy:    proxyConfig.NoProxy,
+		}
+		proxyFn := cfg.ProxyFunc()
+		transport.Proxy = func(req *http.Request) (*url.URL, error) {
+			return proxyFn(req.URL)
+		}
+	}
+
+	return transport, nil
+}
+
 var ConnectAndQueryObjStore = func(
 	ctx context.Context,
 	log logr.Logger,
@@ -105,6 +160,7 @@ var ConnectAndQueryObjStore = func(
 	accesskey, secretkey []byte,
 	secure bool,
 	pemCerts [][]byte,
+	proxyConfig *dspav1.ProxyConfig,
 	objStoreConnectionTimeout time.Duration) (bool, error) {
 	cred := createCredentialProvidersChain(string(accesskey), string(secretkey))
 
@@ -113,10 +169,10 @@ var ConnectAndQueryObjStore = func(
 		Secure: secure,
 	}
 
-	if len(pemCerts) != 0 {
-		tr, err := getHttpsTransportWithCACert(log, pemCerts)
+	if len(pemCerts) != 0 || proxyConfig != nil {
+		tr, err := getTransportWithProxyAndCACert(log, pemCerts, proxyConfig, secure)
 		if err != nil {
-			errorMessage := "Encountered error when processing custom ca bundle."
+			errorMessage := "Encountered error when processing custom ca bundle or proxy configuration."
 			log.Error(err, errorMessage)
 			return false, errors.New(errorMessage)
 		}
@@ -209,7 +265,7 @@ func (r *DSPAReconciler) isObjectStorageAccessible(ctx context.Context, dsp *dsp
 	log.V(1).Info(fmt.Sprintf("Object Store connection timeout: %s", objStoreConnectionTimeout))
 
 	verified, err := ConnectAndQueryObjStore(ctx, log, endpoint, params.ObjectStorageConnection.Bucket, accesskey, secretkey,
-		*params.ObjectStorageConnection.Secure, params.APICustomPemCerts, objStoreConnectionTimeout)
+		*params.ObjectStorageConnection.Secure, params.APICustomPemCerts, params.ProxyConfig, objStoreConnectionTimeout)
 
 	if err != nil {
 		log.Info("Object Storage Health Check Failed")

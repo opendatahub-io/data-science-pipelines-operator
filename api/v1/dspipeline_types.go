@@ -51,6 +51,10 @@ type DSPASpec struct {
 	// WorkflowController is an argo-specific component that manages a DSPA's Workflow objects and handles the orchestration of them with the central Argo server
 	// +kubebuilder:validation:Optional
 	*WorkflowController `json:"workflowController,omitempty"`
+
+	// Proxy configuration for all DSPA components to enable usage in environments requiring proxy access
+	// +kubebuilder:validation:Optional
+	Proxy *ProxyConfig `json:"proxy,omitempty"`
 }
 
 // +kubebuilder:validation:Pattern=`^(Managed|Removed)$`
@@ -391,6 +395,19 @@ type SecretKeyValue struct {
 	// +kubebuilder:validation:Required
 	Name string `json:"name"`
 	Key  string `json:"key"`
+}
+
+type ProxyConfig struct {
+	// HTTP proxy URL for outbound HTTP connections
+	// +kubebuilder:validation:Optional
+	HTTPProxy string `json:"httpProxy,omitempty"`
+	// HTTPS proxy URL for outbound HTTPS connections
+	// +kubebuilder:validation:Optional
+	HTTPSProxy string `json:"httpsProxy,omitempty"`
+	// Comma-separated list of hostnames, IP addresses, or IP ranges
+	// that should not use the proxy. Use "*" to match any hostname (e.g. "localhost,127.0.0.1,10.0.0.0/8,*.example.com")
+	// +kubebuilder:validation:Optional
+	NoProxy string `json:"noProxy,omitempty"`
 }
 
 type DSPAStatus struct {

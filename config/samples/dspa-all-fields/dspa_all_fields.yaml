@@ -156,6 +156,14 @@ spec:
         secretName: somesecret-db-sample
         accessKey: somekey
         secretKey: somekey
+  # Proxy configuration for corporate environments requiring proxy access
+  proxy:
+    # HTTP proxy URL for outbound HTTP connections
+    httpProxy: "http://squid.dspa-proxy.svc.cluster.local:3128"
+    # HTTPS proxy URL for outbound HTTPS connections
+    httpsProxy: "http://squid.dspa-proxy.svc.cluster.local:3128"
+    # Comma-separated list of hosts that should bypass the proxy
+    noProxy: "localhost,127.0.0.1,.svc.cluster.local,kubernetes.default.svc"
 # example status fields
 status:
   components:
