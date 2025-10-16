@@ -40,6 +40,20 @@ spec:
             - name: SSL_CERT_DIR
               value: "/etc/pki/tls/certs:/var/run/secrets/kubernetes.io/serviceaccount/"
             {{ end }}
+            {{ if .ProxyConfig }}
+            {{ if .ProxyConfig.HTTPProxy }}
+            - name: HTTP_PROXY
+              value: "{{.ProxyConfig.HTTPProxy}}"
+            {{ end }}
+            {{ if .ProxyConfig.HTTPSProxy }}
+            - name: HTTPS_PROXY
+              value: "{{.ProxyConfig.HTTPSProxy}}"
+            {{ end }}
+            {{ if and .ProxyConfig.NoProxy (or .ProxyConfig.HTTPProxy .ProxyConfig.HTTPSProxy) }}
+            - name: NO_PROXY
+              value: "{{.ProxyConfig.NoProxy}}"
+            {{ end }}
+            {{ end }}
           image: "{{.PersistenceAgent.Image}}"
           # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
           name: ds-pipeline-persistenceagent

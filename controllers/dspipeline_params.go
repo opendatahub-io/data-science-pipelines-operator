@@ -101,6 +101,9 @@ type DSPAParams struct {
 
 	APIServerServiceDNSName string
 	FIPSEnabled             bool
+
+	// Proxy configuration for all DSPA components
+	ProxyConfig *dspa.ProxyConfig
 }
 
 type DBConnection struct {
@@ -597,6 +600,8 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	} else {
 		p.PodToPodTLS = *dsp.Spec.PodToPodTLS
 	}
+
+	p.ProxyConfig = dsp.Spec.Proxy
 
 	log := loggr.WithValues("namespace", p.Namespace).WithValues("dspa_name", p.Name)
 
