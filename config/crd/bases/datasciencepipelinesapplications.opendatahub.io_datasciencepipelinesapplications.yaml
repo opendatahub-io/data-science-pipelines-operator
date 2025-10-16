@@ -861,6 +861,28 @@ spec:
                   TLS communication between DSPA components (pods). Defaults to "true"
                   to enable TLS between all pods. Only supported in DSP V2 on OpenShift.
                 type: boolean
+              proxy:
+                description: Proxy configuration for all DSPA components to enable
+                  usage in environments requiring proxy access
+                properties:
+                  httpProxy:
+                    description: HTTP proxy URL for outbound HTTP connections
+                    type: string
+                  httpsProxy:
+                    description: |-
+                      HTTPS proxy URL for outbound HTTPS connections
+                      If omitted, HTTPProxy will be used for both HTTP and HTTPS connections as a safe default
+                    type: string
+                  noProxy:
+                    description: |-
+                      Comma-separated list of hostnames, IP addresses, or CIDR ranges
+                      that should bypass the proxy. Recommended baseline for in-cluster traffic:
+                      ".svc.cluster.local,kubernetes.default.svc". Also include service FQDNs for
+                      in-cluster dependencies (e.g. "minio-<name>.<ns>.svc", "mariadb-<name>.<ns>.svc")
+                      and any cluster/service CIDRs if required by your environment. Use "*" to match any hostname.
+                      If unset, a safe default for in-cluster traffic is set.
+                    type: string
+                type: object
               scheduledWorkflow:
                 default:
                   deploy: true
