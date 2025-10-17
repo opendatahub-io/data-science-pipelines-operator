@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ds-pipeline-metadata-grpc-testdsp8
+  namespace: default
+  labels:
+    dsp-version: v2
+    app: ds-pipeline-metadata-grpc-testdsp8
+    component: data-science-pipelines
+    dspa: testdsp8
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ds-pipeline-metadata-grpc-testdsp8
+      component: data-science-pipelines
+      dspa: testdsp8
+  template:
+    metadata:
+      labels:
+        dsp-version: v2
+        app: ds-pipeline-metadata-grpc-testdsp8
+        component: data-science-pipelines
+        dspa: testdsp8
+    spec:
+      containers:
+        - args:
+            - --grpc_port=8080
+            - --mysql_config_database=$(MYSQL_DATABASE)
+            - --mysql_config_host=$(MYSQL_HOST)
+            - --mysql_config_port=$(MYSQL_PORT)
+            - --mysql_config_user=$(DBCONFIG_USER)
+            - --mysql_config_password=$(DBCONFIG_PASSWORD)
+            - --enable_database_upgrade=true
+          command:
+            - /bin/metadata_store_server
+          env:
+            - name: DBCONFIG_USER
+              value: "mlpipeline"
+            - name: DBCONFIG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: "password"
+                  name: "ds-pipeline-db-testdsp8"
+            - name: MYSQL_DATABASE
+              value: "mlpipeline"
+            - name: MYSQL_HOST
+              value: "mariadb-testdsp8.default.svc.cluster.local"
+            - name: MYSQL_PORT
+              value: "3306"
+            - name: HTTP_PROXY
+              value: "http://proxy.example:8080"
+            - name: HTTPS_PROXY
+              value: "http://proxy.example:8080"
+            - name: NO_PROXY
+              value: "localhost,127.0.0.1,.svc.cluster.local,kubernetes.default.svc"
+          image: mlmdgrpc:test8
+          name: container
+          ports:
+            - containerPort: 8080
+              name: grpc-api
+              protocol: TCP
+          livenessProbe:
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            tcpSocket:
+              port: grpc-api
+            timeoutSeconds: 2
+          readinessProbe:
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            tcpSocket:
+              port: grpc-api
+            timeoutSeconds: 2
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 100m
+              memory: 256Mi
+      serviceAccountName: ds-pipeline-metadata-grpc-testdsp8
