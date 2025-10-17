@@ -67,9 +67,9 @@ spec:
                   name: "teststoragesecretname3"
             - name: OBJECTSTORECONFIG_SECURE
               value: "true"
-            - name: MINIO_SERVICE_SERVICE_HOST
+            - name: OBJECTSTORECONFIG_HOST
               value: "teststoragehost3"
-            - name: MINIO_SERVICE_SERVICE_PORT
+            - name: OBJECTSTORECONFIG_PORT
               value: "80"
             - name: V2_LAUNCHER_IMAGE
               value: "argolauncherimage:test3"
