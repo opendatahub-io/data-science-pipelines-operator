@@ -157,7 +157,7 @@ spec:
             - name: HTTPS_PROXY
               value: "{{.ProxyConfig.HTTPSProxy}}"
             {{ end }}
-            {{ if .ProxyConfig.NoProxy }}
+            {{ if and .ProxyConfig.NoProxy (or .ProxyConfig.HTTPProxy .ProxyConfig.HTTPSProxy) }}
             - name: NO_PROXY
               value: "{{.ProxyConfig.NoProxy}}"
             {{ end }}

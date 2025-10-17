@@ -404,8 +404,11 @@ type ProxyConfig struct {
 	// HTTPS proxy URL for outbound HTTPS connections
 	// +kubebuilder:validation:Optional
 	HTTPSProxy string `json:"httpsProxy,omitempty"`
-	// Comma-separated list of hostnames, IP addresses, or IP ranges
-	// that should not use the proxy. Use "*" to match any hostname (e.g. "localhost,127.0.0.1,10.0.0.0/8,*.example.com")
+	// Comma-separated list of hostnames, IP addresses, or CIDR ranges
+	// that should bypass the proxy. Recommended baseline for in-cluster traffic:
+	// ".svc.cluster.local,kubernetes.default.svc". Also include service FQDNs for
+	// in-cluster dependencies (e.g. "minio-<name>.<ns>.svc", "mariadb-<name>.<ns>.svc")
+	// and any cluster/service CIDRs if required by your environment. Use "*" to match any hostname.
 	// +kubebuilder:validation:Optional
 	NoProxy string `json:"noProxy,omitempty"`
 }

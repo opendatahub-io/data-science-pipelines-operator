@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
 	"errors"
@@ -101,6 +100,21 @@ func getHttpsTransportWithCACert(log logr.Logger, pemCerts [][]byte) (*http.Tran
 	return transport, nil
 }
 
+func configureProxyForTransport(transport *http.Transport, proxyConfig *dspav1.ProxyConfig) {
+	if proxyConfig == nil {
+		return
+	}
+	cfg := httpproxy.Config{
+		HTTPProxy:  proxyConfig.HTTPProxy,
+		HTTPSProxy: proxyConfig.HTTPSProxy,
+		NoProxy:    proxyConfig.NoProxy,
+	}
+	proxyFn := cfg.ProxyFunc()
+	transport.Proxy = func(req *http.Request) (*url.URL, error) {
+		return proxyFn(req.URL)
+	}
+}
+
 func getTransportWithProxyAndCACert(log logr.Logger, pemCerts [][]byte, proxyConfig *dspav1.ProxyConfig, secure bool) (*http.Transport, error) {
 	var transport *http.Transport
 	var err error
@@ -115,40 +129,10 @@ func getTransportWithProxyAndCACert(log logr.Logger, pemCerts [][]byte, proxyCon
 		if err != nil {
 			return nil, fmt.Errorf("error creating default transport : %s", err)
 		}
-
-		if len(pemCerts) != 0 {
-			if transport.TLSClientConfig == nil {
-				transport.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS12}
-			}
-			if transport.TLSClientConfig.RootCAs == nil {
-				pool, err := x509.SystemCertPool()
-				if err != nil {
-					log.Error(err, "error initializing TLS Pool: %s")
-					transport.TLSClientConfig.RootCAs = x509.NewCertPool()
-				} else {
-					transport.TLSClientConfig.RootCAs = pool
-				}
-			}
-			for _, pem := range pemCerts {
-				if ok := transport.TLSClientConfig.RootCAs.AppendCertsFromPEM(pem); !ok {
-					return nil, fmt.Errorf("error parsing CA Certificate, ensure provided certs are in valid PEM format")
-				}
-			}
-		}
 	}
 
-	// Configure proxy settings if provided
-	if proxyConfig != nil {
-		cfg := httpproxy.Config{
-			HTTPProxy:  proxyConfig.HTTPProxy,
-			HTTPSProxy: proxyConfig.HTTPSProxy,
-			NoProxy:    proxyConfig.NoProxy,
-		}
-		proxyFn := cfg.ProxyFunc()
-		transport.Proxy = func(req *http.Request) (*url.URL, error) {
-			return proxyFn(req.URL)
-		}
-	}
+	// Configure proxy settings for any transport
+	configureProxyForTransport(transport, proxyConfig)
 
 	return transport, nil
 }
