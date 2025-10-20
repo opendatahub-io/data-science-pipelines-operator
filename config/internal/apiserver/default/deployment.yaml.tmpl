@@ -56,11 +56,17 @@ spec:
               value: "{{.CustomCABundle.ConfigMapKey}}"
             - name: ARTIFACT_COPY_STEP_CABUNDLE_MOUNTPATH
               value: {{ .CustomCABundleRootMountPath }}
+            - name: CABUNDLE_CONFIGMAP_NAME
+              value: "{{.CustomCABundle.ConfigMapName}}"
+            - name: CABUNDLE_KEY_NAME
+              value: "{{.CustomCABundle.ConfigMapKey}}"
             {{ end }}
             {{ if .CustomSSLCertDir }}
             - name: SSL_CERT_DIR
               value: {{.CustomSSLCertDir}}
             {{ end }}
+            - name: ML_PIPELINE_SERVICE_NAME
+              value: "ds-pipeline-{{.Name}}"
             # Visualization server is something we deploy
             # But this env is required in KFP, even though
             # It is not used.
@@ -120,8 +126,6 @@ spec:
             - name: SIGNED_URL_EXPIRY_TIME_SECONDS
               value: "{{.APIServer.ArtifactSignedURLExpirySeconds}}"
             {{ if .PodToPodTLS }}
-            - name: ML_PIPELINE_TLS_ENABLED
-              value: "true"
             - name: METADATA_TLS_ENABLED
               value: "true"
             {{ end }}
