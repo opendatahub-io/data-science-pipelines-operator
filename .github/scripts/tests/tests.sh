@@ -549,5 +549,5 @@ else
 fi
 
 run_tests
-run_tests_dspa_external_connections
 run_tests_dspa_k8s
+run_tests_dspa_external_connections

@@ -51,7 +51,7 @@ spec:
             - "--mlPipelineServiceGRPCPort=8887"
             {{ if .PodToPodTLS }}
             - "--mlPipelineServiceTLSEnabled=true"
-            - "--mlPipelineServiceTLSCert={{ .PiplinesCABundleMountPath }}"
+            - "--caCertPath={{ .PiplinesCABundleMountPath }}"
             {{ end }}
             - "--logtostderr=true"
             - "--namespace={{.Namespace}}"
