@@ -48,6 +48,9 @@ jobs:
       - name: Setup and start KinD cluster
         uses: ./.github/actions/kind
 
+      - name: Free up disk space
+        uses: kubeflow/pipelines/.github/actions/github-disk-cleanup@master
+
       - name: Run test
         id: test
         working-directory: ${{ github.workspace }}/.github/scripts/tests

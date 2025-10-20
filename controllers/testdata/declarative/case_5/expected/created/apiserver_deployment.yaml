@@ -41,14 +41,8 @@ spec:
               value: "mariadb-testdsp5.default.svc.cluster.local"
             - name: DBCONFIG_PORT
               value: "3306"
-            - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_NAME
-              value: dsp-trusted-ca-testdsp5
-            - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_KEY
-              value: testcabundleconfigmapkey5.crt
-            - name: ARTIFACT_COPY_STEP_CABUNDLE_MOUNTPATH
-              value: /dsp-custom-certs
-            - name: SSL_CERT_DIR
-              value: "/dsp-custom-certs:/etc/ssl/certs:/etc/pki/tls/certs"
+            - name: ML_PIPELINE_SERVICE_NAME
+              value: "ds-pipeline-testdsp5"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_HOST
               value: "ds-pipeline-visualizationserver"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
@@ -93,10 +87,10 @@ spec:
               value: "8887"
             - name: SIGNED_URL_EXPIRY_TIME_SECONDS
               value: "60"
-            - name: ML_PIPELINE_TLS_ENABLED
-              value: "true"
             - name: METADATA_TLS_ENABLED
               value: "true"
+            - name: CABUNDLE_SECRET_NAME
+              value: "ds-pipelines-proxy-tls-testdsp5"
             - name: EXECUTIONTYPE
               value: Workflow
             - name: DB_DRIVER_NAME
