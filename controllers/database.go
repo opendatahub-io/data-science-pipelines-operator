@@ -16,24 +16,29 @@ limitations under the License.
 package controllers
 
 import (
+	"bufio"
 	"context"
+	"crypto/sha1"
 	cryptoTls "crypto/tls"
 	"crypto/x509"
 	"database/sql"
 	b64 "encoding/base64"
-	"fmt"
-
-	"time"
-
+	"encoding/hex"
 	"errors"
+	"fmt"
+	"net"
+	"net/http"
+	"net/url"
+	"os"
+	"sync"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/go-sql-driver/mysql"
-	_ "github.com/go-sql-driver/mysql"
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
+	"golang.org/x/net/http/httpproxy"
 	"k8s.io/apimachinery/pkg/util/json"
-	"os"
 )
 
 const dbSecret = "mariadb/generated-secret/secret.yaml.tmpl"
@@ -46,6 +51,9 @@ var mariadbTemplates = []string{
 	"mariadb/default/networkpolicy.yaml.tmpl",
 	"mariadb/default/tls-config.yaml.tmpl",
 }
+
+// registeredDBProxyDialers tracks registered mysql dialer names to prevent duplicate registration
+var registeredDBProxyDialers sync.Map
 
 // tLSClientConfig creates and returns a TLS client configuration that includes
 // a set of custom CA certificates for secure communication. It reads CA
@@ -109,12 +117,108 @@ func createMySQLConfig(user, password string, mysqlServiceHost string,
 	}
 }
 
+// proxyAwareMySQLDialer returns a DialContext that tunnels TCP over an HTTP(S) proxy using CONNECT.
+func proxyAwareMySQLDialer(log logr.Logger, proxyConfig *dspav1.ProxyConfig, pemCerts [][]byte) (string, func(ctx context.Context, addr string) (net.Conn, error), error) {
+	if proxyConfig == nil || (proxyConfig.HTTPProxy == "" && proxyConfig.HTTPSProxy == "") {
+		return "", nil, nil
+	}
+
+	// Build a noProxy-aware resolver
+	cfg := httpproxy.Config{
+		HTTPProxy:  proxyConfig.HTTPProxy,
+		HTTPSProxy: proxyConfig.HTTPSProxy,
+		NoProxy:    proxyConfig.NoProxy,
+	}
+	proxyFn := cfg.ProxyFunc()
+
+	dialer := func(ctx context.Context, addr string) (net.Conn, error) {
+		hostOnly, _, _ := net.SplitHostPort(addr)
+		if hostOnly == "" {
+			hostOnly = addr
+		}
+		scheme := "https"
+		if proxyConfig.HTTPSProxy == "" {
+			scheme = "http"
+		}
+		targetURL := &url.URL{Scheme: scheme, Host: hostOnly}
+		proxyURL, err := proxyFn(targetURL)
+		if err != nil {
+			return nil, fmt.Errorf("resolving proxy for %s failed: %w", addr, err)
+		}
+		// No proxy -> direct
+		if proxyURL == nil {
+			var d net.Dialer
+			return d.DialContext(ctx, "tcp", addr)
+		}
+
+		// Connect to proxy
+		var conn net.Conn
+		var d net.Dialer
+		if proxyURL.Scheme == "https" {
+			tlsCfg, _ := tLSClientConfig(pemCerts)
+			tlsDialer := &cryptoTls.Dialer{NetDialer: &d, Config: tlsCfg}
+			conn, err = tlsDialer.DialContext(ctx, "tcp", proxyURL.Host)
+		} else {
+			conn, err = d.DialContext(ctx, "tcp", proxyURL.Host)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("dial proxy %s failed: %w", proxyURL.Host, err)
+		}
+
+		// Issue CONNECT request
+		req := &http.Request{
+			Method: http.MethodConnect,
+			URL:    &url.URL{Opaque: addr},
+			Host:   addr,
+		}
+		// Basic auth if embedded in proxy URL
+		if proxyURL.User != nil {
+			if pw, ok := proxyURL.User.Password(); ok {
+				req.Header = make(http.Header)
+				req.SetBasicAuth(proxyURL.User.Username(), pw)
+			}
+		}
+
+		// Send CONNECT
+		if err := req.Write(conn); err != nil {
+			_ = conn.Close()
+			return nil, fmt.Errorf("proxy CONNECT write to %s via %s failed: %w", addr, proxyURL.Host, err)
+		}
+		// Read response
+		responseReader := bufio.NewReader(conn)
+		resp, err := http.ReadResponse(responseReader, req)
+		if err != nil {
+			_ = conn.Close()
+			return nil, fmt.Errorf("proxy CONNECT read response from %s for %s failed: %w", proxyURL.Host, addr, err)
+		}
+		if resp.StatusCode != http.StatusOK {
+			_ = conn.Close()
+			return nil, fmt.Errorf("proxy CONNECT to %s via %s failed: %s", addr, proxyURL.Host, resp.Status)
+		}
+		return conn, nil
+	}
+
+	// Create a stable name for this dialer based on proxy settings
+	h := sha1.New()
+	h.Write([]byte(proxyConfig.HTTPProxy))
+	h.Write([]byte("|"))
+	h.Write([]byte(proxyConfig.HTTPSProxy))
+	h.Write([]byte("|"))
+	h.Write([]byte(proxyConfig.NoProxy))
+	if len(pemCerts) > 0 {
+		h.Write([]byte("|certs"))
+	}
+	name := "proxy_connect_" + hex.EncodeToString(h.Sum(nil))[:12]
+	return name, dialer, nil
+}
+
 var ConnectAndQueryDatabase = func(
 	host string,
 	log logr.Logger,
 	port, username, password, dbname, tls string,
 	dbConnectionTimeout time.Duration,
 	pemCerts [][]byte,
+	proxyConfig *dspav1.ProxyConfig,
 	extraParams map[string]string) (bool, error) {
 
 	mysqlConfig := createMySQLConfig(
@@ -125,6 +229,33 @@ var ConnectAndQueryDatabase = func(
 		"",
 		extraParams,
 	)
+
+	// If a proxy is configured, register and use a CONNECT dialer
+	if proxyConfig != nil && (proxyConfig.HTTPProxy != "" || proxyConfig.HTTPSProxy != "") {
+		name, dialer, err := proxyAwareMySQLDialer(log, proxyConfig, pemCerts)
+		if err != nil {
+			return false, err
+		}
+		if dialer != nil {
+			if _, loaded := registeredDBProxyDialers.LoadOrStore(name, true); !loaded {
+				mysql.RegisterDialContext(name, func(ctx context.Context, addr string) (net.Conn, error) {
+					return dialer(ctx, addr)
+				})
+			}
+			mysqlConfig.Net = name
+			effectiveProxy := proxyConfig.HTTPSProxy
+			if effectiveProxy == "" {
+				effectiveProxy = proxyConfig.HTTPProxy
+			}
+			if effectiveProxy != "" {
+				if u, err := url.Parse(effectiveProxy); err == nil {
+					log.Info("Using proxy for DB connection", "proxy", u.Redacted())
+				} else {
+					log.Info("Using proxy for DB connection", "proxy", effectiveProxy)
+				}
+			}
+		}
+	}
 
 	// Create a context with a timeout
 	ctx, cancel := context.WithTimeout(context.Background(), dbConnectionTimeout)
@@ -234,6 +365,7 @@ func (r *DSPAReconciler) isDatabaseAccessible(dsp *dspav1.DataSciencePipelinesAp
 		tls,
 		dbConnectionTimeout,
 		params.APICustomPemCerts,
+		params.ProxyConfig,
 		extraParamsJson)
 
 	if err != nil {

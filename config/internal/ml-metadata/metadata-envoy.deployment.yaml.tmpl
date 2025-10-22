@@ -31,6 +31,21 @@ spec:
             "-c",
             "/etc/envoy.yaml"
           ]
+          {{ if .ProxyConfig }}
+          env:
+          {{ if .ProxyConfig.HTTPProxy }}
+            - name: HTTP_PROXY
+              value: "{{.ProxyConfig.HTTPProxy}}"
+          {{ end }}
+          {{ if .ProxyConfig.HTTPSProxy }}
+            - name: HTTPS_PROXY
+              value: "{{.ProxyConfig.HTTPSProxy}}"
+          {{ end }}
+          {{ if and .ProxyConfig.NoProxy (or .ProxyConfig.HTTPProxy .ProxyConfig.HTTPSProxy) }}
+            - name: NO_PROXY
+              value: "{{.ProxyConfig.NoProxy}}"
+          {{ end }}
+          {{ end }}
           ports:
             - containerPort: 9090
               name: md-envoy
