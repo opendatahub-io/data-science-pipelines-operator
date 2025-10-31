@@ -27,13 +27,14 @@ import (
 
 	"errors"
 
+	"os"
+
 	"github.com/go-logr/logr"
 	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"k8s.io/apimachinery/pkg/util/json"
-	"os"
 )
 
 const dbSecret = "mariadb/generated-secret/secret.yaml.tmpl"
