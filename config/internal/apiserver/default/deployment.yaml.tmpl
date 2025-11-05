@@ -148,6 +148,20 @@ spec:
             {{ end }}
             - name: CACHEENABLED
               value: "{{.APIServer.CacheEnabled}}"
+            {{ if .ProxyConfig }}
+            {{ if .ProxyConfig.HTTPProxy }}
+            - name: HTTP_PROXY
+              value: "{{.ProxyConfig.HTTPProxy}}"
+            {{ end }}
+            {{ if .ProxyConfig.HTTPSProxy }}
+            - name: HTTPS_PROXY
+              value: "{{.ProxyConfig.HTTPSProxy}}"
+            {{ end }}
+            {{ if and .ProxyConfig.NoProxy (or .ProxyConfig.HTTPProxy .ProxyConfig.HTTPSProxy) }}
+            - name: NO_PROXY
+              value: "{{.ProxyConfig.NoProxy}}"
+            {{ end }}
+            {{ end }}
           image: {{.APIServer.Image}}
           # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
           name: ds-pipeline-api-server

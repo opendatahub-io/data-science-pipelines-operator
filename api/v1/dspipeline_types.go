@@ -51,6 +51,10 @@ type DSPASpec struct {
 	// WorkflowController is an argo-specific component that manages a DSPA's Workflow objects and handles the orchestration of them with the central Argo server
 	// +kubebuilder:validation:Optional
 	*WorkflowController `json:"workflowController,omitempty"`
+
+	// Proxy configuration for all DSPA components to enable usage in environments requiring proxy access
+	// +kubebuilder:validation:Optional
+	Proxy *ProxyConfig `json:"proxy,omitempty"`
 }
 
 // +kubebuilder:validation:Pattern=`^(Managed|Removed)$`
@@ -391,6 +395,24 @@ type SecretKeyValue struct {
 	// +kubebuilder:validation:Required
 	Name string `json:"name"`
 	Key  string `json:"key"`
+}
+
+type ProxyConfig struct {
+	// HTTP proxy URL for outbound HTTP connections
+	// +kubebuilder:validation:Optional
+	HTTPProxy string `json:"httpProxy,omitempty"`
+	// HTTPS proxy URL for outbound HTTPS connections
+	// If omitted, HTTPProxy will be used for both HTTP and HTTPS connections as a safe default
+	// +kubebuilder:validation:Optional
+	HTTPSProxy string `json:"httpsProxy,omitempty"`
+	// Comma-separated list of hostnames, IP addresses, or CIDR ranges
+	// that should bypass the proxy. Recommended baseline for in-cluster traffic:
+	// ".svc.cluster.local,kubernetes.default.svc". Also include service FQDNs for
+	// in-cluster dependencies (e.g. "minio-<name>.<ns>.svc", "mariadb-<name>.<ns>.svc")
+	// and any cluster/service CIDRs if required by your environment. Use "*" to match any hostname.
+	// If unset, a safe default for in-cluster traffic is set.
+	// +kubebuilder:validation:Optional
+	NoProxy string `json:"noProxy,omitempty"`
 }
 
 type DSPAStatus struct {
