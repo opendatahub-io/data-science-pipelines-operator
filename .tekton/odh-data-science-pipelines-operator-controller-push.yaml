@@ -8,7 +8,7 @@ metadata:
     pipelinesascode.tekton.dev/cancel-in-progress: "false"
     pipelinesascode.tekton.dev/max-keep-runs: "3"
     pipelinesascode.tekton.dev/on-cel-expression: event == "push" && target_branch
-      == "stable"
+      == "v2.18.x"
   creationTimestamp: null
   labels:
     appstudio.openshift.io/application: opendatahub-release
@@ -23,7 +23,7 @@ spec:
   - name: revision
     value: '{{revision}}'
   - name: output-image
-    value: quay.io/opendatahub/data-science-pipelines-operator:stable
+    value: quay.io/opendatahub/data-science-pipelines-operator:v2.18.0
   - name: dockerfile
     value: Dockerfile
   - name: path-context
