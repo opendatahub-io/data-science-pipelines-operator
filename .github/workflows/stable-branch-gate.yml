@@ -1,0 +1,150 @@
+name: Stable Branch Gate
+
+# This workflow ensures that PRs to the stable branch cannot be merged
+# until the remote stable-merge-check workflow has completed successfully
+on:
+  pull_request:
+    branches: [stable]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+  issues: write
+
+jobs:
+  check-remote-workflow-status:
+    name: Check Remote Integration Tests
+    runs-on: ubuntu-latest
+
+    # Only run on PRs targeting stable branch
+    if: github.event.pull_request.base.ref == 'stable'
+
+    steps:
+      - name: Check remote workflow status
+        id: check-remote
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Get PR information
+            const prNumber = context.payload.pull_request.number;
+            const headSha = context.payload.pull_request.head.sha;
+            const headRef = context.payload.pull_request.head.ref;
+
+            console.log(`Checking remote workflow status for PR #${prNumber}`);
+            console.log(`Head SHA: ${headSha}`);
+            console.log(`Head Ref: ${headRef}`);
+
+            try {
+              const remoteOwner = 'opendatahub-io';
+              const remoteRepo = 'data-science-pipelines';
+
+              // Try to get workflow runs for the stable-merge-check workflow
+              const { data: workflows } = await github.rest.actions.listWorkflowRuns({
+                owner: remoteOwner,
+                repo: remoteRepo,
+                workflow_id: 'stable-merge-check.yml',
+                branch: headRef, // Look for runs on the same branch name
+                per_page: 20
+              });
+
+              console.log(`Found ${workflows.total_count} workflow runs for branch ${headRef}`);
+
+              // Look for successful runs
+              const successfulRuns = workflows.workflow_runs.filter(run =>
+                run.conclusion === 'success' &&
+                run.status === 'completed'
+              );
+
+              if (successfulRuns.length > 0) {
+                const latestSuccessful = successfulRuns[0];
+                console.log(`✅ Found ${successfulRuns.length} successful remote workflow run(s)`);
+                console.log(`Latest successful run: ${latestSuccessful.html_url}`);
+                core.setOutput('status', 'success');
+                core.setOutput('message', `Remote integration tests passed`);
+                core.setOutput('workflow_url', latestSuccessful.html_url);
+              } else {
+                // Check for any runs at all
+                const anyRuns = workflows.workflow_runs.length > 0;
+                if (anyRuns) {
+                  const latestRun = workflows.workflow_runs[0];
+                  console.log(`❌ No successful runs found. Latest run status: ${latestRun.status}, conclusion: ${latestRun.conclusion}`);
+                  core.setOutput('status', 'failure');
+                  core.setOutput('message', `Remote integration tests have not passed (status: ${latestRun.conclusion || latestRun.status})`);
+                  core.setOutput('workflow_url', latestRun.html_url);
+                } else {
+                  console.log('❌ No workflow runs found for this branch');
+                  core.setOutput('status', 'failure');
+                  core.setOutput('message', 'No remote integration test runs found for this branch');
+                    core.setOutput('workflow_url', `https://github.com/${remoteOwner}/${remoteRepo}/actions/workflows/stable-merge-check.yml`);
+                }
+              }
+            } catch (error) {
+              console.error(`Error checking workflow status: ${error.message}`);
+              core.setOutput('status', 'failure');
+              core.setOutput('message', `Error checking remote integration test status: ${error.message}`);
+              core.setOutput('workflow_url', 'https://github.com/opendatahub-io/data-science-pipelines/actions/workflows/stable-merge-check.yml');
+            }
+
+      - name: Set status check
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const status = '${{ steps.check-remote.outputs.status }}';
+            const message = '${{ steps.check-remote.outputs.message }}';
+            const workflowUrl = '${{ steps.check-remote.outputs.workflow_url }}';
+
+            const state = status === 'success' ? 'success' : 'failure';
+
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.payload.pull_request.head.sha,
+              state: state,
+              target_url: workflowUrl,
+              description: message,
+              context: 'stable-branch-gate/remote-integration-tests'
+            });
+
+            if (state === 'failure') {
+              core.setFailed(message);
+            }
+
+  provide-instructions:
+    name: Provide Instructions
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.base.ref == 'stable' && github.event.action == 'opened'
+
+    steps:
+      - name: Comment with instructions
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.payload.pull_request.number;
+
+            const comment = `
+            ## 🔒 Stable Branch Protection
+
+            This PR targets the **stable** branch and requires integration test verification from the upstream repository.
+
+            ### Requirements:
+            The [stable-merge-check workflow](https://github.com/opendatahub-io/data-science-pipelines/blob/master/.github/workflows/stable-merge-check.yml) in the **opendatahub-io/data-science-pipelines** repository must complete successfully for a branch with the same name as this PR.
+
+            ### How it works:
+            - This workflow automatically checks if the remote integration tests have passed
+            - If successful, the PR will be eligible for merge
+            - If not, ensure the corresponding branch exists in the upstream repo and tests pass there
+
+            📋 **Status**: Checking remote integration test status...
+            `;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: comment
+            });
