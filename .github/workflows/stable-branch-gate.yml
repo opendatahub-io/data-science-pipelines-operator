@@ -41,12 +41,16 @@ jobs:
               const remoteOwner = 'opendatahub-io';
               const remoteRepo = 'data-science-pipelines';
 
+              // Map branch name: if headRef is 'main', use 'master' for remote repo
+              const remoteBranch = headRef === 'main' ? 'master' : headRef;
+              console.log(`Remote branch to check: ${remoteBranch}`);
+
               // Try to get workflow runs for the stable-merge-check workflow
               const { data: workflows } = await github.rest.actions.listWorkflowRuns({
                 owner: remoteOwner,
                 repo: remoteRepo,
                 workflow_id: 'stable-merge-check.yml',
-                branch: headRef, // Look for runs on the same branch name
+                branch: remoteBranch, // Look for runs on the mapped branch name
                 per_page: 20
               });
 
