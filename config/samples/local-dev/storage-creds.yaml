@@ -9,6 +9,6 @@ metadata:
     opendatahub.io/connection-type: s3
     openshift.io/display-name: Minio Data Connection
 data:
-  accesskey: QUtJQUlPU0ZPRE5ON0VYQU1QTEU=
-  secretkey: d0phbHJYVXRuRkVNSS9LN01ERU5HL2JQeFJmaUNZRVhBTVBMRUtFWQ==
+  accesskey: DUMMY_KEY
+  secretkey: DUMMY_SECRET
 type: Opaque
