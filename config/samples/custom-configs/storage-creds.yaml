@@ -9,9 +9,9 @@ metadata:
     opendatahub.io/connection-type: s3
     openshift.io/display-name: Minio Data Connection
 data:
-  AWS_ACCESS_KEY_ID: DUMMY_KEY
-  AWS_SECRET_ACCESS_KEY: DUMMY_SECRET
+  AWS_ACCESS_KEY_ID: ""
+  AWS_SECRET_ACCESS_KEY: ""
   # The following keys are needed while https://github.com/kubeflow/pipelines/issues/9689 is open
-  accesskey: DUMMY_KEY
-  secretkey: DUMMY_SECRET
+  accesskey: ""
+  secretkey: ""
 type: Opaque
