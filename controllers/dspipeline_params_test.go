@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/go-logr/logr"
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/testutil"
 	"github.com/stretchr/testify/assert"
@@ -315,4 +316,125 @@ func TestExtractParams_WithWorkspace(t *testing.T) {
 	require.NotNil(t, unmarshalled["VolumeClaimTemplateSpec"].VolumeMode)
 	require.Equal(t, *workspace.VolumeClaimTemplateSpec.VolumeMode, *unmarshalled["VolumeClaimTemplateSpec"].VolumeMode)
 	require.Equal(t, *workspace.VolumeClaimTemplateSpec.StorageClassName, *unmarshalled["VolumeClaimTemplateSpec"].StorageClassName)
+}
+
+func TestSetupCompiledPipelineSpecPatch(t *testing.T) {
+	tt := []struct {
+		name           string
+		params         DSPAParams
+		expectedPatch  string
+		expectedFields map[string]interface{}
+	}{
+		{
+			name: "no ResourceTTL set - empty patch",
+			params: DSPAParams{
+				APIServer: &dspav1.APIServer{Deploy: true},
+			},
+			expectedPatch: "",
+		},
+		{
+			name: "nil APIServer - empty patch",
+			params: DSPAParams{
+				APIServer: nil,
+			},
+			expectedPatch: "",
+		},
+		{
+			name: "ResourceTTL set to 3600",
+			params: DSPAParams{
+				APIServer: &dspav1.APIServer{
+					Deploy:      true,
+					ResourceTTL: int32Ptr(3600),
+				},
+			},
+			expectedFields: map[string]interface{}{
+				"ttlStrategy": map[string]interface{}{
+					"secondsAfterCompletion": float64(3600),
+				},
+			},
+		},
+		{
+			name: "ResourceTTL set to 0",
+			params: DSPAParams{
+				APIServer: &dspav1.APIServer{
+					Deploy:      true,
+					ResourceTTL: int32Ptr(0),
+				},
+			},
+			expectedFields: map[string]interface{}{
+				"ttlStrategy": map[string]interface{}{
+					"secondsAfterCompletion": float64(0),
+				},
+			},
+		},
+		{
+			name: "ResourceTTL set to large value",
+			params: DSPAParams{
+				APIServer: &dspav1.APIServer{
+					Deploy:      true,
+					ResourceTTL: int32Ptr(86400),
+				},
+			},
+			expectedFields: map[string]interface{}{
+				"ttlStrategy": map[string]interface{}{
+					"secondsAfterCompletion": float64(86400),
+				},
+			},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.params.SetupCompiledPipelineSpecPatch(logr.Discard())
+
+			if tc.expectedPatch != "" {
+				assert.Equal(t, tc.expectedPatch, tc.params.CompiledPipelineSpecPatch)
+			} else if tc.expectedFields != nil {
+				// Verify the JSON contains expected fields
+				var actualFields map[string]interface{}
+				err := json.Unmarshal([]byte(tc.params.CompiledPipelineSpecPatch), &actualFields)
+				require.NoError(t, err)
+				assert.Equal(t, tc.expectedFields, actualFields)
+			} else {
+				assert.Empty(t, tc.params.CompiledPipelineSpecPatch)
+			}
+		})
+	}
+}
+
+func TestExtractParams_WithResourceTTL(t *testing.T) {
+	ctx, params, client := CreateNewTestObjects()
+
+	dspa := testutil.CreateDSPAWithResourceTTL(3600)
+
+	err := params.ExtractParams(ctx, dspa, client.Client, client.Log)
+	require.NoError(t, err)
+	require.NotEmpty(t, params.CompiledPipelineSpecPatch)
+
+	var patchFields map[string]interface{}
+	err = json.Unmarshal([]byte(params.CompiledPipelineSpecPatch), &patchFields)
+	require.NoError(t, err)
+
+	ttlStrategy, ok := patchFields["ttlStrategy"].(map[string]interface{})
+	require.True(t, ok, "ttlStrategy should be a map")
+
+	secondsAfterCompletion, ok := ttlStrategy["secondsAfterCompletion"].(float64)
+	require.True(t, ok, "secondsAfterCompletion should be a number")
+	assert.Equal(t, float64(3600), secondsAfterCompletion)
+}
+
+func TestExtractParams_WithoutResourceTTL(t *testing.T) {
+	ctx, params, client := CreateNewTestObjects()
+
+	dspa := testutil.CreateEmptyDSPA()
+	dspa.Spec.APIServer = &dspav1.APIServer{Deploy: true}
+	dspa.Spec.PodToPodTLS = boolPtr(false)
+
+	err := params.ExtractParams(ctx, dspa, client.Client, client.Log)
+	require.NoError(t, err)
+	assert.Empty(t, params.CompiledPipelineSpecPatch)
+}
+
+func int32Ptr(i int32) *int32 {
+	return &i
 }
