@@ -61,6 +61,8 @@ spec:
             - name: SSL_CERT_DIR
               value: {{.CustomSSLCertDir}}
             {{ end }}
+            - name: ML_PIPELINE_SERVICE_NAME
+              value: "ds-pipeline-{{.Name}}"
             # Visualization server is something we deploy
             # But this env is required in KFP, even though
             # It is not used.
@@ -120,10 +122,10 @@ spec:
             - name: SIGNED_URL_EXPIRY_TIME_SECONDS
               value: "{{.APIServer.ArtifactSignedURLExpirySeconds}}"
             {{ if .PodToPodTLS }}
-            - name: ML_PIPELINE_TLS_ENABLED
-              value: "true"
             - name: METADATA_TLS_ENABLED
               value: "true"
+            - name: CABUNDLE_SECRET_NAME
+              value: "ds-pipelines-proxy-tls-{{.Name}}"
             {{ end }}
             - name: EXECUTIONTYPE
               value: Workflow

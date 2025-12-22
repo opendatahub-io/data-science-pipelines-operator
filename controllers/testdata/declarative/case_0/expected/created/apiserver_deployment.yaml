@@ -41,6 +41,8 @@ spec:
               value: "mariadb-testdsp0.default.svc.cluster.local"
             - name: DBCONFIG_PORT
               value: "3306"
+            - name: ML_PIPELINE_SERVICE_NAME
+              value: "ds-pipeline-testdsp0"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_HOST
               value: "ds-pipeline-visualizationserver"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
