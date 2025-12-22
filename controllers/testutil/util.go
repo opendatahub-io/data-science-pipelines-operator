@@ -277,6 +277,18 @@ func CreateDSPAWithCustomKfpLauncherConfigMap(configMapName string) *dspav1.Data
 	return dspa
 }
 
+func CreateDSPAWithResourceTTL(ttl int32) *dspav1.DataSciencePipelinesApplication {
+	dspa := CreateEmptyDSPA()
+	dspa.Spec.DSPVersion = "v2"
+	dspa.Spec.PodToPodTLS = boolPtr(false)
+	dspa.Spec.MLMD.Deploy = true
+	dspa.Spec.APIServer = &dspav1.APIServer{
+		Deploy:      true,
+		ResourceTTL: &ttl,
+	}
+	return dspa
+}
+
 func CreateTestDSPA() *dspav1.DataSciencePipelinesApplication {
 	dspa := CreateEmptyDSPA()
 	dspa.Name = "testdspa"
