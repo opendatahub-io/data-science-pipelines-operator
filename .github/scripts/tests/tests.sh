@@ -552,4 +552,3 @@ run_tests
 run_tests_dspa_k8s
 #todo: out of order temporarily to demonstrate run_tests_dspa_k8s successful execution
 run_tests_dspa_external_connections
-
