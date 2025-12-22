@@ -49,6 +49,18 @@ spec:
               value: "{{.DBConnection.Host}}"
             - name: DBCONFIG_PORT
               value: "{{.DBConnection.Port}}"
+            {{ if .CustomCABundle }}
+            - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_NAME
+              value: "{{.CustomCABundle.ConfigMapName}}"
+            - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_KEY
+              value: "{{.CustomCABundle.ConfigMapKey}}"
+            - name: ARTIFACT_COPY_STEP_CABUNDLE_MOUNTPATH
+              value: {{ .CustomCABundleRootMountPath }}
+            {{ end }}
+            {{ if .CustomSSLCertDir }}
+            - name: SSL_CERT_DIR
+              value: {{.CustomSSLCertDir}}
+            {{ end }}
             - name: ML_PIPELINE_SERVICE_NAME
               value: "ds-pipeline-{{.Name}}"
             # Visualization server is something we deploy

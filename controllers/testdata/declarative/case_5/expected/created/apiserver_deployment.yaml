@@ -41,6 +41,14 @@ spec:
               value: "mariadb-testdsp5.default.svc.cluster.local"
             - name: DBCONFIG_PORT
               value: "3306"
+            - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_NAME
+              value: dsp-trusted-ca-testdsp5
+            - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_KEY
+              value: testcabundleconfigmapkey5.crt
+            - name: ARTIFACT_COPY_STEP_CABUNDLE_MOUNTPATH
+              value: /dsp-custom-certs
+            - name: SSL_CERT_DIR
+              value: "/dsp-custom-certs:/etc/ssl/certs:/etc/pki/tls/certs"
             - name: ML_PIPELINE_SERVICE_NAME
               value: "ds-pipeline-testdsp5"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_HOST
