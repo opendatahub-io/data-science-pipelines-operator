@@ -428,7 +428,7 @@ func TestExtractParams_WithoutResourceTTL(t *testing.T) {
 
 	dspa := testutil.CreateEmptyDSPA()
 	dspa.Spec.APIServer = &dspav1.APIServer{Deploy: true}
-	dspa.Spec.PodToPodTLS = boolPtr(false)
+	dspa.Spec.PodToPodTLS = testutil.BoolPtr(false)
 
 	err := params.ExtractParams(ctx, dspa, client.Client, client.Log)
 	require.NoError(t, err)
