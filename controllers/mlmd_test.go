@@ -23,6 +23,7 @@ import (
 	v1 "github.com/openshift/api/route/v1"
 
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -40,7 +41,7 @@ func TestDeployMLMD(t *testing.T) {
 	dspa := &dspav1.DataSciencePipelinesApplication{
 		Spec: dspav1.DSPASpec{
 			DSPVersion:  "v2",
-			PodToPodTLS: boolPtr(false),
+			PodToPodTLS: testutil.BoolPtr(false),
 			APIServer:   &dspav1.APIServer{},
 			MLMD: &dspav1.MLMD{
 				Deploy: true,
@@ -131,7 +132,7 @@ func TestDontDeployMLMD(t *testing.T) {
 	dspa := &dspav1.DataSciencePipelinesApplication{
 		Spec: dspav1.DSPASpec{
 			DSPVersion:  "v2",
-			PodToPodTLS: boolPtr(false),
+			PodToPodTLS: testutil.BoolPtr(false),
 			APIServer:   &dspav1.APIServer{},
 			MLMD: &dspav1.MLMD{
 				Deploy: false,
@@ -174,7 +175,7 @@ func TestDefaultDeployBehaviorMLMD(t *testing.T) {
 	dspa := &dspav1.DataSciencePipelinesApplication{
 		Spec: dspav1.DSPASpec{
 			DSPVersion:  "v2",
-			PodToPodTLS: boolPtr(false),
+			PodToPodTLS: testutil.BoolPtr(false),
 			APIServer:   &dspav1.APIServer{},
 			Database: &dspav1.Database{
 				DisableHealthCheck: false,
@@ -264,7 +265,7 @@ func TestDeployEnvoyRoute(t *testing.T) {
 	dspa := &dspav1.DataSciencePipelinesApplication{
 		Spec: dspav1.DSPASpec{
 			DSPVersion:  "v2",
-			PodToPodTLS: boolPtr(false),
+			PodToPodTLS: testutil.BoolPtr(false),
 			APIServer:   &dspav1.APIServer{},
 			MLMD: &dspav1.MLMD{
 				Deploy: true,
@@ -336,7 +337,7 @@ func TestDontDeployEnvoyRoute(t *testing.T) {
 	dspa := &dspav1.DataSciencePipelinesApplication{
 		Spec: dspav1.DSPASpec{
 			DSPVersion:  "v2",
-			PodToPodTLS: boolPtr(false),
+			PodToPodTLS: testutil.BoolPtr(false),
 			APIServer:   &dspav1.APIServer{},
 			MLMD: &dspav1.MLMD{
 				Deploy: true,
@@ -398,10 +399,6 @@ func TestDontDeployEnvoyRoute(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func boolPtr(b bool) *bool {
-	return &b
-}
-
 func TestGetEndpointsMLMD(t *testing.T) {
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
@@ -412,7 +409,7 @@ func TestGetEndpointsMLMD(t *testing.T) {
 	dspa := &dspav1.DataSciencePipelinesApplication{
 		Spec: dspav1.DSPASpec{
 			DSPVersion:  "v2",
-			PodToPodTLS: boolPtr(false),
+			PodToPodTLS: testutil.BoolPtr(false),
 			APIServer:   &dspav1.APIServer{},
 			MLMD: &dspav1.MLMD{
 				Deploy: true,

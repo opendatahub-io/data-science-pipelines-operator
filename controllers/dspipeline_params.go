@@ -104,6 +104,10 @@ type DSPAParams struct {
 
 	// Proxy configuration for all DSPA components
 	ProxyConfig *dspa.ProxyConfig
+
+	// CompiledPipelineSpecPatch is a JSON patch applied to all compiled pipeline specs
+	// Used for global workflow configuration like TTL strategy
+	CompiledPipelineSpecPatch string
 }
 
 type DBConnection struct {
@@ -546,6 +550,35 @@ func setStringDefault(defaultValue string, value *string) {
 	}
 }
 
+// buildCompiledPipelineSpecPatch constructs a JSON patch for compiled pipeline specs
+// based on DSPA configuration fields. Returns empty string if no patch fields are set.
+func (p *DSPAParams) buildCompiledPipelineSpecPatch() string {
+	patch := make(map[string]interface{})
+
+	// Add TTL strategy if ResourceTTL is configured
+	if p.APIServer != nil && p.APIServer.ResourceTTL != nil {
+		patch["ttlStrategy"] = map[string]interface{}{
+			"secondsAfterCompletion": *p.APIServer.ResourceTTL,
+		}
+	}
+
+	// Future extensibility: add more patch fields here as needed
+	// Example:
+	// if p.APIServer != nil && p.APIServer.PodGCStrategy != nil {
+	//     patch["podGC"] = map[string]interface{}{"strategy": *p.APIServer.PodGCStrategy}
+	// }
+
+	if len(patch) == 0 {
+		return ""
+	}
+
+	patchJSON, err := json.Marshal(patch)
+	if err != nil {
+		return ""
+	}
+	return string(patchJSON)
+}
+
 func setResourcesDefault(defaultValue dspa.ResourceRequirements, value **dspa.ResourceRequirements) {
 	if *value == nil {
 		*value = defaultValue.DeepCopy()
@@ -602,6 +635,9 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	}
 
 	p.ProxyConfig = dsp.Spec.Proxy
+
+	// Build compiled pipeline spec patch from DSPA fields
+	p.CompiledPipelineSpecPatch = p.buildCompiledPipelineSpecPatch()
 
 	log := loggr.WithValues("namespace", p.Namespace).WithValues("dspa_name", p.Name)
 
