@@ -141,6 +141,10 @@ integrationtest: ## Run integration tests
 	cd tests && \
 	go test ./... --tags=test_integration -v -kubeconfig=${KUBECONFIGPATH} -k8sApiServerHost=${K8SAPISERVERHOST} -DSPANamespace=${DSPANAMESPACE} -DSPAPath=${DSPAPATH} -endpointType=${ENDPOINT_TYPE} -MinioNamespace=${MINIONAMESPACE} -ArgoWorkflowsControllersManagementState=$(INTTEST_AWF_MANAGEMENT_STATE) -skipDeploy=$(INTTEST_SKIP_DEPLOY) -skipCleanup=$(INTTEST_SKIP_CLEANUP)
 
+.PHONY: kustomize-validate
+kustomize-validate: kustomize ## Validate kustomize build output has no warnings or errors for all ./config kustomizations.
+	KUSTOMIZE_BIN=$(KUSTOMIZE) bash scripts/validate-kustomize.sh
+
 ##@ Build
 
 .PHONY: build

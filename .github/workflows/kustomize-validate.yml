@@ -1,0 +1,26 @@
+name: Artifacts validation
+
+on:
+  pull_request:
+    paths:
+      - "config/**"
+      - "scripts/validate-kustomize.sh"
+      - "Makefile"
+      - ".github/workflows/kustomize-validate.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "config/**"
+      - "scripts/validate-kustomize.sh"
+      - "Makefile"
+      - ".github/workflows/kustomize-validate.yml"
+
+jobs:
+  kustomize-build-no-warnings:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Validate artifacts (kustomize build has no warnings or errors)
+        run: make kustomize-validate
