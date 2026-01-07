@@ -40,6 +40,10 @@ ENDPOINT_TYPE="service"
 DSPO_IMAGE_REF="${DSPO_IMAGE_REF:-}"
 CONTAINER_CLI="${CONTAINER_CLI:-docker}"
 RUN_PKG_UPLOADER_IN_CONTAINER="${RUN_PKG_UPLOADER_IN_CONTAINER:-true}"
+SETUP_ONLY="${SETUP_ONLY}"
+TEST_BASIC="${INTTEST_BASIC}"
+TEST_EXT_CONNECTIONS="${INTTEST_EXT_CONNECTIONS}"
+TEST_K8S_STORE="${INTTEST_K8S_STORE}"
 
 get_dspo_image() {
   if [ ! -z "$DSPO_IMAGE_REF" ]; then
@@ -546,8 +550,32 @@ else
   if [ "$DEPLOY_EXTERNAL_ARGO" = true ]; then
     setup_external_argo
   fi
+
+  # If SETUP_ONLY set, exit without running tests.
+  if [ "$SETUP_ONLY" = true ]; then
+    exit 0
+  fi
+
+  # If TEST_BASIC set, run integration tests only with no modifications.
+  if [ "$TEST_BASIC" = true ]; then
+    run_tests
+    exit 0
+  fi
+
+  # If TEST_K8S_STORE set, run integration tests only with k8s pipeline storage enabled.
+  if [ "$TEST_K8S_STORE" = true ]; then
+    run_tests_dspa_k8s
+    exit 0
+  fi
+
+  # If TEST_EXT_CONNECTIONS set, run integration tests only with external connections enabled.
+  if [ "$TEST_EXT_CONNECTIONS" = true ]; then
+    run_tests_dspa_external_connections
+    exit 0
+  fi
 fi
 
+# If none of the above modifications are enabled, run all three iterations of integration tests.
 run_tests
 run_tests_dspa_k8s
 run_tests_dspa_external_connections
