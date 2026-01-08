@@ -557,8 +557,10 @@ func (p *DSPAParams) SetupCompiledPipelineSpecPatch(log logr.Logger) {
 
 	// Add TTL strategy if ResourceTTL is configured
 	if p.APIServer != nil && p.APIServer.ResourceTTL != nil {
+		// Convert duration to seconds (Argo Workflows expects seconds)
+		seconds := int32(p.APIServer.ResourceTTL.Duration.Seconds())
 		patch["ttlStrategy"] = map[string]interface{}{
-			"secondsAfterCompletion": *p.APIServer.ResourceTTL,
+			"secondsAfterCompletion": seconds,
 		}
 	}
 
