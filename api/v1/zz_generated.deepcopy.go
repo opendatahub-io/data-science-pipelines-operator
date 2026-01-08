@@ -65,7 +65,7 @@ func (in *APIServer) DeepCopyInto(out *APIServer) {
 	}
 	if in.ResourceTTL != nil {
 		in, out := &in.ResourceTTL, &out.ResourceTTL
-		*out = new(int32)
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 }

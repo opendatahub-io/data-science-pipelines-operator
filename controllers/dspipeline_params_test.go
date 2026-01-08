@@ -20,6 +20,7 @@ package controllers
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
@@ -340,11 +341,11 @@ func TestSetupCompiledPipelineSpecPatch(t *testing.T) {
 			expectedPatch: "",
 		},
 		{
-			name: "ResourceTTL set to 3600",
+			name: "ResourceTTL set to 1h (3600s)",
 			params: DSPAParams{
 				APIServer: &dspav1.APIServer{
 					Deploy:      true,
-					ResourceTTL: int32Ptr(3600),
+					ResourceTTL: &metav1.Duration{Duration: 1 * time.Hour},
 				},
 			},
 			expectedFields: map[string]interface{}{
@@ -354,11 +355,11 @@ func TestSetupCompiledPipelineSpecPatch(t *testing.T) {
 			},
 		},
 		{
-			name: "ResourceTTL set to 0",
+			name: "ResourceTTL set to 0s",
 			params: DSPAParams{
 				APIServer: &dspav1.APIServer{
 					Deploy:      true,
-					ResourceTTL: int32Ptr(0),
+					ResourceTTL: &metav1.Duration{Duration: 0},
 				},
 			},
 			expectedFields: map[string]interface{}{
@@ -368,16 +369,44 @@ func TestSetupCompiledPipelineSpecPatch(t *testing.T) {
 			},
 		},
 		{
-			name: "ResourceTTL set to large value",
+			name: "ResourceTTL set to 24h (86400s)",
 			params: DSPAParams{
 				APIServer: &dspav1.APIServer{
 					Deploy:      true,
-					ResourceTTL: int32Ptr(86400),
+					ResourceTTL: &metav1.Duration{Duration: 24 * time.Hour},
 				},
 			},
 			expectedFields: map[string]interface{}{
 				"ttlStrategy": map[string]interface{}{
 					"secondsAfterCompletion": float64(86400),
+				},
+			},
+		},
+		{
+			name: "ResourceTTL set to 30m (1800s)",
+			params: DSPAParams{
+				APIServer: &dspav1.APIServer{
+					Deploy:      true,
+					ResourceTTL: &metav1.Duration{Duration: 30 * time.Minute},
+				},
+			},
+			expectedFields: map[string]interface{}{
+				"ttlStrategy": map[string]interface{}{
+					"secondsAfterCompletion": float64(1800),
+				},
+			},
+		},
+		{
+			name: "ResourceTTL set to empty duration (zero value)",
+			params: DSPAParams{
+				APIServer: &dspav1.APIServer{
+					Deploy:      true,
+					ResourceTTL: &metav1.Duration{}, // empty/zero duration
+				},
+			},
+			expectedFields: map[string]interface{}{
+				"ttlStrategy": map[string]interface{}{
+					"secondsAfterCompletion": float64(0),
 				},
 			},
 		},
@@ -405,7 +434,7 @@ func TestSetupCompiledPipelineSpecPatch(t *testing.T) {
 func TestExtractParams_WithResourceTTL(t *testing.T) {
 	ctx, params, client := CreateNewTestObjects()
 
-	dspa := testutil.CreateDSPAWithResourceTTL(3600)
+	dspa := testutil.CreateDSPAWithResourceTTL(1 * time.Hour)
 
 	err := params.ExtractParams(ctx, dspa, client.Client, client.Log)
 	require.NoError(t, err)
@@ -433,8 +462,4 @@ func TestExtractParams_WithoutResourceTTL(t *testing.T) {
 	err := params.ExtractParams(ctx, dspa, client.Client, client.Log)
 	require.NoError(t, err)
 	assert.Empty(t, params.CompiledPipelineSpecPatch)
-}
-
-func int32Ptr(i int32) *int32 {
-	return &i
 }

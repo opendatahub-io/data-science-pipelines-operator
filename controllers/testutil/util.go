@@ -278,14 +278,14 @@ func CreateDSPAWithCustomKfpLauncherConfigMap(configMapName string) *dspav1.Data
 	return dspa
 }
 
-func CreateDSPAWithResourceTTL(ttl int32) *dspav1.DataSciencePipelinesApplication {
+func CreateDSPAWithResourceTTL(duration time.Duration) *dspav1.DataSciencePipelinesApplication {
 	dspa := CreateEmptyDSPA()
 	dspa.Spec.DSPVersion = "v2"
 	dspa.Spec.PodToPodTLS = BoolPtr(false)
 	dspa.Spec.MLMD.Deploy = true
 	dspa.Spec.APIServer = &dspav1.APIServer{
 		Deploy:      true,
-		ResourceTTL: &ttl,
+		ResourceTTL: &metav1.Duration{Duration: duration},
 	}
 	return dspa
 }
