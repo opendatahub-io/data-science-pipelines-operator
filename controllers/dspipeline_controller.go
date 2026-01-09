@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/dspastatus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,6 +51,7 @@ const (
 	finalizerName              = "datasciencepipelinesapplications.opendatahub.io/finalizer"
 	errorUpdatingDspaStatusMsg = "Encountered error when updating the DSPA status"
 	k8sWebhookName             = "ds-pipelines-webhook"
+	rolloutGracePeriod         = time.Minute * 2
 )
 
 // DSPAReconciler reconciles a DSPAParams object
@@ -289,7 +291,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	err = r.ReconcileDatabase(ctx, dspa, params)
 	if err != nil {
-		dspaStatus.SetDatabaseNotReady(err, config.FailingToDeploy)
+		dspaStatus.SetDatabaseNotReady(err, r.reasonForExternalDuringInitialRollout(dspa, err))
 		return ctrl.Result{}, err
 	} else {
 		dspaStatus.SetDatabaseReady()
@@ -297,7 +299,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	err = r.ReconcileStorage(ctx, dspa, params)
 	if err != nil {
-		dspaStatus.SetObjStoreNotReady(err, config.FailingToDeploy)
+		dspaStatus.SetObjStoreNotReady(err, r.reasonForExternalDuringInitialRollout(dspa, err))
 		return ctrl.Result{}, err
 	} else {
 		dspaStatus.SetObjStoreReady()
@@ -307,14 +309,14 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	dbAvailable, err := r.isDatabaseAccessible(dspa, params)
 
 	if err != nil {
-		dspaStatus.SetDatabaseNotReady(err, config.FailingToDeploy)
+		dspaStatus.SetDatabaseNotReady(err, r.reasonForExternalDuringInitialRollout(dspa, err))
 	} else {
 		dspaStatus.SetDatabaseReady()
 	}
 
 	objStoreAvailable, err := r.isObjectStorageAccessible(ctx, dspa, params)
 	if err != nil {
-		dspaStatus.SetObjStoreNotReady(err, config.FailingToDeploy)
+		dspaStatus.SetObjStoreNotReady(err, r.reasonForExternalDuringInitialRollout(dspa, err))
 	} else {
 		dspaStatus.SetObjStoreReady()
 	}
@@ -347,7 +349,8 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 		err = r.ReconcileAPIServer(ctx, dspa, params)
 		if err != nil {
-			r.setStatusAsNotReady(config.APIServerReady, err, dspaStatus.SetApiServerStatus)
+			r.setStatusFromDeployment(ctx, params.APIServerDefaultResourceName, config.APIServerReady, dspa,
+				dspaStatus.SetApiServerStatus, log, err)
 			return ctrl.Result{}, err
 		} else {
 			r.setStatus(ctx, params.APIServerDefaultResourceName, config.APIServerReady, dspa,
@@ -356,7 +359,8 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 		err = r.ReconcilePersistenceAgent(dspa, params)
 		if err != nil {
-			r.setStatusAsNotReady(config.PersistenceAgentReady, err, dspaStatus.SetPersistenceAgentStatus)
+			r.setStatusFromDeployment(ctx, params.PersistentAgentDefaultResourceName, config.PersistenceAgentReady, dspa,
+				dspaStatus.SetPersistenceAgentStatus, log, err)
 			return ctrl.Result{}, err
 		} else {
 			r.setStatus(ctx, params.PersistentAgentDefaultResourceName, config.PersistenceAgentReady, dspa,
@@ -365,7 +369,8 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 		err = r.ReconcileScheduledWorkflow(dspa, params)
 		if err != nil {
-			r.setStatusAsNotReady(config.ScheduledWorkflowReady, err, dspaStatus.SetScheduledWorkflowStatus)
+			r.setStatusFromDeployment(ctx, params.ScheduledWorkflowDefaultResourceName, config.ScheduledWorkflowReady, dspa,
+				dspaStatus.SetScheduledWorkflowStatus, log, err)
 			return ctrl.Result{}, err
 		} else {
 			r.setStatus(ctx, params.ScheduledWorkflowDefaultResourceName, config.ScheduledWorkflowReady, dspa,
@@ -374,7 +379,12 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 		workflowControllerEnabled, err := r.ReconcileWorkflowController(dspa, params)
 		if err != nil {
-			dspaStatus.SetWorkflowControllerNotReady(err, config.FailingToDeploy)
+			if workflowControllerEnabled {
+				r.setStatusFromDeployment(ctx, params.WorkflowControllerDefaultResourceName, config.WorkflowControllerReady, dspa,
+					dspaStatus.SetWorkflowControllerStatus, log, err)
+			} else {
+				dspaStatus.SetWorkflowControllerNotApplicable()
+			}
 			return ctrl.Result{}, err
 		} else {
 			if workflowControllerEnabled {
@@ -388,7 +398,8 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		// MLMD should be the last to reconcile because it can cause an early exit due to the lack of the TLS secret, which may not have been created yet.
 		err = r.ReconcileMLMD(ctx, dspa, params)
 		if err != nil {
-			r.setStatusAsNotReady(config.MLMDProxyReady, err, dspaStatus.SetMLMDProxyStatus)
+			r.setStatusFromDeployment(ctx, params.MlmdProxyDefaultResourceName, config.MLMDProxyReady, dspa,
+				dspaStatus.SetMLMDProxyStatus, log, err)
 			return ctrl.Result{}, err
 		} else {
 			r.setStatus(ctx, params.MlmdProxyDefaultResourceName, config.MLMDProxyReady, dspa,
@@ -422,6 +433,16 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	return ctrl.Result{}, nil
 }
 
+// reasonForExternalDuringInitialRollout returns Deploying instead of FailingToDeploy
+// for transient failures before the DSPA has ever reached Ready.
+// It is used for external dependencies (DB, object storage) where startup failures may be transient.
+func (r *DSPAReconciler) reasonForExternalDuringInitialRollout(dspa *dspav1.DataSciencePipelinesApplication, err error) string {
+	if util.IsTransientStartup(err) && time.Since(dspa.CreationTimestamp.Time) < rolloutGracePeriod {
+		return config.Deploying
+	}
+	return config.FailingToDeploy
+}
+
 func (r *DSPAReconciler) setStatusAsNotReady(conditionType string, err error, setStatus func(metav1.Condition)) {
 	condition := dspastatus.BuildFalseCondition(conditionType, config.FailingToDeploy, err.Error())
 	setStatus(condition)
@@ -430,6 +451,44 @@ func (r *DSPAReconciler) setStatusAsNotReady(conditionType string, err error, se
 func (r *DSPAReconciler) setStatusAsUnsupported(conditionType string, err error, setStatus func(metav1.Condition)) {
 	condition := dspastatus.BuildFalseCondition(conditionType, config.UnsupportedVersion, err.Error())
 	setStatus(condition)
+}
+
+func (r *DSPAReconciler) setStatusFromDeployment(ctx context.Context, resourceName string, conditionType string,
+	dspa *dspav1.DataSciencePipelinesApplication, setStatus func(metav1.Condition), log logr.Logger, reconcileErr error) {
+	condition, evalErr := r.evaluateCondition(ctx, dspa, resourceName, conditionType)
+	if evalErr != nil {
+		log.Error(evalErr, fmt.Sprintf("Encountered error when evaluating %s readiness condition after reconcile failure", conditionType))
+		r.setStatusAsNotReady(conditionType, evalErr, setStatus)
+		return
+	}
+
+	r.applyInitialRolloutReason(&condition, resourceName, dspa, reconcileErr)
+
+	if reconcileErr != nil && condition.Message == "" {
+		condition.Message = reconcileErr.Error()
+	}
+
+	setStatus(condition)
+}
+
+func (r *DSPAReconciler) applyInitialRolloutReason(condition *metav1.Condition, resourceName string,
+	dspa *dspav1.DataSciencePipelinesApplication, reconcileErr error) {
+	if time.Since(dspa.CreationTimestamp.Time) >= rolloutGracePeriod {
+		return
+	}
+
+	if reconcileErr != nil {
+		return
+	}
+
+	// Update reason to Deploying for progressing state when no failure reason is present.
+	if condition.Status != metav1.ConditionTrue {
+		allowProgress := condition.Reason == config.Deploying
+		isFailure := condition.Reason == config.FailingToDeploy || condition.Reason == config.MinimumReplicasAvailable
+		if allowProgress && !isFailure {
+			condition.Reason = config.Deploying
+		}
+	}
 }
 
 func (r *DSPAReconciler) setStatus(ctx context.Context, resourceName string, conditionType string,
