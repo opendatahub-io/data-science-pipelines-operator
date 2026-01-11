@@ -5,16 +5,17 @@ metadata:
     build.appstudio.openshift.io/repo: https://github.com/opendatahub-io/data-science-pipelines-operator?rev={{revision}}
     build.appstudio.redhat.com/commit_sha: '{{revision}}'
     build.appstudio.redhat.com/target_branch: '{{target_branch}}'
+    build.appstudio.redhat.com/pull_request_number: '{{pull_request_number}}'
     pipelinesascode.tekton.dev/cancel-in-progress: "false"
     pipelinesascode.tekton.dev/max-keep-runs: "3"
-    pipelinesascode.tekton.dev/on-cel-expression: event == "push" && target_branch
+    pipelinesascode.tekton.dev/on-cel-expression: event == "pull_request" && target_branch
       == "stable"
   creationTimestamp: null
   labels:
     appstudio.openshift.io/application: opendatahub-release
     appstudio.openshift.io/component: odh-data-science-pipelines-operator-controller
     pipelines.appstudio.openshift.io/type: build
-  name: odh-data-science-pipelines-operator-controller-on-push
+  name: odh-data-science-pipelines-operator-controller-on-pull-request
   namespace: open-data-hub-tenant
 spec:
   params:
@@ -31,6 +32,8 @@ spec:
   - name: additional-tags
     value:
     - '{{target_branch}}-{{revision}}'
+  - name: pipeline-type
+    value: pull-request
   pipelineRef:
     resolver: git
     params:
