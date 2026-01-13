@@ -11,3 +11,6 @@ data:
     [mariadb]
     ssl_cert = /.mariadb/certs/tls.crt
     ssl_key = /.mariadb/certs/tls.key
+    {{ if .PodToPodTLS }}
+    require_secure_transport = on
+    {{ end }}
