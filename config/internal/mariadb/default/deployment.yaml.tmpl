@@ -58,6 +58,17 @@ spec:
             initialDelaySeconds: 30
             periodSeconds: 10
             successThreshold: 1
+            {{ if .PodToPodTLS }}
+            exec:
+              command:
+                - /bin/sh
+                - "-i"
+                - "-c"
+                - >-
+                  MYSQL_PWD=$MYSQL_PASSWORD mysql -u $MYSQL_USER -D
+                  $MYSQL_DATABASE -e 'SELECT 1'
+            {{ else }}
+
             tcpSocket:
               port: 3306
             timeoutSeconds: 1
