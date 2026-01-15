@@ -151,6 +151,15 @@ spec:
                     - database
                     - kubernetes
                     type: string
+                  resourceTTL:
+                    description: |-
+                      ResourceTTL specifies the duration after a pipeline run completes before its
+                      Workflow resources (pods, etc.) are automatically deleted. This helps with cluster resource
+                      cleanup. When set, the ttlStrategy.secondsAfterCompletion field is applied to all pipeline runs.
+                      Accepts duration strings like "1h", "30m", "24h", "1h30m".
+                    minLength: 2
+                    pattern: ^(?:(\d+(?:\.\d+)?h))?(?:(\d+(?:\.\d+)?m))?(?:(\d+(?:\.\d+)?s))?$
+                    type: string
                   resources:
                     description: Specify custom Pod resource requirements for this
                       component.

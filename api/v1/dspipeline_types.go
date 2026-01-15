@@ -163,6 +163,16 @@ type APIServer struct {
 	// @dsl.pipeline(pipeline_config=dsl.PipelineConfig(workspace=dsl.WorkspaceConfig(size="25Mi"))).
 	// +kubebuilder:validation:Optional
 	Workspace *APIServerWorkspace `json:"workspace,omitempty"`
+
+	// ResourceTTL specifies the duration after a pipeline run completes before its
+	// Workflow resources (pods, etc.) are automatically deleted. This helps with cluster resource
+	// cleanup. When set, the ttlStrategy.secondsAfterCompletion field is applied to all pipeline runs.
+	// Accepts duration strings like "1h", "30m", "24h", "1h30m".
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Pattern=`^(?:(\d+(?:\.\d+)?h))?(?:(\d+(?:\.\d+)?m))?(?:(\d+(?:\.\d+)?s))?$`
+	// +kubebuilder:validation:MinLength=2
+	ResourceTTL *metav1.Duration `json:"resourceTTL,omitempty"`
 }
 
 type APIServerWorkspace struct {

@@ -1,5 +1,9 @@
 name: Functional Tests
 on:
+  push:
+    branches:
+      - main
+      - stable
   pull_request:
 jobs:
   functest:

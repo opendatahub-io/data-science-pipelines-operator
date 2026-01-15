@@ -41,6 +41,8 @@ spec:
               value: "mariadb-testdsp2.default.svc.cluster.local"
             - name: DBCONFIG_PORT
               value: "3306"
+            - name: ML_PIPELINE_SERVICE_NAME
+              value: "ds-pipeline-testdsp2"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_HOST
               value: "ds-pipeline-visualizationserver"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
@@ -106,6 +108,8 @@ spec:
               value: "launcher-v2-fips"
             - name: CACHEENABLED
               value: "false"
+            - name: COMPILED_PIPELINE_SPEC_PATCH
+              value: '{"ttlStrategy":{"secondsAfterCompletion":3600}}'
           image: api-server:test2
           # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
           name: ds-pipeline-api-server

@@ -14,6 +14,7 @@ spec:
     enableOauth: true
     enableSamplePipeline: true
     cacheEnabled: false
+    resourceTTL: 1h
     managedPipelines: {}
     customServerConfigMap:
       name: testserverconfigmapdspa2

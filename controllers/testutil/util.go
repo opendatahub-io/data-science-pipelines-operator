@@ -214,7 +214,7 @@ func GenerateDeclarativeTestCases(t *testing.T) []Case {
 func CreateEmptyDSPA() *dspav1.DataSciencePipelinesApplication {
 	dspa := &dspav1.DataSciencePipelinesApplication{
 		Spec: dspav1.DSPASpec{
-			PodToPodTLS:        boolPtr(false),
+			PodToPodTLS:        BoolPtr(false),
 			APIServer:          &dspav1.APIServer{Deploy: false},
 			MLMD:               &dspav1.MLMD{Deploy: true}, // MLMD is required
 			PersistenceAgent:   &dspav1.PersistenceAgent{Deploy: false},
@@ -254,12 +254,13 @@ func CreateDSPAWithAPIServerPodtoPodTlsEnabled() *dspav1.DataSciencePipelinesApp
 		Deploy: true,
 	}
 	dspa.Spec.MLMD.Deploy = true
-	dspa.Spec.PodToPodTLS = boolPtr(true)
+	dspa.Spec.PodToPodTLS = BoolPtr(true)
 
 	return dspa
 }
 
-func boolPtr(b bool) *bool {
+// BoolPtr returns a pointer to the given bool value.
+func BoolPtr(b bool) *bool {
 	return &b
 }
 
@@ -267,12 +268,24 @@ func CreateDSPAWithCustomKfpLauncherConfigMap(configMapName string) *dspav1.Data
 	dspa := CreateEmptyDSPA()
 	dspa.Spec.DSPVersion = "v2"
 	// required, or we get an error because OCP certs aren't found
-	dspa.Spec.PodToPodTLS = boolPtr(false)
+	dspa.Spec.PodToPodTLS = BoolPtr(false)
 	// required, or we get an error because this is required in v2
 	dspa.Spec.MLMD.Deploy = true
 	dspa.Spec.APIServer = &dspav1.APIServer{
 		Deploy:                     true,
 		CustomKfpLauncherConfigMap: configMapName,
+	}
+	return dspa
+}
+
+func CreateDSPAWithResourceTTL(duration time.Duration) *dspav1.DataSciencePipelinesApplication {
+	dspa := CreateEmptyDSPA()
+	dspa.Spec.DSPVersion = "v2"
+	dspa.Spec.PodToPodTLS = BoolPtr(false)
+	dspa.Spec.MLMD.Deploy = true
+	dspa.Spec.APIServer = &dspav1.APIServer{
+		Deploy:      true,
+		ResourceTTL: &metav1.Duration{Duration: duration},
 	}
 	return dspa
 }
@@ -283,7 +296,7 @@ func CreateTestDSPA() *dspav1.DataSciencePipelinesApplication {
 	dspa.Namespace = "testnamespace"
 
 	dspa.Spec = dspav1.DSPASpec{
-		PodToPodTLS: boolPtr(false),
+		PodToPodTLS: BoolPtr(false),
 		APIServer: &dspav1.APIServer{
 			Deploy:        true,
 			PipelineStore: "kubernetes",

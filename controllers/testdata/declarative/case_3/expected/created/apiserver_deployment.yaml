@@ -41,6 +41,8 @@ spec:
               value: "testdbhost3"
             - name: DBCONFIG_PORT
               value: "test3"
+            - name: ML_PIPELINE_SERVICE_NAME
+              value: "ds-pipeline-testdsp3"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_HOST
               value: "ds-pipeline-visualizationserver"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT

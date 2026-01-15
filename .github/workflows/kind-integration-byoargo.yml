@@ -2,6 +2,10 @@ name: KinD DSPO/DSP Integration Tests - External Argo
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+      - stable
   pull_request:
     paths:
       - go.mod
@@ -47,6 +51,9 @@ jobs:
 
       - name: Setup and start KinD cluster
         uses: ./.github/actions/kind
+
+      - name: Free up disk space
+        uses: kubeflow/pipelines/.github/actions/github-disk-cleanup@master
 
       - name: Run test
         id: test
