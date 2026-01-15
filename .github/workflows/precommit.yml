@@ -1,5 +1,9 @@
 name: Pre-commit
 on:
+  push:
+    branches:
+      - main
+      - stable
   pull_request:
 jobs:
   precommit:
