@@ -4,6 +4,7 @@ on:
     branches:
       - main
       - stable
+      - v*.*.*
   pull_request:
 jobs:
   unittest:
