@@ -18,22 +18,26 @@ package util
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+
 	mf "github.com/manifestival/manifestival"
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"os"
-	"path/filepath"
 
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 
 	"context"
 	"crypto/x509"
+	"errors"
+	"net"
 	"net/url"
+	"strings"
 
 	routev1 "github.com/openshift/api/route/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -179,7 +183,7 @@ func GetServiceIfAvailable(ctx context.Context, svcName, ns string, client clien
 	namespacedNamed := types.NamespacedName{Name: svcName, Namespace: ns}
 	err := client.Get(ctx, namespacedNamed, service)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if k8serrors.IsNotFound(err) {
 			return false, nil, nil
 		} else {
 			return false, nil, err
@@ -193,7 +197,7 @@ func GetRouteIfAvailable(ctx context.Context, routeName, ns string, client clien
 	namespacedNamed := types.NamespacedName{Name: routeName, Namespace: ns}
 	err := client.Get(ctx, namespacedNamed, route)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if k8serrors.IsNotFound(err) {
 			return false, nil, nil
 		} else {
 			return false, nil, err
@@ -279,4 +283,40 @@ func AddDeploymentPodLabelTransformer(labelKey, labelValue string) mf.Transforme
 		}
 		return nil
 	}
+}
+
+// IsTransientStartup returns true for common transient rollout errors such as
+// timeouts, connection refused, DNS not ready.
+func IsTransientStartup(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	var netErr net.Error
+	if errors.As(err, &netErr) && netErr.Timeout() {
+		return true
+	}
+	var opErr *net.OpError
+	if errors.As(err, &opErr) {
+		return true
+	}
+	msg := strings.ToLower(err.Error())
+	transientTokens := []string{
+		"connection refused",
+		"connection reset",
+		"no such host",
+		"i/o timeout",
+		"context deadline exceeded",
+		"temporary failure",
+		"503 service unavailable",
+		"could not connect",
+	}
+	for _, t := range transientTokens {
+		if strings.Contains(msg, t) {
+			return true
+		}
+	}
+	return false
 }
