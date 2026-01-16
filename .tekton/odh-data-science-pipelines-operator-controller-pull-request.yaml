@@ -24,15 +24,11 @@ spec:
   - name: revision
     value: '{{revision}}'
   - name: output-image
-    value: quay.io/opendatahub/data-science-pipelines-operator:{{revision}}
+    value: quay.io/opendatahub/data-science-pipelines-operator:odh-pr
   - name: dockerfile
     value: Dockerfile
   - name: path-context
     value: .
-  - name: additional-tags
-    value:
-    - '{{target_branch}}-{{revision}}'
-    - 'odh-stable'
   - name: pipeline-type
     value: pull-request
   pipelineRef:
