@@ -11,8 +11,8 @@ metadata:
       == "stable"
   creationTimestamp: null
   labels:
-    appstudio.openshift.io/application: opendatahub-release
-    appstudio.openshift.io/component: odh-data-science-pipelines-operator-controller
+    appstudio.openshift.io/application: opendatahub-builds
+    appstudio.openshift.io/component: odh-data-science-pipelines-operator-controller-ci
     pipelines.appstudio.openshift.io/type: build
   name: odh-data-science-pipelines-operator-controller-on-push
   namespace: open-data-hub-tenant

@@ -12,8 +12,8 @@ metadata:
       == "stable"
   creationTimestamp: null
   labels:
-    appstudio.openshift.io/application: opendatahub-release
-    appstudio.openshift.io/component: odh-data-science-pipelines-operator-controller
+    appstudio.openshift.io/application: opendatahub-builds
+    appstudio.openshift.io/component: odh-data-science-pipelines-operator-controller-ci
     pipelines.appstudio.openshift.io/type: build
   name: odh-data-science-pipelines-operator-controller-on-pull-request
   namespace: open-data-hub-tenant
@@ -29,6 +29,9 @@ spec:
     value: Dockerfile
   - name: path-context
     value: .
+  - name: additional-tags
+    value:
+    - 'odh-pr-{{revision}}'
   - name: pipeline-type
     value: pull-request
   pipelineRef:
