@@ -1,7 +1,8 @@
 # Build the manager binary
 FROM registry.access.redhat.com/ubi9/go-toolset:1.24 AS builder
-ARG TARGETOS
-ARG TARGETARCH
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
+ARG FIPS_ENABLED=1
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -17,12 +18,18 @@ COPY api/ api/
 COPY controllers/ controllers/
 
 # Build
-# the GOARCH has not a default value to allow the binary be built according to the host where the command
-# was called. For example, if we call make docker-build in a local env which has the Apple Silicon M1 SO
-# the docker BUILDPLATFORM arg will be linux/arm64 when for Apple x86 it will be linux/amd64. Therefore,
-# by leaving it empty we can ensure that the container and binary shipped on it will have the same platform.
+# FIPS_ENABLED=1 (default): FIPS-compliant build with strictfipsruntime (requires CGO)
+# FIPS_ENABLED=0: Non-FIPS build for local development on Apple Silicon (pure Go, no CGO)
 USER root
-RUN CGO_ENABLED=1 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} GO111MODULE=on GOEXPERIMENT=strictfipsruntime go build -tags strictfipsruntime -a -o manager main.go
+RUN if [ "${FIPS_ENABLED}" != "0" ] && [ "${FIPS_ENABLED}" != "1" ]; then \
+      echo "ERROR: FIPS_ENABLED must be '0' or '1', got '${FIPS_ENABLED}'" && exit 1; \
+    elif [ "${FIPS_ENABLED}" = "1" ]; then \
+      CGO_ENABLED=1 GOOS=${TARGETOS} GOARCH=${TARGETARCH} GO111MODULE=on \
+        GOEXPERIMENT=strictfipsruntime go build -tags strictfipsruntime -a -o manager main.go; \
+    else \
+      CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} GO111MODULE=on \
+        go build -a -o manager main.go; \
+    fi
 
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
 WORKDIR /

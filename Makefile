@@ -48,6 +48,25 @@ endif
 
 # Image URL to use all building/pushing image targets
 IMG ?= quay.io/opendatahub/data-science-pipelines-operator:main
+
+# FIPS_ENABLED controls whether FIPS-compliant build flags are used.
+# Default is 1 (enabled) for production. Set to 0 for local builds on
+# Apple Silicon to avoid QEMU emulation issues with FIPS.
+FIPS_ENABLED ?= 1
+
+# TARGETARCH specifies the target architecture for the binary (amd64 or arm64).
+# Default is amd64.
+TARGETARCH ?= amd64
+
+# PLATFORM_FLAG controls the --platform argument for container builds.
+# When FIPS_ENABLED=0, we skip the platform flag to let the build run natively
+# and use Go's cross-compilation instead of QEMU emulation.
+ifeq ($(FIPS_ENABLED),0)
+PLATFORM_FLAG ?=
+else
+PLATFORM_FLAG ?= --platform linux/$(TARGETARCH)
+endif
+
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.25.0
 # Namespace to deploy the operator
@@ -153,7 +172,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 
 .PHONY: podman-build
 podman-build: ## Build container image with the manager.
-	podman build -t ${IMG} .
+	podman build $(PLATFORM_FLAG) --build-arg FIPS_ENABLED=$(FIPS_ENABLED) --build-arg TARGETARCH=$(TARGETARCH) -t ${IMG} .
 
 .PHONY: podman-push
 podman-push: ## Push container image with the manager.
