@@ -128,6 +128,8 @@ spec:
             {{ if .PodToPodTLS }}
             - name: METADATA_TLS_ENABLED
               value: "true"
+            - name: METADATA_SERVICE_NAME
+              value: "ds-pipeline-metadata-grpc-{{.Name}}"
             {{ end }}
             - name: EXECUTIONTYPE
               value: Workflow

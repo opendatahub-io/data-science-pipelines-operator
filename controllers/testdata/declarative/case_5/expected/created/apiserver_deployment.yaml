@@ -101,6 +101,8 @@ spec:
               value: "60"
             - name: METADATA_TLS_ENABLED
               value: "true"
+            - name: METADATA_SERVICE_NAME
+              value: "ds-pipeline-metadata-grpc-testdsp5"
             - name: EXECUTIONTYPE
               value: Workflow
             - name: DB_DRIVER_NAME
