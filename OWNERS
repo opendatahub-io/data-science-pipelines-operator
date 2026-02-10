@@ -5,6 +5,7 @@ approvers:
   - HumairAK
   - mprahl
   - alyssacgoins
+  - nsingla
 reviewers:
   - gmfrasca
   - hbelmiro
@@ -12,5 +13,6 @@ reviewers:
   - VaniHaripriya
   - mprahl
   - alyssacgoins
+  - nsingla
 emeritus_approvers:
   - accorvin
