@@ -91,6 +91,19 @@ INTTEST_SKIP_DEPLOY ?= false
 INTTEST_SKIP_CLEANUP ?= false
 INTTEST_AWF_MANAGEMENT_STATE ?= Managed
 
+# KinD Cluster Config EnvVars
+KIND_NAME ?= dspo
+CONTAINER_ENGINE ?= $(shell \
+	if command -v docker >/dev/null 2>&1; then \
+		echo docker; \
+	elif command -v podman >/dev/null 2>&1; then \
+		echo podman; \
+	fi \
+)
+
+IMG_REGISTRY ?= kind-registry:5000
+IMG_TAG_DSPO ?= dspo:1
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -306,3 +319,48 @@ catalog-build: opm ## Build a catalog image.
 .PHONY: catalog-push
 catalog-push: ## Push a catalog image.
 	$(MAKE) podman-push IMG=$(CATALOG_IMG)
+
+# Build DSPO from local changes and push to IMG_REGISTRY.
+.PHONY: image-dspo
+image-dspo:
+	${CONTAINER_ENGINE} build --platform linux/amd64 . -t $(IMG_REGISTRY)/$(IMG_TAG_DSPO)
+	${CONTAINER_ENGINE} push $(IMG_REGISTRY)/$(IMG_TAG_DSPO)
+
+# Create a KinD cluster and deploy DSPO.
+.PHONY: kind-setup
+kind-setup:
+	# Deploy KinD cluster
+	kind create cluster --name=$(KIND_NAME)
+	# Set and deploy cluster requirements
+	cd .github/scripts/tests && TARGET="kind" SETUP_ONLY="true" GIT_WORKSPACE=$(CURDIR) DSPO_IMAGE_REF=$(IMG_REGISTRY)/$(IMG_TAG_DSPO) ./tests.sh
+
+# Create a KinD cluster and deploy DSPO with external Argo.
+.PHONY: kind-setup-externalargo
+kind-setup-externalargo:
+	# Deploy KinD cluster
+	kind create cluster --name=$(KIND_NAME)
+	# Set and deploy cluster requirements
+	cd .github/scripts/tests && TARGET="kind" SETUP_ONLY="true" GIT_WORKSPACE=$(CURDIR) DSPO_IMAGE_REF=$(IMG_REGISTRY)/$(IMG_TAG_DSPO)  DEPLOY_EXTERNAL_ARGO="true" ./tests.sh
+
+# NOTE: Run the integration test targets below only after executing kind-setup or kind-setup-externalargo targets.
+# Deploy DSPA and run integration tests with default settings.
+.PHONY: kind-integrationtest
+kind-integrationtest:
+	make integrationtest INTTEST_BASIC="true" K8SAPISERVERHOST="" DSPANAMESPACE="test-dspa" ENDPOINT_TYPE=$(ENDPOINT_TYPE) INTTEST_AWF_MANAGEMENT_STATE=$(INTTEST_AWF_MANAGEMENT_STATE) INTTEST_SKIP_DEPLOY=$(INTTEST_SKIP_DEPLOY) INTTEST_SKIP_CLEANUP=$(INTTEST_SKIP_CLEANUP)
+
+# Deploy DSPA and run integration tests with K8s storage enabled.
+.PHONY: kind-integrationtest-k8s
+kind-integrationtest-k8s:
+	# Deploy cert manager
+	kubectl create namespace "cert-manager"
+	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.yaml
+	# Apply webhook certs
+	kubectl wait -n "cert-manager" --timeout=90s --for=condition=Ready pods --all
+	cd ".github/resources/webhook" && kubectl -n "opendatahub" apply -k .
+	# Run integration tests
+	make integrationtest INTTEST_K8S_STORE="true" K8SAPISERVERHOST="" DSPANAMESPACE="test-k8s-dspa" DSPAPATH="resources/dspa-k8s.yaml" ENDPOINT_TYPE=$(ENDPOINT_TYPE) INTTEST_AWF_MANAGEMENT_STATE=$(INTTEST_AWF_MANAGEMENT_STATE) INTTEST_SKIP_DEPLOY=$(INTTEST_SKIP_DEPLOY) INTTEST_SKIP_CLEANUP=$(INTTEST_SKIP_CLEANUP)
+
+# Deploy DSPA and run integration tests with external connections enabled.
+.PHONY: kind-integrationtest-extconnection
+kind-integrationtest-extconnection:
+	make integrationtest INTTEST_EXT_CONNECTIONS="true" K8SAPISERVERHOST="" DSPANAMESPACE="dspa-ext" DSPAPATH="resources/dspa-external-lite.yaml" ENDPOINT_TYPE=$(ENDPOINT_TYPE) MINIONAMESPACE="test-minio" INTTEST_AWF_MANAGEMENT_STATE=$(INTTEST_AWF_MANAGEMENT_STATE) INTTEST_SKIP_DEPLOY=$(INTTEST_SKIP_DEPLOY) INTTEST_SKIP_CLEANUP=$(INTTEST_SKIP_CLEANUP)
