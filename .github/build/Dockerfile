@@ -8,7 +8,7 @@ ARG STATICCHECK_VERSION=v0.3.3
 ARG INEFFASSIGN_VERSION=13ace05
 ARG ERRCHECK_VERSION=v1.6.3
 ARG GHCLI_VERSION=2.23.0
-ARG SETUP_ENVTEST=release-0.16
+ARG SETUP_ENVTEST=release-0.23
 
 ENV GOPATH=/build \
   GO111MODULE=on \
@@ -43,7 +43,7 @@ ENV SUMMARY="Toolchain for running pre-commit hooks." \
     DESCRIPTION="Toolchain for running pre-commit hooks." \
     PATH=/build/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
   GO111MODULE=on \
-  ENVTEST_K8S_VERSION=1.25.0
+  ENVTEST_K8S_VERSION=1.34.0
 
 LABEL summary="$SUMMARY" \
     description="$DESCRIPTION" \
