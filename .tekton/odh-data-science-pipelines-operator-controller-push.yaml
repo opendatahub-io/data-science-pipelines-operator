@@ -11,7 +11,7 @@ metadata:
       == "stable"
   creationTimestamp: null
   labels:
-    appstudio.openshift.io/application: opendatahub-builds
+    appstudio.openshift.io/application: opendatahub-release
     appstudio.openshift.io/component: odh-data-science-pipelines-operator-controller-ci
     pipelines.appstudio.openshift.io/type: build
   name: odh-data-science-pipelines-operator-controller-on-push
@@ -23,7 +23,7 @@ spec:
   - name: revision
     value: '{{revision}}'
   - name: output-image
-    value: quay.io/opendatahub/data-science-pipelines-operator:odh-stable
+    value: quay.io/opendatahub/data-science-pipelines-operator:v2.x.1
   - name: dockerfile
     value: Dockerfile
   - name: path-context
