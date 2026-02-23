@@ -13,7 +13,7 @@ metadata:
   creationTimestamp: null
   labels:
     appstudio.openshift.io/application: opendatahub-builds
-    appstudio.openshift.io/component: odh-data-science-pipelines-operator-controller-ci
+    appstudio.openshift.io/component: odh-data-science-pipelines-operator-controller-ci-ci
     pipelines.appstudio.openshift.io/type: build
   name: odh-data-science-pipelines-operator-controller-on-pull-request
   namespace: open-data-hub-tenant
@@ -24,7 +24,7 @@ spec:
   - name: revision
     value: '{{revision}}'
   - name: output-image
-    value: quay.io/opendatahub/data-science-pipelines-operator:odh-pr
+    value: quay.io/opendatahub/data-science-pipelines-operator:odh-stable
   - name: dockerfile
     value: Dockerfile
   - name: path-context
