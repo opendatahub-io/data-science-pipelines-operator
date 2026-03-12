@@ -815,5 +815,9 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // Clean Up any resources not handled by garbage collection, like Cluster ResourceRequirements
 func (r *DSPAReconciler) cleanUpResources(params *DSPAParams) error {
+	// Fix for RHOAIENG-21799: Delete Prometheus metrics to prevent stale metrics
+	// from persisting after DSPA deletion, which causes false-positive alerts
+	DeleteMetrics(params.Name, params.Namespace)
+
 	return r.CleanUpCommon(params)
 }
