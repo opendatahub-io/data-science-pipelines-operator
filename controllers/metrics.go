@@ -116,3 +116,18 @@ func InitMetrics() {
 		MLMDProxyReadyMetric,
 		CrReadyMetric)
 }
+
+// DeleteMetrics removes all metric label values for a specific DSPA instance
+// This should be called during DSPA finalization to prevent stale metrics
+// from persisting in Prometheus after the DSPA has been deleted.
+// Fix for RHOAIENG-21799: prevents false-positive alerts from firing for deleted DSPAs
+func DeleteMetrics(dspaName, dspaNamespace string) {
+	DBAvailableMetric.DeleteLabelValues(dspaName, dspaNamespace)
+	ObjectStoreAvailableMetric.DeleteLabelValues(dspaName, dspaNamespace)
+	APIServerReadyMetric.DeleteLabelValues(dspaName, dspaNamespace)
+	PersistenceAgentReadyMetric.DeleteLabelValues(dspaName, dspaNamespace)
+	ScheduledWorkflowReadyMetric.DeleteLabelValues(dspaName, dspaNamespace)
+	WorkflowControllerReadyMetric.DeleteLabelValues(dspaName, dspaNamespace)
+	MLMDProxyReadyMetric.DeleteLabelValues(dspaName, dspaNamespace)
+	CrReadyMetric.DeleteLabelValues(dspaName, dspaNamespace)
+}
