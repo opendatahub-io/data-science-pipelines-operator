@@ -290,6 +290,22 @@ func CreateDSPAWithResourceTTL(duration time.Duration) *dspav1.DataSciencePipeli
 	return dspa
 }
 
+func CreateDSPAWithManagedPipelines(image string, pipelines []dspav1.ManagedPipeline, resources *dspav1.ResourceRequirements) *dspav1.DataSciencePipelinesApplication {
+	dspa := CreateEmptyDSPA()
+	dspa.Spec.DSPVersion = "v2"
+	dspa.Spec.PodToPodTLS = BoolPtr(false)
+	dspa.Spec.MLMD.Deploy = true
+	dspa.Spec.APIServer = &dspav1.APIServer{
+		Deploy: true,
+		ManagedPipelines: &dspav1.ManagedPipelinesSpec{
+			Image:     image,
+			Pipelines: pipelines,
+			Resources: resources,
+		},
+	}
+	return dspa
+}
+
 func CreateTestDSPA() *dspav1.DataSciencePipelinesApplication {
 	dspa := CreateEmptyDSPA()
 	dspa.Name = "testdspa"

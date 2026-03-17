@@ -99,7 +99,27 @@ deploy_argo_external() {
   echo "---------------------------------"
   echo "Deploy External Argo"
   echo "---------------------------------"
-  kubectl apply -n $ARGO_NAMESPACE -f https://github.com/argoproj/argo-workflows/releases/download/$ARGO_VERSION/install.yaml
+  kubectl apply -n "$ARGO_NAMESPACE" -f https://github.com/argoproj/argo-workflows/releases/download/"$ARGO_VERSION"/install.yaml
+  echo "---------------------------------"
+  echo "Configure Argo executor to run as non-root"
+  echo "---------------------------------"
+  PATCH_JSON=$(python3 -c '
+import json
+executor = json.dumps({
+    "imagePullPolicy": "IfNotPresent",
+    "securityContext": {
+        "runAsNonRoot": True,
+        "runAsUser": 65532,
+        "allowPrivilegeEscalation": False,
+        "capabilities": {"drop": ["ALL"]},
+        "seccompProfile": {"type": "RuntimeDefault"}
+    }
+})
+print(json.dumps({"data": {"executor": executor}}))
+')
+  kubectl patch configmap workflow-controller-configmap -n "$ARGO_NAMESPACE" --type=merge -p "$PATCH_JSON"
+  kubectl rollout restart deployment/workflow-controller -n "$ARGO_NAMESPACE"
+  kubectl rollout status deployment/workflow-controller -n "$ARGO_NAMESPACE" --timeout=120s
 }
 
 deploy_dspo() {
