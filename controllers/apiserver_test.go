@@ -26,6 +26,7 @@ import (
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 func TestDeployAPIServer(t *testing.T) {
@@ -124,6 +125,127 @@ func TestDontDeployAPIServer(t *testing.T) {
 	created, err = reconciler.IsResourceCreated(ctx, dspa, expectedAPIServerName, testNamespace)
 	assert.False(t, created)
 	assert.Nil(t, err)
+}
+
+func TestDeployAPIServerWithManagedPipelines(t *testing.T) {
+	testNamespace := "testnamespace"
+	testDSPAName := "testdspa"
+	expectedAPIServerName := apiServerDefaultResourceNamePrefix + testDSPAName
+
+	dspa := testutil.CreateDSPAWithManagedPipelines(
+		"quay.io/opendatahub/pipelines-components:latest",
+		nil,
+		nil,
+	)
+	dspa.Name = testDSPAName
+	dspa.Namespace = testNamespace
+
+	ctx, params, reconciler := CreateNewTestObjects()
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	assert.Nil(t, err)
+
+	err = reconciler.ReconcileAPIServer(ctx, dspa, params)
+	assert.Nil(t, err)
+
+	deployment := &appsv1.Deployment{}
+	created, err := reconciler.IsResourceCreated(ctx, deployment, expectedAPIServerName, testNamespace)
+	assert.True(t, created)
+	assert.Nil(t, err)
+
+	// Verify managed pipelines fields are preserved
+	assert.NotNil(t, dspa.Spec.APIServer.ManagedPipelines)
+	assert.Equal(t, "quay.io/opendatahub/pipelines-components:latest", dspa.Spec.APIServer.ManagedPipelines.Image)
+	assert.Nil(t, dspa.Spec.APIServer.ManagedPipelines.Pipelines)
+	assert.Nil(t, dspa.Spec.APIServer.ManagedPipelines.Resources)
+}
+
+func TestDeployAPIServerWithManagedPipelinesAndPipelineList(t *testing.T) {
+	testNamespace := "testnamespace"
+	testDSPAName := "testdspa"
+	expectedAPIServerName := apiServerDefaultResourceNamePrefix + testDSPAName
+
+	pipelines := []dspav1.ManagedPipeline{
+		{Name: "trainer-ostf"},
+		{Name: "lm-eval"},
+	}
+	resources := &dspav1.ResourceRequirements{
+		Requests: &dspav1.Resources{
+			CPU:    resource.MustParse("250m"),
+			Memory: resource.MustParse("512Mi"),
+		},
+	}
+
+	dspa := testutil.CreateDSPAWithManagedPipelines(
+		"quay.io/opendatahub/pipelines-components:latest",
+		pipelines,
+		resources,
+	)
+	dspa.Name = testDSPAName
+	dspa.Namespace = testNamespace
+
+	ctx, params, reconciler := CreateNewTestObjects()
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	assert.Nil(t, err)
+
+	err = reconciler.ReconcileAPIServer(ctx, dspa, params)
+	assert.Nil(t, err)
+
+	deployment := &appsv1.Deployment{}
+	created, err := reconciler.IsResourceCreated(ctx, deployment, expectedAPIServerName, testNamespace)
+	assert.True(t, created)
+	assert.Nil(t, err)
+
+	// Verify managed pipelines fields
+	mp := dspa.Spec.APIServer.ManagedPipelines
+	assert.NotNil(t, mp)
+	assert.Equal(t, "quay.io/opendatahub/pipelines-components:latest", mp.Image)
+	assert.Len(t, mp.Pipelines, 2)
+	assert.Equal(t, "trainer-ostf", mp.Pipelines[0].Name)
+	assert.Equal(t, "lm-eval", mp.Pipelines[1].Name)
+	assert.NotNil(t, mp.Resources)
+	assert.Equal(t, resource.MustParse("250m"), mp.Resources.Requests.CPU)
+	assert.Equal(t, resource.MustParse("512Mi"), mp.Resources.Requests.Memory)
+}
+
+func TestDeployAPIServerWithoutManagedPipelines(t *testing.T) {
+	testNamespace := "testnamespace"
+	testDSPAName := "testdspa"
+	expectedAPIServerName := apiServerDefaultResourceNamePrefix + testDSPAName
+
+	dspa := &dspav1.DataSciencePipelinesApplication{
+		Spec: dspav1.DSPASpec{
+			PodToPodTLS: testutil.BoolPtr(false),
+			APIServer: &dspav1.APIServer{
+				Deploy: true,
+			},
+			MLMD: &dspav1.MLMD{Deploy: true},
+			Database: &dspav1.Database{
+				DisableHealthCheck: false,
+				MariaDB:            &dspav1.MariaDB{Deploy: true},
+			},
+			ObjectStorage: &dspav1.ObjectStorage{
+				DisableHealthCheck: false,
+				Minio:              &dspav1.Minio{Deploy: false, Image: "someimage"},
+			},
+		},
+	}
+	dspa.Name = testDSPAName
+	dspa.Namespace = testNamespace
+
+	ctx, params, reconciler := CreateNewTestObjects()
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	assert.Nil(t, err)
+
+	err = reconciler.ReconcileAPIServer(ctx, dspa, params)
+	assert.Nil(t, err)
+
+	deployment := &appsv1.Deployment{}
+	created, err := reconciler.IsResourceCreated(ctx, deployment, expectedAPIServerName, testNamespace)
+	assert.True(t, created)
+	assert.Nil(t, err)
+
+	// Verify managed pipelines is nil (backward compatibility)
+	assert.Nil(t, dspa.Spec.APIServer.ManagedPipelines)
 }
 
 func TestApiServerEndpoints(t *testing.T) {

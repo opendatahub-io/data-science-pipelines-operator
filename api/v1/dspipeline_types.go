@@ -72,9 +72,21 @@ type ManagedPipelineOptions struct {
 	State ManagedPipelineState `json:"state,omitempty"`
 }
 
-// The technology preview InstructLab pipeline was removed and this field is reserved for future managed pipeline
-// options.
-type ManagedPipelinesSpec struct{}
+type ManagedPipeline struct {
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+}
+
+type ManagedPipelinesSpec struct {
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	Image string `json:"image"`
+	// +kubebuilder:validation:Optional
+	Pipelines []ManagedPipeline `json:"pipelines,omitempty"`
+	// +kubebuilder:validation:Optional
+	Resources *ResourceRequirements `json:"resources,omitempty"`
+}
 
 type APIServer struct {
 	// Enable DS Pipelines Operator management of DSP API Server. Setting Deploy to false disables operator reconciliation. Default: true
@@ -96,8 +108,7 @@ type APIServer struct {
 	ArgoLauncherImage string `json:"argoLauncherImage,omitempty"`
 	// Driver image used during pipeline execution.
 	ArgoDriverImage string `json:"argoDriverImage,omitempty"`
-	// The technology preview InstructLab pipeline was removed and this field is reserved for future managed pipeline
-	// options.
+	// Configures managed pipelines compiled and uploaded via an init container.
 	ManagedPipelines *ManagedPipelinesSpec `json:"managedPipelines,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
