@@ -65,6 +65,8 @@ spec:
             value: $(MAX_CONCURRENT_RECONCILES)
           - name: DSPO_REQUEUE_TIME
             value: $(DSPO_REQUEUE_TIME)
+          - name: GOMEMLIMIT
+            value: "3600MiB"
           - name: DSPO_NAMESPACE
             valueFrom:
               fieldRef:
