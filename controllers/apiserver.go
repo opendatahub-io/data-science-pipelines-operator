@@ -87,10 +87,10 @@ func (r *DSPAReconciler) managedPipelineSampleEntry(pipelineName string) map[str
 	// No config metadata: use minimal entry so API server loads from /config/managed-pipelines/<name>.yaml
 	platformVersion := config.GetStringConfigWithDefault("DSPO.PlatformVersion", config.DefaultPlatformVersion)
 	return map[string]string{
-		"name":            pipelineName,
-		"file":            fmt.Sprintf("/config/managed-pipelines/%s.yaml", pipelineName),
-		"description":     "",
-		"versionName":     fmt.Sprintf("%s - %s", pipelineName, strings.Trim(platformVersion, "\"")),
+		"name":               pipelineName,
+		"file":               fmt.Sprintf("/config/managed-pipelines/%s.yaml", pipelineName),
+		"description":        "",
+		"versionName":        fmt.Sprintf("%s - %s", pipelineName, strings.Trim(platformVersion, "\"")),
 		"versionDescription": "",
 	}
 }
@@ -115,7 +115,7 @@ func (r *DSPAReconciler) generateSampleConfigJSON(dsp *dspav1.DataSciencePipelin
 	}
 
 	sampleConfig := map[string]any{
-		"pipelines":           pipelineConfig,
+		"pipelines":            pipelineConfig,
 		"loadSamplesOnRestart": true,
 	}
 	outputJSON, err := json.Marshal(sampleConfig)
