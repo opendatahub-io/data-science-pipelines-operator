@@ -74,13 +74,31 @@ func (r *DSPAReconciler) GenerateSamplePipelineMetadataBlock(pipeline string) (m
 }
 
 func (r *DSPAReconciler) GetSampleConfig(dsp *dspav1.DataSciencePipelinesApplication) (string, error) {
-	return r.generateSampleConfigJSON(dsp.Spec.APIServer.EnableSamplePipeline)
+	return r.generateSampleConfigJSON(dsp)
 }
 
-func (r *DSPAReconciler) generateSampleConfigJSON(enableIrisPipeline bool) (string, error) {
-	// Now generate a sample config
+// managedPipelineSampleEntry returns a sample_config pipeline entry for the named managed pipeline.
+// Uses config (ManagedPipelinesMetadata.<name>) when present; otherwise a minimal entry for volume-loaded YAML.
+func (r *DSPAReconciler) managedPipelineSampleEntry(pipelineName string) map[string]string {
+	item, err := r.GenerateSamplePipelineMetadataBlock(pipelineName)
+	if err == nil {
+		return item
+	}
+	// No config metadata: use minimal entry so API server loads from /config/managed-pipelines/<name>.yaml
+	platformVersion := config.GetStringConfigWithDefault("DSPO.PlatformVersion", config.DefaultPlatformVersion)
+	return map[string]string{
+		"name":            pipelineName,
+		"file":            fmt.Sprintf("/config/managed-pipelines/%s.yaml", pipelineName),
+		"description":     "",
+		"versionName":     fmt.Sprintf("%s - %s", pipelineName, strings.Trim(platformVersion, "\"")),
+		"versionDescription": "",
+	}
+}
+
+func (r *DSPAReconciler) generateSampleConfigJSON(dsp *dspav1.DataSciencePipelinesApplication) (string, error) {
 	pipelineConfig := make([]map[string]string, 0)
-	if enableIrisPipeline {
+
+	if dsp.Spec.APIServer.EnableSamplePipeline {
 		item, err := r.GenerateSamplePipelineMetadataBlock("iris")
 		if err != nil {
 			return "", err
@@ -88,16 +106,22 @@ func (r *DSPAReconciler) generateSampleConfigJSON(enableIrisPipeline bool) (stri
 		pipelineConfig = append(pipelineConfig, item)
 	}
 
-	var sampleConfig = make(map[string]any)
-	sampleConfig["pipelines"] = pipelineConfig
-	sampleConfig["loadSamplesOnRestart"] = true
+	// Explicit managed pipeline list: add each to sample_config (API server loads these from sample_config).
+	// Omitted list ("all"): do not add managed entries here; API server loads from managed-pipelines.json in volume.
+	if dsp.Spec.APIServer.ManagedPipelines != nil && len(dsp.Spec.APIServer.ManagedPipelines.Pipelines) > 0 {
+		for _, p := range dsp.Spec.APIServer.ManagedPipelines.Pipelines {
+			pipelineConfig = append(pipelineConfig, r.managedPipelineSampleEntry(p.Name))
+		}
+	}
 
-	// Marshal into a JSON String
+	sampleConfig := map[string]any{
+		"pipelines":           pipelineConfig,
+		"loadSamplesOnRestart": true,
+	}
 	outputJSON, err := json.Marshal(sampleConfig)
 	if err != nil {
 		return "", err
 	}
-
 	return string(outputJSON), nil
 }
 
@@ -119,6 +143,13 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1.Dat
 	combinedConfigHashInput := sampleConfigJSON
 	if params.APIServerWorkspaceJSON != "" {
 		combinedConfigHashInput = sampleConfigJSON + params.APIServerWorkspaceJSON
+	}
+	if dsp.Spec.APIServer.ManagedPipelines != nil {
+		managedSpec, err := json.Marshal(dsp.Spec.APIServer.ManagedPipelines)
+		if err != nil {
+			return err
+		}
+		combinedConfigHashInput = combinedConfigHashInput + string(managedSpec)
 	}
 
 	// Generate configuration hash for rebooting on sample changes

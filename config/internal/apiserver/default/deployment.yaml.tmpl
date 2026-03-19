@@ -22,6 +22,39 @@ spec:
         component: data-science-pipelines
         dspa: {{.Name}}
     spec:
+      {{ if .APIServer.ManagedPipelines }}
+      initContainers:
+        - name: init-managed-pipelines
+          image: {{ .APIServer.ManagedPipelines.Image }}
+          env:
+            {{ if .APIServer.ManagedPipelines.Pipelines }}
+            - name: PIPELINE_NAMES
+              value: "{{ range $i, $p := .APIServer.ManagedPipelines.Pipelines }}{{ if $i }},{{ end }}{{ $p.Name }}{{ end }}"
+            {{ else }}
+            - name: ALL_PIPELINES
+              value: "true"
+            {{ end }}
+          volumeMounts:
+            - name: managed-pipelines
+              mountPath: /config/managed-pipelines
+          {{ if and .APIServer.ManagedPipelines.Resources (or .APIServer.ManagedPipelines.Resources.Requests .APIServer.ManagedPipelines.Resources.Limits) }}
+          resources:
+            {{ with .APIServer.ManagedPipelines.Resources.Requests }}
+            {{ if or .CPU .Memory }}
+            requests:
+              {{ if .CPU }}cpu: {{ .CPU }}{{ end }}
+              {{ if .Memory }}memory: {{ .Memory }}{{ end }}
+            {{ end }}
+            {{ end }}
+            {{ with .APIServer.ManagedPipelines.Resources.Limits }}
+            {{ if or .CPU .Memory }}
+            limits:
+              {{ if .CPU }}cpu: {{ .CPU }}{{ end }}
+              {{ if .Memory }}memory: {{ .Memory }}{{ end }}
+            {{ end }}
+            {{ end }}
+          {{ end }}
+      {{ end }}
       containers:
         - env:
             {{ if .IncludeOwnerReference }}
@@ -245,6 +278,10 @@ spec:
               subPath: sample_config.json
             - name: sample-pipeline
               mountPath: /samples/
+            {{ if .APIServer.ManagedPipelines }}
+            - name: managed-pipelines
+              mountPath: /config/managed-pipelines
+            {{ end }}
             {{ if .CustomCABundle }}
             - mountPath: {{ .CustomCABundleRootMountPath  }}
               name: ca-bundle
@@ -335,3 +372,8 @@ spec:
         - name: sample-pipeline
           configMap:
             name: sample-pipeline-{{.Name}}
+        {{ if .APIServer.ManagedPipelines }}
+        - name: managed-pipelines
+          emptyDir:
+            sizeLimit: 10Mi
+        {{ end }}
