@@ -24,6 +24,19 @@ spec:
         component: data-science-pipelines
         dspa: testdsp2
     spec:
+      initContainers:
+        - name: init-managed-pipelines
+          image: pipelines-components:test2
+          env:
+            - name: ALL_PIPELINES
+              value: "true"
+          volumeMounts:
+            - name: managed-pipelines
+              mountPath: /config/managed-pipelines
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
       containers:
         - env:
             - name: POD_NAMESPACE
@@ -165,6 +178,8 @@ spec:
               subPath: sample_config.json
             - mountPath: /samples/
               name: sample-pipeline
+            - name: managed-pipelines
+              mountPath: /config/managed-pipelines
         - name: kube-rbac-proxy
           args:
             - --secure-listen-address=0.0.0.0:8443
@@ -235,4 +250,7 @@ spec:
             defaultMode: 420
             name: sample-pipeline-testdsp2
           name: sample-pipeline
+        - name: managed-pipelines
+          emptyDir:
+            sizeLimit: 10Mi
       serviceAccountName: ds-pipeline-testdsp2
