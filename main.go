@@ -35,8 +35,13 @@ import (
 	imagev1 "github.com/openshift/api/image/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	"go.uber.org/zap/zapcore"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/selection"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 
@@ -56,6 +61,40 @@ var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
 )
+
+// stripManagedFields removes managed fields from cached objects to reduce memory.
+func stripManagedFields(i interface{}) (interface{}, error) {
+	if obj, ok := i.(client.Object); ok {
+		obj.SetManagedFields(nil)
+	}
+	return i, nil
+}
+
+// stripConfigMapData removes data payloads and managed fields from cached ConfigMaps.
+// ConfigMap data is read via direct API calls (DisableFor) when needed.
+// Note: SetManagedFields is called here because DefaultTransform does not apply
+// to types that have a per-type Transform override in ByObject.
+func stripConfigMapData(i interface{}) (interface{}, error) {
+	if cm, ok := i.(*corev1.ConfigMap); ok {
+		cm.Data = nil
+		cm.BinaryData = nil
+		cm.SetManagedFields(nil)
+	}
+	return i, nil
+}
+
+// stripSecretData removes data payloads and managed fields from cached Secrets.
+// Secret data is read via direct API calls (DisableFor) when needed.
+// Note: SetManagedFields is called here because DefaultTransform does not apply
+// to types that have a per-type Transform override in ByObject.
+func stripSecretData(i interface{}) (interface{}, error) {
+	if s, ok := i.(*corev1.Secret); ok {
+		s.Data = nil
+		s.StringData = nil
+		s.SetManagedFields(nil)
+	}
+	return i, nil
+}
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
@@ -146,6 +185,15 @@ func main() {
 
 	webhookConfigName := "pipelineversions.pipelines.kubeflow.org"
 
+	// Build label selector for operator-managed resources using the dsp-version
+	// label that is applied to all resources created through manifestival templates.
+	dspLabelReq, err := labels.NewRequirement(config.DSPVersionk8sLabel, selection.Exists, nil)
+	if err != nil {
+		panic("failed to create label requirement: " + err.Error())
+	}
+	dspSelector := labels.NewSelector().Add(*dspLabelReq)
+	dspFilter := cache.ByObject{Label: dspSelector}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     metricsAddr,
@@ -157,6 +205,7 @@ func main() {
 		RenewDeadline:          &renewDeadline,
 		RetryPeriod:            &retryPeriod,
 		Cache: cache.Options{
+			DefaultTransform: stripManagedFields,
 			ByObject: map[client.Object]cache.ByObject{
 				// Limit the watches to only the pipelineversions.pipelines.kubeflow.org webhooks.
 				&admv1.ValidatingWebhookConfiguration{}: {
@@ -164,6 +213,34 @@ func main() {
 				},
 				&admv1.MutatingWebhookConfiguration{}: {
 					Field: fields.SelectorFromSet(fields.Set{"metadata.name": webhookConfigName}),
+				},
+				// Restrict cache to operator-managed resources only.
+				&appsv1.Deployment{}:             dspFilter,
+				&corev1.Service{}:                dspFilter,
+				&corev1.ServiceAccount{}:         dspFilter,
+				&corev1.PersistentVolumeClaim{}: dspFilter,
+				&rbacv1.Role{}:                   dspFilter,
+				&rbacv1.RoleBinding{}:            dspFilter,
+				&routev1.Route{}:                 dspFilter,
+				// Pod is watched via WatchesRawSource with a handler that filters
+				// by component=data-science-pipelines label, so we can scope the
+				// informer to only cache pods with that label.
+				&corev1.Pod{}: {Label: labels.SelectorFromSet(labels.Set{"component": "data-science-pipelines"})},
+				// ConfigMap and Secret are also watched for external resources
+				// (odh-trusted-ca-bundle, service-ca secrets) that lack the dsp-version
+				// label. Strip data payloads instead of filtering by label so the
+				// informer still detects changes to those external resources.
+				&corev1.ConfigMap{}: {Transform: stripConfigMapData},
+				&corev1.Secret{}:    {Transform: stripSecretData},
+			},
+		},
+		// ConfigMap and Secret client reads bypass the cache entirely for
+		// direct API reads, since the cache strips data payloads.
+		Client: client.Options{
+			Cache: &client.CacheOptions{
+				DisableFor: []client.Object{
+					&corev1.ConfigMap{},
+					&corev1.Secret{},
 				},
 			},
 		},
