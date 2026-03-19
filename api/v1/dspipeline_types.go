@@ -78,6 +78,8 @@ type ManagedPipeline struct {
 	Name string `json:"name"`
 }
 
+// ManagedPipelinesSpec configures the init container. Image contract: volume at /config/managed-pipelines;
+// env PIPELINE_NAMES (comma-separated) or ALL_PIPELINES=true; image writes <name>.yaml per pipeline and copies managed-pipelines.json into the volume.
 type ManagedPipelinesSpec struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
