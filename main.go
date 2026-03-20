@@ -35,7 +35,6 @@ import (
 	imagev1 "github.com/openshift/api/image/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	"go.uber.org/zap/zapcore"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -78,6 +77,9 @@ func stripConfigMapData(i interface{}) (interface{}, error) {
 	if cm, ok := i.(*corev1.ConfigMap); ok {
 		cm.Data = nil
 		cm.BinaryData = nil
+		if cm.Annotations != nil {
+			delete(cm.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
+		}
 		cm.SetManagedFields(nil)
 	}
 	return i, nil
@@ -91,6 +93,9 @@ func stripSecretData(i interface{}) (interface{}, error) {
 	if s, ok := i.(*corev1.Secret); ok {
 		s.Data = nil
 		s.StringData = nil
+		if s.Annotations != nil {
+			delete(s.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
+		}
 		s.SetManagedFields(nil)
 	}
 	return i, nil
@@ -187,6 +192,10 @@ func main() {
 
 	// Build label selector for operator-managed resources using the dsp-version
 	// label that is applied to all resources created through manifestival templates.
+	// INVARIANT: every operator-managed child resource (Service, ServiceAccount,
+	// PVC, Role, RoleBinding, Route) is created via manifestival with
+	// AddLabelTransformer, so they always carry dsp-version. Do not introduce
+	// bare r.Get/r.List on filtered types for resources outside this path.
 	dspLabelReq, err := labels.NewRequirement(config.DSPVersionk8sLabel, selection.Exists, nil)
 	if err != nil {
 		panic("failed to create label requirement: " + err.Error())
@@ -215,13 +224,15 @@ func main() {
 					Field: fields.SelectorFromSet(fields.Set{"metadata.name": webhookConfigName}),
 				},
 				// Restrict cache to operator-managed resources only.
-				&appsv1.Deployment{}:             dspFilter,
-				&corev1.Service{}:                dspFilter,
-				&corev1.ServiceAccount{}:         dspFilter,
+				// Note: Deployment is intentionally NOT filtered because the
+				// operator looks up its own Deployment (which lacks the
+				// dsp-version label) during webhook reconciliation.
+				&corev1.Service{}:               dspFilter,
+				&corev1.ServiceAccount{}:        dspFilter,
 				&corev1.PersistentVolumeClaim{}: dspFilter,
-				&rbacv1.Role{}:                   dspFilter,
-				&rbacv1.RoleBinding{}:            dspFilter,
-				&routev1.Route{}:                 dspFilter,
+				&rbacv1.Role{}:                  dspFilter,
+				&rbacv1.RoleBinding{}:           dspFilter,
+				&routev1.Route{}:                dspFilter,
 				// Pod is watched via WatchesRawSource with a handler that filters
 				// by component=data-science-pipelines label, so we can scope the
 				// informer to only cache pods with that label.
