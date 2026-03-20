@@ -28,9 +28,9 @@ import (
 )
 
 const (
-	DSPV2VersionString       = "v2"
-	DSPVersionk8sLabel       = "dsp-version"
-	DSPComponentk8sLabel     = "component"
+	DSPV2VersionString        = "v2"
+	DSPVersionk8sLabel        = "dsp-version"
+	DSPComponentk8sLabel      = "component"
 	DSPComponentk8sLabelValue = "data-science-pipelines"
 )
 
