@@ -60,6 +60,13 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.IMAGES_MARIADB
+  - name: IMAGES_PIPELINES_COMPONENTS
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGES_PIPELINES_COMPONENTS
   - name: IMAGES_MLMDENVOY
     objref:
       kind: ConfigMap
