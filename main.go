@@ -225,7 +225,7 @@ func main() {
 				// Pod is watched via WatchesRawSource with a handler that filters
 				// by component=data-science-pipelines label, so we can scope the
 				// informer to only cache pods with that label.
-				&corev1.Pod{}: {Label: labels.SelectorFromSet(labels.Set{"component": "data-science-pipelines"})},
+				&corev1.Pod{}: {Label: labels.SelectorFromSet(labels.Set{config.DSPComponentk8sLabel: config.DSPComponentk8sLabelValue})},
 				// ConfigMap and Secret are also watched for external resources
 				// (odh-trusted-ca-bundle, service-ca secrets) that lack the dsp-version
 				// label. Strip data payloads instead of filtering by label so the
