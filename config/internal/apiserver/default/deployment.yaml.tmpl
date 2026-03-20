@@ -37,23 +37,13 @@ spec:
           volumeMounts:
             - name: managed-pipelines
               mountPath: /config/managed-pipelines
-          {{ if and .APIServer.ManagedPipelines.Resources (or .APIServer.ManagedPipelines.Resources.Requests .APIServer.ManagedPipelines.Resources.Limits) }}
           resources:
-            {{ with .APIServer.ManagedPipelines.Resources.Requests }}
-            {{ if or .CPU .Memory }}
             requests:
-              {{ if .CPU }}cpu: {{ .CPU }}{{ end }}
-              {{ if .Memory }}memory: {{ .Memory }}{{ end }}
-            {{ end }}
-            {{ end }}
-            {{ with .APIServer.ManagedPipelines.Resources.Limits }}
-            {{ if or .CPU .Memory }}
+              cpu: {{ .APIServer.ManagedPipelines.Resources.Requests.CPU }}
+              memory: {{ .APIServer.ManagedPipelines.Resources.Requests.Memory }}
             limits:
-              {{ if .CPU }}cpu: {{ .CPU }}{{ end }}
-              {{ if .Memory }}memory: {{ .Memory }}{{ end }}
-            {{ end }}
-            {{ end }}
-          {{ end }}
+              cpu: {{ .APIServer.ManagedPipelines.Resources.Limits.CPU }}
+              memory: {{ .APIServer.ManagedPipelines.Resources.Limits.Memory }}
       {{ end }}
       containers:
         - env:
@@ -375,5 +365,5 @@ spec:
         {{ if .APIServer.ManagedPipelines }}
         - name: managed-pipelines
           emptyDir:
-            sizeLimit: 10Mi
+            sizeLimit: 1024Mi
         {{ end }}

@@ -590,6 +590,44 @@ func setResourcesDefault(defaultValue dspa.ResourceRequirements, value **dspa.Re
 	}
 }
 
+// ensureManagedPipelinesInitResourceDefaults applies baseline requests/limits for the managed-pipelines init
+// container so it is never unbounded when the CR omits resources or only sets a subset of CPU/memory.
+func ensureManagedPipelinesInitResourceDefaults(mp *dspa.ManagedPipelinesSpec) {
+	if mp == nil {
+		return
+	}
+	def := config.ManagedPipelinesInitResourceRequirements
+	if mp.Resources == nil {
+		mp.Resources = def.DeepCopy()
+		return
+	}
+	r := mp.Resources
+	if r.Requests == nil && r.Limits == nil {
+		mp.Resources = def.DeepCopy()
+		return
+	}
+	if r.Requests == nil {
+		r.Requests = def.Requests.DeepCopy()
+	} else {
+		if r.Requests.CPU.IsZero() {
+			r.Requests.CPU = def.Requests.CPU
+		}
+		if r.Requests.Memory.IsZero() {
+			r.Requests.Memory = def.Requests.Memory
+		}
+	}
+	if r.Limits == nil {
+		r.Limits = def.Limits.DeepCopy()
+	} else {
+		if r.Limits.CPU.IsZero() {
+			r.Limits.CPU = def.Limits.CPU
+		}
+		if r.Limits.Memory.IsZero() {
+			r.Limits.Memory = def.Limits.Memory
+		}
+	}
+}
+
 func (p *DSPAParams) LoadMlmdCertificates(ctx context.Context, client client.Client) (bool, error) {
 	secret, err := util.GetSecret(ctx, "ds-pipeline-metadata-grpc-tls-certs-"+p.Name, p.Namespace, client)
 	if err != nil {
@@ -658,6 +696,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		if p.APIServer.ManagedPipelines != nil {
 			managedPipelinesImageFromConfig := config.GetStringConfigWithDefault(config.ManagedPipelinesImagePath, config.DefaultImageValue)
 			setStringDefault(managedPipelinesImageFromConfig, &p.APIServer.ManagedPipelines.Image)
+			ensureManagedPipelinesInitResourceDefaults(p.APIServer.ManagedPipelines)
 		}
 
 		setResourcesDefault(config.APIServerResourceRequirements, &p.APIServer.Resources)

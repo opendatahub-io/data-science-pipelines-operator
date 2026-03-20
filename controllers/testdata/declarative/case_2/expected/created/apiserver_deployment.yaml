@@ -37,6 +37,9 @@ spec:
             requests:
               cpu: 250m
               memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
       containers:
         - env:
             - name: POD_NAMESPACE
@@ -252,5 +255,5 @@ spec:
           name: sample-pipeline
         - name: managed-pipelines
           emptyDir:
-            sizeLimit: 10Mi
+            sizeLimit: 1024Mi
       serviceAccountName: ds-pipeline-testdsp2

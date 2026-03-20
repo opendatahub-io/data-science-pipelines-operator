@@ -188,6 +188,14 @@ func TestDeployAPIServerWithManagedPipelines(t *testing.T) {
 	assert.Equal(t, "true", getEnvValue(initC, "ALL_PIPELINES"))
 	assert.Empty(t, getEnvValue(initC, "PIPELINE_NAMES"))
 
+	// Init container gets default requests/limits when CR omits resources
+	require.NotNil(t, initC.Resources.Requests)
+	assert.True(t, initC.Resources.Requests.Cpu().Equal(resource.MustParse("250m")))
+	assert.True(t, initC.Resources.Requests.Memory().Equal(resource.MustParse("500Mi")))
+	require.NotNil(t, initC.Resources.Limits)
+	assert.True(t, initC.Resources.Limits.Cpu().Equal(resource.MustParse("500m")))
+	assert.True(t, initC.Resources.Limits.Memory().Equal(resource.MustParse("1Gi")))
+
 	// Verify managed pipelines fields are preserved on DSPA
 	assert.NotNil(t, dspa.Spec.APIServer.ManagedPipelines)
 	assert.Equal(t, "quay.io/opendatahub/pipelines-components:latest", dspa.Spec.APIServer.ManagedPipelines.Image)
@@ -240,10 +248,13 @@ func TestDeployAPIServerWithManagedPipelinesAndPipelineList(t *testing.T) {
 	assert.Equal(t, "trainer-ostf,lm-eval", getEnvValue(initC, "PIPELINE_NAMES"))
 	assert.Empty(t, getEnvValue(initC, "ALL_PIPELINES"))
 
-	// Init container resources match CR
+	// Init container resources match CR requests; missing limits filled from defaults
 	require.NotNil(t, initC.Resources.Requests)
 	assert.True(t, initC.Resources.Requests.Cpu().Equal(resource.MustParse("250m")))
 	assert.True(t, initC.Resources.Requests.Memory().Equal(resource.MustParse("512Mi")))
+	require.NotNil(t, initC.Resources.Limits)
+	assert.True(t, initC.Resources.Limits.Cpu().Equal(resource.MustParse("500m")))
+	assert.True(t, initC.Resources.Limits.Memory().Equal(resource.MustParse("1Gi")))
 
 	// Verify managed pipelines fields on DSPA
 	mp := dspa.Spec.APIServer.ManagedPipelines
@@ -520,6 +531,14 @@ func TestExtractParams_ManagedPipelinesImageDefaultedWhenEmpty(t *testing.T) {
 
 	require.NotNil(t, params.APIServer.ManagedPipelines)
 	assert.Equal(t, "from-config:latest", params.APIServer.ManagedPipelines.Image)
+	require.NotNil(t, params.APIServer.ManagedPipelines.Resources)
+	require.NotNil(t, params.APIServer.ManagedPipelines.Resources.Requests)
+	assert.Equal(t, resource.MustParse("250m"), params.APIServer.ManagedPipelines.Resources.Requests.CPU)
+	assert.Equal(t, resource.MustParse("500Mi"), params.APIServer.ManagedPipelines.Resources.Requests.Memory)
+	require.NotNil(t, params.APIServer.ManagedPipelines.Resources.Limits)
+	assert.Equal(t, resource.MustParse("500m"), params.APIServer.ManagedPipelines.Resources.Limits.CPU)
+	assert.Equal(t, resource.MustParse("1Gi"), params.APIServer.ManagedPipelines.Resources.Limits.Memory)
+	assert.Nil(t, dspa.Spec.APIServer.ManagedPipelines.Resources, "CR spec unchanged; defaults apply only to params")
 }
 
 func TestExtractParams_ManagedPipelinesImageNotOverriddenWhenSet(t *testing.T) {
@@ -536,4 +555,33 @@ func TestExtractParams_ManagedPipelinesImageNotOverriddenWhenSet(t *testing.T) {
 
 	require.NotNil(t, params.APIServer.ManagedPipelines)
 	assert.Equal(t, "my-img:tag", params.APIServer.ManagedPipelines.Image)
+	require.NotNil(t, params.APIServer.ManagedPipelines.Resources)
+	assert.Equal(t, resource.MustParse("250m"), params.APIServer.ManagedPipelines.Resources.Requests.CPU)
+	assert.Equal(t, resource.MustParse("500m"), params.APIServer.ManagedPipelines.Resources.Limits.CPU)
+}
+
+func TestExtractParams_ManagedPipelinesResourcesMergePartialRequests(t *testing.T) {
+	t.Cleanup(func() { viper.Reset() })
+
+	resources := &dspav1.ResourceRequirements{
+		Requests: &dspav1.Resources{
+			CPU:    resource.MustParse("100m"),
+			Memory: resource.MustParse("128Mi"),
+		},
+	}
+	dspa := testutil.CreateDSPAWithManagedPipelines("img:latest", nil, resources)
+	dspa.Name = "dspa"
+	dspa.Namespace = "ns"
+
+	_, params, reconciler := CreateNewTestObjects()
+	ctx := context.Background()
+	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+
+	mp := params.APIServer.ManagedPipelines
+	require.NotNil(t, mp.Resources)
+	assert.Equal(t, resource.MustParse("100m"), mp.Resources.Requests.CPU)
+	assert.Equal(t, resource.MustParse("128Mi"), mp.Resources.Requests.Memory)
+	require.NotNil(t, mp.Resources.Limits)
+	assert.Equal(t, resource.MustParse("500m"), mp.Resources.Limits.CPU)
+	assert.Equal(t, resource.MustParse("1Gi"), mp.Resources.Limits.Memory)
 }
