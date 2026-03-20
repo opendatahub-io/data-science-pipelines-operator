@@ -21,52 +21,53 @@ package controllers
 import (
 	"testing"
 
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-// TestDeleteMetrics_RHOAIENG21799 verifies that DeleteMetrics can be called
-// without errors and properly cleans up metric label values for a DSPA instance.
-// This is a regression test for RHOAIENG-21799.
-func TestDeleteMetrics_RHOAIENG21799(t *testing.T) {
+// TestDeleteMetrics verifies that DeleteMetrics removes all metric time series
+// for a given DSPA instance from the registry.
+func TestDeleteMetrics(t *testing.T) {
 	testDSPAName := "test-dspa"
 	testNamespace := "test-namespace"
 
-	// First, set some metric values to ensure they exist before deletion
-	// This simulates the normal operation where metrics are published during reconciliation
-	DBAvailableMetric.WithLabelValues(testDSPAName, testNamespace).Set(1)
-	ObjectStoreAvailableMetric.WithLabelValues(testDSPAName, testNamespace).Set(1)
-	APIServerReadyMetric.WithLabelValues(testDSPAName, testNamespace).Set(0)
-	PersistenceAgentReadyMetric.WithLabelValues(testDSPAName, testNamespace).Set(0)
-	ScheduledWorkflowReadyMetric.WithLabelValues(testDSPAName, testNamespace).Set(0)
-	WorkflowControllerReadyMetric.WithLabelValues(testDSPAName, testNamespace).Set(0)
-	MLMDProxyReadyMetric.WithLabelValues(testDSPAName, testNamespace).Set(0)
-	CrReadyMetric.WithLabelValues(testDSPAName, testNamespace).Set(0)
+	// Set metric values to simulate normal reconciliation
+	for _, m := range allDSPAMetrics {
+		m.WithLabelValues(testDSPAName, testNamespace).Set(1)
+	}
 
-	// Call DeleteMetrics - this should not panic or error
-	// The function uses DeleteLabelValues which is safe to call even if labels don't exist
-	assert.NotPanics(t, func() {
-		DeleteMetrics(testDSPAName, testNamespace)
-	}, "DeleteMetrics should not panic when called")
+	// Verify metrics exist before deletion
+	for _, m := range allDSPAMetrics {
+		assert.Equal(t, 1, testutil.CollectAndCount(m),
+			"metric should have exactly one time series before deletion")
+	}
 
-	// Call DeleteMetrics again to verify idempotency
-	// DeleteLabelValues is idempotent and safe to call multiple times
-	assert.NotPanics(t, func() {
+	// Delete metrics for the instance
+	DeleteMetrics(testDSPAName, testNamespace)
+
+	// Verify all metrics were actually removed from the registry
+	for _, m := range allDSPAMetrics {
+		assert.Equal(t, 0, testutil.CollectAndCount(m),
+			"metric should have zero time series after deletion")
+	}
+
+	// Verify idempotency: calling DeleteMetrics again should not panic or error
+	require.NotPanics(t, func() {
 		DeleteMetrics(testDSPAName, testNamespace)
-	}, "DeleteMetrics should be idempotent and safe to call multiple times")
+	}, "DeleteMetrics should be idempotent")
 }
 
 // TestDeleteMetrics_EmptyValues verifies that DeleteMetrics handles empty
-// string parameters gracefully (edge case).
+// string parameters gracefully.
 func TestDeleteMetrics_EmptyValues(t *testing.T) {
-	// This tests an edge case - though in practice this shouldn't happen
-	// as the DSPA name and namespace should always be set
-	assert.NotPanics(t, func() {
+	require.NotPanics(t, func() {
 		DeleteMetrics("", "")
 	}, "DeleteMetrics should handle empty strings gracefully")
 }
 
 // TestDeleteMetrics_MultipleInstances verifies that DeleteMetrics only removes
-// metrics for the specified DSPA instance and doesn't affect other instances.
+// metrics for the specified DSPA instance and preserves other instances.
 func TestDeleteMetrics_MultipleInstances(t *testing.T) {
 	dspa1Name := "dspa-instance-1"
 	dspa1Namespace := "namespace-1"
@@ -78,38 +79,48 @@ func TestDeleteMetrics_MultipleInstances(t *testing.T) {
 	APIServerReadyMetric.WithLabelValues(dspa2Name, dspa2Namespace).Set(1)
 
 	// Delete metrics for only the first instance
-	assert.NotPanics(t, func() {
-		DeleteMetrics(dspa1Name, dspa1Namespace)
-	}, "DeleteMetrics should successfully delete metrics for first instance")
+	DeleteMetrics(dspa1Name, dspa1Namespace)
 
-	// Verify we can still set/get metrics for the second instance
-	// (this indirectly verifies that DeleteMetrics didn't affect other instances)
-	assert.NotPanics(t, func() {
-		APIServerReadyMetric.WithLabelValues(dspa2Name, dspa2Namespace).Set(0)
-	}, "Metrics for other instances should remain unaffected")
+	// Verify instance-2's metric value is preserved at 1.0
+	metric := APIServerReadyMetric.WithLabelValues(dspa2Name, dspa2Namespace)
+	value := testutil.ToFloat64(metric)
+	assert.Equal(t, 1.0, value,
+		"instance-2 metric value should be preserved after deleting instance-1")
+
+	// Verify instance-1's metric is gone (only instance-2 remains)
+	assert.Equal(t, 1, testutil.CollectAndCount(APIServerReadyMetric),
+		"only instance-2 time series should remain")
+
+	// Clean up instance-2
+	DeleteMetrics(dspa2Name, dspa2Namespace)
 }
 
-// TestCleanUpResources_RHOAIENG21799 verifies that cleanUpResources successfully
-// calls DeleteMetrics during DSPA finalization. This is an integration test for
-// the complete cleanup flow.
-func TestCleanUpResources_RHOAIENG21799(t *testing.T) {
-	// Set up a test DSPA with metrics
+// TestCleanUpResources_DeletesMetrics verifies that cleanUpResources calls
+// DeleteMetrics during DSPA finalization by checking that metrics are removed.
+func TestCleanUpResources_DeletesMetrics(t *testing.T) {
 	testName := "cleanup-test-dspa"
 	testNamespace := "cleanup-test-ns"
 
 	// Publish metrics (simulating normal operation)
 	CrReadyMetric.WithLabelValues(testName, testNamespace).Set(0)
+	DBAvailableMetric.WithLabelValues(testName, testNamespace).Set(1)
 
-	// Create params and reconciler
+	// Verify metrics exist before cleanup
+	assert.Equal(t, float64(0), testutil.ToFloat64(CrReadyMetric.WithLabelValues(testName, testNamespace)))
+	assert.Equal(t, float64(1), testutil.ToFloat64(DBAvailableMetric.WithLabelValues(testName, testNamespace)))
+
 	params := &DSPAParams{
 		Name:      testName,
 		Namespace: testNamespace,
 	}
 	_, _, reconciler := CreateNewTestObjects()
 
-	// Call cleanUpResources - this should call DeleteMetrics internally
 	err := reconciler.cleanUpResources(params)
+	require.NoError(t, err)
 
-	// Verify no error
-	assert.Nil(t, err)
+	// Verify metrics were actually deleted by cleanUpResources
+	assert.Equal(t, 0, testutil.CollectAndCount(CrReadyMetric),
+		"CrReadyMetric should be removed after cleanUpResources")
+	assert.Equal(t, 0, testutil.CollectAndCount(DBAvailableMetric),
+		"DBAvailableMetric should be removed after cleanUpResources")
 }

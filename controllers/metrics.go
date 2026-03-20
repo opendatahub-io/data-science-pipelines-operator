@@ -103,31 +103,34 @@ var (
 			"dspa_namespace",
 		},
 	)
-)
 
-// InitMetrics initialize prometheus metrics
-func InitMetrics() {
-	metrics.Registry.MustRegister(DBAvailableMetric,
+	// allDSPAMetrics is the single source of truth for all DSPA metric gauges.
+	// Both InitMetrics and DeleteMetrics use this slice, so adding a new metric
+	// here automatically includes it in registration and cleanup.
+	allDSPAMetrics = []*prometheus.GaugeVec{
+		DBAvailableMetric,
 		ObjectStoreAvailableMetric,
 		APIServerReadyMetric,
 		PersistenceAgentReadyMetric,
 		ScheduledWorkflowReadyMetric,
 		WorkflowControllerReadyMetric,
 		MLMDProxyReadyMetric,
-		CrReadyMetric)
+		CrReadyMetric,
+	}
+)
+
+// InitMetrics registers all DSPA prometheus metrics.
+func InitMetrics() {
+	for _, m := range allDSPAMetrics {
+		metrics.Registry.MustRegister(m)
+	}
 }
 
-// DeleteMetrics removes all metric label values for a specific DSPA instance
-// This should be called during DSPA finalization to prevent stale metrics
-// from persisting in Prometheus after the DSPA has been deleted.
-// Fix for RHOAIENG-21799: prevents false-positive alerts from firing for deleted DSPAs
+// DeleteMetrics removes all metric label values for a specific DSPA instance.
+// This is called during DSPA finalization to prevent stale metrics from
+// persisting in Prometheus after the DSPA has been deleted.
 func DeleteMetrics(dspaName, dspaNamespace string) {
-	DBAvailableMetric.DeleteLabelValues(dspaName, dspaNamespace)
-	ObjectStoreAvailableMetric.DeleteLabelValues(dspaName, dspaNamespace)
-	APIServerReadyMetric.DeleteLabelValues(dspaName, dspaNamespace)
-	PersistenceAgentReadyMetric.DeleteLabelValues(dspaName, dspaNamespace)
-	ScheduledWorkflowReadyMetric.DeleteLabelValues(dspaName, dspaNamespace)
-	WorkflowControllerReadyMetric.DeleteLabelValues(dspaName, dspaNamespace)
-	MLMDProxyReadyMetric.DeleteLabelValues(dspaName, dspaNamespace)
-	CrReadyMetric.DeleteLabelValues(dspaName, dspaNamespace)
+	for _, m := range allDSPAMetrics {
+		m.DeleteLabelValues(dspaName, dspaNamespace)
+	}
 }
