@@ -740,8 +740,8 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				pod := o.(*corev1.Pod)
 				log := r.Log.WithValues("namespace", pod.Namespace)
 
-				component, hasComponentLabel := pod.Labels["component"]
-				if !hasComponentLabel || component != "data-science-pipelines" {
+				component, hasComponentLabel := pod.Labels[config.DSPComponentk8sLabel]
+				if !hasComponentLabel || component != config.DSPComponentk8sLabelValue {
 					return nil
 				}
 
