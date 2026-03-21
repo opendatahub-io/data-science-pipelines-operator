@@ -84,6 +84,8 @@ func (r *DSPAReconciler) managedPipelineSampleEntry(pipelineName string) map[str
 	if err == nil {
 		return item
 	}
+	r.Log.Info("Managed pipeline metadata not found in operator config; using minimal sample_config entry",
+		"pipeline", pipelineName, "error", err)
 	// No config metadata: use minimal entry so API server loads from /config/managed-pipelines/<name>.yaml
 	platformVersion := config.GetStringConfigWithDefault("DSPO.PlatformVersion", config.DefaultPlatformVersion)
 	return map[string]string{
@@ -110,6 +112,9 @@ func (r *DSPAReconciler) generateSampleConfigJSON(dsp *dspav1.DataSciencePipelin
 	// Omitted list ("all"): do not add managed entries here; API server loads from managed-pipelines.json in volume.
 	if dsp.Spec.APIServer.ManagedPipelines != nil && len(dsp.Spec.APIServer.ManagedPipelines.Pipelines) > 0 {
 		for _, p := range dsp.Spec.APIServer.ManagedPipelines.Pipelines {
+			if dsp.Spec.APIServer.EnableSamplePipeline && strings.EqualFold(p.Name, "iris") {
+				continue // Iris already included above from EnableSamplePipeline
+			}
 			pipelineConfig = append(pipelineConfig, r.managedPipelineSampleEntry(p.Name))
 		}
 	}
