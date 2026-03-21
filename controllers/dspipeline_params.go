@@ -694,8 +694,6 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		setStringDefault(argoDriverImageFromConfig, &p.APIServer.ArgoDriverImage)
 
 		if p.APIServer.ManagedPipelines != nil {
-			managedPipelinesImageFromConfig := config.GetStringConfigWithDefault(config.ManagedPipelinesImagePath, config.DefaultImageValue)
-			setStringDefault(managedPipelinesImageFromConfig, &p.APIServer.ManagedPipelines.Image)
 			ensureManagedPipelinesInitResourceDefaults(p.APIServer.ManagedPipelines)
 		}
 

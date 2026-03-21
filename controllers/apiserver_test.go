@@ -515,34 +515,7 @@ func TestReconcileAPIServer_ConfigHashWhenManagedPipelinesNil(t *testing.T) {
 	assert.NotEmpty(t, params.APIServerConfigHash)
 }
 
-// ExtractParams: default managed pipelines image from config
-
-func TestExtractParams_ManagedPipelinesImageDefaultedWhenEmpty(t *testing.T) {
-	viper.Set(config.ManagedPipelinesImagePath, "from-config:latest")
-	t.Cleanup(func() { viper.Reset() })
-
-	dspa := testutil.CreateDSPAWithManagedPipelines("", nil, nil) // empty image
-	dspa.Name = "dspa"
-	dspa.Namespace = "ns"
-
-	_, params, reconciler := CreateNewTestObjects()
-	ctx := context.Background()
-	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
-
-	require.NotNil(t, params.APIServer.ManagedPipelines)
-	assert.Equal(t, "from-config:latest", params.APIServer.ManagedPipelines.Image)
-	require.NotNil(t, params.APIServer.ManagedPipelines.Resources)
-	require.NotNil(t, params.APIServer.ManagedPipelines.Resources.Requests)
-	assert.Equal(t, resource.MustParse("250m"), params.APIServer.ManagedPipelines.Resources.Requests.CPU)
-	assert.Equal(t, resource.MustParse("500Mi"), params.APIServer.ManagedPipelines.Resources.Requests.Memory)
-	require.NotNil(t, params.APIServer.ManagedPipelines.Resources.Limits)
-	assert.Equal(t, resource.MustParse("500m"), params.APIServer.ManagedPipelines.Resources.Limits.CPU)
-	assert.Equal(t, resource.MustParse("1Gi"), params.APIServer.ManagedPipelines.Resources.Limits.Memory)
-	assert.Nil(t, dspa.Spec.APIServer.ManagedPipelines.Resources, "CR spec unchanged; defaults apply only to params")
-}
-
-func TestExtractParams_ManagedPipelinesImageNotOverriddenWhenSet(t *testing.T) {
-	viper.Set(config.ManagedPipelinesImagePath, "from-config:latest")
+func TestExtractParams_ManagedPipelinesImageFromSpec(t *testing.T) {
 	t.Cleanup(func() { viper.Reset() })
 
 	dspa := testutil.CreateDSPAWithManagedPipelines("my-img:tag", nil, nil)

@@ -27,6 +27,14 @@ spec:
       initContainers:
         - name: init-managed-pipelines
           image: pipelines-components:test2
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
           env:
             - name: ALL_PIPELINES
               value: "true"

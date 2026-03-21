@@ -149,6 +149,7 @@ spec:
                           properties:
                             name:
                               minLength: 1
+                              pattern: ^[^,]+$
                               type: string
                           required:
                           - name

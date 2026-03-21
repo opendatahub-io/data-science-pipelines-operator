@@ -26,6 +26,14 @@ spec:
       initContainers:
         - name: init-managed-pipelines
           image: {{ .APIServer.ManagedPipelines.Image }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
           env:
             {{ if .APIServer.ManagedPipelines.Pipelines }}
             - name: PIPELINE_NAMES

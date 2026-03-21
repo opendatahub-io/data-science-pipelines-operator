@@ -100,7 +100,6 @@ const (
 	ArgoWorkflowControllerImagePath = "Images.ArgoWorkflowController"
 	MariaDBImagePath                = "Images.MariaDB"
 	KubeRBACProxyImagePath          = "Images.KubeRBACProxy"
-	ManagedPipelinesImagePath       = "Images.PipelinesComponents"
 
 	// Other configs
 	ObjStoreConnectionTimeoutConfigName      = "DSPO.HealthCheck.ObjectStore.ConnectionTimeout"
