@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM --platform=$BUILDPLATFORM registry.access.redhat.com/ubi9/go-toolset:1.25 AS builder
+FROM --platform=${BUILDPLATFORM:-linux/amd64} registry.access.redhat.com/ubi9/go-toolset:1.25 AS builder
 ARG TARGETOS=linux
 ARG TARGETARCH=amd64
 ARG FIPS_ENABLED=1
