@@ -114,6 +114,9 @@ type DSPAParams struct {
 	// ManagedPipelinesUploadTags is set when managedPipelines is enabled; injected as MANAGED_PIPELINES_UPLOAD_TAGS for the
 	// pipelines-components init (comma-separated key=value). Init applies to Pipeline and PipelineVersion per API contract.
 	ManagedPipelinesUploadTags string
+	// ManagedPipelineImageEnvVars are MANAGED_PIPELINE_IMAGE_* variables from the operator
+	// process environment, forwarded to the managed-pipelines init container when enabled.
+	ManagedPipelineImageEnvVars []ManagedPipelineImageEnvVar
 }
 
 type DBConnection struct {
@@ -725,6 +728,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 				return err
 			}
 			p.ManagedPipelinesUploadTags = config.BuildManagedPipelinesUploadTags(p.PlatformVersion)
+			p.ManagedPipelineImageEnvVars = ManagedPipelineImageEnvFromEnviron(os.Environ())
 		}
 
 		setResourcesDefault(config.APIServerResourceRequirements, &p.APIServer.Resources)

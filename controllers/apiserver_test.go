@@ -20,6 +20,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
@@ -32,6 +33,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 const (
@@ -40,7 +42,8 @@ const (
 )
 
 // getInitManagedPipelinesContainer returns the init-managed-pipelines container from the deployment, or nil if not found.
-func getInitManagedPipelinesContainer(deployment *appsv1.Deployment) *corev1.Container {
+func getInitManagedPipelinesContainer(t testing.TB, deployment *appsv1.Deployment) *corev1.Container {
+	t.Helper()
 	for i := range deployment.Spec.Template.Spec.InitContainers {
 		if deployment.Spec.Template.Spec.InitContainers[i].Name == initManagedPipelinesContainerName {
 			return &deployment.Spec.Template.Spec.InitContainers[i]
@@ -60,7 +63,11 @@ func getDSPipelineAPIServerContainer(deployment *appsv1.Deployment) *corev1.Cont
 }
 
 // getEnvValue returns the value of the named env var in the container, or "" if not found.
-func getEnvValue(c *corev1.Container, name string) string {
+func getEnvValue(t testing.TB, c *corev1.Container, name string) string {
+	t.Helper()
+	if c == nil {
+		return ""
+	}
 	for _, e := range c.Env {
 		if e.Name == name {
 			return e.Value
@@ -193,19 +200,19 @@ func TestDeployAPIServerWithManagedPipelines(t *testing.T) {
 	require.NoError(t, err)
 
 	// Init container image matches spec
-	initC := getInitManagedPipelinesContainer(deployment)
+	initC := getInitManagedPipelinesContainer(t, deployment)
 	require.NotNil(t, initC, "init-managed-pipelines container should exist")
 	assert.Equal(t, "quay.io/opendatahub/odh-pipelines-components:latest", initC.Image)
 
 	// ALL_PIPELINES env when pipeline list omitted
-	assert.Equal(t, "true", getEnvValue(initC, "ALL_PIPELINES"))
-	assert.Empty(t, getEnvValue(initC, "PIPELINE_NAMES"))
+	assert.Equal(t, "true", getEnvValue(t, initC, "ALL_PIPELINES"))
+	assert.Empty(t, getEnvValue(t, initC, "PIPELINE_NAMES"))
 	wantTags := config.BuildManagedPipelinesUploadTags(config.ResolvedPlatformVersion())
-	assert.Equal(t, wantTags, getEnvValue(initC, "MANAGED_PIPELINES_UPLOAD_TAGS"))
+	assert.Equal(t, wantTags, getEnvValue(t, initC, "MANAGED_PIPELINES_UPLOAD_TAGS"))
 
 	apiC := getDSPipelineAPIServerContainer(deployment)
 	require.NotNil(t, apiC, "ds-pipeline-api-server container should exist")
-	assert.Equal(t, wantTags, getEnvValue(apiC, "MANAGED_PIPELINES_UPLOAD_TAGS"))
+	assert.Equal(t, wantTags, getEnvValue(t, apiC, "MANAGED_PIPELINES_UPLOAD_TAGS"))
 
 	// Init container gets default requests/limits when CR omits resources
 	require.NotNil(t, initC.Resources.Requests)
@@ -259,19 +266,19 @@ func TestDeployAPIServerWithManagedPipelinesAndPipelineList(t *testing.T) {
 	require.NoError(t, err)
 
 	// Init container image matches spec
-	initC := getInitManagedPipelinesContainer(deployment)
+	initC := getInitManagedPipelinesContainer(t, deployment)
 	require.NotNil(t, initC, "init-managed-pipelines container should exist")
 	assert.Equal(t, "quay.io/opendatahub/odh-pipelines-components:latest", initC.Image)
 
 	// PIPELINE_NAMES env for explicit pipeline list
-	assert.Equal(t, "trainer-ostf,lm-eval", getEnvValue(initC, "PIPELINE_NAMES"))
-	assert.Empty(t, getEnvValue(initC, "ALL_PIPELINES"))
+	assert.Equal(t, "trainer-ostf,lm-eval", getEnvValue(t, initC, "PIPELINE_NAMES"))
+	assert.Empty(t, getEnvValue(t, initC, "ALL_PIPELINES"))
 	wantTags := config.BuildManagedPipelinesUploadTags(config.ResolvedPlatformVersion())
-	assert.Equal(t, wantTags, getEnvValue(initC, "MANAGED_PIPELINES_UPLOAD_TAGS"))
+	assert.Equal(t, wantTags, getEnvValue(t, initC, "MANAGED_PIPELINES_UPLOAD_TAGS"))
 
 	apiC := getDSPipelineAPIServerContainer(deployment)
 	require.NotNil(t, apiC, "ds-pipeline-api-server container should exist")
-	assert.Equal(t, wantTags, getEnvValue(apiC, "MANAGED_PIPELINES_UPLOAD_TAGS"))
+	assert.Equal(t, wantTags, getEnvValue(t, apiC, "MANAGED_PIPELINES_UPLOAD_TAGS"))
 
 	// Init container resources match CR requests; missing limits filled from defaults
 	require.NotNil(t, initC.Resources.Requests)
@@ -331,12 +338,12 @@ func TestDeployAPIServerWithoutManagedPipelines(t *testing.T) {
 	require.NoError(t, err)
 
 	// No init container when managedPipelines is nil
-	initC := getInitManagedPipelinesContainer(deployment)
+	initC := getInitManagedPipelinesContainer(t, deployment)
 	assert.Nil(t, initC, "init-managed-pipelines container must not exist when ManagedPipelines is nil")
 
 	apiC := getDSPipelineAPIServerContainer(deployment)
 	require.NotNil(t, apiC)
-	assert.Empty(t, getEnvValue(apiC, "MANAGED_PIPELINES_UPLOAD_TAGS"))
+	assert.Empty(t, getEnvValue(t, apiC, "MANAGED_PIPELINES_UPLOAD_TAGS"))
 
 	// Verify managed pipelines is nil (backward compatibility)
 	assert.Nil(t, dspa.Spec.APIServer.ManagedPipelines)
@@ -624,6 +631,183 @@ func TestExtractParams_ManagedPipelinesVolumeSizeLimit(t *testing.T) {
 	}
 }
 
+// TestAPIServerDeploymentTemplate_ManagedPipelineImageEnvValuesAreYAMLStrings ensures forwarded
+// operator env values are emitted as YAML string scalars. Unquoted values like true/null/123 are
+// parsed as non-strings and can break manifest apply / OpenAPI validation.
+func TestAPIServerDeploymentTemplate_ManagedPipelineImageEnvValuesAreYAMLStrings(t *testing.T) {
+	t.Setenv("MANAGED_PIPELINE_IMAGE_BOOLISH", "true")
+	t.Setenv("MANAGED_PIPELINE_IMAGE_NULLISH", "null")
+	t.Setenv("MANAGED_PIPELINE_IMAGE_NUMERIC", "123")
+
+	t.Cleanup(func() { viper.Reset() })
+
+	ctx, params, reconciler := CreateNewTestObjects()
+	dspa := testutil.CreateDSPAWithManagedPipelines(
+		"quay.io/opendatahub/pipelines-components:latest",
+		nil,
+		nil,
+	)
+	dspa.Name = "testdspa"
+	dspa.Namespace = "testnamespace"
+
+	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+
+	src, err := config.PathTemplateSource(reconciler.TemplatesPath+"apiserver/default/deployment.yaml.tmpl", params)
+	require.NoError(t, err)
+	objs, err := src.Parse()
+	require.NoError(t, err)
+	require.Len(t, objs, 1)
+
+	initContainers, found, err := unstructured.NestedSlice(objs[0].Object, "spec", "template", "spec", "initContainers")
+	require.NoError(t, err)
+	require.True(t, found)
+
+	var initC map[string]interface{}
+	for _, ic := range initContainers {
+		m, ok := ic.(map[string]interface{})
+		require.True(t, ok)
+		if m["name"] == initManagedPipelinesContainerName {
+			initC = m
+			break
+		}
+	}
+	require.NotNil(t, initC, "init-managed-pipelines container should exist")
+
+	envSlice, found, err := unstructured.NestedSlice(initC, "env")
+	require.NoError(t, err)
+	require.True(t, found)
+
+	cases := []struct {
+		name string
+		want string
+	}{
+		{"MANAGED_PIPELINE_IMAGE_BOOLISH", "true"},
+		{"MANAGED_PIPELINE_IMAGE_NULLISH", "null"},
+		{"MANAGED_PIPELINE_IMAGE_NUMERIC", "123"},
+	}
+	for _, tc := range cases {
+		var envMap map[string]interface{}
+		for _, e := range envSlice {
+			em, ok := e.(map[string]interface{})
+			require.True(t, ok)
+			if em["name"] == tc.name {
+				envMap = em
+				break
+			}
+		}
+		require.NotNil(t, envMap, "env %s should exist", tc.name)
+		rawVal, ok := envMap["value"]
+		require.True(t, ok, "env %s should have value field", tc.name)
+		_, isStr := rawVal.(string)
+		require.True(t, isStr, "env %s value must be YAML string scalar, got %T (%v)", tc.name, rawVal, rawVal)
+		assert.Equal(t, tc.want, rawVal)
+	}
+}
+
+func TestDeployAPIServerWithManagedPipelines_ForwardsOperatorManagedPipelineImageEnv(t *testing.T) {
+	t.Setenv("MANAGED_PIPELINE_IMAGE_TOOLBOX", "registry.example/toolbox@sha256:aaa")
+	t.Setenv("MANAGED_PIPELINE_IMAGE_RHEL_AI", "registry.example/rhelai@sha256:bbb")
+	t.Setenv("IGNORED_NOT_FORWARDED", "should-not-appear")
+
+	testNamespace := "testnamespace"
+	testDSPAName := "testdspa"
+	expectedAPIServerName := apiServerDefaultResourceNamePrefix + testDSPAName
+
+	dspa := testutil.CreateDSPAWithManagedPipelines(
+		"quay.io/opendatahub/pipelines-components:latest",
+		nil,
+		nil,
+	)
+	dspa.Name = testDSPAName
+	dspa.Namespace = testNamespace
+
+	ctx, params, reconciler := CreateNewTestObjects()
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	require.NoError(t, err)
+
+	err = reconciler.ReconcileAPIServer(ctx, dspa, params)
+	require.NoError(t, err)
+
+	deployment := &appsv1.Deployment{}
+	created, err := reconciler.IsResourceCreated(ctx, deployment, expectedAPIServerName, testNamespace)
+	require.True(t, created)
+	require.NoError(t, err)
+
+	initC := getInitManagedPipelinesContainer(t, deployment)
+	require.NotNil(t, initC)
+	assert.Equal(t, "registry.example/rhelai@sha256:bbb", getEnvValue(t, initC, "MANAGED_PIPELINE_IMAGE_RHEL_AI"))
+	assert.Equal(t, "registry.example/toolbox@sha256:aaa", getEnvValue(t, initC, "MANAGED_PIPELINE_IMAGE_TOOLBOX"))
+	assert.Empty(t, getEnvValue(t, initC, "IGNORED_NOT_FORWARDED"))
+	// Built-in env for pipeline selection still present
+	assert.Equal(t, "true", getEnvValue(t, initC, "ALL_PIPELINES"))
+}
+
+func TestDeployAPIServerWithManagedPipelines_ForwardsOperatorManagedPipelineImageEnv_QuotesSpecialChars(t *testing.T) {
+	t.Setenv("MANAGED_PIPELINE_IMAGE_TOOLBOX", `registry.example/img:latest"withquotes`)
+
+	testNamespace := "testnamespace"
+	testDSPAName := "testdspa"
+	expectedAPIServerName := apiServerDefaultResourceNamePrefix + testDSPAName
+
+	dspa := testutil.CreateDSPAWithManagedPipelines(
+		"quay.io/opendatahub/pipelines-components:latest",
+		nil,
+		nil,
+	)
+	dspa.Name = testDSPAName
+	dspa.Namespace = testNamespace
+
+	ctx, params, reconciler := CreateNewTestObjects()
+	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+	require.NoError(t, reconciler.ReconcileAPIServer(ctx, dspa, params))
+
+	deployment := &appsv1.Deployment{}
+	created, err := reconciler.IsResourceCreated(ctx, deployment, expectedAPIServerName, testNamespace)
+	require.True(t, created)
+	require.NoError(t, err)
+
+	initC := getInitManagedPipelinesContainer(t, deployment)
+	require.NotNil(t, initC)
+	assert.Equal(t, `registry.example/img:latest"withquotes`, getEnvValue(t, initC, "MANAGED_PIPELINE_IMAGE_TOOLBOX"))
+}
+
+func TestExtractParams_ManagedPipelineImageEnvVarsNilWithoutManagedPipelines(t *testing.T) {
+	t.Cleanup(func() { viper.Reset() })
+	t.Setenv("MANAGED_PIPELINE_IMAGE_SHOULD_NOT_APPEAR", "x")
+
+	dspa := testutil.CreateEmptyDSPA()
+	dspa.Name = "dspa"
+	dspa.Namespace = "ns"
+	dspa.Spec.APIServer = &dspav1.APIServer{Deploy: true}
+	dspa.Spec.APIServer.ManagedPipelines = nil
+
+	ctx, params, reconciler := CreateNewTestObjects()
+	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+
+	assert.Nil(t, params.ManagedPipelineImageEnvVars)
+}
+
+func TestReconcileAPIServer_ConfigHashIncludesManagedPipelineImageEnvVars(t *testing.T) {
+	ctx, _, reconciler := CreateNewTestObjects()
+
+	dspa := testutil.CreateDSPAWithManagedPipelines("same-img", nil, nil)
+	dspa.Name = "dspa"
+	dspa.Namespace = "ns"
+
+	t.Setenv("MANAGED_PIPELINE_IMAGE_X", "digest-one")
+	params1 := &DSPAParams{}
+	require.NoError(t, params1.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+	require.NoError(t, reconciler.ReconcileAPIServer(ctx, dspa, params1))
+
+	t.Setenv("MANAGED_PIPELINE_IMAGE_X", "digest-two")
+	params2 := &DSPAParams{}
+	require.NoError(t, params2.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+	require.NoError(t, reconciler.ReconcileAPIServer(ctx, dspa, params2))
+
+	assert.NotEqual(t, params1.APIServerConfigHash, params2.APIServerConfigHash,
+		"hash should change when operator MANAGED_PIPELINE_IMAGE_* env changes")
+}
+
 func TestExtractParams_ManagedPipelinesResourcesMergePartialRequests(t *testing.T) {
 	t.Cleanup(func() { viper.Reset() })
 
@@ -648,4 +832,60 @@ func TestExtractParams_ManagedPipelinesResourcesMergePartialRequests(t *testing.
 	require.NotNil(t, mp.Resources.Limits)
 	assert.Equal(t, resource.MustParse("500m"), mp.Resources.Limits.CPU)
 	assert.Equal(t, resource.MustParse("1Gi"), mp.Resources.Limits.Memory)
+}
+
+func TestDeployAPIServerWithManagedPipelines_OnlyDetectedManagedImageEnvVarsOnInitContainer(t *testing.T) {
+	testNamespace := "testnamespace"
+	testDSPAName := "testdspa"
+	expectedAPIServerName := apiServerDefaultResourceNamePrefix + testDSPAName
+
+	dspa := testutil.CreateDSPAWithManagedPipelines(
+		"quay.io/opendatahub/pipelines-components:latest",
+		nil,
+		nil,
+	)
+	dspa.Name = testDSPAName
+	dspa.Namespace = testNamespace
+
+	ctx, params, reconciler := CreateNewTestObjects()
+	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+	require.NoError(t, reconciler.ReconcileAPIServer(ctx, dspa, params))
+
+	deployment := &appsv1.Deployment{}
+	created, err := reconciler.IsResourceCreated(ctx, deployment, expectedAPIServerName, testNamespace)
+	require.True(t, created)
+	require.NoError(t, err)
+
+	initC := getInitManagedPipelinesContainer(t, deployment)
+	require.NotNil(t, initC)
+
+	var managedImageEnvCount int
+	for _, e := range initC.Env {
+		if strings.HasPrefix(e.Name, "MANAGED_PIPELINE_IMAGE_") {
+			managedImageEnvCount++
+		}
+	}
+	assert.Equal(t, len(params.ManagedPipelineImageEnvVars), managedImageEnvCount,
+		"init container should carry exactly the MANAGED_PIPELINE_IMAGE_* env vars detected by the operator")
+}
+
+func TestReconcileAPIServer_ConfigHashIdempotent(t *testing.T) {
+	t.Setenv("MANAGED_PIPELINE_IMAGE_X", "digest-same")
+
+	ctx, _, reconciler := CreateNewTestObjects()
+
+	dspa := testutil.CreateDSPAWithManagedPipelines("same-img", nil, nil)
+	dspa.Name = "dspa"
+	dspa.Namespace = "ns"
+
+	params1 := &DSPAParams{}
+	require.NoError(t, params1.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+	require.NoError(t, reconciler.ReconcileAPIServer(ctx, dspa, params1))
+
+	params2 := &DSPAParams{}
+	require.NoError(t, params2.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+	require.NoError(t, reconciler.ReconcileAPIServer(ctx, dspa, params2))
+
+	assert.Equal(t, params1.APIServerConfigHash, params2.APIServerConfigHash,
+		"hash should be identical across reconciles with the same input")
 }

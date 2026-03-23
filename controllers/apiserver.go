@@ -156,6 +156,12 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1.Dat
 			return err
 		}
 		combinedConfigHashInput = combinedConfigHashInput + string(managedSpec)
+
+		imgEnv, err := json.Marshal(params.ManagedPipelineImageEnvVars)
+		if err != nil {
+			return fmt.Errorf("failed to marshal managed pipeline image env vars: %w", err)
+		}
+		combinedConfigHashInput = combinedConfigHashInput + string(imgEnv)
 	}
 
 	// Config hash for pod rollout when sample config, workspace, managed pipelines, or platform version change.
