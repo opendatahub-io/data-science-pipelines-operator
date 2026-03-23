@@ -263,5 +263,5 @@ spec:
           name: sample-pipeline
         - name: managed-pipelines
           emptyDir:
-            sizeLimit: 1024Mi
+            sizeLimit: "1024Mi"
       serviceAccountName: ds-pipeline-testdsp2

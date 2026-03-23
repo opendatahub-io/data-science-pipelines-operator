@@ -86,6 +86,9 @@ const (
 	GeneratedObjectStorageSecretKeyLength = 24
 
 	MlmdGrpcPort = "8080"
+
+	// DefaultManagedPipelinesVolumeSizeLimit is the default emptyDir sizeLimit for the managed-pipelines volume.
+	DefaultManagedPipelinesVolumeSizeLimit = "1024Mi"
 )
 
 // DSPO Config File Paths

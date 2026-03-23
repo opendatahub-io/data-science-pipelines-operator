@@ -533,6 +533,40 @@ func TestExtractParams_ManagedPipelinesImageFromSpec(t *testing.T) {
 	assert.Equal(t, resource.MustParse("500m"), params.APIServer.ManagedPipelines.Resources.Limits.CPU)
 }
 
+func TestExtractParams_ManagedPipelinesVolumeSizeLimit(t *testing.T) {
+	t.Cleanup(func() { viper.Reset() })
+	ctx := context.Background()
+
+	tests := []struct {
+		name       string
+		volumeSpec string
+		want       string
+		wantErr    bool
+	}{
+		{name: "default when omitted", volumeSpec: "", want: config.DefaultManagedPipelinesVolumeSizeLimit},
+		{name: "explicit value", volumeSpec: "512Mi", want: "512Mi"},
+		{name: "invalid quantity", volumeSpec: "not-a-quantity", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dspa := testutil.CreateDSPAWithManagedPipelines("img:latest", nil, nil)
+			dspa.Name = "dspa"
+			dspa.Namespace = "ns"
+			dspa.Spec.APIServer.ManagedPipelines.VolumeSizeLimit = tt.volumeSpec
+
+			_, params, reconciler := CreateNewTestObjects()
+			err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+			if tt.wantErr {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "volumeSizeLimit")
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, params.APIServer.ManagedPipelines.VolumeSizeLimit)
+		})
+	}
+}
+
 func TestExtractParams_ManagedPipelinesResourcesMergePartialRequests(t *testing.T) {
 	t.Cleanup(func() { viper.Reset() })
 

@@ -110,8 +110,14 @@ func (r *DSPAReconciler) generateSampleConfigJSON(dsp *dspav1.DataSciencePipelin
 
 	// Explicit managed pipeline list: add each to sample_config (API server loads these from sample_config).
 	// Omitted list ("all"): do not add managed entries here; API server loads from managed-pipelines.json in volume.
-	if dsp.Spec.APIServer.ManagedPipelines != nil && len(dsp.Spec.APIServer.ManagedPipelines.Pipelines) > 0 {
-		for _, p := range dsp.Spec.APIServer.ManagedPipelines.Pipelines {
+	if mp := dsp.Spec.APIServer.ManagedPipelines; mp != nil && len(mp.Pipelines) > 0 {
+		seenManaged := make(map[string]struct{})
+		for _, p := range mp.Pipelines {
+			key := strings.ToLower(p.Name)
+			if _, exists := seenManaged[key]; exists {
+				return "", fmt.Errorf("duplicate managed pipeline name %q", p.Name)
+			}
+			seenManaged[key] = struct{}{}
 			if dsp.Spec.APIServer.EnableSamplePipeline && strings.EqualFold(p.Name, "iris") {
 				continue // Iris already included above from EnableSamplePipeline
 			}

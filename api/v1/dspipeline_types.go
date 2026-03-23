@@ -89,6 +89,9 @@ type ManagedPipelinesSpec struct {
 	Pipelines []ManagedPipeline `json:"pipelines,omitempty"`
 	// +kubebuilder:validation:Optional
 	Resources *ResourceRequirements `json:"resources,omitempty"`
+	// VolumeSizeLimit caps the managed-pipelines emptyDir volume (Kubernetes quantity, e.g. "1024Mi"). Default: 1024Mi.
+	// +kubebuilder:validation:Optional
+	VolumeSizeLimit string `json:"volumeSizeLimit,omitempty"`
 }
 
 type APIServer struct {

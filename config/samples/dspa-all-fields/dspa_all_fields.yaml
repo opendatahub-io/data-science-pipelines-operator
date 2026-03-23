@@ -20,6 +20,7 @@ spec:
     argoDriverImage: quay.io/org/kfp-driver:latest
     managedPipelines:
       image: quay.io/opendatahub/pipelines-components:latest
+      volumeSizeLimit: 2048Mi
       resources:
         requests:
           cpu: 250m

@@ -628,6 +628,21 @@ func ensureManagedPipelinesInitResourceDefaults(mp *dspa.ManagedPipelinesSpec) {
 	}
 }
 
+// ensureManagedPipelinesVolumeSizeLimit sets a default emptyDir sizeLimit and validates the quantity when set.
+func ensureManagedPipelinesVolumeSizeLimit(mp *dspa.ManagedPipelinesSpec) error {
+	if mp == nil {
+		return nil
+	}
+	if mp.VolumeSizeLimit == "" {
+		mp.VolumeSizeLimit = config.DefaultManagedPipelinesVolumeSizeLimit
+		return nil
+	}
+	if _, err := resource.ParseQuantity(mp.VolumeSizeLimit); err != nil {
+		return fmt.Errorf("managedPipelines.volumeSizeLimit must be a valid Kubernetes quantity: %w", err)
+	}
+	return nil
+}
+
 func (p *DSPAParams) LoadMlmdCertificates(ctx context.Context, client client.Client) (bool, error) {
 	secret, err := util.GetSecret(ctx, "ds-pipeline-metadata-grpc-tls-certs-"+p.Name, p.Namespace, client)
 	if err != nil {
@@ -695,6 +710,9 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 
 		if p.APIServer.ManagedPipelines != nil {
 			ensureManagedPipelinesInitResourceDefaults(p.APIServer.ManagedPipelines)
+			if err := ensureManagedPipelinesVolumeSizeLimit(p.APIServer.ManagedPipelines); err != nil {
+				return err
+			}
 		}
 
 		setResourcesDefault(config.APIServerResourceRequirements, &p.APIServer.Resources)
