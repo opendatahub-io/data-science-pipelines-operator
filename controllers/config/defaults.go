@@ -19,6 +19,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -87,7 +88,17 @@ const (
 
 	// DefaultManagedPipelinesVolumeSizeLimit is the default emptyDir sizeLimit for the managed-pipelines volume.
 	DefaultManagedPipelinesVolumeSizeLimit = "1024Mi"
+
+	// ManagedPipelinesUploadTagManaged is the fixed managed=true pair for MANAGED_PIPELINES_UPLOAD_TAGS.
+	ManagedPipelinesUploadTagManaged = "managed=true"
 )
+
+// BuildManagedPipelinesUploadTags returns MANAGED_PIPELINES_UPLOAD_TAGS: managed=true plus rhoai-version from DSPO.PlatformVersion
+// (operator config / PLATFORMVERSION — set per RHOAI release in bundle). Init parses comma-separated key=value and applies per API contract.
+func BuildManagedPipelinesUploadTags() string {
+	pv := strings.Trim(GetStringConfigWithDefault("DSPO.PlatformVersion", DefaultPlatformVersion), "\"")
+	return fmt.Sprintf("%s,rhoai-version=%s", ManagedPipelinesUploadTagManaged, pv)
+}
 
 // DSPO Config File Paths
 const (

@@ -108,6 +108,10 @@ type DSPAParams struct {
 	// CompiledPipelineSpecPatch is a JSON patch applied to all compiled pipeline specs
 	// Used for global workflow configuration like TTL strategy
 	CompiledPipelineSpecPatch string
+
+	// ManagedPipelinesUploadTags is set when managedPipelines is enabled; injected as MANAGED_PIPELINES_UPLOAD_TAGS for the
+	// pipelines-components init (comma-separated key=value). Init applies to Pipeline and PipelineVersion per API contract.
+	ManagedPipelinesUploadTags string
 }
 
 type DBConnection struct {
@@ -713,6 +717,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 			if err := ensureManagedPipelinesVolumeSizeLimit(p.APIServer.ManagedPipelines); err != nil {
 				return err
 			}
+			p.ManagedPipelinesUploadTags = config.BuildManagedPipelinesUploadTags()
 		}
 
 		setResourcesDefault(config.APIServerResourceRequirements, &p.APIServer.Resources)

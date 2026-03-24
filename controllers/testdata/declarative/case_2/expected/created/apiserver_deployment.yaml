@@ -38,6 +38,8 @@ spec:
           env:
             - name: ALL_PIPELINES
               value: "true"
+            - name: MANAGED_PIPELINES_UPLOAD_TAGS
+              value: "managed=true,rhoai-version=v1.2.3"
           volumeMounts:
             - name: managed-pipelines
               mountPath: /config/managed-pipelines

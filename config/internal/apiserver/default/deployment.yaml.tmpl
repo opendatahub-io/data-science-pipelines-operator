@@ -42,6 +42,9 @@ spec:
             - name: ALL_PIPELINES
               value: "true"
             {{ end }}
+            # Init (pipelines-components): parse comma-separated key=value (managed= + rhoai-version= from DSPO.PlatformVersion); attach to Pipeline and PipelineVersion on upload/create.
+            - name: MANAGED_PIPELINES_UPLOAD_TAGS
+              value: "{{ .ManagedPipelinesUploadTags }}"
           volumeMounts:
             - name: managed-pipelines
               mountPath: /config/managed-pipelines
