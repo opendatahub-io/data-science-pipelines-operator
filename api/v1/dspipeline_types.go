@@ -80,7 +80,9 @@ type ManagedPipeline struct {
 }
 
 // ManagedPipelinesSpec configures the init container. Image contract: volume at /config/managed-pipelines;
-// env PIPELINE_NAMES (comma-separated) or ALL_PIPELINES=true; image writes <name>.yaml per pipeline and copies managed-pipelines.json into the volume.
+// env PIPELINE_NAMES (comma-separated) or ALL_PIPELINES=true; MANAGED_PIPELINES_UPLOAD_TAGS (comma-separated key=value: managed=true and rhoai-version from DSPO platform version).
+// Init must apply those tags to both Pipeline and PipelineVersion on create/upload (same tag set on each resource unless the image implements finer rules).
+// Image writes <name>.yaml per pipeline and copies managed-pipelines.json into the volume.
 type ManagedPipelinesSpec struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1

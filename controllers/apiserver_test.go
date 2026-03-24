@@ -187,6 +187,7 @@ func TestDeployAPIServerWithManagedPipelines(t *testing.T) {
 	// ALL_PIPELINES env when pipeline list omitted
 	assert.Equal(t, "true", getEnvValue(initC, "ALL_PIPELINES"))
 	assert.Empty(t, getEnvValue(initC, "PIPELINE_NAMES"))
+	assert.Equal(t, config.BuildManagedPipelinesUploadTags(), getEnvValue(initC, "MANAGED_PIPELINES_UPLOAD_TAGS"))
 
 	// Init container gets default requests/limits when CR omits resources
 	require.NotNil(t, initC.Resources.Requests)
@@ -247,6 +248,7 @@ func TestDeployAPIServerWithManagedPipelinesAndPipelineList(t *testing.T) {
 	// PIPELINE_NAMES env for explicit pipeline list
 	assert.Equal(t, "trainer-ostf,lm-eval", getEnvValue(initC, "PIPELINE_NAMES"))
 	assert.Empty(t, getEnvValue(initC, "ALL_PIPELINES"))
+	assert.Equal(t, config.BuildManagedPipelinesUploadTags(), getEnvValue(initC, "MANAGED_PIPELINES_UPLOAD_TAGS"))
 
 	// Init container resources match CR requests; missing limits filled from defaults
 	require.NotNil(t, initC.Resources.Requests)
