@@ -46,7 +46,8 @@ OTHER_OPTIONS = {
     "MANAGEDPIPELINES": "\"{}\"",
     "PLATFORMVERSION": "\"v0.0.0\"",
     "FIPSENABLED": "false",
-    "WEBHOOK_ANNOTATIONS": ""
+    "WEBHOOK_ANNOTATIONS": "",
+    "MLFLOW": "{\"}\"",
 }
 
 

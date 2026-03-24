@@ -18,11 +18,12 @@ package util
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+
 	mf "github.com/manifestival/manifestival"
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"os"
-	"path/filepath"
 
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 

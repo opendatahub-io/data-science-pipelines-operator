@@ -12,6 +12,7 @@ require (
 	github.com/manifestival/controller-runtime-client v0.4.0
 	github.com/manifestival/manifestival v0.7.2
 	github.com/minio/minio-go/v7 v7.0.99
+	github.com/opendatahub-io/mlflow-operator/api v0.0.0-20260331183147-5f8991ebee1a
 	github.com/openshift/api v0.0.0-20260331162130-f7b3bd900c75
 	github.com/prometheus/client_golang v1.23.2
 	github.com/spf13/viper v1.21.0

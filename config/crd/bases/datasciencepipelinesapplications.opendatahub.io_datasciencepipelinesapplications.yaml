@@ -610,6 +610,21 @@ spec:
               dspVersion:
                 default: v2
                 type: string
+              mlflow:
+                properties:
+                  injectUserEnvVars:
+                    description: Indicates if user container env variables should
+                      be updated by KFP.
+                    type: boolean
+                  integrationMode:
+                    description: |-
+                      Indicates whether to enable MLflow plugin on API server if plugin installed on cluster,
+                      or disable entirely.
+                    enum:
+                    - AUTODETECT
+                    - DISABLED
+                    type: string
+                type: object
               mlmd:
                 properties:
                   deploy:

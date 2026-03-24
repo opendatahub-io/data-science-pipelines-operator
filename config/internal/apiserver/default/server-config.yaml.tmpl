@@ -25,4 +25,6 @@ data:
       "ARCHIVE_CONFIG_LOG_PATH_PREFIX": "/artifacts",
       "InitConnectionTimeout": "6m"{{ if .APIServerWorkspaceJSON }},
       "Workspace": {{ .APIServerWorkspaceJSON }}{{ end }}
+      "Plugins": {
+        "mlflow": {{ if .APIServerPluginsJson }}
     }
