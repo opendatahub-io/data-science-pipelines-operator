@@ -36,4 +36,7 @@ WORKDIR /
 COPY --from=builder /workspace/manager .
 COPY config/internal config/internal
 
+ARG USER=65532
+USER ${USER}:${USER}
+
 ENTRYPOINT ["/manager"]
