@@ -109,6 +109,8 @@ type DSPAParams struct {
 	// Used for global workflow configuration like TTL strategy
 	CompiledPipelineSpecPatch string
 
+	// PlatformVersion is DSPO.PlatformVersion from operator config (default + quote-trimmed). Used for sample_config and managed pipeline upload tags.
+	PlatformVersion string
 	// ManagedPipelinesUploadTags is set when managedPipelines is enabled; injected as MANAGED_PIPELINES_UPLOAD_TAGS for the
 	// pipelines-components init (comma-separated key=value). Init applies to Pipeline and PipelineVersion per API contract.
 	ManagedPipelinesUploadTags string
@@ -668,6 +670,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.DSPVersion = dsp.Spec.DSPVersion
 	p.Owner = dsp
 	p.APIServer = dsp.Spec.APIServer.DeepCopy()
+	p.PlatformVersion = config.ResolvedPlatformVersion()
 	p.APIServerDefaultResourceName = apiServerDefaultResourceNamePrefix + dsp.Name
 	p.APIServerServiceName = fmt.Sprintf("%s-%s", config.DSPServicePrefix, p.Name)
 	p.APIServerServiceDNSName = fmt.Sprintf("%s.%s.svc.cluster.local", p.APIServerServiceName, p.Namespace)
@@ -717,7 +720,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 			if err := ensureManagedPipelinesVolumeSizeLimit(p.APIServer.ManagedPipelines); err != nil {
 				return err
 			}
-			p.ManagedPipelinesUploadTags = config.BuildManagedPipelinesUploadTags()
+			p.ManagedPipelinesUploadTags = config.BuildManagedPipelinesUploadTags(p.PlatformVersion)
 		}
 
 		setResourcesDefault(config.APIServerResourceRequirements, &p.APIServer.Resources)

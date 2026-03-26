@@ -187,7 +187,7 @@ func TestDeployAPIServerWithManagedPipelines(t *testing.T) {
 	// ALL_PIPELINES env when pipeline list omitted
 	assert.Equal(t, "true", getEnvValue(initC, "ALL_PIPELINES"))
 	assert.Empty(t, getEnvValue(initC, "PIPELINE_NAMES"))
-	assert.Equal(t, config.BuildManagedPipelinesUploadTags(), getEnvValue(initC, "MANAGED_PIPELINES_UPLOAD_TAGS"))
+	assert.Equal(t, config.BuildManagedPipelinesUploadTags(config.ResolvedPlatformVersion()), getEnvValue(initC, "MANAGED_PIPELINES_UPLOAD_TAGS"))
 
 	// Init container gets default requests/limits when CR omits resources
 	require.NotNil(t, initC.Resources.Requests)
@@ -248,7 +248,7 @@ func TestDeployAPIServerWithManagedPipelinesAndPipelineList(t *testing.T) {
 	// PIPELINE_NAMES env for explicit pipeline list
 	assert.Equal(t, "trainer-ostf,lm-eval", getEnvValue(initC, "PIPELINE_NAMES"))
 	assert.Empty(t, getEnvValue(initC, "ALL_PIPELINES"))
-	assert.Equal(t, config.BuildManagedPipelinesUploadTags(), getEnvValue(initC, "MANAGED_PIPELINES_UPLOAD_TAGS"))
+	assert.Equal(t, config.BuildManagedPipelinesUploadTags(config.ResolvedPlatformVersion()), getEnvValue(initC, "MANAGED_PIPELINES_UPLOAD_TAGS"))
 
 	// Init container resources match CR requests; missing limits filled from defaults
 	require.NotNil(t, initC.Resources.Requests)
@@ -378,7 +378,7 @@ func TestGetSampleConfig_ExplicitList_AddsPipelinesToJSON(t *testing.T) {
 	dspa := testutil.CreateDSPAWithManagedPipelines("img", []dspav1.ManagedPipeline{{Name: "p1"}}, nil)
 	dspa.Spec.APIServer.EnableSamplePipeline = false
 
-	jsonStr, err := reconciler.GetSampleConfig(dspa)
+	jsonStr, err := reconciler.GetSampleConfig(dspa, config.ResolvedPlatformVersion())
 	require.NoError(t, err)
 
 	var out struct {
@@ -401,7 +401,7 @@ func TestGetSampleConfig_OmittedList_NoManagedEntriesInJSON(t *testing.T) {
 	dspa := testutil.CreateDSPAWithManagedPipelines("img", nil, nil) // omitted list = "all"
 	dspa.Spec.APIServer.EnableSamplePipeline = true
 
-	jsonStr, err := reconciler.GetSampleConfig(dspa)
+	jsonStr, err := reconciler.GetSampleConfig(dspa, config.ResolvedPlatformVersion())
 	require.NoError(t, err)
 
 	var out struct {
@@ -424,7 +424,7 @@ func TestGetSampleConfig_NoManagedPipelines_IrisOnly(t *testing.T) {
 	dspa.Spec.APIServer.ManagedPipelines = nil
 
 	_, _, reconciler := CreateNewTestObjects()
-	jsonStr, err := reconciler.GetSampleConfig(dspa)
+	jsonStr, err := reconciler.GetSampleConfig(dspa, config.ResolvedPlatformVersion())
 	require.NoError(t, err)
 
 	var out struct {
@@ -447,7 +447,7 @@ func TestGetSampleConfig_ConfigVsMinimalMetadata(t *testing.T) {
 	dspa := testutil.CreateDSPAWithManagedPipelines("img", []dspav1.ManagedPipeline{{Name: "foo"}}, nil)
 	dspa.Spec.APIServer.EnableSamplePipeline = false
 
-	jsonStr, err := reconciler.GetSampleConfig(dspa)
+	jsonStr, err := reconciler.GetSampleConfig(dspa, config.ResolvedPlatformVersion())
 	require.NoError(t, err)
 	var out struct {
 		Pipelines []map[string]string `json:"pipelines"`
@@ -463,7 +463,7 @@ func TestGetSampleConfig_ConfigVsMinimalMetadata(t *testing.T) {
 	viper.Set("DSPO.PlatformVersion", "v1")
 
 	dspa2 := testutil.CreateDSPAWithManagedPipelines("img", []dspav1.ManagedPipeline{{Name: "bar"}}, nil)
-	jsonStr2, err := reconciler.GetSampleConfig(dspa2)
+	jsonStr2, err := reconciler.GetSampleConfig(dspa2, config.ResolvedPlatformVersion())
 	require.NoError(t, err)
 	var out2 struct {
 		Pipelines []map[string]string `json:"pipelines"`
