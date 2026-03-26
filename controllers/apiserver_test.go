@@ -548,6 +548,8 @@ func TestExtractParams_ManagedPipelinesVolumeSizeLimit(t *testing.T) {
 		{name: "default when omitted", volumeSpec: "", want: config.DefaultManagedPipelinesVolumeSizeLimit},
 		{name: "explicit value", volumeSpec: "512Mi", want: "512Mi"},
 		{name: "invalid quantity", volumeSpec: "not-a-quantity", wantErr: true},
+		{name: "zero quantity", volumeSpec: "0", wantErr: true},
+		{name: "negative quantity", volumeSpec: "-1Mi", wantErr: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -643,8 +643,12 @@ func ensureManagedPipelinesVolumeSizeLimit(mp *dspa.ManagedPipelinesSpec) error 
 		mp.VolumeSizeLimit = config.DefaultManagedPipelinesVolumeSizeLimit
 		return nil
 	}
-	if _, err := resource.ParseQuantity(mp.VolumeSizeLimit); err != nil {
+	q, err := resource.ParseQuantity(mp.VolumeSizeLimit)
+	if err != nil {
 		return fmt.Errorf("managedPipelines.volumeSizeLimit must be a valid Kubernetes quantity: %w", err)
+	}
+	if q.Sign() <= 0 {
+		return fmt.Errorf("managedPipelines.volumeSizeLimit must be a positive quantity, got %q", mp.VolumeSizeLimit)
 	}
 	return nil
 }

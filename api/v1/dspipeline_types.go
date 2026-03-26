@@ -75,6 +75,7 @@ type ManagedPipelineOptions struct {
 type ManagedPipeline struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=63
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]+$`
 	Name string `json:"name"`
 }
