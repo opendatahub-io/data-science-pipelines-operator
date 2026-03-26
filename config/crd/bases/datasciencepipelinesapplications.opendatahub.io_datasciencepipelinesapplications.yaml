@@ -149,11 +149,12 @@ spec:
                           properties:
                             name:
                               minLength: 1
-                              pattern: ^[^,]+$
+                              pattern: ^[A-Za-z0-9._-]+$
                               type: string
                           required:
                           - name
                           type: object
+                        minItems: 1
                         type: array
                       resources:
                         description: |-
@@ -193,8 +194,9 @@ spec:
                             type: object
                         type: object
                       volumeSizeLimit:
-                        description: |-
-                          VolumeSizeLimit caps the managed-pipelines emptyDir volume (Kubernetes quantity, e.g. "1024Mi"). Default: 1024Mi.
+                        description: 'VolumeSizeLimit caps the managed-pipelines emptyDir
+                          volume (Kubernetes quantity, e.g. "1024Mi"). Default: 1024Mi.'
+                        maxLength: 64
                         type: string
                     required:
                     - image

@@ -95,11 +95,14 @@ const (
 	ManagedPipelinesUploadTagManaged = "managed=true"
 )
 
-// BuildManagedPipelinesUploadTags returns MANAGED_PIPELINES_UPLOAD_TAGS: managed=true plus rhoai-version from DSPO.PlatformVersion
-// (operator config / PLATFORMVERSION — set per RHOAI release in bundle). Init parses comma-separated key=value and applies per API contract.
-func BuildManagedPipelinesUploadTags() string {
-	pv := strings.Trim(GetStringConfigWithDefault("DSPO.PlatformVersion", DefaultPlatformVersion), "\"")
-	return fmt.Sprintf("%s,rhoai-version=%s", ManagedPipelinesUploadTagManaged, pv)
+// ResolvedPlatformVersion returns DSPO.PlatformVersion from operator config with default and surrounding quotes trimmed.
+func ResolvedPlatformVersion() string {
+	return strings.Trim(GetStringConfigWithDefault("DSPO.PlatformVersion", DefaultPlatformVersion), "\"")
+}
+
+// BuildManagedPipelinesUploadTags returns MANAGED_PIPELINES_UPLOAD_TAGS: managed=true plus rhoai-version for the given resolved version string.
+func BuildManagedPipelinesUploadTags(platformVersion string) string {
+	return fmt.Sprintf("%s,rhoai-version=%s", ManagedPipelinesUploadTagManaged, platformVersion)
 }
 
 // DSPO Config File Paths

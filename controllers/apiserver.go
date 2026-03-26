@@ -43,7 +43,7 @@ var samplePipelineTemplates = map[string]string{
 	"sample-config":   "apiserver/sample-pipeline/sample-config.yaml.tmpl",
 }
 
-func (r *DSPAReconciler) GenerateSamplePipelineMetadataBlock(pipeline string) (map[string]string, error) {
+func (r *DSPAReconciler) GenerateSamplePipelineMetadataBlock(pipeline string, platformVersion string) (map[string]string, error) {
 
 	item := make(map[string]string)
 
@@ -56,7 +56,6 @@ func (r *DSPAReconciler) GenerateSamplePipelineMetadataBlock(pipeline string) (m
 	if err != nil {
 		return nil, err
 	}
-	platformVersion := config.GetStringConfigWithDefault("DSPO.PlatformVersion", config.DefaultPlatformVersion)
 
 	// Get optional fields
 	pDesc := config.GetStringConfigWithDefault(fmt.Sprintf("ManagedPipelinesMetadata.%s.Description", pipeline), "")
@@ -67,41 +66,40 @@ func (r *DSPAReconciler) GenerateSamplePipelineMetadataBlock(pipeline string) (m
 	item["name"] = pName
 	item["file"] = pFile
 	item["description"] = pDesc
-	item["versionName"] = fmt.Sprintf("%s - %s", pVerName, strings.Trim(platformVersion, "\""))
+	item["versionName"] = fmt.Sprintf("%s - %s", pVerName, platformVersion)
 	item["versionDescription"] = pVerDesc
 
 	return item, nil
 }
 
-func (r *DSPAReconciler) GetSampleConfig(dsp *dspav1.DataSciencePipelinesApplication) (string, error) {
-	return r.generateSampleConfigJSON(dsp)
+func (r *DSPAReconciler) GetSampleConfig(dsp *dspav1.DataSciencePipelinesApplication, platformVersion string) (string, error) {
+	return r.generateSampleConfigJSON(dsp, platformVersion)
 }
 
 // managedPipelineSampleEntry returns a sample_config pipeline entry for the named managed pipeline.
 // Uses config (ManagedPipelinesMetadata.<name>) when present; otherwise a minimal entry for volume-loaded YAML.
-func (r *DSPAReconciler) managedPipelineSampleEntry(pipelineName string) map[string]string {
-	item, err := r.GenerateSamplePipelineMetadataBlock(pipelineName)
+func (r *DSPAReconciler) managedPipelineSampleEntry(pipelineName string, platformVersion string) map[string]string {
+	item, err := r.GenerateSamplePipelineMetadataBlock(pipelineName, platformVersion)
 	if err == nil {
 		return item
 	}
 	r.Log.Info("Managed pipeline metadata not found in operator config; using minimal sample_config entry",
 		"pipeline", pipelineName, "error", err)
 	// No config metadata: use minimal entry so API server loads from /config/managed-pipelines/<name>.yaml
-	platformVersion := config.GetStringConfigWithDefault("DSPO.PlatformVersion", config.DefaultPlatformVersion)
 	return map[string]string{
 		"name":               pipelineName,
 		"file":               fmt.Sprintf("/config/managed-pipelines/%s.yaml", pipelineName),
 		"description":        "",
-		"versionName":        fmt.Sprintf("%s - %s", pipelineName, strings.Trim(platformVersion, "\"")),
+		"versionName":        fmt.Sprintf("%s - %s", pipelineName, platformVersion),
 		"versionDescription": "",
 	}
 }
 
-func (r *DSPAReconciler) generateSampleConfigJSON(dsp *dspav1.DataSciencePipelinesApplication) (string, error) {
+func (r *DSPAReconciler) generateSampleConfigJSON(dsp *dspav1.DataSciencePipelinesApplication, platformVersion string) (string, error) {
 	pipelineConfig := make([]map[string]string, 0)
 
 	if dsp.Spec.APIServer.EnableSamplePipeline {
-		item, err := r.GenerateSamplePipelineMetadataBlock("iris")
+		item, err := r.GenerateSamplePipelineMetadataBlock("iris", platformVersion)
 		if err != nil {
 			return "", err
 		}
@@ -121,7 +119,7 @@ func (r *DSPAReconciler) generateSampleConfigJSON(dsp *dspav1.DataSciencePipelin
 			if dsp.Spec.APIServer.EnableSamplePipeline && strings.EqualFold(p.Name, "iris") {
 				continue // Iris already included above from EnableSamplePipeline
 			}
-			pipelineConfig = append(pipelineConfig, r.managedPipelineSampleEntry(p.Name))
+			pipelineConfig = append(pipelineConfig, r.managedPipelineSampleEntry(p.Name, platformVersion))
 		}
 	}
 
@@ -145,7 +143,7 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1.Dat
 	}
 
 	log.Info("Generating Sample Config")
-	sampleConfigJSON, err := r.GetSampleConfig(dsp)
+	sampleConfigJSON, err := r.GetSampleConfig(dsp, params.PlatformVersion)
 	if err != nil {
 		return err
 	}

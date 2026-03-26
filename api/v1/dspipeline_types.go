@@ -75,12 +75,12 @@ type ManagedPipelineOptions struct {
 type ManagedPipeline struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Pattern=`^[^,]+$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]+$`
 	Name string `json:"name"`
 }
 
 // ManagedPipelinesSpec configures the init container. Image contract: volume at /config/managed-pipelines;
-// env PIPELINE_NAMES (comma-separated) or ALL_PIPELINES=true; MANAGED_PIPELINES_UPLOAD_TAGS (comma-separated key=value: managed=true and rhoai-version from DSPO platform version).
+// env PIPELINE_NAMES (comma-separated pipeline name keys; each name must match Name pattern) or ALL_PIPELINES=true; MANAGED_PIPELINES_UPLOAD_TAGS (comma-separated key=value: managed=true and rhoai-version from DSPO platform version).
 // Init must apply those tags to both Pipeline and PipelineVersion on create/upload (same tag set on each resource unless the image implements finer rules).
 // Image writes <name>.yaml per pipeline and copies managed-pipelines.json into the volume.
 type ManagedPipelinesSpec struct {
@@ -88,11 +88,13 @@ type ManagedPipelinesSpec struct {
 	// +kubebuilder:validation:MinLength=1
 	Image string `json:"image"`
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MinItems=1
 	Pipelines []ManagedPipeline `json:"pipelines,omitempty"`
 	// +kubebuilder:validation:Optional
 	Resources *ResourceRequirements `json:"resources,omitempty"`
 	// VolumeSizeLimit caps the managed-pipelines emptyDir volume (Kubernetes quantity, e.g. "1024Mi"). Default: 1024Mi.
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=64
 	VolumeSizeLimit string `json:"volumeSizeLimit,omitempty"`
 }
 
