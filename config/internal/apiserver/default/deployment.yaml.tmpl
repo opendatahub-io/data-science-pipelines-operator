@@ -206,6 +206,11 @@ spec:
               value: "{{.ProxyConfig.NoProxy}}"
             {{ end }}
             {{ end }}
+            {{ if .APIServer.ManagedPipelines }}
+            # Same as init-managed-pipelines: DSP apiserver reads MANAGED_PIPELINES_UPLOAD_TAGS for managed-pipeline tagging.
+            - name: MANAGED_PIPELINES_UPLOAD_TAGS
+              value: "{{ .ManagedPipelinesUploadTags }}"
+            {{ end }}
           image: {{.APIServer.Image}}
           # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
           name: ds-pipeline-api-server
