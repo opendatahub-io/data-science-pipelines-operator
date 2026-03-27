@@ -19,7 +19,7 @@ spec:
     argoLauncherImage: quay.io/org/kfp-launcher:latest
     argoDriverImage: quay.io/org/kfp-driver:latest
     managedPipelines:
-      image: quay.io/opendatahub/pipelines-components:latest
+      image: quay.io/opendatahub/odh-pipelines-components:latest
       volumeSizeLimit: 2048Mi
       resources:
         requests:

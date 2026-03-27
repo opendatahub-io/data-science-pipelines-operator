@@ -173,7 +173,7 @@ func TestDeployAPIServerWithManagedPipelines(t *testing.T) {
 	expectedAPIServerName := apiServerDefaultResourceNamePrefix + testDSPAName
 
 	dspa := testutil.CreateDSPAWithManagedPipelines(
-		"quay.io/opendatahub/pipelines-components:latest",
+		"quay.io/opendatahub/odh-pipelines-components:latest",
 		nil,
 		nil,
 	)
@@ -195,7 +195,7 @@ func TestDeployAPIServerWithManagedPipelines(t *testing.T) {
 	// Init container image matches spec
 	initC := getInitManagedPipelinesContainer(deployment)
 	require.NotNil(t, initC, "init-managed-pipelines container should exist")
-	assert.Equal(t, "quay.io/opendatahub/pipelines-components:latest", initC.Image)
+	assert.Equal(t, "quay.io/opendatahub/odh-pipelines-components:latest", initC.Image)
 
 	// ALL_PIPELINES env when pipeline list omitted
 	assert.Equal(t, "true", getEnvValue(initC, "ALL_PIPELINES"))
@@ -217,7 +217,7 @@ func TestDeployAPIServerWithManagedPipelines(t *testing.T) {
 
 	// Verify managed pipelines fields are preserved on DSPA
 	assert.NotNil(t, dspa.Spec.APIServer.ManagedPipelines)
-	assert.Equal(t, "quay.io/opendatahub/pipelines-components:latest", dspa.Spec.APIServer.ManagedPipelines.Image)
+	assert.Equal(t, "quay.io/opendatahub/odh-pipelines-components:latest", dspa.Spec.APIServer.ManagedPipelines.Image)
 	assert.Nil(t, dspa.Spec.APIServer.ManagedPipelines.Pipelines)
 	assert.Nil(t, dspa.Spec.APIServer.ManagedPipelines.Resources)
 }
@@ -239,7 +239,7 @@ func TestDeployAPIServerWithManagedPipelinesAndPipelineList(t *testing.T) {
 	}
 
 	dspa := testutil.CreateDSPAWithManagedPipelines(
-		"quay.io/opendatahub/pipelines-components:latest",
+		"quay.io/opendatahub/odh-pipelines-components:latest",
 		pipelines,
 		resources,
 	)
@@ -261,7 +261,7 @@ func TestDeployAPIServerWithManagedPipelinesAndPipelineList(t *testing.T) {
 	// Init container image matches spec
 	initC := getInitManagedPipelinesContainer(deployment)
 	require.NotNil(t, initC, "init-managed-pipelines container should exist")
-	assert.Equal(t, "quay.io/opendatahub/pipelines-components:latest", initC.Image)
+	assert.Equal(t, "quay.io/opendatahub/odh-pipelines-components:latest", initC.Image)
 
 	// PIPELINE_NAMES env for explicit pipeline list
 	assert.Equal(t, "trainer-ostf,lm-eval", getEnvValue(initC, "PIPELINE_NAMES"))
@@ -284,7 +284,7 @@ func TestDeployAPIServerWithManagedPipelinesAndPipelineList(t *testing.T) {
 	// Verify managed pipelines fields on DSPA
 	mp := dspa.Spec.APIServer.ManagedPipelines
 	assert.NotNil(t, mp)
-	assert.Equal(t, "quay.io/opendatahub/pipelines-components:latest", mp.Image)
+	assert.Equal(t, "quay.io/opendatahub/odh-pipelines-components:latest", mp.Image)
 	assert.Len(t, mp.Pipelines, 2)
 	assert.Equal(t, "trainer-ostf", mp.Pipelines[0].Name)
 	assert.Equal(t, "lm-eval", mp.Pipelines[1].Name)
