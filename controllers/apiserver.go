@@ -72,10 +72,6 @@ func (r *DSPAReconciler) GenerateSamplePipelineMetadataBlock(pipeline string, pl
 	return item, nil
 }
 
-func (r *DSPAReconciler) GetSampleConfig(dsp *dspav1.DataSciencePipelinesApplication, platformVersion string) (string, error) {
-	return r.generateSampleConfigJSON(dsp, platformVersion)
-}
-
 // managedPipelineSampleEntry returns a sample_config pipeline entry for the named managed pipeline.
 // Uses config (ManagedPipelinesMetadata.<name>) when present; otherwise a minimal entry for volume-loaded YAML.
 func (r *DSPAReconciler) managedPipelineSampleEntry(pipelineName string, platformVersion string) map[string]string {
@@ -143,7 +139,7 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1.Dat
 	}
 
 	log.Info("Generating Sample Config")
-	sampleConfigJSON, err := r.GetSampleConfig(dsp, params.PlatformVersion)
+	sampleConfigJSON, err := r.generateSampleConfigJSON(dsp, params.PlatformVersion)
 	if err != nil {
 		return err
 	}

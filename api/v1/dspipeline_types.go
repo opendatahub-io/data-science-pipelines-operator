@@ -82,6 +82,7 @@ type ManagedPipeline struct {
 
 // ManagedPipelinesSpec configures the init container. Image contract: volume at /config/managed-pipelines;
 // env PIPELINE_NAMES (comma-separated pipeline name keys; each name must match Name pattern) or ALL_PIPELINES=true; MANAGED_PIPELINES_UPLOAD_TAGS (comma-separated key=value: managed=true and rhoai-version from DSPO platform version).
+// The same MANAGED_PIPELINES_UPLOAD_TAGS value is set on the ds-pipeline-api-server container for DSP apiserver use.
 // Init must apply those tags to both Pipeline and PipelineVersion on create/upload (same tag set on each resource unless the image implements finer rules).
 // Image writes <name>.yaml per pipeline and copies managed-pipelines.json into the volume.
 type ManagedPipelinesSpec struct {
