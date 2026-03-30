@@ -93,6 +93,16 @@ var (
 			"dspa_namespace",
 		},
 	)
+	ManagedPipelineValidMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "data_science_pipelines_application_managed_pipeline_valid",
+			Help: "Data Science Pipelines Application - Managed Pipeline Validation Status",
+		},
+		[]string{
+			"dspa_name",
+			"dspa_namespace",
+		},
+	)
 	CrReadyMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "data_science_pipelines_application_ready",
@@ -115,6 +125,7 @@ var (
 		ScheduledWorkflowReadyMetric,
 		WorkflowControllerReadyMetric,
 		MLMDProxyReadyMetric,
+		ManagedPipelineValidMetric,
 		CrReadyMetric,
 	}
 )
