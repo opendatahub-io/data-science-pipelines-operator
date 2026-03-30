@@ -139,6 +139,7 @@ const (
 	WorkflowControllerReady = "WorkflowControllerReady"
 	MLMDProxyReady          = "MLMDProxyReady"
 	WebhookReady            = "WebhookReady"
+	ManagedPipelineValid    = "ManagedPipelineValid"
 	CrReady                 = "Ready"
 )
 
@@ -153,6 +154,8 @@ const (
 	Deploying                   = "Deploying"
 	ComponentDeploymentNotFound = "ComponentDeploymentNotFound"
 	UnsupportedVersion          = "UnsupportedVersion"
+	ManagedPipelineInvalid      = "ManagedPipelineInvalid"
+	ManagedPipelinesFetchError  = "ManagedPipelinesFetchError"
 )
 
 // Any required Configmap paths can be added here,

@@ -61,6 +61,7 @@ type DSPAReconciler struct {
 	TemplatesPath           string
 	MaxConcurrentReconciles int
 	WebhookAnnotations      map[string]string
+	ManifestFetcher         PipelineNamesFetcher
 }
 
 func (r *DSPAReconciler) ApplyDir(owner mf.Owner, params *DSPAParams, directory string, fns ...mf.Transformer) error {
@@ -346,6 +347,10 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			dspaStatus.SetWebhookNotApplicable()
 		}
 
+		if err := r.validateManagedPipelines(ctx, dspa, dspaStatus, log); err != nil {
+			return ctrl.Result{}, err
+		}
+
 		err = r.ReconcileAPIServer(ctx, dspa, params)
 		if err != nil {
 			r.setStatusAsNotReady(config.APIServerReady, err, dspaStatus.SetApiServerStatus)
@@ -410,6 +415,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		util.GetConditionByType(config.ScheduledWorkflowReady, conditions):  ScheduledWorkflowReadyMetric,
 		util.GetConditionByType(config.WorkflowControllerReady, conditions): WorkflowControllerReadyMetric,
 		util.GetConditionByType(config.MLMDProxyReady, conditions):          MLMDProxyReadyMetric,
+		util.GetConditionByType(config.ManagedPipelineValid, conditions):    ManagedPipelineValidMetric,
 		util.GetConditionByType(config.CrReady, conditions):                 CrReadyMetric,
 	}
 	r.PublishMetrics(dspa, metricsMap)
@@ -421,6 +427,44 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *DSPAReconciler) validateManagedPipelines(
+	ctx context.Context,
+	dspa *dspav1.DataSciencePipelinesApplication,
+	dspaStatus dspastatus.DSPAStatus,
+	log logr.Logger,
+) error {
+	if dspa.Spec.APIServer == nil {
+		dspaStatus.SetManagedPipelineNotApplicable()
+		return nil
+	}
+	mp := dspa.Spec.APIServer.ManagedPipelines
+	if mp == nil || len(mp.Pipelines) == 0 {
+		dspaStatus.SetManagedPipelineNotApplicable()
+		return nil
+	}
+
+	manifestNames, err := r.ManifestFetcher.FetchPipelineNames(ctx, mp.Image)
+	if err != nil {
+		// Fetch failures are transient (network, credentials). Surface the condition
+		// but allow reconciliation to continue so the API server can still be deployed.
+		// The condition will be re-evaluated on the next reconciliation.
+		log.Error(err, "Failed to fetch managed-pipelines.json from image", "image", mp.Image)
+		dspaStatus.SetManagedPipelineInvalid(err, config.ManagedPipelinesFetchError)
+		return nil
+	}
+
+	if err := ValidateManagedPipelineNames(mp.Pipelines, manifestNames); err != nil {
+		// Validation failures are definitive: the CR lists names that do not exist in
+		// the manifest. Block the API server deployment until the CR is corrected.
+		log.Info("Managed pipeline validation failed", "error", err)
+		dspaStatus.SetManagedPipelineInvalid(err, config.ManagedPipelineInvalid)
+		return err
+	}
+
+	dspaStatus.SetManagedPipelineValid()
+	return nil
 }
 
 func (r *DSPAReconciler) setStatusAsNotReady(conditionType string, err error, setStatus func(metav1.Condition)) {
@@ -687,6 +731,9 @@ func (r *DSPAReconciler) GetComponents(ctx context.Context, dspa *dspav1.DataSci
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	if r.ManifestFetcher == nil {
+		r.ManifestFetcher = NewOCIManifestFetcher(r.Log)
+	}
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&dspav1.DataSciencePipelinesApplication{}).
 		Owns(&appsv1.Deployment{}).

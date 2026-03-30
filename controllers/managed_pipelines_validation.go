@@ -1,0 +1,67 @@
+package controllers
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
+
+	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
+)
+
+// ManagedPipelineEntry represents a single entry in managed-pipelines.json.
+type ManagedPipelineEntry struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Path        string `json:"path"`
+	Stability   string `json:"stability"`
+}
+
+// PipelineNamesFetcher abstracts fetching and parsing of pipeline names from an image.
+type PipelineNamesFetcher interface {
+	FetchPipelineNames(ctx context.Context, imageRef string) (map[string]bool, error)
+}
+
+// ParseManagedPipelinesManifest parses the JSON content of managed-pipelines.json
+// and returns the set of valid pipeline names.
+func ParseManagedPipelinesManifest(data []byte) (map[string]bool, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("managed-pipelines.json content is empty")
+	}
+
+	var entries []ManagedPipelineEntry
+	if err := json.Unmarshal(data, &entries); err != nil {
+		return nil, fmt.Errorf("failed to parse managed-pipelines.json: %w", err)
+	}
+
+	names := make(map[string]bool, len(entries))
+	for _, e := range entries {
+		if strings.TrimSpace(e.Name) != "" {
+			names[e.Name] = true
+		}
+	}
+	return names, nil
+}
+
+// ValidateManagedPipelineNames checks that every pipeline name in the CR exists
+// in the manifest's valid name set. Returns nil if all names are valid.
+func ValidateManagedPipelineNames(crPipelines []dspav1.ManagedPipeline, manifestNames map[string]bool) error {
+	if len(crPipelines) == 0 {
+		return nil
+	}
+
+	var invalid []string
+	for _, p := range crPipelines {
+		if !manifestNames[p.Name] {
+			invalid = append(invalid, p.Name)
+		}
+	}
+
+	if len(invalid) > 0 {
+		return fmt.Errorf(
+			"pipeline(s) not found in managed-pipelines.json: %s",
+			strings.Join(invalid, ", "),
+		)
+	}
+	return nil
+}
