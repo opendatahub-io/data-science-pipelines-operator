@@ -149,6 +149,7 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1.Dat
 	if params.APIServerWorkspaceJSON != "" {
 		combinedConfigHashInput = sampleConfigJSON + params.APIServerWorkspaceJSON
 	}
+	combinedConfigHashInput += params.PlatformVersion
 	if dsp.Spec.APIServer.ManagedPipelines != nil {
 		managedSpec, err := json.Marshal(dsp.Spec.APIServer.ManagedPipelines)
 		if err != nil {
