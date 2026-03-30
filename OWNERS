@@ -6,6 +6,7 @@ approvers:
   - mprahl
   - alyssacgoins
   - nsingla
+  - sduvvuri 
 reviewers:
   - gmfrasca
   - hbelmiro
@@ -14,5 +15,6 @@ reviewers:
   - mprahl
   - alyssacgoins
   - nsingla
+  - sduvvuri
 emeritus_approvers:
   - accorvin
