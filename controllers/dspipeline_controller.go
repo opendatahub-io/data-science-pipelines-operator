@@ -62,6 +62,7 @@ type DSPAReconciler struct {
 	MaxConcurrentReconciles int
 	WebhookAnnotations      map[string]string
 	ManifestFetcher         PipelineNamesFetcher
+	AllowedRegistries       []string
 }
 
 func (r *DSPAReconciler) ApplyDir(owner mf.Owner, params *DSPAParams, directory string, fns ...mf.Transformer) error {
@@ -225,6 +226,21 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	dspaStatus := dspastatus.NewDSPAStatus(dspa)
 
 	defer r.updateStatus(ctx, dspa, dspaStatus, log, req)
+	defer func() {
+		conditions := dspaStatus.GetConditions()
+		metricsMap := map[metav1.Condition]*prometheus.GaugeVec{
+			util.GetConditionByType(config.DatabaseAvailable, conditions):       DBAvailableMetric,
+			util.GetConditionByType(config.ObjectStoreAvailable, conditions):    ObjectStoreAvailableMetric,
+			util.GetConditionByType(config.APIServerReady, conditions):          APIServerReadyMetric,
+			util.GetConditionByType(config.PersistenceAgentReady, conditions):   PersistenceAgentReadyMetric,
+			util.GetConditionByType(config.ScheduledWorkflowReady, conditions):  ScheduledWorkflowReadyMetric,
+			util.GetConditionByType(config.WorkflowControllerReady, conditions): WorkflowControllerReadyMetric,
+			util.GetConditionByType(config.MLMDProxyReady, conditions):          MLMDProxyReadyMetric,
+			util.GetConditionByType(config.ManagedPipelineValid, conditions):    ManagedPipelineValidMetric,
+			util.GetConditionByType(config.CrReady, conditions):                 CrReadyMetric,
+		}
+		r.PublishMetrics(dspa, metricsMap)
+	}()
 
 	if !util.DSPAWithSupportedDSPVersion(dspa) {
 		err1 := fmt.Errorf("unsupported DSP version %s detected. Please manually remove "+
@@ -402,24 +418,6 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 	}
 
-	conditions := dspaStatus.GetConditions()
-	if err != nil {
-		log.Info(err.Error())
-		return ctrl.Result{}, err
-	}
-	metricsMap := map[metav1.Condition]*prometheus.GaugeVec{
-		util.GetConditionByType(config.DatabaseAvailable, conditions):       DBAvailableMetric,
-		util.GetConditionByType(config.ObjectStoreAvailable, conditions):    ObjectStoreAvailableMetric,
-		util.GetConditionByType(config.APIServerReady, conditions):          APIServerReadyMetric,
-		util.GetConditionByType(config.PersistenceAgentReady, conditions):   PersistenceAgentReadyMetric,
-		util.GetConditionByType(config.ScheduledWorkflowReady, conditions):  ScheduledWorkflowReadyMetric,
-		util.GetConditionByType(config.WorkflowControllerReady, conditions): WorkflowControllerReadyMetric,
-		util.GetConditionByType(config.MLMDProxyReady, conditions):          MLMDProxyReadyMetric,
-		util.GetConditionByType(config.ManagedPipelineValid, conditions):    ManagedPipelineValidMetric,
-		util.GetConditionByType(config.CrReady, conditions):                 CrReadyMetric,
-	}
-	r.PublishMetrics(dspa, metricsMap)
-
 	if !dspaPrereqsReady {
 		log.Info(fmt.Sprintf("Health check for Database or Object Store failed, retrying in %d seconds.", int(requeueTime.Seconds())))
 
@@ -442,6 +440,12 @@ func (r *DSPAReconciler) validateManagedPipelines(
 	mp := dspa.Spec.APIServer.ManagedPipelines
 	if mp == nil || len(mp.Pipelines) == 0 {
 		dspaStatus.SetManagedPipelineNotApplicable()
+		return nil
+	}
+
+	if r.ManifestFetcher == nil {
+		err := fmt.Errorf("ManifestFetcher not initialized")
+		dspaStatus.SetManagedPipelineInvalid(err, config.ManagedPipelinesFetchError)
 		return nil
 	}
 
@@ -732,7 +736,7 @@ func (r *DSPAReconciler) GetComponents(ctx context.Context, dspa *dspav1.DataSci
 // SetupWithManager sets up the controller with the Manager.
 func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if r.ManifestFetcher == nil {
-		r.ManifestFetcher = NewOCIManifestFetcher(r.Log)
+		r.ManifestFetcher = NewOCIManifestFetcher(r.Log, r.AllowedRegistries)
 	}
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&dspav1.DataSciencePipelinesApplication{}).

@@ -3,9 +3,12 @@
 package controllers
 
 import (
+	"archive/tar"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"testing"
 
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
@@ -340,6 +343,97 @@ func TestValidateManagedPipelines_NotApplicable(t *testing.T) {
 			assert.Equal(t, "NotApplicable", cond.Reason)
 		})
 	}
+}
+
+func TestValidateManagedPipelines_NilFetcher_SetsConditionDoesNotPanic(t *testing.T) {
+	dspa := testutil.CreateDSPAWithManagedPipelines("img:latest", []dspav1.ManagedPipeline{{Name: "p1"}}, nil)
+	dspa.Status.Conditions = make([]metav1.Condition, 11)
+	status := dspastatus.NewDSPAStatus(dspa)
+	reconciler := &DSPAReconciler{Log: ctrl.Log, ManifestFetcher: nil}
+
+	err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
+	assert.NoError(t, err, "nil fetcher should not panic or block reconciliation")
+
+	conditions := status.GetConditions()
+	cond := findCondition(conditions, config.ManagedPipelineValid)
+	require.NotNil(t, cond)
+	assert.Equal(t, metav1.ConditionFalse, cond.Status)
+	assert.Equal(t, config.ManagedPipelinesFetchError, cond.Reason)
+}
+
+func TestExtractFileFromTar_OversizedEntry(t *testing.T) {
+	_, _, err := extractFileFromTar(
+		newTarWithEntry("app/managed-pipelines.json", make([]byte, maxManagedPipelinesManifestSize+1)),
+		"app/managed-pipelines.json",
+	)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "exceeds limit")
+}
+
+func TestExtractFileFromTar_ExactLimit(t *testing.T) {
+	payload := make([]byte, maxManagedPipelinesManifestSize)
+	data, found, err := extractFileFromTar(
+		newTarWithEntry("app/managed-pipelines.json", payload),
+		"app/managed-pipelines.json",
+	)
+	require.NoError(t, err)
+	require.True(t, found)
+	assert.Len(t, data, int(maxManagedPipelinesManifestSize))
+}
+
+func TestObservedGeneration_SetOnNewConditions(t *testing.T) {
+	dspa := testutil.CreateEmptyDSPA()
+	dspa.Generation = 42
+	dspa.Status.Conditions = nil // no previous conditions at all
+	status := dspastatus.NewDSPAStatus(dspa)
+	status.SetManagedPipelineValid()
+
+	conditions := status.GetConditions()
+	for _, c := range conditions {
+		assert.Equal(t, int64(42), c.ObservedGeneration, "ObservedGeneration must be set for condition %s", c.Type)
+	}
+}
+
+func TestRegistryAllowlist_BlocksDisallowedRegistry(t *testing.T) {
+	dspa := testutil.CreateDSPAWithManagedPipelines("evil.registry.io/img:latest", []dspav1.ManagedPipeline{{Name: "p1"}}, nil)
+	dspa.Status.Conditions = make([]metav1.Condition, 11)
+	status := dspastatus.NewDSPAStatus(dspa)
+
+	fetcher := NewOCIManifestFetcher(ctrl.Log, []string{"quay.io", "registry.redhat.io"})
+	reconciler := &DSPAReconciler{Log: ctrl.Log, ManifestFetcher: fetcher}
+
+	err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
+	assert.NoError(t, err, "fetch errors should not block reconciliation")
+
+	conditions := status.GetConditions()
+	cond := findCondition(conditions, config.ManagedPipelineValid)
+	require.NotNil(t, cond)
+	assert.Equal(t, metav1.ConditionFalse, cond.Status)
+	assert.Equal(t, config.ManagedPipelinesFetchError, cond.Reason)
+	assert.Contains(t, cond.Message, "not in the allowed list")
+}
+
+func TestRegistryAllowlist_EmptyAllowsAll(t *testing.T) {
+	fetcher := NewOCIManifestFetcher(ctrl.Log, nil)
+	assert.Empty(t, fetcher.AllowedRegistries)
+}
+
+func TestIsRegistryAllowed(t *testing.T) {
+	fetcher := NewOCIManifestFetcher(ctrl.Log, []string{"quay.io", "registry.redhat.io"})
+	assert.True(t, fetcher.isRegistryAllowed("quay.io"))
+	assert.True(t, fetcher.isRegistryAllowed("QUAY.IO"))
+	assert.True(t, fetcher.isRegistryAllowed("registry.redhat.io"))
+	assert.False(t, fetcher.isRegistryAllowed("evil.io"))
+	assert.False(t, fetcher.isRegistryAllowed("docker.io"))
+}
+
+func newTarWithEntry(name string, content []byte) io.Reader {
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	_ = tw.WriteHeader(&tar.Header{Name: name, Size: int64(len(content))})
+	_, _ = tw.Write(content)
+	_ = tw.Close()
+	return &buf
 }
 
 // findCondition returns the condition with the given type, or nil if not found.

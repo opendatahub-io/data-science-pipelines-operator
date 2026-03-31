@@ -265,11 +265,9 @@ func (s *dspaStatus) GetConditions() []metav1.Condition {
 		previousConditions[c.Type] = c
 	}
 	for i := range conditions {
-		if prev, ok := previousConditions[conditions[i].Type]; ok {
-			if prev.Status == conditions[i].Status {
-				conditions[i].LastTransitionTime = prev.LastTransitionTime
-			}
-			conditions[i].ObservedGeneration = s.dspa.Generation
+		conditions[i].ObservedGeneration = s.dspa.Generation
+		if prev, ok := previousConditions[conditions[i].Type]; ok && prev.Status == conditions[i].Status {
+			conditions[i].LastTransitionTime = prev.LastTransitionTime
 		}
 	}
 
