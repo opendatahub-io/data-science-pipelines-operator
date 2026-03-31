@@ -337,6 +337,26 @@ func TestManagedPipelineNotApplicable_DoesNotBlockReady(t *testing.T) {
 	assert.Equal(t, metav1.ConditionTrue, crReady.Status)
 }
 
+func TestManagedPipelineFetchError_DoesNotBlockReady(t *testing.T) {
+	status := newAllReadyStatus(t)
+	status.SetManagedPipelineInvalid(
+		fmt.Errorf("connection refused"),
+		config.ManagedPipelinesFetchError,
+	)
+
+	conditions := status.GetConditions()
+
+	cond := findCondition(conditions, config.ManagedPipelineValid)
+	require.NotNil(t, cond)
+	assert.Equal(t, metav1.ConditionFalse, cond.Status)
+	assert.Equal(t, config.ManagedPipelinesFetchError, cond.Reason)
+
+	crReady := findCondition(conditions, config.CrReady)
+	require.NotNil(t, crReady)
+	assert.Equal(t, metav1.ConditionTrue, crReady.Status,
+		"transient fetch error must not degrade CrReady when deployment proceeds")
+}
+
 // --- validateManagedPipelines reconciler method tests ---
 
 type mockPipelineNamesFetcher struct {

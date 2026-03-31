@@ -216,7 +216,7 @@ func (s *dspaStatus) GetConditions() []metav1.Condition {
 	allReady := true
 	failureMessages := ""
 	for _, c := range componentConditions {
-		if (c.Status == metav1.ConditionFalse || c.Status == metav1.ConditionUnknown) && c.Reason != "NotApplicable" {
+		if (c.Status == metav1.ConditionFalse || c.Status == metav1.ConditionUnknown) && !isNonBlockingReason(c.Reason) {
 			allReady = false
 			failureMessages += fmt.Sprintf("%s \n", c.Message)
 		}
@@ -340,4 +340,12 @@ func BuildUnknownCondition(conditionType string) metav1.Condition {
 	condition.LastTransitionTime = metav1.Now()
 
 	return condition
+}
+
+// isNonBlockingReason returns true for condition reasons that should not
+// degrade the overall CrReady status. "NotApplicable" means the feature is
+// not configured; "ManagedPipelinesFetchError" means a transient fetch
+// failure occurred but the controller allows deployment to proceed.
+func isNonBlockingReason(reason string) bool {
+	return reason == "NotApplicable" || reason == config.ManagedPipelinesFetchError
 }
