@@ -11,6 +11,7 @@ import (
 	"io"
 	"testing"
 
+	oci "github.com/google/go-containerregistry/pkg/v1"
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/dspastatus"
@@ -20,6 +21,97 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
+
+// --- extractManifestFromImage mocks and tests ---
+
+type mockContainerImage struct {
+	oci.Image
+	layers    []oci.Layer
+	layersErr error
+}
+
+func (m *mockContainerImage) Layers() ([]oci.Layer, error) {
+	return m.layers, m.layersErr
+}
+
+type mockContainerLayer struct {
+	oci.Layer
+	reader io.ReadCloser
+	err    error
+}
+
+func (m *mockContainerLayer) Uncompressed() (io.ReadCloser, error) {
+	return m.reader, m.err
+}
+
+func TestExtractManifestFromImage_LayerOpenError(t *testing.T) {
+	fetcher := NewOCIManifestFetcher(ctrl.Log, nil)
+
+	failLayer := &mockContainerLayer{err: fmt.Errorf("layer read failure")}
+	img := &mockContainerImage{layers: []oci.Layer{failLayer}}
+
+	_, err := fetcher.extractManifestFromImage(img, "test-image:latest")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to open layer")
+	assert.Contains(t, err.Error(), "test-image:latest")
+}
+
+func TestExtractManifestFromImage_TarScanError(t *testing.T) {
+	fetcher := NewOCIManifestFetcher(ctrl.Log, nil)
+
+	corruptReader := io.NopCloser(bytes.NewReader([]byte("not a tar")))
+	layer := &mockContainerLayer{reader: corruptReader}
+	img := &mockContainerImage{layers: []oci.Layer{layer}}
+
+	_, err := fetcher.extractManifestFromImage(img, "test-image:latest")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to scan layer")
+}
+
+func TestExtractManifestFromImage_OversizedTopLayer_NoFallback(t *testing.T) {
+	fetcher := NewOCIManifestFetcher(ctrl.Log, nil)
+
+	oversizedContent := make([]byte, maxManagedPipelinesManifestSize+1)
+	newerLayer := &mockContainerLayer{
+		reader: io.NopCloser(newTarWithEntry(managedPipelinesJSONPath, oversizedContent)),
+	}
+	validContent := []byte(`[{"name":"good-pipeline"}]`)
+	olderLayer := &mockContainerLayer{
+		reader: io.NopCloser(newTarWithEntry(managedPipelinesJSONPath, validContent)),
+	}
+	img := &mockContainerImage{layers: []oci.Layer{olderLayer, newerLayer}}
+
+	_, err := fetcher.extractManifestFromImage(img, "test-image:latest")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "exceeds limit")
+}
+
+func TestExtractManifestFromImage_FileFound(t *testing.T) {
+	fetcher := NewOCIManifestFetcher(ctrl.Log, nil)
+
+	content := []byte(`[{"name":"test-pipeline"}]`)
+	layer := &mockContainerLayer{
+		reader: io.NopCloser(newTarWithEntry(managedPipelinesJSONPath, content)),
+	}
+	img := &mockContainerImage{layers: []oci.Layer{layer}}
+
+	data, err := fetcher.extractManifestFromImage(img, "test-image:latest")
+	require.NoError(t, err)
+	assert.Equal(t, content, data)
+}
+
+func TestExtractManifestFromImage_FileNotFound(t *testing.T) {
+	fetcher := NewOCIManifestFetcher(ctrl.Log, nil)
+
+	layer := &mockContainerLayer{
+		reader: io.NopCloser(newTarWithEntry("app/other-file.json", []byte("data"))),
+	}
+	img := &mockContainerImage{layers: []oci.Layer{layer}}
+
+	_, err := fetcher.extractManifestFromImage(img, "test-image:latest")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found in image")
+}
 
 // --- ParseManagedPipelinesManifest tests ---
 
@@ -263,8 +355,9 @@ func TestValidateManagedPipelines_FetchError_DoesNotBlockReconcile(t *testing.T)
 		ManifestFetcher: &mockPipelineNamesFetcher{err: fmt.Errorf("connection refused")},
 	}
 
-	err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
+	proceed, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
 	assert.NoError(t, err, "fetch errors should not block reconciliation")
+	assert.True(t, proceed, "fetch errors are transient; API server deployment should proceed")
 
 	conditions := status.GetConditions()
 	cond := findCondition(conditions, config.ManagedPipelineValid)
@@ -274,7 +367,7 @@ func TestValidateManagedPipelines_FetchError_DoesNotBlockReconcile(t *testing.T)
 	assert.Contains(t, cond.Message, "connection refused")
 }
 
-func TestValidateManagedPipelines_ValidationError_BlocksReconcile(t *testing.T) {
+func TestValidateManagedPipelines_ValidationError_BlocksAPIServer(t *testing.T) {
 	dspa := testutil.CreateDSPAWithManagedPipelines("img:latest", []dspav1.ManagedPipeline{{Name: "bad"}}, nil)
 	dspa.Status.Conditions = make([]metav1.Condition, 11)
 	status := dspastatus.NewDSPAStatus(dspa)
@@ -283,15 +376,16 @@ func TestValidateManagedPipelines_ValidationError_BlocksReconcile(t *testing.T) 
 		ManifestFetcher: &mockPipelineNamesFetcher{names: map[string]bool{"good": true}},
 	}
 
-	err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
-	require.Error(t, err, "validation errors should block reconciliation")
-	assert.Contains(t, err.Error(), "bad")
+	proceed, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
+	assert.NoError(t, err, "validation failures are permanent and must not trigger controller-runtime retries")
+	assert.False(t, proceed, "validation failures must block API server deployment")
 
 	conditions := status.GetConditions()
 	cond := findCondition(conditions, config.ManagedPipelineValid)
 	require.NotNil(t, cond)
 	assert.Equal(t, metav1.ConditionFalse, cond.Status)
 	assert.Equal(t, config.ManagedPipelineInvalid, cond.Reason)
+	assert.Contains(t, cond.Message, "bad", "invalid pipeline name must appear in condition message")
 }
 
 func TestValidateManagedPipelines_AllValid_SetsCondition(t *testing.T) {
@@ -303,8 +397,9 @@ func TestValidateManagedPipelines_AllValid_SetsCondition(t *testing.T) {
 		ManifestFetcher: &mockPipelineNamesFetcher{names: map[string]bool{"p1": true}},
 	}
 
-	err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
+	proceed, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
 	assert.NoError(t, err)
+	assert.True(t, proceed, "valid pipelines should allow API server deployment")
 
 	conditions := status.GetConditions()
 	cond := findCondition(conditions, config.ManagedPipelineValid)
@@ -334,8 +429,9 @@ func TestValidateManagedPipelines_NotApplicable(t *testing.T) {
 			status := dspastatus.NewDSPAStatus(dspa)
 			reconciler := &DSPAReconciler{Log: ctrl.Log}
 
-			err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
+			proceed, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
 			assert.NoError(t, err)
+			assert.True(t, proceed, "not-applicable should allow API server deployment")
 
 			conditions := status.GetConditions()
 			cond := findCondition(conditions, config.ManagedPipelineValid)
@@ -351,8 +447,9 @@ func TestValidateManagedPipelines_NilFetcher_SetsConditionDoesNotPanic(t *testin
 	status := dspastatus.NewDSPAStatus(dspa)
 	reconciler := &DSPAReconciler{Log: ctrl.Log, ManifestFetcher: nil}
 
-	err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
+	proceed, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
 	assert.NoError(t, err, "nil fetcher should not panic or block reconciliation")
+	assert.True(t, proceed, "nil fetcher is transient; API server deployment should proceed")
 
 	conditions := status.GetConditions()
 	cond := findCondition(conditions, config.ManagedPipelineValid)
@@ -402,8 +499,9 @@ func TestRegistryAllowlist_BlocksDisallowedRegistry(t *testing.T) {
 	fetcher := NewOCIManifestFetcher(ctrl.Log, []string{"quay.io", "registry.redhat.io"})
 	reconciler := &DSPAReconciler{Log: ctrl.Log, ManifestFetcher: fetcher}
 
-	err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
+	proceed, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
 	assert.NoError(t, err, "fetch errors should not block reconciliation")
+	assert.True(t, proceed, "fetch errors are transient; API server deployment should proceed")
 
 	conditions := status.GetConditions()
 	cond := findCondition(conditions, config.ManagedPipelineValid)
@@ -425,6 +523,24 @@ func TestIsRegistryAllowed(t *testing.T) {
 	assert.True(t, fetcher.isRegistryAllowed("registry.redhat.io"))
 	assert.False(t, fetcher.isRegistryAllowed("evil.io"))
 	assert.False(t, fetcher.isRegistryAllowed("docker.io"))
+}
+
+func TestCopyStringBoolMap(t *testing.T) {
+	original := map[string]bool{"a": true, "b": true}
+	cp := copyStringBoolMap(original)
+
+	assert.Equal(t, original, cp)
+
+	cp["c"] = true
+	delete(cp, "a")
+	assert.True(t, original["a"], "mutation of copy must not affect original")
+	assert.False(t, original["c"], "mutation of copy must not affect original")
+}
+
+func TestCopyStringBoolMap_Nil(t *testing.T) {
+	cp := copyStringBoolMap(nil)
+	assert.NotNil(t, cp)
+	assert.Empty(t, cp)
 }
 
 func newTarWithEntry(name string, content []byte) io.Reader {

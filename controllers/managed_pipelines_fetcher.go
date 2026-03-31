@@ -11,6 +11,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
+	oci "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
 
@@ -42,9 +43,10 @@ func (f *OCIManifestFetcher) isRegistryAllowed(registry string) bool {
 	return false
 }
 
-// fetchManifestData resolves the image, validates the registry, extracts
-// managed-pipelines.json, and returns the raw bytes plus the resolved digest string.
-func (f *OCIManifestFetcher) fetchManifestData(ctx context.Context, imageRef string) ([]byte, string, error) {
+// resolveImageDigest parses the reference, validates the registry allowlist,
+// fetches the image manifest (lightweight), and returns the image handle plus
+// the resolved content digest string for cache lookups.
+func (f *OCIManifestFetcher) resolveImageDigest(ctx context.Context, imageRef string) (oci.Image, string, error) {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return nil, "", fmt.Errorf("invalid image reference %q: %w", imageRef, err)
@@ -67,15 +69,23 @@ func (f *OCIManifestFetcher) fetchManifestData(ctx context.Context, imageRef str
 		return nil, "", fmt.Errorf("failed to resolve digest for image %q: %w", imageRef, err)
 	}
 
+	return img, digest.String(), nil
+}
+
+// extractManifestFromImage iterates image layers from newest to oldest and
+// returns the raw bytes of managed-pipelines.json. Layer read failures are
+// returned immediately instead of falling through to older layers that may
+// contain stale content.
+func (f *OCIManifestFetcher) extractManifestFromImage(img oci.Image, imageRef string) ([]byte, error) {
 	layers, err := img.Layers()
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to get layers for image %q: %w", imageRef, err)
+		return nil, fmt.Errorf("failed to get layers for image %q: %w", imageRef, err)
 	}
 
 	for i := len(layers) - 1; i >= 0; i-- {
 		layerReader, err := layers[i].Uncompressed()
 		if err != nil {
-			continue
+			return nil, fmt.Errorf("failed to open layer %d for image %q: %w", i, imageRef, err)
 		}
 
 		data, found, tarErr := extractFileFromTar(layerReader, managedPipelinesJSONPath)
@@ -83,21 +93,25 @@ func (f *OCIManifestFetcher) fetchManifestData(ctx context.Context, imageRef str
 			f.log.V(1).Info("Error closing layer reader", "layer", i, "error", closeErr)
 		}
 		if tarErr != nil {
-			f.log.V(1).Info("Error reading layer", "layer", i, "error", tarErr)
-			continue
+			return nil, fmt.Errorf(
+				"failed to scan layer %d for %s in image %q: %w",
+				i, managedPipelinesJSONPath, imageRef, tarErr,
+			)
 		}
 		if found {
-			return data, digest.String(), nil
+			return data, nil
 		}
 	}
 
-	return nil, "", fmt.Errorf("managed-pipelines.json not found in image %q", imageRef)
+	return nil, fmt.Errorf("managed-pipelines.json not found in image %q", imageRef)
 }
 
-// FetchPipelineNames fetches and parses managed-pipelines.json from the image,
-// returning the set of valid pipeline names. Results are cached per resolved image digest.
+// FetchPipelineNames resolves the image digest (lightweight manifest fetch),
+// checks the per-digest cache, and only on a cache miss downloads layers and
+// extracts managed-pipelines.json. The returned map is a defensive copy safe
+// for caller mutation.
 func (f *OCIManifestFetcher) FetchPipelineNames(ctx context.Context, imageRef string) (map[string]bool, error) {
-	data, digestStr, err := f.fetchManifestData(ctx, imageRef)
+	img, digestStr, err := f.resolveImageDigest(ctx, imageRef)
 	if err != nil {
 		return nil, err
 	}
@@ -105,9 +119,14 @@ func (f *OCIManifestFetcher) FetchPipelineNames(ctx context.Context, imageRef st
 	f.mu.Lock()
 	if cached, ok := f.cache[digestStr]; ok {
 		f.mu.Unlock()
-		return cached, nil
+		return copyStringBoolMap(cached), nil
 	}
 	f.mu.Unlock()
+
+	data, err := f.extractManifestFromImage(img, imageRef)
+	if err != nil {
+		return nil, err
+	}
 
 	names, err := ParseManagedPipelinesManifest(data)
 	if err != nil {
@@ -117,7 +136,15 @@ func (f *OCIManifestFetcher) FetchPipelineNames(ctx context.Context, imageRef st
 	f.mu.Lock()
 	f.cache[digestStr] = names
 	f.mu.Unlock()
-	return names, nil
+	return copyStringBoolMap(names), nil
+}
+
+func copyStringBoolMap(m map[string]bool) map[string]bool {
+	cp := make(map[string]bool, len(m))
+	for k, v := range m {
+		cp[k] = v
+	}
+	return cp
 }
 
 const maxManagedPipelinesManifestSize int64 = 1 << 20 // 1 MiB
