@@ -3,10 +3,13 @@ package controllers
 import (
 	"archive/tar"
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"path"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -15,20 +18,41 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
 
+var (
+	// errNotFound is returned by extractFileFromTar when the target file
+	// is not present in the layer. Callers may continue to the next layer.
+	errNotFound = errors.New("file not found in tar layer")
+
+	// errWhiteout is returned by extractFileFromTar when the target file
+	// was deleted by an OCI whiteout marker (.wh.<name> or .wh..wh..opq).
+	// Callers must stop scanning lower layers to avoid surfacing stale content.
+	errWhiteout = errors.New("file deleted by OCI whiteout")
+)
+
 const managedPipelinesJSONPath = "app/managed-pipelines.json"
 
+const cacheTTL = 10 * time.Minute
+
+type cacheEntry struct {
+	names     map[string]bool
+	fetchedAt time.Time
+}
+
 // OCIManifestFetcher pulls managed-pipelines.json from a container image
-// using the OCI registry API. Results are cached per resolved image digest.
+// using the OCI registry API. Results are cached per resolved image digest
+// and expire after cacheTTL.
 type OCIManifestFetcher struct {
 	mu                sync.Mutex
-	cache             map[string]map[string]bool // digest string -> pipeline names
+	cache             map[string]cacheEntry
+	nowFunc           func() time.Time
 	log               logr.Logger
 	AllowedRegistries []string
 }
 
 func NewOCIManifestFetcher(log logr.Logger, allowedRegistries []string) *OCIManifestFetcher {
 	return &OCIManifestFetcher{
-		cache:             make(map[string]map[string]bool),
+		cache:             make(map[string]cacheEntry),
+		nowFunc:           time.Now,
 		log:               log,
 		AllowedRegistries: allowedRegistries,
 	}
@@ -88,40 +112,61 @@ func (f *OCIManifestFetcher) extractManifestFromImage(img oci.Image, imageRef st
 			return nil, fmt.Errorf("failed to open layer %d for image %q: %w", i, imageRef, err)
 		}
 
-		data, found, tarErr := extractFileFromTar(layerReader, managedPipelinesJSONPath)
+		data, tarErr := extractFileFromTar(layerReader, managedPipelinesJSONPath)
 		if closeErr := layerReader.Close(); closeErr != nil {
 			f.log.V(1).Info("Error closing layer reader", "layer", i, "error", closeErr)
 		}
-		if tarErr != nil {
+		switch {
+		case tarErr == nil:
+			return data, nil
+		case errors.Is(tarErr, errNotFound):
+			continue
+		case errors.Is(tarErr, errWhiteout):
+			return nil, fmt.Errorf("managed-pipelines.json not found in image %q (deleted by whiteout in layer %d)", imageRef, i)
+		default:
 			return nil, fmt.Errorf(
 				"failed to scan layer %d for %s in image %q: %w",
 				i, managedPipelinesJSONPath, imageRef, tarErr,
 			)
-		}
-		if found {
-			return data, nil
 		}
 	}
 
 	return nil, fmt.Errorf("managed-pipelines.json not found in image %q", imageRef)
 }
 
+func (f *OCIManifestFetcher) getCached(digestStr string) map[string]bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	entry, ok := f.cache[digestStr]
+	if !ok {
+		return nil
+	}
+	if f.nowFunc().Sub(entry.fetchedAt) > cacheTTL {
+		delete(f.cache, digestStr)
+		return nil
+	}
+	return copyStringBoolMap(entry.names)
+}
+
+func (f *OCIManifestFetcher) putCache(digestStr string, names map[string]bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.cache[digestStr] = cacheEntry{names: names, fetchedAt: f.nowFunc()}
+}
+
 // FetchPipelineNames resolves the image digest (lightweight manifest fetch),
-// checks the per-digest cache, and only on a cache miss downloads layers and
-// extracts managed-pipelines.json. The returned map is a defensive copy safe
-// for caller mutation.
+// checks the per-digest cache (entries expire after cacheTTL), and only on a
+// cache miss downloads layers and extracts managed-pipelines.json. The
+// returned map is a defensive copy safe for caller mutation.
 func (f *OCIManifestFetcher) FetchPipelineNames(ctx context.Context, imageRef string) (map[string]bool, error) {
 	img, digestStr, err := f.resolveImageDigest(ctx, imageRef)
 	if err != nil {
 		return nil, err
 	}
 
-	f.mu.Lock()
-	if cached, ok := f.cache[digestStr]; ok {
-		f.mu.Unlock()
-		return copyStringBoolMap(cached), nil
+	if cached := f.getCached(digestStr); cached != nil {
+		return cached, nil
 	}
-	f.mu.Unlock()
 
 	data, err := f.extractManifestFromImage(img, imageRef)
 	if err != nil {
@@ -133,9 +178,7 @@ func (f *OCIManifestFetcher) FetchPipelineNames(ctx context.Context, imageRef st
 		return nil, err
 	}
 
-	f.mu.Lock()
-	f.cache[digestStr] = names
-	f.mu.Unlock()
+	f.putCache(digestStr, names)
 	return copyStringBoolMap(names), nil
 }
 
@@ -149,25 +192,48 @@ func copyStringBoolMap(m map[string]bool) map[string]bool {
 
 const maxManagedPipelinesManifestSize int64 = 1 << 20 // 1 MiB
 
-func extractFileFromTar(r io.Reader, targetPath string) ([]byte, bool, error) {
+// isWhiteoutFor reports whether entryName is an OCI whiteout marker that
+// deletes targetPath (.wh.<name>) or makes its parent directory opaque
+// (.wh..wh..opq), hiding all lower-layer content.
+func isWhiteoutFor(entryName, targetPath string) bool {
+	dir := path.Dir(targetPath)
+	base := path.Base(targetPath)
+	return entryName == dir+"/.wh."+base || entryName == dir+"/.wh..wh..opq"
+}
+
+// readBoundedTarEntry reads the current tar entry, rejecting files larger
+// than maxManagedPipelinesManifestSize.
+func readBoundedTarEntry(tr *tar.Reader, hdr *tar.Header) ([]byte, error) {
+	if hdr.Size < 0 || hdr.Size > maxManagedPipelinesManifestSize {
+		return nil, fmt.Errorf("%s size %d exceeds limit of %d bytes", hdr.Name, hdr.Size, maxManagedPipelinesManifestSize)
+	}
+	data, err := io.ReadAll(io.LimitReader(tr, maxManagedPipelinesManifestSize))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read %s from tar: %w", hdr.Name, err)
+	}
+	return data, nil
+}
+
+// extractFileFromTar scans a tar stream for targetPath. Returns:
+//   - (data, nil)        — file found
+//   - (nil, errNotFound) — file not present in this layer
+//   - (nil, errWhiteout) — file deleted by OCI whiteout; stop scanning lower layers
+//   - (nil, other error) — read failure
+func extractFileFromTar(r io.Reader, targetPath string) ([]byte, error) {
 	tr := tar.NewReader(r)
 	for {
 		hdr, err := tr.Next()
 		if err == io.EOF {
-			return nil, false, nil
+			return nil, errNotFound
 		}
 		if err != nil {
-			return nil, false, fmt.Errorf("tar read error: %w", err)
+			return nil, fmt.Errorf("tar read error: %w", err)
+		}
+		if isWhiteoutFor(hdr.Name, targetPath) {
+			return nil, errWhiteout
 		}
 		if hdr.Name == targetPath {
-			if hdr.Size < 0 || hdr.Size > maxManagedPipelinesManifestSize {
-				return nil, false, fmt.Errorf("%s size %d exceeds limit of %d bytes", targetPath, hdr.Size, maxManagedPipelinesManifestSize)
-			}
-			data, err := io.ReadAll(io.LimitReader(tr, maxManagedPipelinesManifestSize))
-			if err != nil {
-				return nil, false, fmt.Errorf("failed to read %s from tar: %w", targetPath, err)
-			}
-			return data, true, nil
+			return readBoundedTarEntry(tr, hdr)
 		}
 	}
 }

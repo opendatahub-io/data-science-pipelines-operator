@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"testing"
+	"time"
 
 	oci "github.com/google/go-containerregistry/pkg/v1"
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
@@ -356,8 +357,8 @@ func TestValidateManagedPipelines_FetchError_DoesNotBlockReconcile(t *testing.T)
 	}
 
 	proceed, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
-	assert.NoError(t, err, "fetch errors should not block reconciliation")
-	assert.True(t, proceed, "fetch errors are transient; API server deployment should proceed")
+	require.NoError(t, err, "fetch errors should not block reconciliation")
+	require.True(t, proceed, "fetch errors are transient; API server deployment should proceed")
 
 	conditions := status.GetConditions()
 	cond := findCondition(conditions, config.ManagedPipelineValid)
@@ -377,8 +378,8 @@ func TestValidateManagedPipelines_ValidationError_BlocksAPIServer(t *testing.T) 
 	}
 
 	proceed, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
-	assert.NoError(t, err, "validation failures are permanent and must not trigger controller-runtime retries")
-	assert.False(t, proceed, "validation failures must block API server deployment")
+	require.NoError(t, err, "validation failures are permanent and must not trigger controller-runtime retries")
+	require.False(t, proceed, "validation failures must block API server deployment")
 
 	conditions := status.GetConditions()
 	cond := findCondition(conditions, config.ManagedPipelineValid)
@@ -398,8 +399,8 @@ func TestValidateManagedPipelines_AllValid_SetsCondition(t *testing.T) {
 	}
 
 	proceed, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
-	assert.NoError(t, err)
-	assert.True(t, proceed, "valid pipelines should allow API server deployment")
+	require.NoError(t, err)
+	require.True(t, proceed, "valid pipelines should allow API server deployment")
 
 	conditions := status.GetConditions()
 	cond := findCondition(conditions, config.ManagedPipelineValid)
@@ -430,8 +431,8 @@ func TestValidateManagedPipelines_NotApplicable(t *testing.T) {
 			reconciler := &DSPAReconciler{Log: ctrl.Log}
 
 			proceed, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
-			assert.NoError(t, err)
-			assert.True(t, proceed, "not-applicable should allow API server deployment")
+			require.NoError(t, err)
+			require.True(t, proceed, "not-applicable should allow API server deployment")
 
 			conditions := status.GetConditions()
 			cond := findCondition(conditions, config.ManagedPipelineValid)
@@ -448,8 +449,8 @@ func TestValidateManagedPipelines_NilFetcher_SetsConditionDoesNotPanic(t *testin
 	reconciler := &DSPAReconciler{Log: ctrl.Log, ManifestFetcher: nil}
 
 	proceed, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
-	assert.NoError(t, err, "nil fetcher should not panic or block reconciliation")
-	assert.True(t, proceed, "nil fetcher is transient; API server deployment should proceed")
+	require.NoError(t, err, "nil fetcher should not panic or block reconciliation")
+	require.True(t, proceed, "nil fetcher is transient; API server deployment should proceed")
 
 	conditions := status.GetConditions()
 	cond := findCondition(conditions, config.ManagedPipelineValid)
@@ -459,7 +460,7 @@ func TestValidateManagedPipelines_NilFetcher_SetsConditionDoesNotPanic(t *testin
 }
 
 func TestExtractFileFromTar_OversizedEntry(t *testing.T) {
-	_, _, err := extractFileFromTar(
+	_, err := extractFileFromTar(
 		newTarWithEntry("app/managed-pipelines.json", make([]byte, maxManagedPipelinesManifestSize+1)),
 		"app/managed-pipelines.json",
 	)
@@ -469,12 +470,12 @@ func TestExtractFileFromTar_OversizedEntry(t *testing.T) {
 
 func TestExtractFileFromTar_ExactLimit(t *testing.T) {
 	payload := make([]byte, maxManagedPipelinesManifestSize)
-	data, found, err := extractFileFromTar(
+	data, err := extractFileFromTar(
 		newTarWithEntry("app/managed-pipelines.json", payload),
 		"app/managed-pipelines.json",
 	)
 	require.NoError(t, err)
-	require.True(t, found)
+	require.NotNil(t, data)
 	assert.Len(t, data, int(maxManagedPipelinesManifestSize))
 }
 
@@ -500,8 +501,8 @@ func TestRegistryAllowlist_BlocksDisallowedRegistry(t *testing.T) {
 	reconciler := &DSPAReconciler{Log: ctrl.Log, ManifestFetcher: fetcher}
 
 	proceed, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
-	assert.NoError(t, err, "fetch errors should not block reconciliation")
-	assert.True(t, proceed, "fetch errors are transient; API server deployment should proceed")
+	require.NoError(t, err, "fetch errors should not block reconciliation")
+	require.True(t, proceed, "fetch errors are transient; API server deployment should proceed")
 
 	conditions := status.GetConditions()
 	cond := findCondition(conditions, config.ManagedPipelineValid)
@@ -543,11 +544,175 @@ func TestCopyStringBoolMap_Nil(t *testing.T) {
 	assert.Empty(t, cp)
 }
 
+func TestIsWhiteoutFor(t *testing.T) {
+	target := "app/managed-pipelines.json"
+
+	assert.True(t, isWhiteoutFor("app/.wh.managed-pipelines.json", target))
+	assert.True(t, isWhiteoutFor("app/.wh..wh..opq", target))
+	assert.False(t, isWhiteoutFor("app/managed-pipelines.json", target))
+	assert.False(t, isWhiteoutFor("app/other-file.json", target))
+	assert.False(t, isWhiteoutFor("other/.wh.managed-pipelines.json", target))
+}
+
+func TestExtractFileFromTar_Whiteout_ReturnsErrWhiteout(t *testing.T) {
+	tarBuf := newTarWithEntry("app/.wh.managed-pipelines.json", nil)
+
+	data, err := extractFileFromTar(tarBuf, managedPipelinesJSONPath)
+	assert.ErrorIs(t, err, errWhiteout)
+	assert.Nil(t, data)
+}
+
+func TestExtractFileFromTar_OpaqueWhiteout_ReturnsErrWhiteout(t *testing.T) {
+	tarBuf := newTarWithEntry("app/.wh..wh..opq", nil)
+
+	data, err := extractFileFromTar(tarBuf, managedPipelinesJSONPath)
+	assert.ErrorIs(t, err, errWhiteout)
+	assert.Nil(t, data)
+}
+
+func TestExtractFileFromTar_Found(t *testing.T) {
+	content := []byte(`[{"name":"test"}]`)
+	tarBuf := newTarWithEntry(managedPipelinesJSONPath, content)
+
+	data, err := extractFileFromTar(tarBuf, managedPipelinesJSONPath)
+	require.NoError(t, err)
+	assert.Equal(t, content, data)
+}
+
+func TestExtractFileFromTar_NotFound(t *testing.T) {
+	tarBuf := newTarWithEntry("app/other-file.json", []byte("data"))
+
+	data, err := extractFileFromTar(tarBuf, managedPipelinesJSONPath)
+	assert.ErrorIs(t, err, errNotFound)
+	assert.Nil(t, data)
+}
+
+func TestExtractManifestFromImage_WhiteoutInUpperLayer_StopsSearch(t *testing.T) {
+	fetcher := NewOCIManifestFetcher(ctrl.Log, nil)
+
+	validContent := []byte(`[{"name":"old-pipeline"}]`)
+	olderLayer := &mockContainerLayer{
+		reader: io.NopCloser(newTarWithEntry(managedPipelinesJSONPath, validContent)),
+	}
+	whiteoutLayer := &mockContainerLayer{
+		reader: io.NopCloser(newTarWithEntry("app/.wh.managed-pipelines.json", nil)),
+	}
+	img := &mockContainerImage{layers: []oci.Layer{olderLayer, whiteoutLayer}}
+
+	_, err := fetcher.extractManifestFromImage(img, "test-image:latest")
+	require.Error(t, err, "should NOT fall through to lower layer with deleted content")
+	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestExtractManifestFromImage_OpaqueWhiteoutInUpperLayer_StopsSearch(t *testing.T) {
+	fetcher := NewOCIManifestFetcher(ctrl.Log, nil)
+
+	validContent := []byte(`[{"name":"old-pipeline"}]`)
+	olderLayer := &mockContainerLayer{
+		reader: io.NopCloser(newTarWithEntry(managedPipelinesJSONPath, validContent)),
+	}
+	opaqueLayer := &mockContainerLayer{
+		reader: io.NopCloser(newTarWithEntry("app/.wh..wh..opq", nil)),
+	}
+	img := &mockContainerImage{layers: []oci.Layer{olderLayer, opaqueLayer}}
+
+	_, err := fetcher.extractManifestFromImage(img, "test-image:latest")
+	require.Error(t, err, "should NOT fall through when directory is opaque")
+	assert.Contains(t, err.Error(), "not found")
+}
+
+// --- Cache TTL tests ---
+
+func TestGetCached_HitWithinTTL(t *testing.T) {
+	fetcher := NewOCIManifestFetcher(ctrl.Log, nil)
+	now := time.Now()
+	fetcher.nowFunc = func() time.Time { return now }
+	fetcher.putCache("sha256:abc123", map[string]bool{"pipeline_a": true})
+
+	fetcher.nowFunc = func() time.Time { return now.Add(cacheTTL - time.Minute) }
+	cached := fetcher.getCached("sha256:abc123")
+	require.NotNil(t, cached, "entry within TTL must be returned")
+	assert.Equal(t, map[string]bool{"pipeline_a": true}, cached)
+}
+
+func TestGetCached_MissAfterExpiry(t *testing.T) {
+	fetcher := NewOCIManifestFetcher(ctrl.Log, nil)
+	now := time.Now()
+	fetcher.nowFunc = func() time.Time { return now }
+	fetcher.putCache("sha256:abc123", map[string]bool{"pipeline_a": true})
+
+	fetcher.nowFunc = func() time.Time { return now.Add(cacheTTL + time.Minute) }
+	cached := fetcher.getCached("sha256:abc123")
+	assert.Nil(t, cached, "entry past TTL must be treated as miss")
+}
+
+func TestGetCached_ExpiredEntryEvicted(t *testing.T) {
+	fetcher := NewOCIManifestFetcher(ctrl.Log, nil)
+	now := time.Now()
+	fetcher.nowFunc = func() time.Time { return now }
+	fetcher.putCache("sha256:abc123", map[string]bool{"pipeline_a": true})
+
+	fetcher.nowFunc = func() time.Time { return now.Add(cacheTTL + time.Minute) }
+	_ = fetcher.getCached("sha256:abc123")
+
+	fetcher.mu.Lock()
+	_, exists := fetcher.cache["sha256:abc123"]
+	fetcher.mu.Unlock()
+	assert.False(t, exists, "expired entry must be evicted from cache map")
+}
+
+func TestGetCached_UnknownDigest(t *testing.T) {
+	fetcher := NewOCIManifestFetcher(ctrl.Log, nil)
+	cached := fetcher.getCached("sha256:unknown")
+	assert.Nil(t, cached)
+}
+
+func TestGetCached_ExactTTLBoundary(t *testing.T) {
+	fetcher := NewOCIManifestFetcher(ctrl.Log, nil)
+	now := time.Now()
+	fetcher.nowFunc = func() time.Time { return now }
+	fetcher.putCache("sha256:abc123", map[string]bool{"pipeline_a": true})
+
+	fetcher.nowFunc = func() time.Time { return now.Add(cacheTTL) }
+	cached := fetcher.getCached("sha256:abc123")
+	require.NotNil(t, cached, "entry at exactly TTL must still be valid")
+	assert.Equal(t, map[string]bool{"pipeline_a": true}, cached)
+}
+
+func TestPutCache_OverwriteRefreshesTTL(t *testing.T) {
+	fetcher := NewOCIManifestFetcher(ctrl.Log, nil)
+	now := time.Now()
+	fetcher.nowFunc = func() time.Time { return now }
+	fetcher.putCache("sha256:abc123", map[string]bool{"pipeline_a": true})
+
+	refresh := now.Add(cacheTTL - time.Minute)
+	fetcher.nowFunc = func() time.Time { return refresh }
+	fetcher.putCache("sha256:abc123", map[string]bool{"pipeline_a": true, "pipeline_b": true})
+
+	fetcher.nowFunc = func() time.Time { return refresh.Add(cacheTTL) }
+	cached := fetcher.getCached("sha256:abc123")
+	require.NotNil(t, cached, "overwritten entry should use refreshed timestamp")
+	assert.Equal(t, map[string]bool{"pipeline_a": true, "pipeline_b": true}, cached)
+}
+
+func TestGetCached_DefensiveCopy(t *testing.T) {
+	fetcher := NewOCIManifestFetcher(ctrl.Log, nil)
+	fetcher.putCache("sha256:abc123", map[string]bool{"pipeline_a": true})
+
+	cached := fetcher.getCached("sha256:abc123")
+	cached["mutated"] = true
+
+	cached2 := fetcher.getCached("sha256:abc123")
+	assert.NotContains(t, cached2, "mutated", "getCached must return defensive copies")
+}
+
 func newTarWithEntry(name string, content []byte) io.Reader {
 	var buf bytes.Buffer
 	tw := tar.NewWriter(&buf)
 	_ = tw.WriteHeader(&tar.Header{Name: name, Size: int64(len(content))})
-	_, _ = tw.Write(content)
+	if len(content) > 0 {
+		_, _ = tw.Write(content)
+	}
 	_ = tw.Close()
 	return &buf
 }

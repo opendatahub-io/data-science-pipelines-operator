@@ -349,7 +349,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			return ctrl.Result{}, err
 		}
 
-		if dspa.Spec.APIServer.PipelineStore == "kubernetes" {
+		if dspa.Spec.APIServer != nil && dspa.Spec.APIServer.PipelineStore == "kubernetes" {
 			err = r.ReconcileWebhook(ctx, params)
 			if err != nil {
 				dspaStatus.SetWebhookNotReady(err, config.FailingToDeploy)
