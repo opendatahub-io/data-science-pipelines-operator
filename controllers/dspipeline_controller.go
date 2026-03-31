@@ -227,6 +227,9 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	defer r.updateStatus(ctx, dspa, dspaStatus, log, req)
 	defer func() {
+		if dspa.GetDeletionTimestamp() != nil {
+			return
+		}
 		conditions := dspaStatus.GetConditions()
 		metricsMap := map[metav1.Condition]*prometheus.GaugeVec{
 			util.GetConditionByType(config.DatabaseAvailable, conditions):       DBAvailableMetric,
@@ -363,8 +366,12 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			dspaStatus.SetWebhookNotApplicable()
 		}
 
-		if err := r.validateManagedPipelines(ctx, dspa, dspaStatus, log); err != nil {
-			return ctrl.Result{}, err
+		proceed, validationErr := r.validateManagedPipelines(ctx, dspa, dspaStatus, log)
+		if validationErr != nil {
+			return ctrl.Result{}, validationErr
+		}
+		if !proceed {
+			return ctrl.Result{}, nil
 		}
 
 		err = r.ReconcileAPIServer(ctx, dspa, params)
@@ -427,48 +434,47 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	return ctrl.Result{}, nil
 }
 
+// validateManagedPipelines checks CR pipeline names against the manifest.
+// Returns (proceed, err) where proceed indicates whether the reconciler should
+// continue to deploy the API server. Permanent validation failures return
+// (false, nil) to block deployment without triggering controller-runtime retries.
 func (r *DSPAReconciler) validateManagedPipelines(
 	ctx context.Context,
 	dspa *dspav1.DataSciencePipelinesApplication,
 	dspaStatus dspastatus.DSPAStatus,
 	log logr.Logger,
-) error {
+) (bool, error) {
 	if dspa.Spec.APIServer == nil {
 		dspaStatus.SetManagedPipelineNotApplicable()
-		return nil
+		return true, nil
 	}
 	mp := dspa.Spec.APIServer.ManagedPipelines
 	if mp == nil || len(mp.Pipelines) == 0 {
 		dspaStatus.SetManagedPipelineNotApplicable()
-		return nil
+		return true, nil
 	}
 
 	if r.ManifestFetcher == nil {
 		err := fmt.Errorf("ManifestFetcher not initialized")
 		dspaStatus.SetManagedPipelineInvalid(err, config.ManagedPipelinesFetchError)
-		return nil
+		return true, nil
 	}
 
 	manifestNames, err := r.ManifestFetcher.FetchPipelineNames(ctx, mp.Image)
 	if err != nil {
-		// Fetch failures are transient (network, credentials). Surface the condition
-		// but allow reconciliation to continue so the API server can still be deployed.
-		// The condition will be re-evaluated on the next reconciliation.
 		log.Error(err, "Failed to fetch managed-pipelines.json from image", "image", mp.Image)
 		dspaStatus.SetManagedPipelineInvalid(err, config.ManagedPipelinesFetchError)
-		return nil
+		return true, nil
 	}
 
 	if err := ValidateManagedPipelineNames(mp.Pipelines, manifestNames); err != nil {
-		// Validation failures are definitive: the CR lists names that do not exist in
-		// the manifest. Block the API server deployment until the CR is corrected.
 		log.Info("Managed pipeline validation failed", "error", err)
 		dspaStatus.SetManagedPipelineInvalid(err, config.ManagedPipelineInvalid)
-		return err
+		return false, nil
 	}
 
 	dspaStatus.SetManagedPipelineValid()
-	return nil
+	return true, nil
 }
 
 func (r *DSPAReconciler) setStatusAsNotReady(conditionType string, err error, setStatus func(metav1.Condition)) {
