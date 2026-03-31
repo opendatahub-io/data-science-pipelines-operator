@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"testing"
@@ -459,6 +460,102 @@ func TestValidateManagedPipelines_NilFetcher_SetsConditionDoesNotPanic(t *testin
 	assert.Equal(t, config.ManagedPipelinesFetchError, cond.Reason)
 }
 
+// --- Permanent vs transient error classification tests ---
+
+func TestValidateManagedPipelines_PermanentFetchError_BlocksDeployment(t *testing.T) {
+	dspa := testutil.CreateDSPAWithManagedPipelines("img:latest", []dspav1.ManagedPipeline{{Name: "p1"}}, nil)
+	dspa.Status.Conditions = make([]metav1.Condition, 11)
+	status := dspastatus.NewDSPAStatus(dspa)
+	reconciler := &DSPAReconciler{
+		Log:             ctrl.Log,
+		ManifestFetcher: &mockPipelineNamesFetcher{err: &permanentError{err: fmt.Errorf("managed-pipelines.json not found in image")}},
+	}
+
+	proceed, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
+	require.NoError(t, err, "permanent errors should not trigger controller-runtime retries")
+	require.False(t, proceed, "permanent misconfiguration must block API server deployment")
+
+	conditions := status.GetConditions()
+	cond := findCondition(conditions, config.ManagedPipelineValid)
+	require.NotNil(t, cond)
+	assert.Equal(t, metav1.ConditionFalse, cond.Status)
+	assert.Equal(t, config.ManagedPipelineInvalid, cond.Reason)
+}
+
+func TestResolveImageDigest_InvalidRef_ReturnsPermanentError(t *testing.T) {
+	fetcher := NewOCIManifestFetcher(ctrl.Log, nil)
+	_, _, err := fetcher.resolveImageDigest(context.Background(), "@@invalid")
+	require.Error(t, err)
+
+	var pe *permanentError
+	assert.True(t, errors.As(err, &pe), "invalid image ref must be a permanent error")
+}
+
+func TestResolveImageDigest_AllowlistDenial_ReturnsPermanentError(t *testing.T) {
+	fetcher := NewOCIManifestFetcher(ctrl.Log, []string{"quay.io"})
+	_, _, err := fetcher.resolveImageDigest(context.Background(), "evil.io/img:latest")
+	require.Error(t, err)
+
+	var pe *permanentError
+	assert.True(t, errors.As(err, &pe), "allowlist denial must be a permanent error")
+}
+
+func TestExtractManifestFromImage_NotFound_ReturnsPermanentError(t *testing.T) {
+	fetcher := NewOCIManifestFetcher(ctrl.Log, nil)
+	layer := &mockContainerLayer{
+		reader: io.NopCloser(newTarWithEntry("app/other-file.json", []byte("data"))),
+	}
+	img := &mockContainerImage{layers: []oci.Layer{layer}}
+
+	_, err := fetcher.extractManifestFromImage(img, "test-image:latest")
+	require.Error(t, err)
+
+	var pe *permanentError
+	assert.True(t, errors.As(err, &pe), "file-not-found must be a permanent error")
+}
+
+func TestExtractManifestFromImage_Whiteout_ReturnsPermanentError(t *testing.T) {
+	fetcher := NewOCIManifestFetcher(ctrl.Log, nil)
+	olderLayer := &mockContainerLayer{
+		reader: io.NopCloser(newTarWithEntry(managedPipelinesJSONPath, []byte(`[{"name":"old"}]`))),
+	}
+	whiteoutLayer := &mockContainerLayer{
+		reader: io.NopCloser(newTarWithEntry("app/.wh.managed-pipelines.json", nil)),
+	}
+	img := &mockContainerImage{layers: []oci.Layer{olderLayer, whiteoutLayer}}
+
+	_, err := fetcher.extractManifestFromImage(img, "test-image:latest")
+	require.Error(t, err)
+
+	var pe *permanentError
+	assert.True(t, errors.As(err, &pe), "whiteout must be a permanent error")
+}
+
+func TestExtractManifestFromImage_LayerOpenError_NotPermanent(t *testing.T) {
+	fetcher := NewOCIManifestFetcher(ctrl.Log, nil)
+	failLayer := &mockContainerLayer{err: fmt.Errorf("layer read failure")}
+	img := &mockContainerImage{layers: []oci.Layer{failLayer}}
+
+	_, err := fetcher.extractManifestFromImage(img, "test-image:latest")
+	require.Error(t, err)
+
+	var pe *permanentError
+	assert.False(t, errors.As(err, &pe), "layer I/O error must NOT be a permanent error")
+}
+
+func TestExtractManifestFromImage_TarScanError_NotPermanent(t *testing.T) {
+	fetcher := NewOCIManifestFetcher(ctrl.Log, nil)
+	corruptReader := io.NopCloser(bytes.NewReader([]byte("not a tar")))
+	layer := &mockContainerLayer{reader: corruptReader}
+	img := &mockContainerImage{layers: []oci.Layer{layer}}
+
+	_, err := fetcher.extractManifestFromImage(img, "test-image:latest")
+	require.Error(t, err)
+
+	var pe *permanentError
+	assert.False(t, errors.As(err, &pe), "tar scan error must NOT be a permanent error")
+}
+
 func TestExtractFileFromTar_OversizedEntry(t *testing.T) {
 	_, err := extractFileFromTar(
 		newTarWithEntry("app/managed-pipelines.json", make([]byte, maxManagedPipelinesManifestSize+1)),
@@ -501,14 +598,14 @@ func TestRegistryAllowlist_BlocksDisallowedRegistry(t *testing.T) {
 	reconciler := &DSPAReconciler{Log: ctrl.Log, ManifestFetcher: fetcher}
 
 	proceed, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
-	require.NoError(t, err, "fetch errors should not block reconciliation")
-	require.True(t, proceed, "fetch errors are transient; API server deployment should proceed")
+	require.NoError(t, err, "permanent errors should not trigger controller-runtime retries")
+	require.False(t, proceed, "allowlist denial is permanent; must block API server deployment")
 
 	conditions := status.GetConditions()
 	cond := findCondition(conditions, config.ManagedPipelineValid)
 	require.NotNil(t, cond)
 	assert.Equal(t, metav1.ConditionFalse, cond.Status)
-	assert.Equal(t, config.ManagedPipelinesFetchError, cond.Reason)
+	assert.Equal(t, config.ManagedPipelineInvalid, cond.Reason)
 	assert.Contains(t, cond.Message, "not in the allowed list")
 }
 

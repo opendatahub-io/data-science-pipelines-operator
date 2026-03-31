@@ -29,6 +29,18 @@ var (
 	errWhiteout = errors.New("file deleted by OCI whiteout")
 )
 
+// permanentError wraps errors representing definitive misconfigurations that
+// will never self-resolve (invalid image ref, allowlist denial, file missing
+// from image, malformed manifest). The controller uses errors.As to distinguish
+// these from transient errors (network, registry unavailable) and blocks API
+// server deployment only for permanent ones.
+type permanentError struct {
+	err error
+}
+
+func (e *permanentError) Error() string { return e.err.Error() }
+func (e *permanentError) Unwrap() error { return e.err }
+
 const managedPipelinesJSONPath = "app/managed-pipelines.json"
 
 const cacheTTL = 10 * time.Minute
@@ -73,13 +85,13 @@ func (f *OCIManifestFetcher) isRegistryAllowed(registry string) bool {
 func (f *OCIManifestFetcher) resolveImageDigest(ctx context.Context, imageRef string) (oci.Image, string, error) {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
-		return nil, "", fmt.Errorf("invalid image reference %q: %w", imageRef, err)
+		return nil, "", &permanentError{fmt.Errorf("invalid image reference %q: %w", imageRef, err)}
 	}
 
 	if len(f.AllowedRegistries) > 0 {
 		registry := ref.Context().RegistryStr()
 		if !f.isRegistryAllowed(registry) {
-			return nil, "", fmt.Errorf("registry %q is not in the allowed list for managed pipelines", registry)
+			return nil, "", &permanentError{fmt.Errorf("registry %q is not in the allowed list for managed pipelines", registry)}
 		}
 	}
 
@@ -122,7 +134,7 @@ func (f *OCIManifestFetcher) extractManifestFromImage(img oci.Image, imageRef st
 		case errors.Is(tarErr, errNotFound):
 			continue
 		case errors.Is(tarErr, errWhiteout):
-			return nil, fmt.Errorf("managed-pipelines.json not found in image %q (deleted by whiteout in layer %d)", imageRef, i)
+			return nil, &permanentError{fmt.Errorf("managed-pipelines.json not found in image %q (deleted by whiteout in layer %d)", imageRef, i)}
 		default:
 			return nil, fmt.Errorf(
 				"failed to scan layer %d for %s in image %q: %w",
@@ -131,7 +143,7 @@ func (f *OCIManifestFetcher) extractManifestFromImage(img oci.Image, imageRef st
 		}
 	}
 
-	return nil, fmt.Errorf("managed-pipelines.json not found in image %q", imageRef)
+	return nil, &permanentError{fmt.Errorf("managed-pipelines.json not found in image %q", imageRef)}
 }
 
 func (f *OCIManifestFetcher) getCached(digestStr string) map[string]bool {
@@ -175,7 +187,7 @@ func (f *OCIManifestFetcher) FetchPipelineNames(ctx context.Context, imageRef st
 
 	names, err := ParseManagedPipelinesManifest(data)
 	if err != nil {
-		return nil, err
+		return nil, &permanentError{err}
 	}
 
 	f.putCache(digestStr, names)

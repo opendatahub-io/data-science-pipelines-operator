@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
@@ -462,7 +463,13 @@ func (r *DSPAReconciler) validateManagedPipelines(
 
 	manifestNames, err := r.ManifestFetcher.FetchPipelineNames(ctx, mp.Image)
 	if err != nil {
-		log.Error(err, "Failed to fetch managed-pipelines.json from image", "image", mp.Image)
+		var pe *permanentError
+		if errors.As(err, &pe) {
+			log.Info("Managed pipeline configuration error (permanent)", "error", err, "image", mp.Image)
+			dspaStatus.SetManagedPipelineInvalid(err, config.ManagedPipelineInvalid)
+			return false, nil
+		}
+		log.Error(err, "Failed to fetch managed-pipelines.json from image (transient)", "image", mp.Image)
 		dspaStatus.SetManagedPipelineInvalid(err, config.ManagedPipelinesFetchError)
 		return true, nil
 	}
