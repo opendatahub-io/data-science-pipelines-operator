@@ -158,7 +158,7 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1.Dat
 		combinedConfigHashInput = combinedConfigHashInput + string(managedSpec)
 	}
 
-	// Generate configuration hash for rebooting on sample changes
+	// Config hash for pod rollout when sample config, workspace, managed pipelines, or platform version change.
 	params.APIServerConfigHash = fmt.Sprintf("%x", sha256.Sum256([]byte(combinedConfigHashInput)))
 
 	log.Info("Applying APIServer Resources")
