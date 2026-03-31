@@ -702,7 +702,7 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// Watch for global ca bundle, if one is added to this namespace
 		// we need to reconcile on all the dspa's in this namespace
 		// so they may mount this cert in the appropriate containers
-		WatchesRawSource(source.Kind(mgr.GetCache(), &corev1.ConfigMap{}),
+		WatchesRawSource(source.Kind[client.Object](mgr.GetCache(), &corev1.ConfigMap{},
 			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, o client.Object) []reconcile.Request {
 				cm := o.(*corev1.ConfigMap)
 				thisNamespace := cm.Namespace
@@ -736,8 +736,8 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 				return reconcileRequests
 			}),
-		).
-		WatchesRawSource(source.Kind(mgr.GetCache(), &corev1.Pod{}),
+		)).
+		WatchesRawSource(source.Kind[client.Object](mgr.GetCache(), &corev1.Pod{},
 			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, o client.Object) []reconcile.Request {
 				pod := o.(*corev1.Pod)
 				log := r.Log.WithValues("namespace", pod.Namespace)
@@ -768,8 +768,8 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				}
 				return []reconcile.Request{{NamespacedName: namespacedName}}
 			}),
-		).
-		WatchesRawSource(source.Kind(mgr.GetCache(), &corev1.Secret{}),
+		)).
+		WatchesRawSource(source.Kind[client.Object](mgr.GetCache(), &corev1.Secret{},
 			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, o client.Object) []reconcile.Request {
 				secret := o.(*corev1.Secret)
 				log := r.Log.WithValues("namespace", secret.Namespace)
@@ -808,7 +808,7 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				log.V(1).Info(fmt.Sprintf("Reconcile event triggered by change on Secret: %s owned by service-ca: %s", secret.Name, serviceName))
 				return []reconcile.Request{{NamespacedName: namespacedDspaName}}
 			}),
-		).
+		)).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: r.MaxConcurrentReconciles,
 		}).

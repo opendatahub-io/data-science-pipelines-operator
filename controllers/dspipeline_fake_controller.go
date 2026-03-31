@@ -20,7 +20,6 @@ package controllers
 import (
 	"context"
 
-	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -30,6 +29,7 @@ import (
 	imagev1 "github.com/openshift/api/image/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -39,8 +39,9 @@ func NewFakeController() *DSPAReconciler {
 	// Setup Fake Client Builder
 	FakeBuilder := fake.NewClientBuilder()
 
-	// Create Scheme
-	FakeScheme := scheme.Scheme
+	// Create a fresh scheme to avoid polluting the global k8s client-go scheme,
+	// which would break manifestival's strategic-merge-patch detection.
+	FakeScheme := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(FakeScheme))
 	utilruntime.Must(buildv1.Install(FakeScheme))
 	utilruntime.Must(imagev1.Install(FakeScheme))
