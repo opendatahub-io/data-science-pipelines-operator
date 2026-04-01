@@ -488,6 +488,43 @@ func TestValidateManagedPipelines_NotApplicable(t *testing.T) {
 	}
 }
 
+func TestPreserveAPIServerReadyCondition_UsesPreviousCondition(t *testing.T) {
+	dspa := testutil.CreateEmptyDSPA()
+	prev := metav1.Condition{
+		Type:               config.APIServerReady,
+		Status:             metav1.ConditionTrue,
+		Reason:             config.MinimumReplicasAvailable,
+		Message:            "api server remains healthy",
+		LastTransitionTime: metav1.NewTime(time.Now().Add(-time.Hour)),
+	}
+	dspa.Status.Conditions = []metav1.Condition{prev}
+	dspa.Generation = 7
+
+	status := dspastatus.NewDSPAStatus(dspa)
+	reconciler := &DSPAReconciler{}
+	reconciler.preserveAPIServerReadyCondition(dspa, status)
+
+	cond := findCondition(status.GetConditions(), config.APIServerReady)
+	require.NotNil(t, cond)
+	assert.Equal(t, metav1.ConditionTrue, cond.Status)
+	assert.Equal(t, config.MinimumReplicasAvailable, cond.Reason)
+	assert.Equal(t, "api server remains healthy", cond.Message)
+}
+
+func TestPreserveAPIServerReadyCondition_NoPreviousCondition_LeavesUnknown(t *testing.T) {
+	dspa := testutil.CreateEmptyDSPA()
+	dspa.Status.Conditions = nil
+
+	status := dspastatus.NewDSPAStatus(dspa)
+	reconciler := &DSPAReconciler{}
+	reconciler.preserveAPIServerReadyCondition(dspa, status)
+
+	cond := findCondition(status.GetConditions(), config.APIServerReady)
+	require.NotNil(t, cond)
+	assert.Equal(t, metav1.ConditionUnknown, cond.Status)
+	assert.Equal(t, "Unknown", cond.Reason)
+}
+
 func TestValidateManagedPipelines_NilFetcher_SetsConditionDoesNotPanic(t *testing.T) {
 	dspa := testutil.CreateDSPAWithManagedPipelines("img:latest", []dspav1.ManagedPipeline{{Name: "p1"}}, nil)
 	dspa.Status.Conditions = make([]metav1.Condition, 11)

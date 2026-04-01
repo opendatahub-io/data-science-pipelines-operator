@@ -375,6 +375,9 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			return ctrl.Result{}, validationErr
 		}
 		if !proceed {
+			// Keep APIServerReady aligned with the last reconciled deployment state
+			// when managed-pipeline validation blocks a new API server reconcile.
+			r.preserveAPIServerReadyCondition(dspa, dspaStatus)
 			return ctrl.Result{}, nil
 		}
 
@@ -436,6 +439,16 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *DSPAReconciler) preserveAPIServerReadyCondition(
+	dspa *dspav1.DataSciencePipelinesApplication,
+	dspaStatus dspastatus.DSPAStatus,
+) {
+	prev := util.GetConditionByType(config.APIServerReady, dspa.Status.Conditions)
+	if prev.Type == config.APIServerReady {
+		dspaStatus.SetApiServerStatus(prev)
+	}
 }
 
 // validateManagedPipelines checks CR pipeline names against the manifest.
