@@ -29,6 +29,7 @@ spec:
           image: pipelines-components:test2
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             runAsNonRoot: true
             capabilities:
               drop:

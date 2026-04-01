@@ -62,18 +62,18 @@ func getDSPipelineAPIServerContainer(deployment *appsv1.Deployment) *corev1.Cont
 	return nil
 }
 
-// getEnvValue returns the value of the named env var in the container, or "" if not found.
-func getEnvValue(t testing.TB, c *corev1.Container, name string) string {
+// getEnvValue returns the value of the named env var and whether it is present.
+func getEnvValue(t testing.TB, c *corev1.Container, name string) (string, bool) {
 	t.Helper()
 	if c == nil {
-		return ""
+		return "", false
 	}
 	for _, e := range c.Env {
 		if e.Name == name {
-			return e.Value
+			return e.Value, true
 		}
 	}
-	return ""
+	return "", false
 }
 
 func TestDeployAPIServer(t *testing.T) {
@@ -205,14 +205,21 @@ func TestDeployAPIServerWithManagedPipelines(t *testing.T) {
 	assert.Equal(t, "quay.io/opendatahub/odh-pipelines-components:latest", initC.Image)
 
 	// ALL_PIPELINES env when pipeline list omitted
-	assert.Equal(t, "true", getEnvValue(t, initC, "ALL_PIPELINES"))
-	assert.Empty(t, getEnvValue(t, initC, "PIPELINE_NAMES"))
+	value, found := getEnvValue(t, initC, "ALL_PIPELINES")
+	require.True(t, found)
+	assert.Equal(t, "true", value)
+	_, found = getEnvValue(t, initC, "PIPELINE_NAMES")
+	assert.False(t, found)
 	wantTags := config.BuildManagedPipelinesUploadTags(config.ResolvedPlatformVersion())
-	assert.Equal(t, wantTags, getEnvValue(t, initC, "MANAGED_PIPELINES_UPLOAD_TAGS"))
+	value, found = getEnvValue(t, initC, "MANAGED_PIPELINES_UPLOAD_TAGS")
+	require.True(t, found)
+	assert.Equal(t, wantTags, value)
 
 	apiC := getDSPipelineAPIServerContainer(deployment)
 	require.NotNil(t, apiC, "ds-pipeline-api-server container should exist")
-	assert.Equal(t, wantTags, getEnvValue(t, apiC, "MANAGED_PIPELINES_UPLOAD_TAGS"))
+	value, found = getEnvValue(t, apiC, "MANAGED_PIPELINES_UPLOAD_TAGS")
+	require.True(t, found)
+	assert.Equal(t, wantTags, value)
 
 	// Init container gets default requests/limits when CR omits resources
 	require.NotNil(t, initC.Resources.Requests)
@@ -271,14 +278,21 @@ func TestDeployAPIServerWithManagedPipelinesAndPipelineList(t *testing.T) {
 	assert.Equal(t, "quay.io/opendatahub/odh-pipelines-components:latest", initC.Image)
 
 	// PIPELINE_NAMES env for explicit pipeline list
-	assert.Equal(t, "trainer-ostf,lm-eval", getEnvValue(t, initC, "PIPELINE_NAMES"))
-	assert.Empty(t, getEnvValue(t, initC, "ALL_PIPELINES"))
+	value, found := getEnvValue(t, initC, "PIPELINE_NAMES")
+	require.True(t, found)
+	assert.Equal(t, "trainer-ostf,lm-eval", value)
+	_, found = getEnvValue(t, initC, "ALL_PIPELINES")
+	assert.False(t, found)
 	wantTags := config.BuildManagedPipelinesUploadTags(config.ResolvedPlatformVersion())
-	assert.Equal(t, wantTags, getEnvValue(t, initC, "MANAGED_PIPELINES_UPLOAD_TAGS"))
+	value, found = getEnvValue(t, initC, "MANAGED_PIPELINES_UPLOAD_TAGS")
+	require.True(t, found)
+	assert.Equal(t, wantTags, value)
 
 	apiC := getDSPipelineAPIServerContainer(deployment)
 	require.NotNil(t, apiC, "ds-pipeline-api-server container should exist")
-	assert.Equal(t, wantTags, getEnvValue(t, apiC, "MANAGED_PIPELINES_UPLOAD_TAGS"))
+	value, found = getEnvValue(t, apiC, "MANAGED_PIPELINES_UPLOAD_TAGS")
+	require.True(t, found)
+	assert.Equal(t, wantTags, value)
 
 	// Init container resources match CR requests; missing limits filled from defaults
 	require.NotNil(t, initC.Resources.Requests)
@@ -343,7 +357,8 @@ func TestDeployAPIServerWithoutManagedPipelines(t *testing.T) {
 
 	apiC := getDSPipelineAPIServerContainer(deployment)
 	require.NotNil(t, apiC)
-	assert.Empty(t, getEnvValue(t, apiC, "MANAGED_PIPELINES_UPLOAD_TAGS"))
+	_, found := getEnvValue(t, apiC, "MANAGED_PIPELINES_UPLOAD_TAGS")
+	assert.False(t, found)
 
 	// Verify managed pipelines is nil (backward compatibility)
 	assert.Nil(t, dspa.Spec.APIServer.ManagedPipelines)
@@ -735,11 +750,18 @@ func TestDeployAPIServerWithManagedPipelines_ForwardsOperatorManagedPipelineImag
 
 	initC := getInitManagedPipelinesContainer(t, deployment)
 	require.NotNil(t, initC)
-	assert.Equal(t, "registry.example/rhelai@sha256:bbb", getEnvValue(t, initC, "MANAGED_PIPELINE_IMAGE_RHEL_AI"))
-	assert.Equal(t, "registry.example/toolbox@sha256:aaa", getEnvValue(t, initC, "MANAGED_PIPELINE_IMAGE_TOOLBOX"))
-	assert.Empty(t, getEnvValue(t, initC, "IGNORED_NOT_FORWARDED"))
+	value, found := getEnvValue(t, initC, "MANAGED_PIPELINE_IMAGE_RHEL_AI")
+	require.True(t, found)
+	assert.Equal(t, "registry.example/rhelai@sha256:bbb", value)
+	value, found = getEnvValue(t, initC, "MANAGED_PIPELINE_IMAGE_TOOLBOX")
+	require.True(t, found)
+	assert.Equal(t, "registry.example/toolbox@sha256:aaa", value)
+	_, found = getEnvValue(t, initC, "IGNORED_NOT_FORWARDED")
+	assert.False(t, found)
 	// Built-in env for pipeline selection still present
-	assert.Equal(t, "true", getEnvValue(t, initC, "ALL_PIPELINES"))
+	value, found = getEnvValue(t, initC, "ALL_PIPELINES")
+	require.True(t, found)
+	assert.Equal(t, "true", value)
 }
 
 func TestDeployAPIServerWithManagedPipelines_ForwardsOperatorManagedPipelineImageEnv_QuotesSpecialChars(t *testing.T) {
@@ -768,7 +790,9 @@ func TestDeployAPIServerWithManagedPipelines_ForwardsOperatorManagedPipelineImag
 
 	initC := getInitManagedPipelinesContainer(t, deployment)
 	require.NotNil(t, initC)
-	assert.Equal(t, `registry.example/img:latest"withquotes`, getEnvValue(t, initC, "MANAGED_PIPELINE_IMAGE_TOOLBOX"))
+	value, found := getEnvValue(t, initC, "MANAGED_PIPELINE_IMAGE_TOOLBOX")
+	require.True(t, found)
+	assert.Equal(t, `registry.example/img:latest"withquotes`, value)
 }
 
 func TestExtractParams_ManagedPipelineImageEnvVarsNilWithoutManagedPipelines(t *testing.T) {
