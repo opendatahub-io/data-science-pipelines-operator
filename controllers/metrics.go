@@ -116,9 +116,9 @@ var (
 		},
 	)
 
-	// allDSPAMetrics is the single source of truth for all DSPA metric gauges.
-	// Both InitMetrics and DeleteMetrics use this slice, so adding a new metric
-	// here automatically includes it in registration and cleanup.
+	// allDSPAMetrics tracks the two-label DSPA gauges
+	// (dspa_name, dspa_namespace). ManagedPipelineValidMetric is handled
+	// separately because it has an extra "reason" label and one-hot semantics.
 	allDSPAMetrics = []*prometheus.GaugeVec{
 		DBAvailableMetric,
 		ObjectStoreAvailableMetric,
