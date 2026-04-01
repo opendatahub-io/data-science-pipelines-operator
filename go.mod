@@ -138,6 +138,6 @@ replace (
 	github.com/openshift/api v0.0.0-20231118005202-0f638a8a4705 => github.com/openshift/api v0.0.0-20231118005202-0f638a8a4705
 	go.opentelemetry.io/contrib v0.20.0 => go.opentelemetry.io/contrib v0.44.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.35.1 => go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.44.0
-	golang.org/x/net => golang.org/x/net v0.33.0
+	golang.org/x/net => golang.org/x/net v0.52.0
 	google.golang.org/grpc => google.golang.org/grpc v1.56.3
 )

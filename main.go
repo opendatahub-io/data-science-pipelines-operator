@@ -266,12 +266,23 @@ func main() {
 	}
 
 	webhookAnnotations := map[string]string{}
+	var allowedRegistries []string
 
 	if os.Getenv("WEBHOOK_ANNOTATIONS") != "" {
 		err := json.Unmarshal([]byte(os.Getenv("WEBHOOK_ANNOTATIONS")), &webhookAnnotations)
 		if err != nil {
 			setupLog.Error(err, "the WEBHOOK_ANNOTATIONS environment variable is not a valid JSON object")
 			os.Exit(1)
+		}
+	}
+
+	// Optional allowlist for managed-pipelines OCI images. When unset/empty,
+	// all registries are allowed to preserve existing operator behavior.
+	if rawAllowed := os.Getenv("MANAGED_PIPELINES_ALLOWED_REGISTRIES"); rawAllowed != "" {
+		for _, registry := range strings.Split(rawAllowed, ",") {
+			if trimmed := strings.TrimSpace(registry); trimmed != "" {
+				allowedRegistries = append(allowedRegistries, trimmed)
+			}
 		}
 	}
 
@@ -282,6 +293,7 @@ func main() {
 		TemplatesPath:           "config/internal/",
 		MaxConcurrentReconciles: maxConcurrentReconciles,
 		WebhookAnnotations:      webhookAnnotations,
+		AllowedRegistries:       allowedRegistries,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DSPAParams")
 		os.Exit(1)
