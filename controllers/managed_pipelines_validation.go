@@ -52,8 +52,9 @@ func ParseManagedPipelinesManifest(data []byte) (map[string]bool, error) {
 
 	names := make(map[string]bool, len(entries))
 	for _, e := range entries {
-		if strings.TrimSpace(e.Name) != "" {
-			names[e.Name] = true
+		trimmed := strings.TrimSpace(e.Name)
+		if trimmed != "" {
+			names[trimmed] = true
 		}
 	}
 	return names, nil
