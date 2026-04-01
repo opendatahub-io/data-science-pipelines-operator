@@ -97,16 +97,6 @@ var (
 	ManagedPipelineValidMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "data_science_pipelines_application_managed_pipeline_valid",
-			Help: "Data Science Pipelines Application - Managed Pipeline Validation Status (1=true, 0=all other states)",
-		},
-		[]string{
-			"dspa_name",
-			"dspa_namespace",
-		},
-	)
-	ManagedPipelineValidationStateMetric = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "data_science_pipelines_application_managed_pipeline_validation_state",
 			Help: "Data Science Pipelines Application - Managed Pipeline validation state by reason (one-hot: active reason=1, others=0)",
 		},
 		[]string{
@@ -137,7 +127,6 @@ var (
 		ScheduledWorkflowReadyMetric,
 		WorkflowControllerReadyMetric,
 		MLMDProxyReadyMetric,
-		ManagedPipelineValidMetric,
 		CrReadyMetric,
 	}
 
@@ -156,7 +145,7 @@ func InitMetrics() {
 	for _, m := range allDSPAMetrics {
 		metrics.Registry.MustRegister(m)
 	}
-	metrics.Registry.MustRegister(ManagedPipelineValidationStateMetric)
+	metrics.Registry.MustRegister(ManagedPipelineValidMetric)
 }
 
 // DeleteMetrics removes all metric label values for a specific DSPA instance.
@@ -167,18 +156,18 @@ func DeleteMetrics(dspaName, dspaNamespace string) {
 		m.DeleteLabelValues(dspaName, dspaNamespace)
 	}
 	for _, reason := range managedPipelineValidationReasons {
-		ManagedPipelineValidationStateMetric.DeleteLabelValues(dspaName, dspaNamespace, reason)
+		ManagedPipelineValidMetric.DeleteLabelValues(dspaName, dspaNamespace, reason)
 	}
 }
 
-func setManagedPipelineValidationStateMetric(dspaName, dspaNamespace, reason string) {
+func setManagedPipelineValidMetricByReason(dspaName, dspaNamespace, reason string) {
 	activeReason := normalizeManagedPipelineValidationReason(reason)
 	for _, r := range managedPipelineValidationReasons {
 		value := 0.0
 		if r == activeReason {
 			value = 1
 		}
-		ManagedPipelineValidationStateMetric.WithLabelValues(dspaName, dspaNamespace, r).Set(value)
+		ManagedPipelineValidMetric.WithLabelValues(dspaName, dspaNamespace, r).Set(value)
 	}
 }
 
