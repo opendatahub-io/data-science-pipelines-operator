@@ -170,6 +170,15 @@ func TestParseManagedPipelinesManifest_EntryWithEmptyName(t *testing.T) {
 	assert.NotContains(t, names, "")
 }
 
+func TestParseManagedPipelinesManifest_TrimsEntryNames(t *testing.T) {
+	data := []byte(`[{"name":"  pipeline_a  ","description":"d","path":"p","stability":"alpha"}]`)
+
+	names, err := ParseManagedPipelinesManifest(data)
+	require.NoError(t, err)
+	assert.Equal(t, map[string]bool{"pipeline_a": true}, names)
+	assert.NotContains(t, names, "  pipeline_a  ")
+}
+
 func TestParseManagedPipelinesManifest_SingleEntry(t *testing.T) {
 	data := []byte(`[{"name":"only_one","description":"d","path":"p","stability":"alpha"}]`)
 
