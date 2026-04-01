@@ -859,6 +859,8 @@ func TestExtractParams_ManagedPipelinesResourcesMergePartialRequests(t *testing.
 }
 
 func TestDeployAPIServerWithManagedPipelines_OnlyDetectedManagedImageEnvVarsOnInitContainer(t *testing.T) {
+	t.Setenv("MANAGED_PIPELINE_IMAGE_SENTINEL", "registry.example/sentinel@sha256:ccc")
+
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
 	expectedAPIServerName := apiServerDefaultResourceNamePrefix + testDSPAName
@@ -873,6 +875,7 @@ func TestDeployAPIServerWithManagedPipelines_OnlyDetectedManagedImageEnvVarsOnIn
 
 	ctx, params, reconciler := CreateNewTestObjects()
 	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+	require.NotEmpty(t, params.ManagedPipelineImageEnvVars)
 	require.NoError(t, reconciler.ReconcileAPIServer(ctx, dspa, params))
 
 	deployment := &appsv1.Deployment{}
@@ -885,10 +888,13 @@ func TestDeployAPIServerWithManagedPipelines_OnlyDetectedManagedImageEnvVarsOnIn
 
 	var managedImageEnvCount int
 	for _, e := range initC.Env {
-		if strings.HasPrefix(e.Name, "MANAGED_PIPELINE_IMAGE_") {
+		if strings.HasPrefix(e.Name, managedPipelineImageEnvPrefix) {
 			managedImageEnvCount++
 		}
 	}
+	value, found := getEnvValue(t, initC, "MANAGED_PIPELINE_IMAGE_SENTINEL")
+	require.True(t, found)
+	assert.Equal(t, "registry.example/sentinel@sha256:ccc", value)
 	assert.Equal(t, len(params.ManagedPipelineImageEnvVars), managedImageEnvCount,
 		"init container should carry exactly the MANAGED_PIPELINE_IMAGE_* env vars detected by the operator")
 }
