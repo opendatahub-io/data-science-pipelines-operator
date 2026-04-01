@@ -176,10 +176,22 @@ func (f *OCIManifestFetcher) getCached(digestStr string) map[string]bool {
 	return copyStringBoolMap(entry.names)
 }
 
+// pruneExpiredLocked removes expired entries from f.cache.
+// Caller must hold f.mu.
+func (f *OCIManifestFetcher) pruneExpiredLocked(now time.Time) {
+	for digest, entry := range f.cache {
+		if now.Sub(entry.fetchedAt) > cacheTTL {
+			delete(f.cache, digest)
+		}
+	}
+}
+
 func (f *OCIManifestFetcher) putCache(digestStr string, names map[string]bool) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.cache[digestStr] = cacheEntry{names: copyStringBoolMap(names), fetchedAt: f.nowFunc()}
+	now := f.nowFunc()
+	f.pruneExpiredLocked(now)
+	f.cache[digestStr] = cacheEntry{names: copyStringBoolMap(names), fetchedAt: now}
 }
 
 // FetchPipelineNames resolves the image digest (lightweight manifest fetch),
