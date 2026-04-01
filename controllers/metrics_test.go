@@ -112,11 +112,11 @@ func TestCleanUpResources_DeletesMetrics(t *testing.T) {
 	// Verify metrics exist before cleanup
 	assert.Equal(t, float64(0), testutil.ToFloat64(CrReadyMetric.WithLabelValues(testName, testNamespace)))
 	assert.Equal(t, float64(1), testutil.ToFloat64(DBAvailableMetric.WithLabelValues(testName, testNamespace)))
-	setManagedPipelineValidationStateMetric(testName, testNamespace, "NotApplicable")
+	setManagedPipelineValidMetricByReason(testName, testNamespace, "NotApplicable")
 	assert.Equal(
 		t,
 		float64(1),
-		testutil.ToFloat64(ManagedPipelineValidationStateMetric.WithLabelValues(testName, testNamespace, "NotApplicable")),
+		testutil.ToFloat64(ManagedPipelineValidMetric.WithLabelValues(testName, testNamespace, "NotApplicable")),
 	)
 
 	params := &DSPAParams{
@@ -133,36 +133,36 @@ func TestCleanUpResources_DeletesMetrics(t *testing.T) {
 		"CrReadyMetric should be removed after cleanUpResources")
 	assert.Equal(t, 0, testutil.CollectAndCount(DBAvailableMetric),
 		"DBAvailableMetric should be removed after cleanUpResources")
-	assert.Equal(t, 0, testutil.CollectAndCount(ManagedPipelineValidationStateMetric),
-		"ManagedPipelineValidationStateMetric should be removed after cleanUpResources")
+	assert.Equal(t, 0, testutil.CollectAndCount(ManagedPipelineValidMetric),
+		"ManagedPipelineValidMetric should be removed after cleanUpResources")
 }
 
-func TestSetManagedPipelineValidationStateMetric_OneHotByReason(t *testing.T) {
+func TestSetManagedPipelineValidMetricByReason_OneHotByReason(t *testing.T) {
 	testName := "state-test-dspa"
 	testNamespace := "state-test-ns"
 
-	setManagedPipelineValidationStateMetric(testName, testNamespace, "NotApplicable")
+	setManagedPipelineValidMetricByReason(testName, testNamespace, "NotApplicable")
 	assert.Equal(
 		t,
 		float64(1),
-		testutil.ToFloat64(ManagedPipelineValidationStateMetric.WithLabelValues(testName, testNamespace, "NotApplicable")),
+		testutil.ToFloat64(ManagedPipelineValidMetric.WithLabelValues(testName, testNamespace, "NotApplicable")),
 	)
 	assert.Equal(
 		t,
 		float64(0),
-		testutil.ToFloat64(ManagedPipelineValidationStateMetric.WithLabelValues(testName, testNamespace, config.ManagedPipelineInvalid)),
+		testutil.ToFloat64(ManagedPipelineValidMetric.WithLabelValues(testName, testNamespace, config.ManagedPipelineInvalid)),
 	)
 
-	setManagedPipelineValidationStateMetric(testName, testNamespace, config.ManagedPipelinesFetchError)
+	setManagedPipelineValidMetricByReason(testName, testNamespace, config.ManagedPipelinesFetchError)
 	assert.Equal(
 		t,
 		float64(1),
-		testutil.ToFloat64(ManagedPipelineValidationStateMetric.WithLabelValues(testName, testNamespace, config.ManagedPipelinesFetchError)),
+		testutil.ToFloat64(ManagedPipelineValidMetric.WithLabelValues(testName, testNamespace, config.ManagedPipelinesFetchError)),
 	)
 	assert.Equal(
 		t,
 		float64(0),
-		testutil.ToFloat64(ManagedPipelineValidationStateMetric.WithLabelValues(testName, testNamespace, "NotApplicable")),
+		testutil.ToFloat64(ManagedPipelineValidMetric.WithLabelValues(testName, testNamespace, "NotApplicable")),
 	)
 
 	DeleteMetrics(testName, testNamespace)
@@ -187,7 +187,7 @@ func TestPublishMetrics_PublishesManagedPipelineValidationReason(t *testing.T) {
 
 	reconciler.PublishMetrics(dspa, metricsMap)
 
-	assert.Equal(t, float64(1), testutil.ToFloat64(ManagedPipelineValidationStateMetric.WithLabelValues(dspaName, dspaNamespace, "NotApplicable")))
-	assert.Equal(t, float64(0), testutil.ToFloat64(ManagedPipelineValidationStateMetric.WithLabelValues(dspaName, dspaNamespace, config.ManagedPipelineInvalid)))
+	assert.Equal(t, float64(1), testutil.ToFloat64(ManagedPipelineValidMetric.WithLabelValues(dspaName, dspaNamespace, "NotApplicable")))
+	assert.Equal(t, float64(0), testutil.ToFloat64(ManagedPipelineValidMetric.WithLabelValues(dspaName, dspaNamespace, config.ManagedPipelineInvalid)))
 	DeleteMetrics(dspaName, dspaNamespace)
 }
