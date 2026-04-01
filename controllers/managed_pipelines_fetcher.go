@@ -163,7 +163,7 @@ func (f *OCIManifestFetcher) getCached(digestStr string) map[string]bool {
 func (f *OCIManifestFetcher) putCache(digestStr string, names map[string]bool) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.cache[digestStr] = cacheEntry{names: names, fetchedAt: f.nowFunc()}
+	f.cache[digestStr] = cacheEntry{names: copyStringBoolMap(names), fetchedAt: f.nowFunc()}
 }
 
 // FetchPipelineNames resolves the image digest (lightweight manifest fetch),

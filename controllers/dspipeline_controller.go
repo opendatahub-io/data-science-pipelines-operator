@@ -63,7 +63,10 @@ type DSPAReconciler struct {
 	MaxConcurrentReconciles int
 	WebhookAnnotations      map[string]string
 	ManifestFetcher         PipelineNamesFetcher
-	AllowedRegistries       []string
+	// AllowedRegistries restricts managed-pipeline image refs for
+	// resolveImageDigest/isRegistryAllowed. Empty (default) keeps permissive
+	// behavior to match existing operator image handling.
+	AllowedRegistries []string
 }
 
 func (r *DSPAReconciler) ApplyDir(owner mf.Owner, params *DSPAParams, directory string, fns ...mf.Transformer) error {
@@ -456,7 +459,7 @@ func (r *DSPAReconciler) validateManagedPipelines(
 	}
 
 	if r.ManifestFetcher == nil {
-		err := fmt.Errorf("ManifestFetcher not initialized")
+		err := fmt.Errorf("manifest fetcher not initialized")
 		dspaStatus.SetManagedPipelineInvalid(err, config.ManagedPipelinesFetchError)
 		return true, nil
 	}
