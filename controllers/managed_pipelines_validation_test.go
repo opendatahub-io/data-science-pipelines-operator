@@ -75,11 +75,11 @@ func TestExtractManifestFromImage_OversizedTopLayer_NoFallback(t *testing.T) {
 
 	oversizedContent := make([]byte, maxManagedPipelinesManifestSize+1)
 	newerLayer := &mockContainerLayer{
-		reader: io.NopCloser(newTarWithEntry(managedPipelinesJSONPath, oversizedContent)),
+		reader: io.NopCloser(newTarWithEntry(t, managedPipelinesJSONPath, oversizedContent)),
 	}
 	validContent := []byte(`[{"name":"good-pipeline"}]`)
 	olderLayer := &mockContainerLayer{
-		reader: io.NopCloser(newTarWithEntry(managedPipelinesJSONPath, validContent)),
+		reader: io.NopCloser(newTarWithEntry(t, managedPipelinesJSONPath, validContent)),
 	}
 	img := &mockContainerImage{layers: []oci.Layer{olderLayer, newerLayer}}
 
@@ -93,7 +93,7 @@ func TestExtractManifestFromImage_FileFound(t *testing.T) {
 
 	content := []byte(`[{"name":"test-pipeline"}]`)
 	layer := &mockContainerLayer{
-		reader: io.NopCloser(newTarWithEntry(managedPipelinesJSONPath, content)),
+		reader: io.NopCloser(newTarWithEntry(t, managedPipelinesJSONPath, content)),
 	}
 	img := &mockContainerImage{layers: []oci.Layer{layer}}
 
@@ -106,7 +106,7 @@ func TestExtractManifestFromImage_FileNotFound(t *testing.T) {
 	fetcher := NewOCIManifestFetcher(ctrl.Log, nil)
 
 	layer := &mockContainerLayer{
-		reader: io.NopCloser(newTarWithEntry("app/other-file.json", []byte("data"))),
+		reader: io.NopCloser(newTarWithEntry(t, "app/other-file.json", []byte("data"))),
 	}
 	img := &mockContainerImage{layers: []oci.Layer{layer}}
 
@@ -523,7 +523,7 @@ func TestResolveImageDigest_AllowlistDenial_ReturnsPermanentError(t *testing.T) 
 func TestExtractManifestFromImage_NotFound_ReturnsPermanentError(t *testing.T) {
 	fetcher := NewOCIManifestFetcher(ctrl.Log, nil)
 	layer := &mockContainerLayer{
-		reader: io.NopCloser(newTarWithEntry("app/other-file.json", []byte("data"))),
+		reader: io.NopCloser(newTarWithEntry(t, "app/other-file.json", []byte("data"))),
 	}
 	img := &mockContainerImage{layers: []oci.Layer{layer}}
 
@@ -537,10 +537,10 @@ func TestExtractManifestFromImage_NotFound_ReturnsPermanentError(t *testing.T) {
 func TestExtractManifestFromImage_Whiteout_ReturnsPermanentError(t *testing.T) {
 	fetcher := NewOCIManifestFetcher(ctrl.Log, nil)
 	olderLayer := &mockContainerLayer{
-		reader: io.NopCloser(newTarWithEntry(managedPipelinesJSONPath, []byte(`[{"name":"old"}]`))),
+		reader: io.NopCloser(newTarWithEntry(t, managedPipelinesJSONPath, []byte(`[{"name":"old"}]`))),
 	}
 	whiteoutLayer := &mockContainerLayer{
-		reader: io.NopCloser(newTarWithEntry("app/.wh.managed-pipelines.json", nil)),
+		reader: io.NopCloser(newTarWithEntry(t, "app/.wh.managed-pipelines.json", nil)),
 	}
 	img := &mockContainerImage{layers: []oci.Layer{olderLayer, whiteoutLayer}}
 
@@ -578,7 +578,7 @@ func TestExtractManifestFromImage_TarScanError_NotPermanent(t *testing.T) {
 
 func TestExtractFileFromTar_OversizedEntry(t *testing.T) {
 	_, err := extractFileFromTar(
-		newTarWithEntry("app/managed-pipelines.json", make([]byte, maxManagedPipelinesManifestSize+1)),
+		newTarWithEntry(t, "app/managed-pipelines.json", make([]byte, maxManagedPipelinesManifestSize+1)),
 		"app/managed-pipelines.json",
 	)
 	require.Error(t, err)
@@ -588,7 +588,7 @@ func TestExtractFileFromTar_OversizedEntry(t *testing.T) {
 func TestExtractFileFromTar_ExactLimit(t *testing.T) {
 	payload := make([]byte, maxManagedPipelinesManifestSize)
 	data, err := extractFileFromTar(
-		newTarWithEntry("app/managed-pipelines.json", payload),
+		newTarWithEntry(t, "app/managed-pipelines.json", payload),
 		"app/managed-pipelines.json",
 	)
 	require.NoError(t, err)
@@ -672,7 +672,7 @@ func TestIsWhiteoutFor(t *testing.T) {
 }
 
 func TestExtractFileFromTar_Whiteout_ReturnsErrWhiteout(t *testing.T) {
-	tarBuf := newTarWithEntry("app/.wh.managed-pipelines.json", nil)
+	tarBuf := newTarWithEntry(t, "app/.wh.managed-pipelines.json", nil)
 
 	data, err := extractFileFromTar(tarBuf, managedPipelinesJSONPath)
 	assert.ErrorIs(t, err, errWhiteout)
@@ -680,16 +680,52 @@ func TestExtractFileFromTar_Whiteout_ReturnsErrWhiteout(t *testing.T) {
 }
 
 func TestExtractFileFromTar_OpaqueWhiteout_ReturnsErrWhiteout(t *testing.T) {
-	tarBuf := newTarWithEntry("app/.wh..wh..opq", nil)
+	tarBuf := newTarWithEntry(t, "app/.wh..wh..opq", nil)
 
 	data, err := extractFileFromTar(tarBuf, managedPipelinesJSONPath)
 	assert.ErrorIs(t, err, errWhiteout)
 	assert.Nil(t, data)
 }
 
+func TestExtractFileFromTar_WhiteoutBeforeFile_ReturnsFile(t *testing.T) {
+	content := []byte(`[{"name":"replacement"}]`)
+	tarBuf := newTarWithEntries(t,
+		tarEntry{name: "app/.wh.managed-pipelines.json", content: nil},
+		tarEntry{name: managedPipelinesJSONPath, content: content},
+	)
+
+	data, err := extractFileFromTar(tarBuf, managedPipelinesJSONPath)
+	require.NoError(t, err)
+	assert.Equal(t, content, data)
+}
+
+func TestExtractFileFromTar_FileBeforeWhiteout_ReturnsFile(t *testing.T) {
+	content := []byte(`[{"name":"replacement"}]`)
+	tarBuf := newTarWithEntries(t,
+		tarEntry{name: managedPipelinesJSONPath, content: content},
+		tarEntry{name: "app/.wh.managed-pipelines.json", content: nil},
+	)
+
+	data, err := extractFileFromTar(tarBuf, managedPipelinesJSONPath)
+	require.NoError(t, err)
+	assert.Equal(t, content, data)
+}
+
+func TestExtractFileFromTar_OpaqueWhiteoutBeforeFile_ReturnsFile(t *testing.T) {
+	content := []byte(`[{"name":"replacement"}]`)
+	tarBuf := newTarWithEntries(t,
+		tarEntry{name: "app/.wh..wh..opq", content: nil},
+		tarEntry{name: managedPipelinesJSONPath, content: content},
+	)
+
+	data, err := extractFileFromTar(tarBuf, managedPipelinesJSONPath)
+	require.NoError(t, err)
+	assert.Equal(t, content, data)
+}
+
 func TestExtractFileFromTar_Found(t *testing.T) {
 	content := []byte(`[{"name":"test"}]`)
-	tarBuf := newTarWithEntry(managedPipelinesJSONPath, content)
+	tarBuf := newTarWithEntry(t, managedPipelinesJSONPath, content)
 
 	data, err := extractFileFromTar(tarBuf, managedPipelinesJSONPath)
 	require.NoError(t, err)
@@ -697,7 +733,7 @@ func TestExtractFileFromTar_Found(t *testing.T) {
 }
 
 func TestExtractFileFromTar_NotFound(t *testing.T) {
-	tarBuf := newTarWithEntry("app/other-file.json", []byte("data"))
+	tarBuf := newTarWithEntry(t, "app/other-file.json", []byte("data"))
 
 	data, err := extractFileFromTar(tarBuf, managedPipelinesJSONPath)
 	assert.ErrorIs(t, err, errNotFound)
@@ -709,10 +745,10 @@ func TestExtractManifestFromImage_WhiteoutInUpperLayer_StopsSearch(t *testing.T)
 
 	validContent := []byte(`[{"name":"old-pipeline"}]`)
 	olderLayer := &mockContainerLayer{
-		reader: io.NopCloser(newTarWithEntry(managedPipelinesJSONPath, validContent)),
+		reader: io.NopCloser(newTarWithEntry(t, managedPipelinesJSONPath, validContent)),
 	}
 	whiteoutLayer := &mockContainerLayer{
-		reader: io.NopCloser(newTarWithEntry("app/.wh.managed-pipelines.json", nil)),
+		reader: io.NopCloser(newTarWithEntry(t, "app/.wh.managed-pipelines.json", nil)),
 	}
 	img := &mockContainerImage{layers: []oci.Layer{olderLayer, whiteoutLayer}}
 
@@ -721,15 +757,32 @@ func TestExtractManifestFromImage_WhiteoutInUpperLayer_StopsSearch(t *testing.T)
 	assert.Contains(t, err.Error(), "not found")
 }
 
+func TestExtractManifestFromImage_WhiteoutAndReplacementInSameLayer(t *testing.T) {
+	fetcher := NewOCIManifestFetcher(ctrl.Log, nil)
+
+	replacement := []byte(`[{"name":"new-pipeline"}]`)
+	layer := &mockContainerLayer{
+		reader: io.NopCloser(newTarWithEntries(t,
+			tarEntry{name: "app/.wh.managed-pipelines.json", content: nil},
+			tarEntry{name: managedPipelinesJSONPath, content: replacement},
+		)),
+	}
+	img := &mockContainerImage{layers: []oci.Layer{layer}}
+
+	data, err := fetcher.extractManifestFromImage(img, "test-image:latest")
+	require.NoError(t, err)
+	assert.Equal(t, replacement, data)
+}
+
 func TestExtractManifestFromImage_OpaqueWhiteoutInUpperLayer_StopsSearch(t *testing.T) {
 	fetcher := NewOCIManifestFetcher(ctrl.Log, nil)
 
 	validContent := []byte(`[{"name":"old-pipeline"}]`)
 	olderLayer := &mockContainerLayer{
-		reader: io.NopCloser(newTarWithEntry(managedPipelinesJSONPath, validContent)),
+		reader: io.NopCloser(newTarWithEntry(t, managedPipelinesJSONPath, validContent)),
 	}
 	opaqueLayer := &mockContainerLayer{
-		reader: io.NopCloser(newTarWithEntry("app/.wh..wh..opq", nil)),
+		reader: io.NopCloser(newTarWithEntry(t, "app/.wh..wh..opq", nil)),
 	}
 	img := &mockContainerImage{layers: []oci.Layer{olderLayer, opaqueLayer}}
 
@@ -823,15 +876,29 @@ func TestGetCached_DefensiveCopy(t *testing.T) {
 	assert.NotContains(t, cached2, "mutated", "getCached must return defensive copies")
 }
 
-func newTarWithEntry(name string, content []byte) io.Reader {
+type tarEntry struct {
+	name    string
+	content []byte
+}
+
+func newTarWithEntries(t testing.TB, entries ...tarEntry) io.Reader {
+	t.Helper()
 	var buf bytes.Buffer
 	tw := tar.NewWriter(&buf)
-	_ = tw.WriteHeader(&tar.Header{Name: name, Size: int64(len(content))})
-	if len(content) > 0 {
-		_, _ = tw.Write(content)
+	for _, e := range entries {
+		require.NoError(t, tw.WriteHeader(&tar.Header{Name: e.name, Size: int64(len(e.content))}))
+		if len(e.content) > 0 {
+			_, err := tw.Write(e.content)
+			require.NoError(t, err)
+		}
 	}
-	_ = tw.Close()
+	require.NoError(t, tw.Close())
 	return &buf
+}
+
+func newTarWithEntry(t testing.TB, name string, content []byte) io.Reader {
+	t.Helper()
+	return newTarWithEntries(t, tarEntry{name: name, content: content})
 }
 
 // findCondition returns the condition with the given type, or nil if not found.

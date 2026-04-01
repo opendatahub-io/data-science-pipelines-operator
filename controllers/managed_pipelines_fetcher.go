@@ -226,26 +226,43 @@ func readBoundedTarEntry(tr *tar.Reader, hdr *tar.Header) ([]byte, error) {
 	return data, nil
 }
 
-// extractFileFromTar scans a tar stream for targetPath. Returns:
-//   - (data, nil)        — file found
+// extractFileFromTar scans a tar stream for targetPath. The entire stream is
+// read because tar entry order is not guaranteed: a layer may contain both a
+// whiteout marker and a replacement file. The file takes precedence (the
+// whiteout only applies to lower layers). Returns:
+//   - (data, nil)        — file found (even if a whiteout was also present)
 //   - (nil, errNotFound) — file not present in this layer
 //   - (nil, errWhiteout) — file deleted by OCI whiteout; stop scanning lower layers
 //   - (nil, other error) — read failure
 func extractFileFromTar(r io.Reader, targetPath string) ([]byte, error) {
 	tr := tar.NewReader(r)
+	var foundData []byte
+	var foundWhiteout bool
 	for {
 		hdr, err := tr.Next()
 		if err == io.EOF {
-			return nil, errNotFound
+			break
 		}
 		if err != nil {
 			return nil, fmt.Errorf("tar read error: %w", err)
 		}
 		if isWhiteoutFor(hdr.Name, targetPath) {
-			return nil, errWhiteout
+			foundWhiteout = true
+			continue
 		}
 		if hdr.Name == targetPath {
-			return readBoundedTarEntry(tr, hdr)
+			data, readErr := readBoundedTarEntry(tr, hdr)
+			if readErr != nil {
+				return nil, readErr
+			}
+			foundData = data
 		}
 	}
+	if foundData != nil {
+		return foundData, nil
+	}
+	if foundWhiteout {
+		return nil, errWhiteout
+	}
+	return nil, errNotFound
 }
