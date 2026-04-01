@@ -890,6 +890,27 @@ func TestPutCache_OverwriteRefreshesTTL(t *testing.T) {
 	assert.Equal(t, map[string]bool{"pipeline_a": true, "pipeline_b": true}, cached)
 }
 
+func TestPutCache_PrunesExpiredEntriesOnWrite(t *testing.T) {
+	fetcher := NewOCIManifestFetcher(ctrl.Log, nil)
+	now := time.Now()
+	fetcher.nowFunc = func() time.Time { return now }
+	fetcher.putCache("sha256:old", map[string]bool{"old_pipeline": true})
+
+	// Advance past TTL and write a new digest entry. This write should
+	// opportunistically remove expired cache entries.
+	fetcher.nowFunc = func() time.Time { return now.Add(cacheTTL + time.Minute) }
+	fetcher.putCache("sha256:new", map[string]bool{"new_pipeline": true})
+
+	fetcher.mu.Lock()
+	_, oldExists := fetcher.cache["sha256:old"]
+	newEntry, newExists := fetcher.cache["sha256:new"]
+	fetcher.mu.Unlock()
+
+	assert.False(t, oldExists, "expired entries should be pruned during putCache")
+	require.True(t, newExists, "new entry should be present after putCache")
+	assert.Equal(t, map[string]bool{"new_pipeline": true}, newEntry.names)
+}
+
 func TestGetCached_DefensiveCopy(t *testing.T) {
 	fetcher := NewOCIManifestFetcher(ctrl.Log, nil)
 	fetcher.putCache("sha256:abc123", map[string]bool{"pipeline_a": true})
