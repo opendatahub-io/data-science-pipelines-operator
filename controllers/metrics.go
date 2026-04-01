@@ -17,6 +17,7 @@ limitations under the License.
 package controllers
 
 import (
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/prometheus/client_golang/prometheus"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
@@ -96,11 +97,22 @@ var (
 	ManagedPipelineValidMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "data_science_pipelines_application_managed_pipeline_valid",
-			Help: "Data Science Pipelines Application - Managed Pipeline Validation Status",
+			Help: "Data Science Pipelines Application - Managed Pipeline Validation Status (1=true, 0=all other states)",
 		},
 		[]string{
 			"dspa_name",
 			"dspa_namespace",
+		},
+	)
+	ManagedPipelineValidationStateMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "data_science_pipelines_application_managed_pipeline_validation_state",
+			Help: "Data Science Pipelines Application - Managed Pipeline validation state by reason (one-hot: active reason=1, others=0)",
+		},
+		[]string{
+			"dspa_name",
+			"dspa_namespace",
+			"reason",
 		},
 	)
 	CrReadyMetric = prometheus.NewGaugeVec(
@@ -128,6 +140,15 @@ var (
 		ManagedPipelineValidMetric,
 		CrReadyMetric,
 	}
+
+	managedPipelineValidationReasons = []string{
+		config.ManagedPipelineValid,
+		config.ManagedPipelineInvalid,
+		config.ManagedPipelinesFetchError,
+		"NotApplicable",
+		"Unknown",
+		"Other",
+	}
 )
 
 // InitMetrics registers all DSPA prometheus metrics.
@@ -135,6 +156,7 @@ func InitMetrics() {
 	for _, m := range allDSPAMetrics {
 		metrics.Registry.MustRegister(m)
 	}
+	metrics.Registry.MustRegister(ManagedPipelineValidationStateMetric)
 }
 
 // DeleteMetrics removes all metric label values for a specific DSPA instance.
@@ -144,4 +166,27 @@ func DeleteMetrics(dspaName, dspaNamespace string) {
 	for _, m := range allDSPAMetrics {
 		m.DeleteLabelValues(dspaName, dspaNamespace)
 	}
+	for _, reason := range managedPipelineValidationReasons {
+		ManagedPipelineValidationStateMetric.DeleteLabelValues(dspaName, dspaNamespace, reason)
+	}
+}
+
+func setManagedPipelineValidationStateMetric(dspaName, dspaNamespace, reason string) {
+	activeReason := normalizeManagedPipelineValidationReason(reason)
+	for _, r := range managedPipelineValidationReasons {
+		value := 0.0
+		if r == activeReason {
+			value = 1
+		}
+		ManagedPipelineValidationStateMetric.WithLabelValues(dspaName, dspaNamespace, r).Set(value)
+	}
+}
+
+func normalizeManagedPipelineValidationReason(reason string) string {
+	for _, r := range managedPipelineValidationReasons {
+		if reason == r && r != "Other" {
+			return reason
+		}
+	}
+	return "Other"
 }

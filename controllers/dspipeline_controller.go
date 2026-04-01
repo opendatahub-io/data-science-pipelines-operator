@@ -695,6 +695,9 @@ func (r *DSPAReconciler) PublishMetrics(dspa *dspav1.DataSciencePipelinesApplica
 		}
 		log.Info(condition.Type, " Status:", status)
 		metric.WithLabelValues(dspa.Name, dspa.Namespace).Set(float64(value))
+		if condition.Type == config.ManagedPipelineValid {
+			setManagedPipelineValidationStateMetric(dspa.Name, dspa.Namespace, condition.Reason)
+		}
 	}
 }
 

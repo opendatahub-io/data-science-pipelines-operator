@@ -21,9 +21,13 @@ package controllers
 import (
 	"testing"
 
+	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // TestDeleteMetrics verifies that DeleteMetrics removes all metric time series
@@ -108,6 +112,12 @@ func TestCleanUpResources_DeletesMetrics(t *testing.T) {
 	// Verify metrics exist before cleanup
 	assert.Equal(t, float64(0), testutil.ToFloat64(CrReadyMetric.WithLabelValues(testName, testNamespace)))
 	assert.Equal(t, float64(1), testutil.ToFloat64(DBAvailableMetric.WithLabelValues(testName, testNamespace)))
+	setManagedPipelineValidationStateMetric(testName, testNamespace, "NotApplicable")
+	assert.Equal(
+		t,
+		float64(1),
+		testutil.ToFloat64(ManagedPipelineValidationStateMetric.WithLabelValues(testName, testNamespace, "NotApplicable")),
+	)
 
 	params := &DSPAParams{
 		Name:      testName,
@@ -123,4 +133,61 @@ func TestCleanUpResources_DeletesMetrics(t *testing.T) {
 		"CrReadyMetric should be removed after cleanUpResources")
 	assert.Equal(t, 0, testutil.CollectAndCount(DBAvailableMetric),
 		"DBAvailableMetric should be removed after cleanUpResources")
+	assert.Equal(t, 0, testutil.CollectAndCount(ManagedPipelineValidationStateMetric),
+		"ManagedPipelineValidationStateMetric should be removed after cleanUpResources")
+}
+
+func TestSetManagedPipelineValidationStateMetric_OneHotByReason(t *testing.T) {
+	testName := "state-test-dspa"
+	testNamespace := "state-test-ns"
+
+	setManagedPipelineValidationStateMetric(testName, testNamespace, "NotApplicable")
+	assert.Equal(
+		t,
+		float64(1),
+		testutil.ToFloat64(ManagedPipelineValidationStateMetric.WithLabelValues(testName, testNamespace, "NotApplicable")),
+	)
+	assert.Equal(
+		t,
+		float64(0),
+		testutil.ToFloat64(ManagedPipelineValidationStateMetric.WithLabelValues(testName, testNamespace, config.ManagedPipelineInvalid)),
+	)
+
+	setManagedPipelineValidationStateMetric(testName, testNamespace, config.ManagedPipelinesFetchError)
+	assert.Equal(
+		t,
+		float64(1),
+		testutil.ToFloat64(ManagedPipelineValidationStateMetric.WithLabelValues(testName, testNamespace, config.ManagedPipelinesFetchError)),
+	)
+	assert.Equal(
+		t,
+		float64(0),
+		testutil.ToFloat64(ManagedPipelineValidationStateMetric.WithLabelValues(testName, testNamespace, "NotApplicable")),
+	)
+
+	DeleteMetrics(testName, testNamespace)
+}
+
+func TestPublishMetrics_PublishesManagedPipelineValidationReason(t *testing.T) {
+	dspaName := "publish-metric-dspa"
+	dspaNamespace := "publish-metric-ns"
+	dspa := &dspav1.DataSciencePipelinesApplication{}
+	dspa.Name = dspaName
+	dspa.Namespace = dspaNamespace
+	_, _, reconciler := CreateNewTestObjects()
+
+	cond := metav1.Condition{
+		Type:   config.ManagedPipelineValid,
+		Status: metav1.ConditionFalse,
+		Reason: "NotApplicable",
+	}
+	metricsMap := map[metav1.Condition]*prometheus.GaugeVec{
+		cond: ManagedPipelineValidMetric,
+	}
+
+	reconciler.PublishMetrics(dspa, metricsMap)
+
+	assert.Equal(t, float64(1), testutil.ToFloat64(ManagedPipelineValidationStateMetric.WithLabelValues(dspaName, dspaNamespace, "NotApplicable")))
+	assert.Equal(t, float64(0), testutil.ToFloat64(ManagedPipelineValidationStateMetric.WithLabelValues(dspaName, dspaNamespace, config.ManagedPipelineInvalid)))
+	DeleteMetrics(dspaName, dspaNamespace)
 }
