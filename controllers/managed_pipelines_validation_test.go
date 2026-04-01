@@ -402,9 +402,10 @@ func TestValidateManagedPipelines_FetchError_DoesNotBlockReconcile(t *testing.T)
 		ManifestFetcher: &mockPipelineNamesFetcher{err: fmt.Errorf("connection refused")},
 	}
 
-	proceed, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
-	require.NoError(t, err, "fetch errors should not block reconciliation")
+	proceed, requeue, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
+	require.NoError(t, err, "fetch errors should not fail reconciliation")
 	require.True(t, proceed, "fetch errors are transient; API server deployment should proceed")
+	require.True(t, requeue, "fetch errors should request a timed requeue for self-healing")
 
 	conditions := status.GetConditions()
 	cond := findCondition(conditions, config.ManagedPipelineValid)
@@ -423,9 +424,10 @@ func TestValidateManagedPipelines_ValidationError_BlocksAPIServer(t *testing.T) 
 		ManifestFetcher: &mockPipelineNamesFetcher{names: map[string]bool{"good": true}},
 	}
 
-	proceed, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
+	proceed, requeue, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
 	require.NoError(t, err, "validation failures are permanent and must not trigger controller-runtime retries")
 	require.False(t, proceed, "validation failures must block API server deployment")
+	require.False(t, requeue, "permanent validation failures should not schedule retries")
 
 	conditions := status.GetConditions()
 	cond := findCondition(conditions, config.ManagedPipelineValid)
@@ -444,9 +446,10 @@ func TestValidateManagedPipelines_AllValid_SetsCondition(t *testing.T) {
 		ManifestFetcher: &mockPipelineNamesFetcher{names: map[string]bool{"p1": true}},
 	}
 
-	proceed, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
+	proceed, requeue, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
 	require.NoError(t, err)
 	require.True(t, proceed, "valid pipelines should allow API server deployment")
+	require.False(t, requeue, "valid manifests should not schedule an extra requeue")
 
 	conditions := status.GetConditions()
 	cond := findCondition(conditions, config.ManagedPipelineValid)
@@ -476,9 +479,10 @@ func TestValidateManagedPipelines_NotApplicable(t *testing.T) {
 			status := dspastatus.NewDSPAStatus(dspa)
 			reconciler := &DSPAReconciler{Log: ctrl.Log}
 
-			proceed, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
+			proceed, requeue, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
 			require.NoError(t, err)
 			require.True(t, proceed, "not-applicable should allow API server deployment")
+			require.False(t, requeue, "not-applicable should not schedule an extra requeue")
 
 			conditions := status.GetConditions()
 			cond := findCondition(conditions, config.ManagedPipelineValid)
@@ -531,9 +535,10 @@ func TestValidateManagedPipelines_NilFetcher_SetsConditionDoesNotPanic(t *testin
 	status := dspastatus.NewDSPAStatus(dspa)
 	reconciler := &DSPAReconciler{Log: ctrl.Log, ManifestFetcher: nil}
 
-	proceed, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
+	proceed, requeue, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
 	require.NoError(t, err, "nil fetcher should not panic or block reconciliation")
 	require.True(t, proceed, "nil fetcher is transient; API server deployment should proceed")
+	require.False(t, requeue, "nil fetcher is operator wiring issue; avoid unnecessary retry loops")
 
 	conditions := status.GetConditions()
 	cond := findCondition(conditions, config.ManagedPipelineValid)
@@ -553,9 +558,10 @@ func TestValidateManagedPipelines_PermanentFetchError_BlocksDeployment(t *testin
 		ManifestFetcher: &mockPipelineNamesFetcher{err: &permanentError{err: fmt.Errorf("managed-pipelines.json not found in image")}},
 	}
 
-	proceed, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
+	proceed, requeue, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
 	require.NoError(t, err, "permanent errors should not trigger controller-runtime retries")
 	require.False(t, proceed, "permanent misconfiguration must block API server deployment")
+	require.False(t, requeue, "permanent misconfiguration should not schedule retries")
 
 	conditions := status.GetConditions()
 	cond := findCondition(conditions, config.ManagedPipelineValid)
@@ -679,9 +685,10 @@ func TestRegistryAllowlist_BlocksDisallowedRegistry(t *testing.T) {
 	fetcher := NewOCIManifestFetcher(ctrl.Log, []string{"quay.io", "registry.redhat.io"})
 	reconciler := &DSPAReconciler{Log: ctrl.Log, ManifestFetcher: fetcher}
 
-	proceed, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
+	proceed, requeue, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
 	require.NoError(t, err, "permanent errors should not trigger controller-runtime retries")
 	require.False(t, proceed, "allowlist denial is permanent; must block API server deployment")
+	require.False(t, requeue, "allowlist denial is permanent; no retry needed")
 
 	conditions := status.GetConditions()
 	cond := findCondition(conditions, config.ManagedPipelineValid)
