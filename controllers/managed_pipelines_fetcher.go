@@ -60,6 +60,7 @@ func (e *permanentError) Unwrap() error { return e.err }
 const managedPipelinesJSONPath = "app/managed-pipelines.json"
 
 const cacheTTL = 10 * time.Minute
+const registryFetchTimeout = 30 * time.Second
 
 type cacheEntry struct {
 	names     map[string]bool
@@ -199,6 +200,9 @@ func (f *OCIManifestFetcher) putCache(digestStr string, names map[string]bool) {
 // cache miss downloads layers and extracts managed-pipelines.json. The
 // returned map is a defensive copy safe for caller mutation.
 func (f *OCIManifestFetcher) FetchPipelineNames(ctx context.Context, imageRef string) (map[string]bool, error) {
+	ctx, cancel := context.WithTimeout(ctx, registryFetchTimeout)
+	defer cancel()
+
 	img, digestStr, err := f.resolveImageDigest(ctx, imageRef)
 	if err != nil {
 		return nil, err
