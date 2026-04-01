@@ -22,7 +22,7 @@ type ManagedPipelineImageEnvVar struct {
 // the result conditionally (e.g. only when managed pipelines is enabled) may leave the
 // target field nil.
 func ManagedPipelineImageEnvFromEnviron(environ []string) []ManagedPipelineImageEnvVar {
-	var out []ManagedPipelineImageEnvVar
+	seen := map[string]string{}
 	for _, e := range environ {
 		idx := strings.IndexByte(e, '=')
 		if idx <= 0 {
@@ -32,17 +32,19 @@ func ManagedPipelineImageEnvFromEnviron(environ []string) []ManagedPipelineImage
 		if !strings.HasPrefix(key, managedPipelineImageEnvPrefix) {
 			continue
 		}
-		if !isValidEnvVarName(key) {
+		if len(key) == len(managedPipelineImageEnvPrefix) || !isValidEnvVarName(key) {
 			continue
 		}
-		out = append(out, ManagedPipelineImageEnvVar{Name: key, Value: e[idx+1:]})
+		// Last occurrence wins for duplicated keys.
+		seen[key] = e[idx+1:]
+	}
+	out := make([]ManagedPipelineImageEnvVar, 0, len(seen))
+	for key, value := range seen {
+		out = append(out, ManagedPipelineImageEnvVar{Name: key, Value: value})
 	}
 	slices.SortFunc(out, func(a, b ManagedPipelineImageEnvVar) int {
 		return strings.Compare(a.Name, b.Name)
 	})
-	if out == nil {
-		return []ManagedPipelineImageEnvVar{}
-	}
 	return out
 }
 
