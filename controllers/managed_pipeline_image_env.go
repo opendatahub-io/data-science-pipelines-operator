@@ -17,13 +17,15 @@ limitations under the License.
 package controllers
 
 import (
+	"encoding/json"
+	"fmt"
 	"slices"
 	"strings"
 )
 
-// managedPipelineImageEnvPrefix matches variables forwarded from the operator process
-// environment to the managed-pipelines init container (e.g. MANAGED_PIPELINE_IMAGE_TOOLBOX).
-const managedPipelineImageEnvPrefix = "MANAGED_PIPELINE_IMAGE_"
+// relatedImageEnvPrefix matches env vars forwarded to the managed-pipelines init
+// container through DSPO.ManagedPipelinesImages (e.g. RELATED_IMAGE_AUTOML_RUNTIME).
+const relatedImageEnvPrefix = "RELATED_IMAGE_"
 
 // ManagedPipelineImageEnvVar is a name/value pair from the operator environment.
 type ManagedPipelineImageEnvVar struct {
@@ -31,37 +33,32 @@ type ManagedPipelineImageEnvVar struct {
 	Value string
 }
 
-// ManagedPipelineImageEnvFromEnviron returns every environment entry whose name starts with
-// managedPipelineImageEnvPrefix and whose name contains only uppercase ASCII letters, digits,
-// and underscores, sorted by name.
-// The returned slice is always non-nil (empty when no entries match). Callers that store
-// the result conditionally (e.g. only when managed pipelines is enabled) may leave the
-// target field nil.
-func ManagedPipelineImageEnvFromEnviron(environ []string) []ManagedPipelineImageEnvVar {
-	seen := map[string]string{}
-	for _, e := range environ {
-		idx := strings.IndexByte(e, '=')
-		if idx <= 0 {
-			continue
-		}
-		key := e[:idx]
-		if !strings.HasPrefix(key, managedPipelineImageEnvPrefix) {
-			continue
-		}
-		if len(key) == len(managedPipelineImageEnvPrefix) || !isValidEnvVarName(key) {
-			continue
-		}
-		// Last occurrence wins for duplicated keys.
-		seen[key] = e[idx+1:]
+// ManagedPipelineImageEnvFromJSON parses a JSON object and returns name/value entries
+// whose keys are RELATED_IMAGE_* env var names, sorted by name.
+func ManagedPipelineImageEnvFromJSON(raw string) ([]ManagedPipelineImageEnvVar, error) {
+	m := map[string]string{}
+	if err := json.Unmarshal([]byte(raw), &m); err != nil {
+		return nil, fmt.Errorf("invalid DSPO managed pipeline images JSON mapping: %w", err)
 	}
-	out := make([]ManagedPipelineImageEnvVar, 0, len(seen))
-	for key, value := range seen {
+	out := make([]ManagedPipelineImageEnvVar, 0, len(m))
+	for rawKey, value := range m {
+		key := strings.TrimSpace(rawKey)
+		if !strings.HasPrefix(key, relatedImageEnvPrefix) {
+			return nil, fmt.Errorf("invalid env var name %q: must start with %q", key, relatedImageEnvPrefix)
+		}
+		if len(key) == len(relatedImageEnvPrefix) || !isValidEnvVarName(key) {
+			return nil, fmt.Errorf("invalid env var name %q: must contain only [A-Z0-9_] and non-empty suffix", key)
+		}
+		value = strings.TrimSpace(value)
+		if value == "" {
+			return nil, fmt.Errorf("empty image value for env var %q", key)
+		}
 		out = append(out, ManagedPipelineImageEnvVar{Name: key, Value: value})
 	}
 	slices.SortFunc(out, func(a, b ManagedPipelineImageEnvVar) int {
 		return strings.Compare(a.Name, b.Name)
 	})
-	return out
+	return out, nil
 }
 
 // isValidEnvVarName returns true if name consists only of [A-Z0-9_].
