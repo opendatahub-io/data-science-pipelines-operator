@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-
-	"github.com/go-logr/logr"
 )
 
 // relatedImageEnvPrefix matches env vars forwarded to the managed-pipelines init
@@ -37,7 +35,7 @@ type ManagedPipelineImageEnvVar struct {
 
 // ManagedPipelineImageEnvFromJSON parses a JSON object and returns name/value entries
 // whose keys are RELATED_IMAGE_* env var names, sorted by name.
-func ManagedPipelineImageEnvFromJSON(raw string, log logr.Logger) ([]ManagedPipelineImageEnvVar, error) {
+func ManagedPipelineImageEnvFromJSON(raw string) ([]ManagedPipelineImageEnvVar, error) {
 	m := map[string]string{}
 	if err := json.Unmarshal([]byte(raw), &m); err != nil {
 		return nil, fmt.Errorf("invalid DSPO managed pipeline images JSON mapping: %w", err)
@@ -56,8 +54,7 @@ func ManagedPipelineImageEnvFromJSON(raw string, log logr.Logger) ([]ManagedPipe
 			return nil, fmt.Errorf("empty image value for env var %q", key)
 		}
 		if prev, exists := cleaned[key]; exists {
-			log.Info("duplicate env var key after whitespace trimming, last value wins",
-				"key", key, "previousValue", prev, "newValue", value)
+			return nil, fmt.Errorf("duplicate env var key %q after whitespace trimming (values %q and %q)", key, prev, value)
 		}
 		cleaned[key] = value
 	}
