@@ -282,8 +282,7 @@ func TestValidateManagedPipelineNames_CaseSensitive(t *testing.T) {
 
 func TestManagedPipelineValid_SetValid(t *testing.T) {
 	dspa := testutil.CreateEmptyDSPA()
-	dspa.Status.Conditions = make([]metav1.Condition, 11)
-	status := dspastatus.NewDSPAStatus(dspa)
+	status := newTestDSPAStatus(dspa)
 	status.SetManagedPipelineValid()
 
 	conditions := status.GetConditions()
@@ -294,8 +293,7 @@ func TestManagedPipelineValid_SetValid(t *testing.T) {
 
 func TestManagedPipelineValid_SetInvalid(t *testing.T) {
 	dspa := testutil.CreateEmptyDSPA()
-	dspa.Status.Conditions = make([]metav1.Condition, 11)
-	status := dspastatus.NewDSPAStatus(dspa)
+	status := newTestDSPAStatus(dspa)
 	status.SetManagedPipelineInvalid(
 		fmt.Errorf("pipeline \"foo\" not found in managed-pipelines.json"),
 		config.ManagedPipelineInvalid,
@@ -312,8 +310,7 @@ func TestManagedPipelineValid_SetInvalid(t *testing.T) {
 
 func TestManagedPipelineValid_SetNotApplicable(t *testing.T) {
 	dspa := testutil.CreateEmptyDSPA()
-	dspa.Status.Conditions = make([]metav1.Condition, 11)
-	status := dspastatus.NewDSPAStatus(dspa)
+	status := newTestDSPAStatus(dspa)
 	status.SetManagedPipelineNotApplicable()
 
 	conditions := status.GetConditions()
@@ -323,11 +320,17 @@ func TestManagedPipelineValid_SetNotApplicable(t *testing.T) {
 	assert.Equal(t, "NotApplicable", cond.Reason)
 }
 
+func newTestDSPAStatus(dspa *dspav1.DataSciencePipelinesApplication) dspastatus.DSPAStatus {
+	if dspa.Status.Conditions == nil {
+		dspa.Status.Conditions = []metav1.Condition{}
+	}
+	return dspastatus.NewDSPAStatus(dspa)
+}
+
 func newAllReadyStatus(t *testing.T) dspastatus.DSPAStatus {
 	t.Helper()
 	dspa := testutil.CreateEmptyDSPA()
-	dspa.Status.Conditions = make([]metav1.Condition, 11)
-	status := dspastatus.NewDSPAStatus(dspa)
+	status := newTestDSPAStatus(dspa)
 	status.SetDatabaseReady()
 	status.SetObjStoreReady()
 	status.SetApiServerStatus(dspastatus.BuildTrueCondition(config.APIServerReady, "ready"))
@@ -395,8 +398,7 @@ func (m *mockPipelineNamesFetcher) FetchPipelineNames(_ context.Context, _ strin
 
 func TestValidateManagedPipelines_FetchError_DoesNotBlockReconcile(t *testing.T) {
 	dspa := testutil.CreateDSPAWithManagedPipelines("img:latest", []dspav1.ManagedPipeline{{Name: "p1"}}, nil)
-	dspa.Status.Conditions = make([]metav1.Condition, 11)
-	status := dspastatus.NewDSPAStatus(dspa)
+	status := newTestDSPAStatus(dspa)
 	reconciler := &DSPAReconciler{
 		Log:             ctrl.Log,
 		ManifestFetcher: &mockPipelineNamesFetcher{err: fmt.Errorf("connection refused")},
@@ -417,8 +419,7 @@ func TestValidateManagedPipelines_FetchError_DoesNotBlockReconcile(t *testing.T)
 
 func TestValidateManagedPipelines_ValidationError_BlocksAPIServer(t *testing.T) {
 	dspa := testutil.CreateDSPAWithManagedPipelines("img:latest", []dspav1.ManagedPipeline{{Name: "bad"}}, nil)
-	dspa.Status.Conditions = make([]metav1.Condition, 11)
-	status := dspastatus.NewDSPAStatus(dspa)
+	status := newTestDSPAStatus(dspa)
 	reconciler := &DSPAReconciler{
 		Log:             ctrl.Log,
 		ManifestFetcher: &mockPipelineNamesFetcher{names: map[string]bool{"good": true}},
@@ -439,8 +440,7 @@ func TestValidateManagedPipelines_ValidationError_BlocksAPIServer(t *testing.T) 
 
 func TestValidateManagedPipelines_AllValid_SetsCondition(t *testing.T) {
 	dspa := testutil.CreateDSPAWithManagedPipelines("img:latest", []dspav1.ManagedPipeline{{Name: "p1"}}, nil)
-	dspa.Status.Conditions = make([]metav1.Condition, 11)
-	status := dspastatus.NewDSPAStatus(dspa)
+	status := newTestDSPAStatus(dspa)
 	reconciler := &DSPAReconciler{
 		Log:             ctrl.Log,
 		ManifestFetcher: &mockPipelineNamesFetcher{names: map[string]bool{"p1": true}},
@@ -475,8 +475,7 @@ func TestValidateManagedPipelines_NotApplicable(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			dspa := testutil.CreateEmptyDSPA()
 			tt.mutate(dspa)
-			dspa.Status.Conditions = make([]metav1.Condition, 11)
-			status := dspastatus.NewDSPAStatus(dspa)
+			status := newTestDSPAStatus(dspa)
 			reconciler := &DSPAReconciler{Log: ctrl.Log}
 
 			proceed, requeue, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
@@ -492,47 +491,94 @@ func TestValidateManagedPipelines_NotApplicable(t *testing.T) {
 	}
 }
 
-func TestPreserveAPIServerReadyCondition_UsesPreviousCondition(t *testing.T) {
+func TestPreservePostValidationConditions_AllPreviousConditions(t *testing.T) {
 	dspa := testutil.CreateEmptyDSPA()
-	prev := metav1.Condition{
-		Type:               config.APIServerReady,
-		Status:             metav1.ConditionTrue,
-		Reason:             config.MinimumReplicasAvailable,
-		Message:            "api server remains healthy",
-		LastTransitionTime: metav1.NewTime(time.Now().Add(-time.Hour)),
-	}
-	dspa.Status.Conditions = []metav1.Condition{prev}
 	dspa.Generation = 7
+	dspa.Status.Conditions = []metav1.Condition{
+		{Type: config.APIServerReady, Status: metav1.ConditionTrue, Reason: config.MinimumReplicasAvailable, Message: "api server healthy"},
+		{Type: config.PersistenceAgentReady, Status: metav1.ConditionTrue, Reason: config.MinimumReplicasAvailable, Message: "persistence agent healthy"},
+		{Type: config.ScheduledWorkflowReady, Status: metav1.ConditionTrue, Reason: config.MinimumReplicasAvailable, Message: "scheduled workflow healthy"},
+		{Type: config.WorkflowControllerReady, Status: metav1.ConditionTrue, Reason: config.MinimumReplicasAvailable, Message: "workflow controller healthy"},
+		{Type: config.MLMDProxyReady, Status: metav1.ConditionTrue, Reason: config.MinimumReplicasAvailable, Message: "mlmd proxy healthy"},
+	}
 
 	status := dspastatus.NewDSPAStatus(dspa)
 	reconciler := &DSPAReconciler{}
-	reconciler.preserveAPIServerReadyCondition(dspa, status)
+	reconciler.preservePostValidationConditions(dspa, status)
 
-	cond := findCondition(status.GetConditions(), config.APIServerReady)
-	require.NotNil(t, cond)
-	assert.Equal(t, metav1.ConditionTrue, cond.Status)
-	assert.Equal(t, config.MinimumReplicasAvailable, cond.Reason)
-	assert.Equal(t, "api server remains healthy", cond.Message)
+	conditions := status.GetConditions()
+	for _, ct := range []string{
+		config.APIServerReady,
+		config.PersistenceAgentReady,
+		config.ScheduledWorkflowReady,
+		config.WorkflowControllerReady,
+		config.MLMDProxyReady,
+	} {
+		cond := findCondition(conditions, ct)
+		require.NotNil(t, cond, "condition %s must be present", ct)
+		assert.Equal(t, metav1.ConditionTrue, cond.Status, "condition %s must preserve previous True status", ct)
+		assert.Equal(t, config.MinimumReplicasAvailable, cond.Reason, "condition %s must preserve previous reason", ct)
+	}
 }
 
-func TestPreserveAPIServerReadyCondition_NoPreviousCondition_LeavesUnknown(t *testing.T) {
+func TestPreservePostValidationConditions_NoPreviousConditions_LeavesUnknown(t *testing.T) {
 	dspa := testutil.CreateEmptyDSPA()
 	dspa.Status.Conditions = nil
 
 	status := dspastatus.NewDSPAStatus(dspa)
 	reconciler := &DSPAReconciler{}
-	reconciler.preserveAPIServerReadyCondition(dspa, status)
+	reconciler.preservePostValidationConditions(dspa, status)
 
-	cond := findCondition(status.GetConditions(), config.APIServerReady)
-	require.NotNil(t, cond)
-	assert.Equal(t, metav1.ConditionUnknown, cond.Status)
-	assert.Equal(t, "Unknown", cond.Reason)
+	conditions := status.GetConditions()
+	for _, ct := range []string{
+		config.APIServerReady,
+		config.PersistenceAgentReady,
+		config.ScheduledWorkflowReady,
+		config.WorkflowControllerReady,
+		config.MLMDProxyReady,
+	} {
+		cond := findCondition(conditions, ct)
+		require.NotNil(t, cond, "condition %s must be present", ct)
+		assert.Equal(t, metav1.ConditionUnknown, cond.Status, "condition %s must be Unknown without prior state", ct)
+	}
+}
+
+func TestPreservePostValidationConditions_PartialPreviousConditions(t *testing.T) {
+	dspa := testutil.CreateEmptyDSPA()
+	dspa.Status.Conditions = []metav1.Condition{
+		{Type: config.APIServerReady, Status: metav1.ConditionTrue, Reason: config.MinimumReplicasAvailable, Message: "api server healthy"},
+		{Type: config.MLMDProxyReady, Status: metav1.ConditionFalse, Reason: config.FailingToDeploy, Message: "mlmd failing"},
+	}
+
+	status := dspastatus.NewDSPAStatus(dspa)
+	reconciler := &DSPAReconciler{}
+	reconciler.preservePostValidationConditions(dspa, status)
+
+	conditions := status.GetConditions()
+
+	apiCond := findCondition(conditions, config.APIServerReady)
+	require.NotNil(t, apiCond)
+	assert.Equal(t, metav1.ConditionTrue, apiCond.Status)
+
+	mlmdCond := findCondition(conditions, config.MLMDProxyReady)
+	require.NotNil(t, mlmdCond)
+	assert.Equal(t, metav1.ConditionFalse, mlmdCond.Status)
+	assert.Equal(t, config.FailingToDeploy, mlmdCond.Reason)
+
+	for _, ct := range []string{
+		config.PersistenceAgentReady,
+		config.ScheduledWorkflowReady,
+		config.WorkflowControllerReady,
+	} {
+		cond := findCondition(conditions, ct)
+		require.NotNil(t, cond, "condition %s must be present", ct)
+		assert.Equal(t, metav1.ConditionUnknown, cond.Status, "condition %s with no prior state must stay Unknown", ct)
+	}
 }
 
 func TestValidateManagedPipelines_NilFetcher_SetsConditionDoesNotPanic(t *testing.T) {
 	dspa := testutil.CreateDSPAWithManagedPipelines("img:latest", []dspav1.ManagedPipeline{{Name: "p1"}}, nil)
-	dspa.Status.Conditions = make([]metav1.Condition, 11)
-	status := dspastatus.NewDSPAStatus(dspa)
+	status := newTestDSPAStatus(dspa)
 	reconciler := &DSPAReconciler{Log: ctrl.Log, ManifestFetcher: nil}
 
 	proceed, requeue, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
@@ -551,8 +597,7 @@ func TestValidateManagedPipelines_NilFetcher_SetsConditionDoesNotPanic(t *testin
 
 func TestValidateManagedPipelines_PermanentFetchError_BlocksDeployment(t *testing.T) {
 	dspa := testutil.CreateDSPAWithManagedPipelines("img:latest", []dspav1.ManagedPipeline{{Name: "p1"}}, nil)
-	dspa.Status.Conditions = make([]metav1.Condition, 11)
-	status := dspastatus.NewDSPAStatus(dspa)
+	status := newTestDSPAStatus(dspa)
 	reconciler := &DSPAReconciler{
 		Log:             ctrl.Log,
 		ManifestFetcher: &mockPipelineNamesFetcher{err: &permanentError{err: fmt.Errorf("managed-pipelines.json not found in image")}},
@@ -679,8 +724,7 @@ func TestObservedGeneration_SetOnNewConditions(t *testing.T) {
 
 func TestRegistryAllowlist_BlocksDisallowedRegistry(t *testing.T) {
 	dspa := testutil.CreateDSPAWithManagedPipelines("evil.registry.io/img:latest", []dspav1.ManagedPipeline{{Name: "p1"}}, nil)
-	dspa.Status.Conditions = make([]metav1.Condition, 11)
-	status := dspastatus.NewDSPAStatus(dspa)
+	status := newTestDSPAStatus(dspa)
 
 	fetcher := NewOCIManifestFetcher(ctrl.Log, []string{"quay.io", "registry.redhat.io"})
 	reconciler := &DSPAReconciler{Log: ctrl.Log, ManifestFetcher: fetcher}
