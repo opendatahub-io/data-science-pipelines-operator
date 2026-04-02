@@ -495,13 +495,6 @@ func (r *DSPAReconciler) validateManagedPipelines(
 		return true, false, nil
 	}
 
-	if r.ManifestFetcher == nil {
-		err := fmt.Errorf("manifest fetcher not initialized")
-		log.Error(err, "ManifestFetcher is nil; this is a controller wiring bug — managed pipeline validation skipped")
-		dspaStatus.SetManagedPipelineInvalid(err, config.ManagedPipelinesFetchError)
-		return true, false, nil
-	}
-
 	manifestNames, err := r.ManifestFetcher.FetchPipelineNames(ctx, mp.Image)
 	if err != nil {
 		var pe *permanentError
