@@ -730,7 +730,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 			}
 			p.ManagedPipelinesUploadTags = config.BuildManagedPipelinesUploadTags(p.PlatformVersion)
 			rawManagedPipelineImages := config.GetStringConfigWithDefault(config.ManagedPipelinesImagesConfigName, "{}")
-			managedImageEnvVars, err := ManagedPipelineImageEnvFromJSON(rawManagedPipelineImages)
+			managedImageEnvVars, err := ManagedPipelineImageEnvFromJSON(rawManagedPipelineImages, loggr)
 			if err != nil {
 				return err
 			}

@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+
+	"github.com/go-logr/logr"
 )
 
 // relatedImageEnvPrefix matches env vars forwarded to the managed-pipelines init
@@ -35,13 +37,13 @@ type ManagedPipelineImageEnvVar struct {
 
 // ManagedPipelineImageEnvFromJSON parses a JSON object and returns name/value entries
 // whose keys are RELATED_IMAGE_* env var names, sorted by name.
-func ManagedPipelineImageEnvFromJSON(raw string) ([]ManagedPipelineImageEnvVar, error) {
+func ManagedPipelineImageEnvFromJSON(raw string, log logr.Logger) ([]ManagedPipelineImageEnvVar, error) {
 	m := map[string]string{}
 	if err := json.Unmarshal([]byte(raw), &m); err != nil {
 		return nil, fmt.Errorf("invalid DSPO managed pipeline images JSON mapping: %w", err)
 	}
-	out := make([]ManagedPipelineImageEnvVar, 0, len(m))
-	for rawKey, value := range m {
+	cleaned := make(map[string]string, len(m))
+	for rawKey, rawValue := range m {
 		key := strings.TrimSpace(rawKey)
 		if !strings.HasPrefix(key, relatedImageEnvPrefix) {
 			return nil, fmt.Errorf("invalid env var name %q: must start with %q", key, relatedImageEnvPrefix)
@@ -49,10 +51,18 @@ func ManagedPipelineImageEnvFromJSON(raw string) ([]ManagedPipelineImageEnvVar, 
 		if len(key) == len(relatedImageEnvPrefix) || !isValidEnvVarName(key) {
 			return nil, fmt.Errorf("invalid env var name %q: must contain only [A-Z0-9_] and non-empty suffix", key)
 		}
-		value = strings.TrimSpace(value)
+		value := strings.TrimSpace(rawValue)
 		if value == "" {
 			return nil, fmt.Errorf("empty image value for env var %q", key)
 		}
+		if prev, exists := cleaned[key]; exists {
+			log.Info("duplicate env var key after whitespace trimming, last value wins",
+				"key", key, "previousValue", prev, "newValue", value)
+		}
+		cleaned[key] = value
+	}
+	out := make([]ManagedPipelineImageEnvVar, 0, len(cleaned))
+	for key, value := range cleaned {
 		out = append(out, ManagedPipelineImageEnvVar{Name: key, Value: value})
 	}
 	slices.SortFunc(out, func(a, b ManagedPipelineImageEnvVar) int {
