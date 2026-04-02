@@ -153,6 +153,13 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.MANAGEDPIPELINES
+  - name: MANAGEDPIPELINES_IMAGES
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.MANAGEDPIPELINES_IMAGES
   - name: ARGOWORKFLOWSCONTROLLERS
     objref:
       kind: ConfigMap

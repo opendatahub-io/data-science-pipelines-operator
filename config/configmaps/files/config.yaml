@@ -24,5 +24,6 @@ DSPO:
     ObjectStore:
       ConnectionTimeout: $(DSPO_HEALTHCHECK_OBJECTSTORE_CONNECTIONTIMEOUT)
   RequeueTime: $(DSPO_REQUEUE_TIME)
+  ManagedPipelinesImages: '$(MANAGEDPIPELINES_IMAGES)'
   PlatformVersion: $(PLATFORMVERSION)
   FIPSEnabled: $(FIPSENABLED)
