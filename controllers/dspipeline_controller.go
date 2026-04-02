@@ -379,9 +379,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			managedPipelinesRequeue = true
 		}
 		if !proceed {
-			// Keep APIServerReady aligned with the last reconciled deployment state
-			// when managed-pipeline validation blocks a new API server reconcile.
-			r.preserveAPIServerReadyCondition(dspa, dspaStatus)
+			r.preservePostValidationConditions(dspa, dspaStatus)
 			return ctrl.Result{}, nil
 		}
 
@@ -448,13 +446,30 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	return ctrl.Result{}, nil
 }
 
-func (r *DSPAReconciler) preserveAPIServerReadyCondition(
+// preservePostValidationConditions restores conditions for components that
+// are reconciled after managed-pipeline validation. When validation blocks
+// deployment (!proceed), these components are not re-evaluated, so their
+// conditions must be carried forward from the previous status to avoid
+// overwriting accurate state with Unknown.
+func (r *DSPAReconciler) preservePostValidationConditions(
 	dspa *dspav1.DataSciencePipelinesApplication,
 	dspaStatus dspastatus.DSPAStatus,
 ) {
-	prev := util.GetConditionByType(config.APIServerReady, dspa.Status.Conditions)
-	if prev.Type == config.APIServerReady {
-		dspaStatus.SetApiServerStatus(prev)
+	conditionSetters := []struct {
+		condType  string
+		setStatus func(metav1.Condition)
+	}{
+		{config.APIServerReady, dspaStatus.SetApiServerStatus},
+		{config.PersistenceAgentReady, dspaStatus.SetPersistenceAgentStatus},
+		{config.ScheduledWorkflowReady, dspaStatus.SetScheduledWorkflowStatus},
+		{config.WorkflowControllerReady, dspaStatus.SetWorkflowControllerStatus},
+		{config.MLMDProxyReady, dspaStatus.SetMLMDProxyStatus},
+	}
+	for _, cs := range conditionSetters {
+		prev := util.GetConditionByType(cs.condType, dspa.Status.Conditions)
+		if prev.Type == cs.condType {
+			cs.setStatus(prev)
+		}
 	}
 }
 
@@ -482,6 +497,7 @@ func (r *DSPAReconciler) validateManagedPipelines(
 
 	if r.ManifestFetcher == nil {
 		err := fmt.Errorf("manifest fetcher not initialized")
+		log.Error(err, "ManifestFetcher is nil; this is a controller wiring bug — managed pipeline validation skipped")
 		dspaStatus.SetManagedPipelineInvalid(err, config.ManagedPipelinesFetchError)
 		return true, false, nil
 	}
