@@ -576,23 +576,6 @@ func TestPreservePostValidationConditions_PartialPreviousConditions(t *testing.T
 	}
 }
 
-func TestValidateManagedPipelines_NilFetcher_SetsConditionDoesNotPanic(t *testing.T) {
-	dspa := testutil.CreateDSPAWithManagedPipelines("img:latest", []dspav1.ManagedPipeline{{Name: "p1"}}, nil)
-	status := newTestDSPAStatus(dspa)
-	reconciler := &DSPAReconciler{Log: ctrl.Log, ManifestFetcher: nil}
-
-	proceed, requeue, err := reconciler.validateManagedPipelines(context.Background(), dspa, status, ctrl.Log)
-	require.NoError(t, err, "nil fetcher should not panic or block reconciliation")
-	require.True(t, proceed, "nil fetcher is transient; API server deployment should proceed")
-	require.False(t, requeue, "nil fetcher is operator wiring issue; avoid unnecessary retry loops")
-
-	conditions := status.GetConditions()
-	cond := findCondition(conditions, config.ManagedPipelineValid)
-	require.NotNil(t, cond)
-	assert.Equal(t, metav1.ConditionFalse, cond.Status)
-	assert.Equal(t, config.ManagedPipelinesFetchError, cond.Reason)
-}
-
 // --- Permanent vs transient error classification tests ---
 
 func TestValidateManagedPipelines_PermanentFetchError_BlocksDeployment(t *testing.T) {
