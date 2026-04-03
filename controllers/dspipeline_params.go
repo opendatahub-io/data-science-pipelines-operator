@@ -41,6 +41,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	mlflowv1 "github.com/opendatahub-io/mlflow-operator/api/v1"
 )
 
 const MlmdIsRequired = "MLMD explicitly disabled in DSPA, but is a required component for DSP"
@@ -101,6 +103,8 @@ type DSPAParams struct {
 
 	APIServerServiceDNSName string
 	FIPSEnabled             bool
+	MLflow                  *dspa.MLflowConfig
+	APIServerPluginsJson    string
 
 	// Proxy configuration for all DSPA components
 	ProxyConfig *dspa.ProxyConfig
@@ -139,6 +143,27 @@ type ObjectStorageConnection struct {
 	AccessKeyID       string
 	SecretAccessKey   string
 	ExternalRouteURL  string
+}
+
+type PluginConfig struct {
+	Endpoint string               `json:"endpoint,omitempty" mapstructure:"endpoint"`
+	Timeout  string               `json:"timeout,omitempty" mapstructure:"timeout"`
+	TLS      TLSConfig            `json:"tls,omitempty" mapstructure:"tls"`
+	Settings MLflowPluginSettings `json:"settings,omitempty" mapstructure:"settings"`
+}
+
+type TLSConfig struct {
+	InsecureSkipVerify bool   `json:"insecureSkipVerify,omitempty" mapstructure:"insecureSkipVerify"`
+	CABundlePath       string `json:"caBundlePath,omitempty" mapstructure:"caBundlePath"`
+}
+
+// MLflowPluginSettings contains MLflow-specific settings to be marshalled into PluginConfig.Settings
+type MLflowPluginSettings struct {
+	WorkspacesEnabled     bool   `json:"workspacesEnabled,omitempty"`
+	ExperimentDescription string `json:"experimentDescription,omitempty"`
+	DefaultExperimentName string `json:"defaultExperimentName"`
+	KFPBaseURL            string `json:"kfpBaseURL,omitempty"`
+	InjectUserEnvVars     bool   `json:"injectUserEnvVars,omitempty"`
 }
 
 // UsingExternalDB will return true if an external Database is specified in the CR, otherwise false.
@@ -215,6 +240,25 @@ func (p *DSPAParams) RetrieveSecret(ctx context.Context, client client.Client, s
 		return "", err
 	}
 	return base64.StdEncoding.EncodeToString(secret.Data[secretKey]), nil
+}
+
+func (p *DSPAParams) RetrieveMLflowEndpoint(ctx context.Context, client client.Client, log logr.Logger) (string, error) {
+	mlflowName := "mlflow"
+	mlflow := &mlflowv1.MLflow{}
+	namespacedName := types.NamespacedName{
+		Name:      mlflowName,
+		Namespace: p.Namespace,
+	}
+	err := client.Get(ctx, namespacedName, mlflow)
+	if err != nil {
+		log.V(1).Info(fmt.Sprintf("Unable to retrieve mlflow resource [%s].", mlflowName))
+		return "", err
+	}
+	status := mlflow.Status
+	if status.Address != nil && status.Address.URL != "" {
+		return mlflow.Status.Address.URL, nil
+	}
+	return "", errors.New("MLflow resource missing Status.Address.URL field. Unable to resolve endpoint")
 }
 
 func (p *DSPAParams) RetrieveOrCreateSecret(ctx context.Context, client client.Client, secretName, secretKey string, generatedPasswordLength int, log logr.Logger) (string, error) {
@@ -703,6 +747,22 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		p.PodToPodTLS = *dsp.Spec.PodToPodTLS
 	}
 
+	if dsp.Spec.MLflow != nil {
+		defaultMode := dspa.AutoDetect
+		mlflowCfg := dspa.MLflowConfig{
+			IntegrationMode:   &defaultMode,
+			InjectUserEnvVars: dsp.Spec.MLflow.InjectUserEnvVars,
+		}
+
+		// Override default IntegrationMode if specified.
+		disabledMode := dspa.Disabled
+		if *dsp.Spec.MLflow.IntegrationMode == dspa.Disabled {
+			mlflowCfg.IntegrationMode = &disabledMode
+		}
+
+		p.MLflow = &mlflowCfg
+	}
+
 	p.ProxyConfig = dsp.Spec.Proxy
 
 	log := loggr.WithValues("namespace", p.Namespace).WithValues("dspa_name", p.Name)
@@ -728,6 +788,24 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		}
 
 		setResourcesDefault(config.APIServerResourceRequirements, &p.APIServer.Resources)
+
+		if p.MLflow != nil && *p.MLflow.IntegrationMode == dspa.AutoDetect {
+			// Retrieve internal MLflow service endpoint for use in API Server MLflow plugin config.
+			mlflowEndpoint, err := p.RetrieveMLflowEndpoint(ctx, client, log)
+			if err == nil {
+				apiServerExternalUrl, err := util.GetRouteHostname(ctx, p.APIServerServiceName, p.Namespace, client)
+				if err != nil {
+					log.Info("Unable to retrieve API server route for KFP base URL", "error", err)
+				}
+				pluginCfg, err := BuildMLflowPluginConfigJson(mlflowEndpoint, p.CustomCABundleRootMountPath, *p.MLflow.InjectUserEnvVars, apiServerExternalUrl)
+				if err != nil {
+					log.Info("Failed to build MLflow plugin config. MLflow API server plugin will not be enabled.")
+				}
+				p.APIServerPluginsJson = pluginCfg
+			} else {
+				log.Error(err, "failed to retrieve MLflow internal endpoint. MLflow API server plugin will not be enabled.")
+			}
+		}
 
 		if p.APIServer.CustomServerConfig == nil {
 			p.APIServer.CustomServerConfig = &dspa.ScriptConfigMap{
@@ -976,4 +1054,29 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.SetupOwner(dsp)
 
 	return nil
+}
+
+func BuildMLflowPluginConfigJson(mlflowEndpoint string, caBundlePath string, injectUserEnvVars bool, kfpBaseURL string) (string, error) {
+	settings := MLflowPluginSettings{
+		WorkspacesEnabled:     true,
+		ExperimentDescription: "Created by AI Pipelines.",
+		DefaultExperimentName: "AIP-default",
+		KFPBaseURL:            kfpBaseURL,
+		InjectUserEnvVars:     injectUserEnvVars,
+	}
+
+	pluginCfgJson, err := json.Marshal(
+		PluginConfig{
+			Endpoint: mlflowEndpoint,
+			Timeout:  "30s",
+			TLS: TLSConfig{
+				InsecureSkipVerify: false,
+				CABundlePath:       caBundlePath,
+			},
+			Settings: settings,
+		})
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal MLflow plugin config: %w", err)
+	}
+	return string(pluginCfgJson), nil
 }

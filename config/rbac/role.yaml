@@ -184,6 +184,23 @@ rules:
   verbs:
   - '*'
 - apiGroups:
+  - mlflow.kubeflow.org
+  resources:
+  - experiments
+  verbs:
+  - create
+  - get
+  - list
+- apiGroups:
+  - mlflow.kubeflow.org
+  resources:
+  - runs
+  verbs:
+  - create
+  - get
+  - list
+  - update
+- apiGroups:
   - monitoring.coreos.com
   resources:
   - servicemonitors

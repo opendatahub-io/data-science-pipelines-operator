@@ -42,7 +42,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/discovery"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -56,6 +58,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	//+kubebuilder:scaffold:imports
+	mlflowv1 "github.com/opendatahub-io/mlflow-operator/api/v1"
 )
 
 var (
@@ -110,6 +113,7 @@ func init() {
 	utilruntime.Must(routev1.AddToScheme(scheme))
 
 	utilruntime.Must(dspav1.AddToScheme(scheme))
+	utilruntime.Must(mlflowv1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 
 	controllers.InitMetrics()
@@ -149,6 +153,15 @@ func initConfig(configPath string) error {
 	})
 
 	return nil
+}
+
+func isCRDAvailable(cfg *rest.Config, groupVersion string) bool {
+	dc, err := discovery.NewDiscoveryClientForConfig(cfg)
+	if err != nil {
+		return false
+	}
+	_, err = dc.ServerResourcesForGroupVersion(groupVersion)
+	return err == nil
 }
 
 func main() {
@@ -205,7 +218,9 @@ func main() {
 	dspSelector := labels.NewSelector().Add(*dspLabelReq)
 	dspFilter := cache.ByObject{Label: dspSelector}
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	restCfg := ctrl.GetConfigOrDie()
+
+	mgrOpts := ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
 			BindAddress: metricsAddr,
@@ -259,7 +274,18 @@ func main() {
 				},
 			},
 		},
-	})
+	}
+
+	if isCRDAvailable(restCfg, mlflowv1.GroupVersion.String()) {
+		mlflowSyncPeriod := 5 * time.Minute
+		mgrOpts.Cache.ByObject[&mlflowv1.MLflow{}] = cache.ByObject{SyncPeriod: &mlflowSyncPeriod}
+		setupLog.Info("MLflow CRD detected, caching MLflow resources", "syncPeriod", mlflowSyncPeriod)
+	} else {
+		mgrOpts.Client.Cache.DisableFor = append(mgrOpts.Client.Cache.DisableFor, &mlflowv1.MLflow{})
+		setupLog.Info("MLflow CRD not found, MLflow cache disabled")
+	}
+
+	mgr, err := ctrl.NewManager(restCfg, mgrOpts)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)

@@ -141,3 +141,21 @@ rules:
       - list
       - patch
       - delete
+  - apiGroups:
+      - mlflow.kubeflow.org
+    resources:
+      - experiments
+    verbs:
+      - create
+      - get
+      - list
+  - apiGroups:
+      - mlflow.kubeflow.org
+    resources:
+      - runs
+    verbs:
+      - create
+      - get
+      - update
+      - list
+
