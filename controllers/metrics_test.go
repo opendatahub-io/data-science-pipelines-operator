@@ -30,9 +30,22 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// resetGlobalDSPAMetricsForTests clears all label sets on shared Prometheus gauges.
+// Earlier tests in this package call Reconcile/PublishMetrics and leave time series in
+// the process-global registry; tests that use CollectAndCount must start from a clean slate.
+func resetGlobalDSPAMetricsForTests(t *testing.T) {
+	t.Helper()
+	for _, m := range allDSPAMetrics {
+		m.Reset()
+	}
+	ManagedPipelineValidMetric.Reset()
+}
+
 // TestDeleteMetrics verifies that DeleteMetrics removes all metric time series
 // for a given DSPA instance from the registry.
 func TestDeleteMetrics(t *testing.T) {
+	resetGlobalDSPAMetricsForTests(t)
+
 	testDSPAName := "test-dspa"
 	testNamespace := "test-namespace"
 
@@ -73,6 +86,8 @@ func TestDeleteMetrics_EmptyValues(t *testing.T) {
 // TestDeleteMetrics_MultipleInstances verifies that DeleteMetrics only removes
 // metrics for the specified DSPA instance and preserves other instances.
 func TestDeleteMetrics_MultipleInstances(t *testing.T) {
+	resetGlobalDSPAMetricsForTests(t)
+
 	dspa1Name := "dspa-instance-1"
 	dspa1Namespace := "namespace-1"
 	dspa2Name := "dspa-instance-2"
@@ -102,6 +117,8 @@ func TestDeleteMetrics_MultipleInstances(t *testing.T) {
 // TestCleanUpResources_DeletesMetrics verifies that cleanUpResources calls
 // DeleteMetrics during DSPA finalization by checking that metrics are removed.
 func TestCleanUpResources_DeletesMetrics(t *testing.T) {
+	resetGlobalDSPAMetricsForTests(t)
+
 	testName := "cleanup-test-dspa"
 	testNamespace := "cleanup-test-ns"
 
