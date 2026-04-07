@@ -17,7 +17,7 @@ spec:
   template:
     metadata:
       annotations:
-        configHash: e005216cc98fb5929c7777d39e4008f0f407502a699a359082d7acdb0e200713
+        configHash: 650f2b104160c90456c3e8c8f51c73f82f8bd5567b21e4b6d01b6bf67cbc1da9
       labels:
         dsp-version: v2
         app: ds-pipeline-testdsp2

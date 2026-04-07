@@ -80,15 +80,16 @@ type ManagedPipeline struct {
 	Name string `json:"name"`
 }
 
-// ManagedPipelinesSpec configures the init container. Image contract: volume at /config/managed-pipelines;
-// env PIPELINE_NAMES (comma-separated pipeline name keys; each name must match Name pattern) or ALL_PIPELINES=true; MANAGED_PIPELINES_UPLOAD_TAGS (comma-separated key=value: managed=true and rhoai-version from DSPO platform version).
-// The same MANAGED_PIPELINES_UPLOAD_TAGS value is set on the ds-pipeline-api-server container for DSP apiserver use.
-// Init must apply those tags to both Pipeline and PipelineVersion on create/upload (same tag set on each resource unless the image implements finer rules).
-// Image writes <name>.yaml per pipeline and copies managed-pipelines.json into the volume.
+// ManagedPipelinesSpec configures the init-managed-pipelines container (pipelines-components bundle).
+// Init contract: shared volume at /config/managed-pipelines; env PIPELINE_NAMES (comma-separated keys matching Name pattern) or ALL_PIPELINES=true;
+// MANAGED_PIPELINES_UPLOAD_TAGS (managed=true and rhoai-version from DSPO platform version). The same tag env is set on the ds-pipeline-api-server container.
+// Init writes <name>.yaml per pipeline and managed-pipelines.json on the volume.
 type ManagedPipelinesSpec struct {
-	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:MinLength=1
-	Image string `json:"image"`
+	// Container image for the init-managed-pipelines step (pipelines-components). Optional: when omitted, empty (""), or whitespace-only, DSPO uses operator config Images.PipelinesComponents
+	// (populated from IMAGES_PIPELINES_COMPONENTS in params.env / dspo-config). Set explicitly only to override the operator default for this DSPA.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=1024
+	Image string `json:"image,omitempty"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:MinItems=1
 	Pipelines []ManagedPipeline `json:"pipelines,omitempty"`

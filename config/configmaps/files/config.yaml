@@ -10,6 +10,7 @@ Images:
   DriverImage: $(IMAGES_DRIVER)
   KubeRBACProxy: $(kube-rbac-proxy)
   MariaDB: $(IMAGES_MARIADB)
+  PipelinesComponents: $(IMAGES_PIPELINES_COMPONENTS)
 ManagedPipelinesMetadata:
   Iris:
     Name: "[Demo] iris-training"
