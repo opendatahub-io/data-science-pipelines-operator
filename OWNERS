@@ -1,22 +1,19 @@
 approvers:
-  - anishasthana
-  - DharmitD
   - dsp-developers
   - gmfrasca
   - hbelmiro
   - HumairAK
-  - rimolive
   - mprahl
   - alyssacgoins
+  - nsingla
 reviewers:
-  - DharmitD
   - gmfrasca
   - hbelmiro
   - HumairAK
-  - rimolive
   - VaniHaripriya
   - mprahl
   - alyssacgoins
+  - nsingla
+  - sduvvuri1603
 emeritus_approvers:
   - accorvin
-  - harshad16

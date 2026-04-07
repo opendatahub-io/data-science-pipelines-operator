@@ -102,6 +102,13 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.IMAGES_ARGO_WORKFLOWCONTROLLER
+  - name: IMAGES_PIPELINES_COMPONENTS
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.IMAGES_PIPELINES_COMPONENTS
 
   # DSPO level configs
   - name: ZAP_LOG_LEVEL
@@ -153,6 +160,13 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.MANAGEDPIPELINES
+  - name: MANAGEDPIPELINES_IMAGES
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.MANAGEDPIPELINES_IMAGES
   - name: ARGOWORKFLOWSCONTROLLERS
     objref:
       kind: ConfigMap

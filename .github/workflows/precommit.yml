@@ -1,26 +1,37 @@
 name: Pre-commit
 on:
+  push:
+    branches:
+      - main
+      - stable
+      - v*.*.*
   pull_request:
 jobs:
   precommit:
     runs-on: ubuntu-latest
-    container:
-      image: quay.io/opendatahub/pre-commit-go-toolchain:v0.5
-      env:
-        XDG_CACHE_HOME: /cache
-        GOCACHE: /cache/go-build
-        GOMODCACHE: /cache/go-mod
-        PRE_COMMIT_HOME: /cache/pre-commit
-      volumes:
-        - /cache
+    env:
+      PRE_COMMIT_HOME: ~/.cache/pre-commit
     steps:
       - uses: actions/checkout@v3
-      - name: Activate cache
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Install golangci-lint
+        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+      - name: Activate pre-commit cache
         uses: actions/cache@v4
         with:
-          path: /cache
-          key: ${{ runner.os }}-cache-${{ hashFiles('**/go.sum', '.pre-commit-config.yaml') }}
+          path: ~/.cache/pre-commit
+          key: ${{ runner.os }}-pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
       - name: Mark source directory as safe
         run: git config --global --add safe.directory $GITHUB_WORKSPACE
+      - name: Install pre-commit
+        run: python -m pip install --upgrade pip pre-commit
       - name: Run pre-commit checks
         run: pre-commit run --all-files

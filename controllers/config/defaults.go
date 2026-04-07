@@ -19,6 +19,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -28,8 +29,10 @@ import (
 )
 
 const (
-	DSPV2VersionString = "v2"
-	DSPVersionk8sLabel = "dsp-version"
+	DSPV2VersionString        = "v2"
+	DSPVersionk8sLabel        = "dsp-version"
+	DSPComponentk8sLabel      = "component"
+	DSPComponentk8sLabelValue = "data-science-pipelines"
 )
 
 var SupportedDSPVersions = []string{DSPV2VersionString}
@@ -84,7 +87,23 @@ const (
 	GeneratedObjectStorageSecretKeyLength = 24
 
 	MlmdGrpcPort = "8080"
+
+	// DefaultManagedPipelinesVolumeSizeLimit is the default emptyDir sizeLimit for the managed-pipelines volume.
+	DefaultManagedPipelinesVolumeSizeLimit = "1024Mi"
+
+	// ManagedPipelinesUploadTagManaged is the fixed managed=true pair for MANAGED_PIPELINES_UPLOAD_TAGS.
+	ManagedPipelinesUploadTagManaged = "managed=true"
 )
+
+// ResolvedPlatformVersion returns DSPO.PlatformVersion from operator config with default and surrounding quotes trimmed.
+func ResolvedPlatformVersion() string {
+	return strings.Trim(GetStringConfigWithDefault("DSPO.PlatformVersion", DefaultPlatformVersion), "\"")
+}
+
+// BuildManagedPipelinesUploadTags returns MANAGED_PIPELINES_UPLOAD_TAGS: managed=true plus rhoai-version for the given resolved version string.
+func BuildManagedPipelinesUploadTags(platformVersion string) string {
+	return fmt.Sprintf("%s,rhoai-version=%s", ManagedPipelinesUploadTagManaged, platformVersion)
+}
 
 // DSPO Config File Paths
 const (
@@ -100,6 +119,7 @@ const (
 	ArgoWorkflowControllerImagePath = "Images.ArgoWorkflowController"
 	MariaDBImagePath                = "Images.MariaDB"
 	KubeRBACProxyImagePath          = "Images.KubeRBACProxy"
+	PipelinesComponentsImagePath    = "Images.PipelinesComponents"
 
 	// Other configs
 	ObjStoreConnectionTimeoutConfigName      = "DSPO.HealthCheck.ObjectStore.ConnectionTimeout"
@@ -107,6 +127,7 @@ const (
 	RequeueTimeConfigName                    = "DSPO.RequeueTime"
 	ApiServerIncludeOwnerReferenceConfigName = "DSPO.ApiServer.IncludeOwnerReference"
 	FIPSEnabledConfigName                    = "DSPO.FIPSEnabled"
+	ManagedPipelinesImagesConfigName         = "DSPO.ManagedPipelinesImages"
 )
 
 // DSPA Status Condition Types
@@ -119,6 +140,7 @@ const (
 	WorkflowControllerReady = "WorkflowControllerReady"
 	MLMDProxyReady          = "MLMDProxyReady"
 	WebhookReady            = "WebhookReady"
+	ManagedPipelineValid    = "ManagedPipelineValid"
 	CrReady                 = "Ready"
 )
 
@@ -133,6 +155,8 @@ const (
 	Deploying                   = "Deploying"
 	ComponentDeploymentNotFound = "ComponentDeploymentNotFound"
 	UnsupportedVersion          = "UnsupportedVersion"
+	ManagedPipelineInvalid      = "ManagedPipelineInvalid"
+	ManagedPipelinesFetchError  = "ManagedPipelinesFetchError"
 )
 
 // Any required Configmap paths can be added here,
@@ -173,14 +197,15 @@ func GetConfigRequiredFields() []string {
 
 // Default ResourceRequirements
 var (
-	APIServerResourceRequirements          = createResourceRequirement(resource.MustParse("250m"), resource.MustParse("500Mi"), resource.MustParse("500m"), resource.MustParse("1Gi"))
-	PersistenceAgentResourceRequirements   = createResourceRequirement(resource.MustParse("120m"), resource.MustParse("500Mi"), resource.MustParse("250m"), resource.MustParse("1Gi"))
-	ScheduledWorkflowResourceRequirements  = createResourceRequirement(resource.MustParse("120m"), resource.MustParse("100Mi"), resource.MustParse("250m"), resource.MustParse("250Mi"))
-	WorkflowControllerResourceRequirements = createResourceRequirement(resource.MustParse("120m"), resource.MustParse("500Mi"), resource.MustParse("250m"), resource.MustParse("1Gi"))
-	MariaDBResourceRequirements            = createResourceRequirement(resource.MustParse("300m"), resource.MustParse("800Mi"), resource.MustParse("1"), resource.MustParse("1Gi"))
-	MinioResourceRequirements              = createResourceRequirement(resource.MustParse("200m"), resource.MustParse("100Mi"), resource.MustParse("250m"), resource.MustParse("1Gi"))
-	MlmdEnvoyResourceRequirements          = createResourceRequirement(resource.MustParse("100m"), resource.MustParse("256Mi"), resource.MustParse("100m"), resource.MustParse("256Mi"))
-	MlmdGRPCResourceRequirements           = createResourceRequirement(resource.MustParse("100m"), resource.MustParse("256Mi"), resource.MustParse("100m"), resource.MustParse("256Mi"))
+	APIServerResourceRequirements            = createResourceRequirement(resource.MustParse("250m"), resource.MustParse("500Mi"), resource.MustParse("500m"), resource.MustParse("1Gi"))
+	PersistenceAgentResourceRequirements     = createResourceRequirement(resource.MustParse("120m"), resource.MustParse("500Mi"), resource.MustParse("250m"), resource.MustParse("1Gi"))
+	ScheduledWorkflowResourceRequirements    = createResourceRequirement(resource.MustParse("120m"), resource.MustParse("100Mi"), resource.MustParse("250m"), resource.MustParse("250Mi"))
+	WorkflowControllerResourceRequirements   = createResourceRequirement(resource.MustParse("120m"), resource.MustParse("500Mi"), resource.MustParse("250m"), resource.MustParse("1Gi"))
+	MariaDBResourceRequirements              = createResourceRequirement(resource.MustParse("300m"), resource.MustParse("800Mi"), resource.MustParse("1"), resource.MustParse("1Gi"))
+	MinioResourceRequirements                = createResourceRequirement(resource.MustParse("200m"), resource.MustParse("100Mi"), resource.MustParse("250m"), resource.MustParse("1Gi"))
+	MlmdEnvoyResourceRequirements            = createResourceRequirement(resource.MustParse("100m"), resource.MustParse("256Mi"), resource.MustParse("100m"), resource.MustParse("256Mi"))
+	MlmdGRPCResourceRequirements             = createResourceRequirement(resource.MustParse("100m"), resource.MustParse("256Mi"), resource.MustParse("100m"), resource.MustParse("256Mi"))
+	ManagedPipelinesInitResourceRequirements = createResourceRequirement(resource.MustParse("250m"), resource.MustParse("500Mi"), resource.MustParse("500m"), resource.MustParse("1Gi"))
 )
 
 type DBExtraParams map[string]string

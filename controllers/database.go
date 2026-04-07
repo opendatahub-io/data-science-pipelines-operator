@@ -31,7 +31,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-sql-driver/mysql"
-	_ "github.com/go-sql-driver/mysql"
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"k8s.io/apimachinery/pkg/util/json"
@@ -192,7 +191,7 @@ func (r *DSPAReconciler) isDatabaseAccessible(dsp *dspav1.DataSciencePipelinesAp
 	usingExternalDB := params.UsingExternalDB(dsp)
 	usingMariaDB := !databaseSpecified || dsp.Spec.Database.MariaDB != nil
 	if !usingMariaDB && !usingExternalDB {
-		errorMessage := "Could not connect to Database: Unsupported Type"
+		errorMessage := "could not connect to database: unsupported type"
 		log.Info(errorMessage)
 		return false, errors.New(errorMessage)
 	}

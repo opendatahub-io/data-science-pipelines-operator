@@ -17,7 +17,7 @@ spec:
   template:
     metadata:
       annotations:
-        configHash: 9a8b56f5098a0d91d9db76d9c8b48e9872c0dbe71bcdc7f08f2c05bfe26c787f
+        configHash: 9e958a8ff6c224354458f1f38abf74b2e3ae5a85336ab1459930db6ab0c31528
       labels:
         dsp-version: v2
         app: ds-pipeline-testdsp5
@@ -47,8 +47,14 @@ spec:
               value: testcabundleconfigmapkey5.crt
             - name: ARTIFACT_COPY_STEP_CABUNDLE_MOUNTPATH
               value: /dsp-custom-certs
+            - name: CABUNDLE_CONFIGMAP_NAME
+              value: dsp-trusted-ca-testdsp5
+            - name: CABUNDLE_KEY_NAME
+              value: testcabundleconfigmapkey5.crt
             - name: SSL_CERT_DIR
               value: "/dsp-custom-certs:/etc/ssl/certs:/etc/pki/tls/certs"
+            - name: ML_PIPELINE_SERVICE_NAME
+              value: "ds-pipeline-testdsp5"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_HOST
               value: "ds-pipeline-visualizationserver"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
@@ -93,10 +99,10 @@ spec:
               value: "8887"
             - name: SIGNED_URL_EXPIRY_TIME_SECONDS
               value: "60"
-            - name: ML_PIPELINE_TLS_ENABLED
-              value: "true"
             - name: METADATA_TLS_ENABLED
               value: "true"
+            - name: METADATA_SERVICE_NAME
+              value: "ds-pipeline-metadata-grpc-testdsp5"
             - name: EXECUTIONTYPE
               value: Workflow
             - name: DB_DRIVER_NAME

@@ -1,5 +1,10 @@
 name: Unit Tests
 on:
+  push:
+    branches:
+      - main
+      - stable
+      - v*.*.*
   pull_request:
 jobs:
   unittest:

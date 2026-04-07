@@ -17,6 +17,7 @@ limitations under the License.
 package controllers
 
 import (
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/prometheus/client_golang/prometheus"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
@@ -93,6 +94,17 @@ var (
 			"dspa_namespace",
 		},
 	)
+	ManagedPipelineValidMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "data_science_pipelines_application_managed_pipeline_valid",
+			Help: "Data Science Pipelines Application - Managed Pipeline validation state by reason (one-hot: active reason=1, others=0)",
+		},
+		[]string{
+			"dspa_name",
+			"dspa_namespace",
+			"reason",
+		},
+	)
 	CrReadyMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "data_science_pipelines_application_ready",
@@ -103,16 +115,67 @@ var (
 			"dspa_namespace",
 		},
 	)
-)
 
-// InitMetrics initialize prometheus metrics
-func InitMetrics() {
-	metrics.Registry.MustRegister(DBAvailableMetric,
+	// allDSPAMetrics tracks the two-label DSPA gauges
+	// (dspa_name, dspa_namespace). ManagedPipelineValidMetric is handled
+	// separately because it has an extra "reason" label and one-hot semantics.
+	allDSPAMetrics = []*prometheus.GaugeVec{
+		DBAvailableMetric,
 		ObjectStoreAvailableMetric,
 		APIServerReadyMetric,
 		PersistenceAgentReadyMetric,
 		ScheduledWorkflowReadyMetric,
 		WorkflowControllerReadyMetric,
 		MLMDProxyReadyMetric,
-		CrReadyMetric)
+		CrReadyMetric,
+	}
+
+	managedPipelineValidationReasons = []string{
+		config.ManagedPipelineValid,
+		config.ManagedPipelineInvalid,
+		config.ManagedPipelinesFetchError,
+		"NotApplicable",
+		"Unknown",
+		"Other",
+	}
+)
+
+// InitMetrics registers all DSPA prometheus metrics.
+func InitMetrics() {
+	for _, m := range allDSPAMetrics {
+		metrics.Registry.MustRegister(m)
+	}
+	metrics.Registry.MustRegister(ManagedPipelineValidMetric)
+}
+
+// DeleteMetrics removes all metric label values for a specific DSPA instance.
+// This is called during DSPA finalization to prevent stale metrics from
+// persisting in Prometheus after the DSPA has been deleted.
+func DeleteMetrics(dspaName, dspaNamespace string) {
+	for _, m := range allDSPAMetrics {
+		m.DeleteLabelValues(dspaName, dspaNamespace)
+	}
+	for _, reason := range managedPipelineValidationReasons {
+		ManagedPipelineValidMetric.DeleteLabelValues(dspaName, dspaNamespace, reason)
+	}
+}
+
+func setManagedPipelineValidMetricByReason(dspaName, dspaNamespace, reason string) {
+	activeReason := normalizeManagedPipelineValidationReason(reason)
+	for _, r := range managedPipelineValidationReasons {
+		value := 0.0
+		if r == activeReason {
+			value = 1
+		}
+		ManagedPipelineValidMetric.WithLabelValues(dspaName, dspaNamespace, r).Set(value)
+	}
+}
+
+func normalizeManagedPipelineValidationReason(reason string) string {
+	for _, r := range managedPipelineValidationReasons {
+		if reason == r && r != "Other" {
+			return reason
+		}
+	}
+	return "Other"
 }
