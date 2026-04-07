@@ -87,8 +87,11 @@ Images:
   MoveResultsImage: busybox:test4
   MariaDB: mariadb:test4
   Minio: minio:test4
+  PipelinesComponents: odh-pipelines-components:test4
 ```
 In `controllers/testdata/declarative/case_4/config.yaml`
+
+**Managed pipelines:** If the DSPA under test sets `spec.apiServer.managedPipelines` **without** `image`, the case `config.yaml` must include `Images.PipelinesComponents` (mirroring `IMAGES_PIPELINES_COMPONENTS` / `dspo-config`) or reconciliation will fail with a clear configuration error. Cases that set `managedPipelines.image` explicitly can omit it. The case_2 `apiserver_deployment` golden `configHash` reflects resolved `params` (including defaulted init resources); expect to refresh it if managed-pipelines defaults change.
 
 Then run the tests by running: 
 

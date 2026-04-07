@@ -17,13 +17,40 @@ spec:
   template:
     metadata:
       annotations:
-        configHash: dc6461be9ead393cdabbefaa0db94b1788b655dabeb411b7dd33454a215bc527
+        configHash: 650f2b104160c90456c3e8c8f51c73f82f8bd5567b21e4b6d01b6bf67cbc1da9
       labels:
         dsp-version: v2
         app: ds-pipeline-testdsp2
         component: data-science-pipelines
         dspa: testdsp2
     spec:
+      initContainers:
+        - name: init-managed-pipelines
+          image: pipelines-components:test2
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          env:
+            - name: ALL_PIPELINES
+              value: "true"
+            - name: MANAGED_PIPELINES_UPLOAD_TAGS
+              value: "managed=true,rhoai-version=v1.2.3"
+          volumeMounts:
+            - name: managed-pipelines
+              mountPath: /config/managed-pipelines
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
       containers:
         - env:
             - name: POD_NAMESPACE
@@ -41,6 +68,8 @@ spec:
               value: "mariadb-testdsp2.default.svc.cluster.local"
             - name: DBCONFIG_PORT
               value: "3306"
+            - name: ML_PIPELINE_SERVICE_NAME
+              value: "ds-pipeline-testdsp2"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_HOST
               value: "ds-pipeline-visualizationserver"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
@@ -106,6 +135,10 @@ spec:
               value: "launcher-v2-fips"
             - name: CACHEENABLED
               value: "false"
+            - name: COMPILED_PIPELINE_SPEC_PATCH
+              value: '{"ttlStrategy":{"secondsAfterCompletion":3600}}'
+            - name: MANAGED_PIPELINES_UPLOAD_TAGS
+              value: "managed=true,rhoai-version=v1.2.3"
           image: api-server:test2
           # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
           name: ds-pipeline-api-server
@@ -161,6 +194,8 @@ spec:
               subPath: sample_config.json
             - mountPath: /samples/
               name: sample-pipeline
+            - name: managed-pipelines
+              mountPath: /config/managed-pipelines
         - name: kube-rbac-proxy
           args:
             - --secure-listen-address=0.0.0.0:8443
@@ -231,4 +266,7 @@ spec:
             defaultMode: 420
             name: sample-pipeline-testdsp2
           name: sample-pipeline
+        - name: managed-pipelines
+          emptyDir:
+            sizeLimit: "1024Mi"
       serviceAccountName: ds-pipeline-testdsp2

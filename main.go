@@ -35,8 +35,12 @@ import (
 	imagev1 "github.com/openshift/api/image/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	"go.uber.org/zap/zapcore"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/selection"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 
@@ -49,6 +53,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -56,6 +62,46 @@ var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
 )
+
+// stripManagedFields removes managed fields from cached objects to reduce memory.
+func stripManagedFields(i interface{}) (interface{}, error) {
+	if obj, ok := i.(client.Object); ok {
+		obj.SetManagedFields(nil)
+	}
+	return i, nil
+}
+
+// stripConfigMapData removes data payloads and managed fields from cached ConfigMaps.
+// ConfigMap data is read via direct API calls (DisableFor) when needed.
+// Note: SetManagedFields is called here because DefaultTransform does not apply
+// to types that have a per-type Transform override in ByObject.
+func stripConfigMapData(i interface{}) (interface{}, error) {
+	if cm, ok := i.(*corev1.ConfigMap); ok {
+		cm.Data = nil
+		cm.BinaryData = nil
+		if cm.Annotations != nil {
+			delete(cm.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
+		}
+		cm.SetManagedFields(nil)
+	}
+	return i, nil
+}
+
+// stripSecretData removes data payloads and managed fields from cached Secrets.
+// Secret data is read via direct API calls (DisableFor) when needed.
+// Note: SetManagedFields is called here because DefaultTransform does not apply
+// to types that have a per-type Transform override in ByObject.
+func stripSecretData(i interface{}) (interface{}, error) {
+	if s, ok := i.(*corev1.Secret); ok {
+		s.Data = nil
+		s.StringData = nil
+		if s.Annotations != nil {
+			delete(s.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
+		}
+		s.SetManagedFields(nil)
+	}
+	return i, nil
+}
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
@@ -75,6 +121,11 @@ func initConfig(configPath string) error {
 	viper.SetEnvKeyReplacer(replacer)
 	// Check for an environment variable any time a viper.Get request is made.
 	viper.AutomaticEnv()
+	// BindEnv: AutomaticEnv+replacer maps Images.PipelinesComponents to IMAGES_PIPELINESCOMPONENTS
+	// (no underscores between words), not IMAGES_PIPELINES_COMPONENTS; bind explicitly to match params.env.
+	if err := viper.BindEnv("Images.PipelinesComponents", "IMAGES_PIPELINES_COMPONENTS"); err != nil {
+		return err
+	}
 	// Treat empty environment variables as set
 	viper.AllowEmptyEnv(true)
 
@@ -146,10 +197,25 @@ func main() {
 
 	webhookConfigName := "pipelineversions.pipelines.kubeflow.org"
 
+	// Build label selector for operator-managed resources using the dsp-version
+	// label that is applied to all resources created through manifestival templates.
+	// INVARIANT: every operator-managed child resource (Service, ServiceAccount,
+	// PVC, Role, RoleBinding, Route) is created via manifestival with
+	// AddLabelTransformer, so they always carry dsp-version. Do not introduce
+	// bare r.Get/r.List on filtered types for resources outside this path.
+	dspLabelReq, err := labels.NewRequirement(config.DSPVersionk8sLabel, selection.Exists, nil)
+	if err != nil {
+		panic("failed to create label requirement: " + err.Error())
+	}
+	dspSelector := labels.NewSelector().Add(*dspLabelReq)
+	dspFilter := cache.ByObject{Label: dspSelector}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
+		Scheme: scheme,
+		Metrics: metricsserver.Options{
+			BindAddress: metricsAddr,
+		},
+		WebhookServer:          webhook.NewServer(webhook.Options{Port: 9443}),
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "f9eb95d5.opendatahub.io",
@@ -157,6 +223,7 @@ func main() {
 		RenewDeadline:          &renewDeadline,
 		RetryPeriod:            &retryPeriod,
 		Cache: cache.Options{
+			DefaultTransform: stripManagedFields,
 			ByObject: map[client.Object]cache.ByObject{
 				// Limit the watches to only the pipelineversions.pipelines.kubeflow.org webhooks.
 				&admv1.ValidatingWebhookConfiguration{}: {
@@ -164,6 +231,36 @@ func main() {
 				},
 				&admv1.MutatingWebhookConfiguration{}: {
 					Field: fields.SelectorFromSet(fields.Set{"metadata.name": webhookConfigName}),
+				},
+				// Restrict cache to operator-managed resources only.
+				// Note: Deployment is intentionally NOT filtered because the
+				// operator looks up its own Deployment (which lacks the
+				// dsp-version label) during webhook reconciliation.
+				&corev1.Service{}:               dspFilter,
+				&corev1.ServiceAccount{}:        dspFilter,
+				&corev1.PersistentVolumeClaim{}: dspFilter,
+				&rbacv1.Role{}:                  dspFilter,
+				&rbacv1.RoleBinding{}:           dspFilter,
+				&routev1.Route{}:                dspFilter,
+				// Pod is watched via WatchesRawSource with a handler that filters
+				// by component=data-science-pipelines label, so we can scope the
+				// informer to only cache pods with that label.
+				&corev1.Pod{}: {Label: labels.SelectorFromSet(labels.Set{config.DSPComponentk8sLabel: config.DSPComponentk8sLabelValue})},
+				// ConfigMap and Secret are also watched for external resources
+				// (odh-trusted-ca-bundle, service-ca secrets) that lack the dsp-version
+				// label. Strip data payloads instead of filtering by label so the
+				// informer still detects changes to those external resources.
+				&corev1.ConfigMap{}: {Transform: stripConfigMapData},
+				&corev1.Secret{}:    {Transform: stripSecretData},
+			},
+		},
+		// ConfigMap and Secret client reads bypass the cache entirely for
+		// direct API reads, since the cache strips data payloads.
+		Client: client.Options{
+			Cache: &client.CacheOptions{
+				DisableFor: []client.Object{
+					&corev1.ConfigMap{},
+					&corev1.Secret{},
 				},
 			},
 		},
@@ -174,12 +271,23 @@ func main() {
 	}
 
 	webhookAnnotations := map[string]string{}
+	var allowedRegistries []string
 
 	if os.Getenv("WEBHOOK_ANNOTATIONS") != "" {
 		err := json.Unmarshal([]byte(os.Getenv("WEBHOOK_ANNOTATIONS")), &webhookAnnotations)
 		if err != nil {
 			setupLog.Error(err, "the WEBHOOK_ANNOTATIONS environment variable is not a valid JSON object")
 			os.Exit(1)
+		}
+	}
+
+	// Optional allowlist for managed-pipelines OCI images. When unset/empty,
+	// all registries are allowed to preserve existing operator behavior.
+	if rawAllowed := os.Getenv("MANAGED_PIPELINES_ALLOWED_REGISTRIES"); rawAllowed != "" {
+		for _, registry := range strings.Split(rawAllowed, ",") {
+			if trimmed := strings.TrimSpace(registry); trimmed != "" {
+				allowedRegistries = append(allowedRegistries, trimmed)
+			}
 		}
 	}
 
@@ -190,6 +298,7 @@ func main() {
 		TemplatesPath:           "config/internal/",
 		MaxConcurrentReconciles: maxConcurrentReconciles,
 		WebhookAnnotations:      webhookAnnotations,
+		AllowedRegistries:       allowedRegistries,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DSPAParams")
 		os.Exit(1)

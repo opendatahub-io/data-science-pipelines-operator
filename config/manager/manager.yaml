@@ -59,12 +59,16 @@ spec:
             value: $(kube-rbac-proxy)
           - name: IMAGES_MARIADB
             value: $(IMAGES_MARIADB)
+          - name: IMAGES_PIPELINES_COMPONENTS
+            value: $(IMAGES_PIPELINES_COMPONENTS)
           - name: ZAP_LOG_LEVEL
             value: $(ZAP_LOG_LEVEL)
           - name: MAX_CONCURRENT_RECONCILES
             value: $(MAX_CONCURRENT_RECONCILES)
           - name: DSPO_REQUEUE_TIME
             value: $(DSPO_REQUEUE_TIME)
+          - name: GOMEMLIMIT
+            value: "3600MiB"
           - name: DSPO_NAMESPACE
             valueFrom:
               fieldRef:
@@ -77,6 +81,8 @@ spec:
             value: $(ARGOWORKFLOWSCONTROLLERS)
           - name: MANAGEDPIPELINES
             value: $(MANAGEDPIPELINES)
+          - name: DSPO_MANAGEDPIPELINESIMAGES
+            value: $(MANAGEDPIPELINES_IMAGES)
           - name: DSPO_PLATFORMVERSION
             value: $(PLATFORMVERSION)
           - name: DSPO_FIPSENABLED

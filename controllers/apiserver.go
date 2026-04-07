@@ -43,7 +43,7 @@ var samplePipelineTemplates = map[string]string{
 	"sample-config":   "apiserver/sample-pipeline/sample-config.yaml.tmpl",
 }
 
-func (r *DSPAReconciler) GenerateSamplePipelineMetadataBlock(pipeline string) (map[string]string, error) {
+func (r *DSPAReconciler) GenerateSamplePipelineMetadataBlock(pipeline string, platformVersion string) (map[string]string, error) {
 
 	item := make(map[string]string)
 
@@ -56,7 +56,6 @@ func (r *DSPAReconciler) GenerateSamplePipelineMetadataBlock(pipeline string) (m
 	if err != nil {
 		return nil, err
 	}
-	platformVersion := config.GetStringConfigWithDefault("DSPO.PlatformVersion", config.DefaultPlatformVersion)
 
 	// Get optional fields
 	pDesc := config.GetStringConfigWithDefault(fmt.Sprintf("ManagedPipelinesMetadata.%s.Description", pipeline), "")
@@ -67,37 +66,67 @@ func (r *DSPAReconciler) GenerateSamplePipelineMetadataBlock(pipeline string) (m
 	item["name"] = pName
 	item["file"] = pFile
 	item["description"] = pDesc
-	item["versionName"] = fmt.Sprintf("%s - %s", pVerName, strings.Trim(platformVersion, "\""))
+	item["versionName"] = fmt.Sprintf("%s - %s", pVerName, platformVersion)
 	item["versionDescription"] = pVerDesc
 
 	return item, nil
 }
 
-func (r *DSPAReconciler) GetSampleConfig(dsp *dspav1.DataSciencePipelinesApplication) (string, error) {
-	return r.generateSampleConfigJSON(dsp.Spec.APIServer.EnableSamplePipeline)
+// managedPipelineSampleEntry returns a sample_config pipeline entry for the named managed pipeline.
+// Uses config (ManagedPipelinesMetadata.<name>) when present; otherwise a minimal entry for volume-loaded YAML.
+func (r *DSPAReconciler) managedPipelineSampleEntry(pipelineName string, platformVersion string) map[string]string {
+	item, err := r.GenerateSamplePipelineMetadataBlock(pipelineName, platformVersion)
+	if err == nil {
+		return item
+	}
+	r.Log.Info("Managed pipeline metadata not found in operator config; using minimal sample_config entry",
+		"pipeline", pipelineName, "error", err)
+	// No config metadata: use minimal entry so API server loads from /config/managed-pipelines/<name>.yaml
+	return map[string]string{
+		"name":               pipelineName,
+		"file":               fmt.Sprintf("/config/managed-pipelines/%s.yaml", pipelineName),
+		"description":        "",
+		"versionName":        fmt.Sprintf("%s - %s", pipelineName, platformVersion),
+		"versionDescription": "",
+	}
 }
 
-func (r *DSPAReconciler) generateSampleConfigJSON(enableIrisPipeline bool) (string, error) {
-	// Now generate a sample config
+func (r *DSPAReconciler) generateSampleConfigJSON(dsp *dspav1.DataSciencePipelinesApplication, platformVersion string) (string, error) {
 	pipelineConfig := make([]map[string]string, 0)
-	if enableIrisPipeline {
-		item, err := r.GenerateSamplePipelineMetadataBlock("iris")
+
+	if dsp.Spec.APIServer.EnableSamplePipeline {
+		item, err := r.GenerateSamplePipelineMetadataBlock("iris", platformVersion)
 		if err != nil {
 			return "", err
 		}
 		pipelineConfig = append(pipelineConfig, item)
 	}
 
-	var sampleConfig = make(map[string]any)
-	sampleConfig["pipelines"] = pipelineConfig
-	sampleConfig["loadSamplesOnRestart"] = true
+	// Explicit managed pipeline list: add each to sample_config (API server loads these from sample_config).
+	// Omitted list ("all"): do not add managed entries here; API server loads from managed-pipelines.json in volume.
+	if mp := dsp.Spec.APIServer.ManagedPipelines; mp != nil && len(mp.Pipelines) > 0 {
+		seenManaged := make(map[string]struct{})
+		for _, p := range mp.Pipelines {
+			key := strings.ToLower(p.Name)
+			if _, exists := seenManaged[key]; exists {
+				return "", fmt.Errorf("duplicate managed pipeline name %q", p.Name)
+			}
+			seenManaged[key] = struct{}{}
+			if dsp.Spec.APIServer.EnableSamplePipeline && strings.EqualFold(p.Name, "iris") {
+				continue // Iris already included above from EnableSamplePipeline
+			}
+			pipelineConfig = append(pipelineConfig, r.managedPipelineSampleEntry(p.Name, platformVersion))
+		}
+	}
 
-	// Marshal into a JSON String
+	sampleConfig := map[string]any{
+		"pipelines":            pipelineConfig,
+		"loadSamplesOnRestart": true,
+	}
 	outputJSON, err := json.Marshal(sampleConfig)
 	if err != nil {
 		return "", err
 	}
-
 	return string(outputJSON), nil
 }
 
@@ -110,7 +139,7 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1.Dat
 	}
 
 	log.Info("Generating Sample Config")
-	sampleConfigJSON, err := r.GetSampleConfig(dsp)
+	sampleConfigJSON, err := r.generateSampleConfigJSON(dsp, params.PlatformVersion)
 	if err != nil {
 		return err
 	}
@@ -120,8 +149,22 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1.Dat
 	if params.APIServerWorkspaceJSON != "" {
 		combinedConfigHashInput = sampleConfigJSON + params.APIServerWorkspaceJSON
 	}
+	combinedConfigHashInput += params.PlatformVersion
+	if params.APIServer != nil && params.APIServer.ManagedPipelines != nil {
+		managedSpec, err := json.Marshal(params.APIServer.ManagedPipelines)
+		if err != nil {
+			return err
+		}
+		combinedConfigHashInput = combinedConfigHashInput + string(managedSpec)
 
-	// Generate configuration hash for rebooting on sample changes
+		imgEnv, err := json.Marshal(params.ManagedPipelineImageEnvVars)
+		if err != nil {
+			return fmt.Errorf("failed to marshal managed pipeline image env vars: %w", err)
+		}
+		combinedConfigHashInput = combinedConfigHashInput + string(imgEnv)
+	}
+
+	// Config hash for pod rollout when sample config, workspace, managed pipelines, or platform version change.
 	params.APIServerConfigHash = fmt.Sprintf("%x", sha256.Sum256([]byte(combinedConfigHashInput)))
 
 	log.Info("Applying APIServer Resources")

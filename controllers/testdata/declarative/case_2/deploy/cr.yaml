@@ -14,7 +14,13 @@ spec:
     enableOauth: true
     enableSamplePipeline: true
     cacheEnabled: false
-    managedPipelines: {}
+    resourceTTL: 1h
+    managedPipelines:
+      image: pipelines-components:test2
+      resources:
+        requests:
+          cpu: 250m
+          memory: 512Mi
     customServerConfigMap:
       name: testserverconfigmapdspa2
       key: testserverconfigmapkeydspa2

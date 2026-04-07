@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
@@ -34,6 +35,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -60,6 +62,11 @@ type DSPAReconciler struct {
 	TemplatesPath           string
 	MaxConcurrentReconciles int
 	WebhookAnnotations      map[string]string
+	ManifestFetcher         PipelineNamesFetcher
+	// AllowedRegistries restricts managed-pipeline image refs for
+	// resolveImageDigest/isRegistryAllowed. Empty (default) keeps permissive
+	// behavior to match existing operator image handling.
+	AllowedRegistries []string
 }
 
 func (r *DSPAReconciler) ApplyDir(owner mf.Owner, params *DSPAParams, directory string, fns ...mf.Transformer) error {
@@ -223,6 +230,24 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	dspaStatus := dspastatus.NewDSPAStatus(dspa)
 
 	defer r.updateStatus(ctx, dspa, dspaStatus, log, req)
+	defer func() {
+		if dspa.GetDeletionTimestamp() != nil {
+			return
+		}
+		conditions := dspaStatus.GetConditions()
+		metricsMap := map[metav1.Condition]*prometheus.GaugeVec{
+			util.GetConditionByType(config.DatabaseAvailable, conditions):       DBAvailableMetric,
+			util.GetConditionByType(config.ObjectStoreAvailable, conditions):    ObjectStoreAvailableMetric,
+			util.GetConditionByType(config.APIServerReady, conditions):          APIServerReadyMetric,
+			util.GetConditionByType(config.PersistenceAgentReady, conditions):   PersistenceAgentReadyMetric,
+			util.GetConditionByType(config.ScheduledWorkflowReady, conditions):  ScheduledWorkflowReadyMetric,
+			util.GetConditionByType(config.WorkflowControllerReady, conditions): WorkflowControllerReadyMetric,
+			util.GetConditionByType(config.MLMDProxyReady, conditions):          MLMDProxyReadyMetric,
+			util.GetConditionByType(config.ManagedPipelineValid, conditions):    ManagedPipelineValidMetric,
+			util.GetConditionByType(config.CrReady, conditions):                 CrReadyMetric,
+		}
+		r.PublishMetrics(dspa, metricsMap)
+	}()
 
 	if !util.DSPAWithSupportedDSPVersion(dspa) {
 		err1 := fmt.Errorf("unsupported DSP version %s detected. Please manually remove "+
@@ -283,7 +308,10 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	err = params.ExtractParams(ctx, dspa, r.Client, r.Log)
 	if err != nil {
-		log.Info(fmt.Sprintf("Encountered error when parsing CR: [%s]", err))
+		log.Error(err, "Encountered error when parsing CR")
+		if errors.Is(err, ErrManagedPipelinesImageUnset) {
+			r.setStatusAsNotReady(config.APIServerReady, err, dspaStatus.SetApiServerStatus)
+		}
 		return ctrl.Result{Requeue: true, RequeueAfter: requeueTime}, nil
 	}
 
@@ -320,6 +348,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	dspaPrereqsReady := dbAvailable && objStoreAvailable
+	managedPipelinesRequeue := false
 
 	if dspaPrereqsReady {
 		// Manage Common Manifests
@@ -328,7 +357,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			return ctrl.Result{}, err
 		}
 
-		if dspa.Spec.APIServer.PipelineStore == "kubernetes" {
+		if dspa.Spec.APIServer != nil && dspa.Spec.APIServer.PipelineStore == "kubernetes" {
 			err = r.ReconcileWebhook(ctx, params)
 			if err != nil {
 				dspaStatus.SetWebhookNotReady(err, config.FailingToDeploy)
@@ -343,6 +372,18 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			}
 		} else {
 			dspaStatus.SetWebhookNotApplicable()
+		}
+
+		proceed, shouldRequeue, validationErr := r.validateManagedPipelines(ctx, dspa, dspaStatus, log)
+		if validationErr != nil {
+			return ctrl.Result{}, validationErr
+		}
+		if shouldRequeue {
+			managedPipelinesRequeue = true
+		}
+		if !proceed {
+			r.preservePostValidationConditions(dspa, dspaStatus)
+			return ctrl.Result{}, nil
 		}
 
 		err = r.ReconcileAPIServer(ctx, dspa, params)
@@ -396,30 +437,88 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 	}
 
-	conditions := dspaStatus.GetConditions()
-	if err != nil {
-		log.Info(err.Error())
-		return ctrl.Result{}, err
-	}
-	metricsMap := map[metav1.Condition]*prometheus.GaugeVec{
-		util.GetConditionByType(config.DatabaseAvailable, conditions):       DBAvailableMetric,
-		util.GetConditionByType(config.ObjectStoreAvailable, conditions):    ObjectStoreAvailableMetric,
-		util.GetConditionByType(config.APIServerReady, conditions):          APIServerReadyMetric,
-		util.GetConditionByType(config.PersistenceAgentReady, conditions):   PersistenceAgentReadyMetric,
-		util.GetConditionByType(config.ScheduledWorkflowReady, conditions):  ScheduledWorkflowReadyMetric,
-		util.GetConditionByType(config.WorkflowControllerReady, conditions): WorkflowControllerReadyMetric,
-		util.GetConditionByType(config.MLMDProxyReady, conditions):          MLMDProxyReadyMetric,
-		util.GetConditionByType(config.CrReady, conditions):                 CrReadyMetric,
-	}
-	r.PublishMetrics(dspa, metricsMap)
-
 	if !dspaPrereqsReady {
 		log.Info(fmt.Sprintf("Health check for Database or Object Store failed, retrying in %d seconds.", int(requeueTime.Seconds())))
 
 		return ctrl.Result{Requeue: true, RequeueAfter: requeueTime}, nil
 	}
 
+	if managedPipelinesRequeue {
+		return ctrl.Result{RequeueAfter: requeueTime}, nil
+	}
 	return ctrl.Result{}, nil
+}
+
+// preservePostValidationConditions restores conditions for components that
+// are reconciled after managed-pipeline validation. When validation blocks
+// deployment (!proceed), these components are not re-evaluated, so their
+// conditions must be carried forward from the previous status to avoid
+// overwriting accurate state with Unknown.
+func (r *DSPAReconciler) preservePostValidationConditions(
+	dspa *dspav1.DataSciencePipelinesApplication,
+	dspaStatus dspastatus.DSPAStatus,
+) {
+	conditionSetters := []struct {
+		condType  string
+		setStatus func(metav1.Condition)
+	}{
+		{config.APIServerReady, dspaStatus.SetApiServerStatus},
+		{config.PersistenceAgentReady, dspaStatus.SetPersistenceAgentStatus},
+		{config.ScheduledWorkflowReady, dspaStatus.SetScheduledWorkflowStatus},
+		{config.WorkflowControllerReady, dspaStatus.SetWorkflowControllerStatus},
+		{config.MLMDProxyReady, dspaStatus.SetMLMDProxyStatus},
+	}
+	for _, cs := range conditionSetters {
+		prev := util.GetConditionByType(cs.condType, dspa.Status.Conditions)
+		if prev.Type == cs.condType {
+			cs.setStatus(prev)
+		}
+	}
+}
+
+// validateManagedPipelines checks CR pipeline names against the manifest.
+// Returns (proceed, shouldRequeue, err), where proceed indicates whether the
+// reconciler should continue to deploy the API server.
+// Permanent validation failures return (false, false, nil) to block deployment
+// without controller-runtime retries, while transient fetch failures return
+// (true, true, nil) so status can self-heal on a timed requeue.
+func (r *DSPAReconciler) validateManagedPipelines(
+	ctx context.Context,
+	dspa *dspav1.DataSciencePipelinesApplication,
+	dspaStatus dspastatus.DSPAStatus,
+	log logr.Logger,
+) (bool, bool, error) {
+	if dspa.Spec.APIServer == nil {
+		dspaStatus.SetManagedPipelineNotApplicable()
+		return true, false, nil
+	}
+	mp := dspa.Spec.APIServer.ManagedPipelines
+	if mp == nil || len(mp.Pipelines) == 0 {
+		dspaStatus.SetManagedPipelineNotApplicable()
+		return true, false, nil
+	}
+
+	manifestNames, err := r.ManifestFetcher.FetchPipelineNames(ctx, mp.Image)
+	if err != nil {
+		var pe *permanentError
+		if errors.As(err, &pe) {
+			log.Info("Managed pipeline configuration error (permanent)", "error", err, "image", mp.Image)
+			dspaStatus.SetManagedPipelineInvalid(err, config.ManagedPipelineInvalid)
+			return false, false, nil
+		}
+		log.Error(err, "Failed to fetch managed-pipelines.json from image (transient)", "image", mp.Image)
+		dspaStatus.SetManagedPipelineInvalid(err, config.ManagedPipelinesFetchError)
+		return true, true, nil
+	}
+
+	if err := ValidateManagedPipelineNames(mp.Pipelines, manifestNames); err != nil {
+		log.Info("Managed pipeline validation failed", "error", err)
+		dspaStatus.SetManagedPipelineInvalid(err, config.ManagedPipelineInvalid)
+		return false, false, nil
+	}
+
+	dspaStatus.SetManagedPipelineValid()
+	return true, false, nil
 }
 
 func (r *DSPAReconciler) setStatusAsNotReady(conditionType string, err error, setStatus func(metav1.Condition)) {
@@ -623,6 +722,10 @@ func (r *DSPAReconciler) PublishMetrics(dspa *dspav1.DataSciencePipelinesApplica
 
 	for conditionType, metric := range metricsMap {
 		condition := conditionType
+		if condition.Type == config.ManagedPipelineValid {
+			setManagedPipelineValidMetricByReason(dspa.Name, dspa.Namespace, condition.Reason)
+			continue
+		}
 		status := condition.Status
 		value := 0
 		if status == metav1.ConditionTrue {
@@ -686,6 +789,9 @@ func (r *DSPAReconciler) GetComponents(ctx context.Context, dspa *dspav1.DataSci
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	if r.ManifestFetcher == nil {
+		r.ManifestFetcher = NewOCIManifestFetcher(r.Log, r.AllowedRegistries)
+	}
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&dspav1.DataSciencePipelinesApplication{}).
 		Owns(&appsv1.Deployment{}).
@@ -694,13 +800,14 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Service{}).
 		Owns(&corev1.ServiceAccount{}).
 		Owns(&corev1.PersistentVolumeClaim{}).
+		Owns(&networkingv1.NetworkPolicy{}).
 		Owns(&rbacv1.Role{}).
 		Owns(&rbacv1.RoleBinding{}).
 		Owns(&routev1.Route{}).
 		// Watch for global ca bundle, if one is added to this namespace
 		// we need to reconcile on all the dspa's in this namespace
 		// so they may mount this cert in the appropriate containers
-		WatchesRawSource(source.Kind(mgr.GetCache(), &corev1.ConfigMap{}),
+		WatchesRawSource(source.Kind[client.Object](mgr.GetCache(), &corev1.ConfigMap{},
 			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, o client.Object) []reconcile.Request {
 				cm := o.(*corev1.ConfigMap)
 				thisNamespace := cm.Namespace
@@ -734,14 +841,14 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 				return reconcileRequests
 			}),
-		).
-		WatchesRawSource(source.Kind(mgr.GetCache(), &corev1.Pod{}),
+		)).
+		WatchesRawSource(source.Kind[client.Object](mgr.GetCache(), &corev1.Pod{},
 			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, o client.Object) []reconcile.Request {
 				pod := o.(*corev1.Pod)
 				log := r.Log.WithValues("namespace", pod.Namespace)
 
-				component, hasComponentLabel := pod.Labels["component"]
-				if !hasComponentLabel || component != "data-science-pipelines" {
+				component, hasComponentLabel := pod.Labels[config.DSPComponentk8sLabel]
+				if !hasComponentLabel || component != config.DSPComponentk8sLabelValue {
 					return nil
 				}
 
@@ -766,8 +873,8 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				}
 				return []reconcile.Request{{NamespacedName: namespacedName}}
 			}),
-		).
-		WatchesRawSource(source.Kind(mgr.GetCache(), &corev1.Secret{}),
+		)).
+		WatchesRawSource(source.Kind[client.Object](mgr.GetCache(), &corev1.Secret{},
 			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, o client.Object) []reconcile.Request {
 				secret := o.(*corev1.Secret)
 				log := r.Log.WithValues("namespace", secret.Namespace)
@@ -806,14 +913,16 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				log.V(1).Info(fmt.Sprintf("Reconcile event triggered by change on Secret: %s owned by service-ca: %s", secret.Name, serviceName))
 				return []reconcile.Request{{NamespacedName: namespacedDspaName}}
 			}),
-		).
+		)).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: r.MaxConcurrentReconciles,
 		}).
 		Complete(r)
 }
 
-// Clean Up any resources not handled by garbage collection, like Cluster ResourceRequirements
+// cleanUpResources cleans up any resources not handled by garbage collection, like Cluster ResourceRequirements.
 func (r *DSPAReconciler) cleanUpResources(params *DSPAParams) error {
+	DeleteMetrics(params.Name, params.Namespace)
+
 	return r.CleanUpCommon(params)
 }

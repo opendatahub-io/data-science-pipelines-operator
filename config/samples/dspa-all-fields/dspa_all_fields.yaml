@@ -18,6 +18,13 @@ spec:
     image: quay.io/opendatahub/ds-pipelines-api-server:latest
     argoLauncherImage: quay.io/org/kfp-launcher:latest
     argoDriverImage: quay.io/org/kfp-driver:latest
+    managedPipelines:
+      image: quay.io/opendatahub/odh-pipelines-components:odh-stable
+      volumeSizeLimit: 2048Mi
+      resources:
+        requests:
+          cpu: 250m
+          memory: 512Mi
     resources:
       requests:
         cpu: 250m
