@@ -48,6 +48,7 @@ func NewFakeController() *DSPAReconciler {
 	utilruntime.Must(routev1.Install(FakeScheme))
 	utilruntime.Must(dspav1.AddToScheme(FakeScheme))
 	FakeBuilder.WithScheme(FakeScheme)
+	FakeBuilder.WithStatusSubresource(&dspav1.DataSciencePipelinesApplication{})
 
 	// Build Fake Client
 	FakeClient := FakeBuilder.Build()

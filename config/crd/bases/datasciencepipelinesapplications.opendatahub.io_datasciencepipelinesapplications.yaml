@@ -142,7 +142,10 @@ spec:
                       via an init container.
                     properties:
                       image:
-                        minLength: 1
+                        description: |-
+                          Container image for the init-managed-pipelines step (pipelines-components). Optional: when omitted, empty (""), or whitespace-only, DSPO uses operator config Images.PipelinesComponents
+                          (populated from IMAGES_PIPELINES_COMPONENTS in params.env / dspo-config). Set explicitly only to override the operator default for this DSPA.
+                        maxLength: 1024
                         type: string
                       pipelines:
                         items:
@@ -199,8 +202,6 @@ spec:
                           volume (Kubernetes quantity, e.g. "1024Mi"). Default: 1024Mi.'
                         maxLength: 64
                         type: string
-                    required:
-                    - image
                     type: object
                   pipelineStore:
                     default: database

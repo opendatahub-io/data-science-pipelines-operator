@@ -59,6 +59,8 @@ spec:
             value: $(kube-rbac-proxy)
           - name: IMAGES_MARIADB
             value: $(IMAGES_MARIADB)
+          - name: IMAGES_PIPELINES_COMPONENTS
+            value: $(IMAGES_PIPELINES_COMPONENTS)
           - name: ZAP_LOG_LEVEL
             value: $(ZAP_LOG_LEVEL)
           - name: MAX_CONCURRENT_RECONCILES

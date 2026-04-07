@@ -45,6 +45,10 @@ import (
 
 const MlmdIsRequired = "MLMD explicitly disabled in DSPA, but is a required component for DSP"
 
+// ErrManagedPipelinesImageUnset is returned by ExtractParams when managed pipelines is enabled
+// but neither spec.apiServer.managedPipelines.image nor operator Images.PipelinesComponents resolves to a real image.
+var ErrManagedPipelinesImageUnset = errors.New("managedPipelines init image not configured")
+
 type DSPAParams struct {
 	IncludeOwnerReference                 bool
 	UID                                   types.UID
@@ -724,6 +728,16 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		setStringDefault(argoDriverImageFromConfig, &p.APIServer.ArgoDriverImage)
 
 		if p.APIServer.ManagedPipelines != nil {
+			// Whitespace-only overrides are treated as omitted so operator defaulting applies (CRD allows arbitrary strings).
+			p.APIServer.ManagedPipelines.Image = strings.TrimSpace(p.APIServer.ManagedPipelines.Image)
+			pipelinesComponentsImageFromConfig := config.GetStringConfigWithDefault(config.PipelinesComponentsImagePath, config.DefaultImageValue)
+			setStringDefault(pipelinesComponentsImageFromConfig, &p.APIServer.ManagedPipelines.Image)
+			// setStringDefault only overwrites when the image is "". Missing operator config: GetStringConfigWithDefault
+			// returns DefaultImageValue ("MustSetInConfig"), which is assigned. With AllowEmptyEnv, an empty
+			// IMAGES_PIPELINES_COMPONENTS yields "" from viper and setStringDefault leaves Image "". Reject both.
+			if p.APIServer.ManagedPipelines.Image == config.DefaultImageValue || p.APIServer.ManagedPipelines.Image == "" {
+				return fmt.Errorf("%w: specify spec.apiServer.managedPipelines.image or configure operator Images.PipelinesComponents (IMAGES_PIPELINES_COMPONENTS in DSPO params/config)", ErrManagedPipelinesImageUnset)
+			}
 			ensureManagedPipelinesInitResourceDefaults(p.APIServer.ManagedPipelines)
 			if err := ensureManagedPipelinesVolumeSizeLimit(p.APIServer.ManagedPipelines); err != nil {
 				return err

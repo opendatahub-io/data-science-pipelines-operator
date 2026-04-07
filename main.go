@@ -121,6 +121,11 @@ func initConfig(configPath string) error {
 	viper.SetEnvKeyReplacer(replacer)
 	// Check for an environment variable any time a viper.Get request is made.
 	viper.AutomaticEnv()
+	// BindEnv: AutomaticEnv+replacer maps Images.PipelinesComponents to IMAGES_PIPELINESCOMPONENTS
+	// (no underscores between words), not IMAGES_PIPELINES_COMPONENTS; bind explicitly to match params.env.
+	if err := viper.BindEnv("Images.PipelinesComponents", "IMAGES_PIPELINES_COMPONENTS"); err != nil {
+		return err
+	}
 	// Treat empty environment variables as set
 	viper.AllowEmptyEnv(true)
 

@@ -20,6 +20,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 
@@ -33,7 +34,10 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 const (
@@ -594,6 +598,7 @@ func TestReconcileAPIServer_ConfigHashChangesWhenPlatformVersionChanges(t *testi
 
 func TestExtractParams_ManagedPipelinesImageFromSpec(t *testing.T) {
 	t.Cleanup(func() { viper.Reset() })
+	viper.Set("Images.PipelinesComponents", "quay.io/opendatahub/odh-pipelines-components:from-config-only")
 
 	dspa := testutil.CreateDSPAWithManagedPipelines("my-img:tag", nil, nil)
 	dspa.Name = "dspa"
@@ -604,10 +609,181 @@ func TestExtractParams_ManagedPipelinesImageFromSpec(t *testing.T) {
 	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
 
 	require.NotNil(t, params.APIServer.ManagedPipelines)
-	assert.Equal(t, "my-img:tag", params.APIServer.ManagedPipelines.Image)
+	assert.Equal(t, "my-img:tag", params.APIServer.ManagedPipelines.Image, "explicit CR image must override operator config")
 	require.NotNil(t, params.APIServer.ManagedPipelines.Resources)
 	assert.Equal(t, resource.MustParse("250m"), params.APIServer.ManagedPipelines.Resources.Requests.CPU)
 	assert.Equal(t, resource.MustParse("500m"), params.APIServer.ManagedPipelines.Resources.Limits.CPU)
+}
+
+func TestExtractParams_ManagedPipelinesImageDefaultsFromOperatorConfig(t *testing.T) {
+	t.Cleanup(func() { viper.Reset() })
+	want := "quay.io/opendatahub/odh-pipelines-components:odh-stable"
+	viper.Set("Images.PipelinesComponents", want)
+
+	dspa := testutil.CreateDSPAWithManagedPipelines("", nil, nil)
+	dspa.Name = "dspa"
+	dspa.Namespace = "ns"
+
+	_, params, reconciler := CreateNewTestObjects()
+	ctx := context.Background()
+	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+
+	require.NotNil(t, params.APIServer.ManagedPipelines)
+	assert.Equal(t, want, params.APIServer.ManagedPipelines.Image)
+}
+
+func TestExtractParams_ManagedPipelinesFailsWhenEnvVarEmpty(t *testing.T) {
+	t.Cleanup(func() { viper.Reset() })
+	// Simulates IMAGES_PIPELINES_COMPONENTS="" with AllowEmptyEnv: key is set but value is empty, so we must error.
+	viper.Set("Images.PipelinesComponents", "")
+
+	dspa := testutil.CreateDSPAWithManagedPipelines("", nil, nil)
+	dspa.Name = "dspa"
+	dspa.Namespace = "ns"
+
+	_, params, reconciler := CreateNewTestObjects()
+	ctx := context.Background()
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	require.Error(t, err)
+	require.True(t, errors.Is(err, ErrManagedPipelinesImageUnset))
+	require.Contains(t, err.Error(), "IMAGES_PIPELINES_COMPONENTS")
+}
+
+func TestExtractParams_ManagedPipelinesFailsWhenImageUnsetAndNotInOperatorConfig(t *testing.T) {
+	t.Cleanup(func() { viper.Reset() })
+
+	dspa := testutil.CreateDSPAWithManagedPipelines("", nil, nil)
+	dspa.Name = "dspa"
+	dspa.Namespace = "ns"
+
+	_, params, reconciler := CreateNewTestObjects()
+	ctx := context.Background()
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	require.Error(t, err)
+	require.True(t, errors.Is(err, ErrManagedPipelinesImageUnset))
+	require.Contains(t, err.Error(), "managedPipelines")
+	require.Contains(t, err.Error(), "Images.PipelinesComponents")
+	require.Contains(t, err.Error(), "IMAGES_PIPELINES_COMPONENTS")
+}
+
+func TestExtractParams_ManagedPipelinesWhitespaceImageTreatedAsOmitted(t *testing.T) {
+	t.Cleanup(func() { viper.Reset() })
+	want := "quay.io/opendatahub/odh-pipelines-components:odh-stable"
+	viper.Set("Images.PipelinesComponents", want)
+
+	dspa := testutil.CreateDSPAWithManagedPipelines("  \t  ", nil, nil)
+	dspa.Name = "dspa"
+	dspa.Namespace = "ns"
+
+	_, params, reconciler := CreateNewTestObjects()
+	ctx := context.Background()
+	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+	require.NotNil(t, params.APIServer.ManagedPipelines)
+	assert.Equal(t, want, params.APIServer.ManagedPipelines.Image)
+}
+
+func TestExtractParams_ManagedPipelinesWhitespaceOnlyFailsWithoutOperatorConfig(t *testing.T) {
+	t.Cleanup(func() { viper.Reset() })
+
+	dspa := testutil.CreateDSPAWithManagedPipelines("   ", nil, nil)
+	dspa.Name = "dspa"
+	dspa.Namespace = "ns"
+
+	_, params, reconciler := CreateNewTestObjects()
+	ctx := context.Background()
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	require.Error(t, err)
+	require.True(t, errors.Is(err, ErrManagedPipelinesImageUnset))
+	require.Contains(t, err.Error(), "managedPipelines")
+	require.Contains(t, err.Error(), "IMAGES_PIPELINES_COMPONENTS")
+}
+
+func TestReconcile_SetsAPIServerNotReadyWhenManagedPipelinesImageUnset(t *testing.T) {
+	t.Cleanup(func() { viper.Reset() })
+
+	dspa := testutil.CreateDSPAWithManagedPipelines("", nil, nil)
+	dspa.Name = "dspa-mp-status"
+	dspa.Namespace = "testnamespace"
+
+	ctx, _, reconciler := CreateNewTestObjects()
+	require.NoError(t, reconciler.Client.Create(ctx, dspa))
+
+	result, err := reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{Name: dspa.Name, Namespace: dspa.Namespace},
+	})
+	require.NoError(t, err)
+	assert.True(t, result.Requeue, "should requeue when managed pipelines image is unset")
+	assert.NotZero(t, result.RequeueAfter, "RequeueAfter should be set")
+
+	updated := &dspav1.DataSciencePipelinesApplication{}
+	require.NoError(t, reconciler.Get(ctx, types.NamespacedName{Name: dspa.Name, Namespace: dspa.Namespace}, updated))
+
+	var apiCond *metav1.Condition
+	for i := range updated.Status.Conditions {
+		if updated.Status.Conditions[i].Type == config.APIServerReady {
+			apiCond = &updated.Status.Conditions[i]
+			break
+		}
+	}
+	require.NotNil(t, apiCond, "expected APIServerReady condition")
+	assert.Equal(t, metav1.ConditionFalse, apiCond.Status)
+	assert.Equal(t, config.FailingToDeploy, apiCond.Reason)
+	assert.Contains(t, apiCond.Message, "managedPipelines")
+	assert.Contains(t, apiCond.Message, "Images.PipelinesComponents")
+	assert.Contains(t, apiCond.Message, "IMAGES_PIPELINES_COMPONENTS")
+}
+
+func TestDeployAPIServerWithManagedPipelines_OmittedImageUsesOperatorConfigDefault(t *testing.T) {
+	t.Cleanup(func() { viper.Reset() })
+	want := "quay.io/opendatahub/odh-pipelines-components:odh-stable"
+	viper.Set("Images.PipelinesComponents", want)
+
+	testNamespace := "testnamespace"
+	testDSPAName := "testdspa"
+	expectedAPIServerName := apiServerDefaultResourceNamePrefix + testDSPAName
+
+	dspa := testutil.CreateDSPAWithManagedPipelines("", nil, nil)
+	dspa.Name = testDSPAName
+	dspa.Namespace = testNamespace
+
+	ctx, params, reconciler := CreateNewTestObjects()
+	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+	require.NoError(t, reconciler.ReconcileAPIServer(ctx, dspa, params))
+
+	deployment := &appsv1.Deployment{}
+	created, err := reconciler.IsResourceCreated(ctx, deployment, expectedAPIServerName, testNamespace)
+	require.True(t, created)
+	require.NoError(t, err)
+
+	initC := getInitManagedPipelinesContainer(t, deployment)
+	require.NotNil(t, initC)
+	assert.Equal(t, want, initC.Image)
+}
+
+func TestReconcileAPIServer_ConfigHashChangesWhenDefaultPipelinesComponentsImageChanges(t *testing.T) {
+	t.Cleanup(func() { viper.Reset() })
+	ctx := context.Background()
+
+	dspa := testutil.CreateDSPAWithManagedPipelines("", nil, nil)
+	dspa.Name = "dspa"
+	dspa.Namespace = "ns"
+	dspa.Spec.APIServer.Deploy = true
+	dspa.Spec.APIServer.EnableSamplePipeline = false
+
+	_, _, reconciler := CreateNewTestObjects()
+
+	viper.Set("Images.PipelinesComponents", "quay.io/opendatahub/odh-pipelines-components:tag-a")
+	params1 := &DSPAParams{}
+	require.NoError(t, params1.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+	require.NoError(t, reconciler.ReconcileAPIServer(ctx, dspa, params1))
+
+	viper.Set("Images.PipelinesComponents", "quay.io/opendatahub/odh-pipelines-components:tag-b")
+	params2 := &DSPAParams{}
+	require.NoError(t, params2.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+	require.NoError(t, reconciler.ReconcileAPIServer(ctx, dspa, params2))
+
+	assert.NotEqual(t, params1.APIServerConfigHash, params2.APIServerConfigHash,
+		"hash should differ when operator default pipelines-components image changes (CR omits image)")
 }
 
 func TestExtractParams_ManagedPipelinesVolumeSizeLimit(t *testing.T) {
