@@ -32,6 +32,10 @@ type DSPAStatus interface {
 
 	SetMLMDProxyStatus(mlmdProxyReady metav1.Condition)
 
+	SetManagedPipelineValid()
+	SetManagedPipelineInvalid(err error, reason string)
+	SetManagedPipelineNotApplicable()
+
 	SetDSPANotReady(err error, reason string)
 
 	GetConditions() []metav1.Condition
@@ -46,6 +50,7 @@ func NewDSPAStatus(dspa *dspav1.DataSciencePipelinesApplication) DSPAStatus {
 	workflowControllerReadyCondition := BuildUnknownCondition(config.WorkflowControllerReady)
 	mlmdProxyReadyCondition := BuildUnknownCondition(config.MLMDProxyReady)
 	webhookReadyCondition := BuildUnknownCondition(config.WebhookReady)
+	managedPipelineValidCondition := BuildUnknownCondition(config.ManagedPipelineValid)
 
 	return &dspaStatus{
 		dspa:                    dspa,
@@ -57,6 +62,7 @@ func NewDSPAStatus(dspa *dspav1.DataSciencePipelinesApplication) DSPAStatus {
 		workflowControllerReady: &workflowControllerReadyCondition,
 		mlmdProxyReady:          &mlmdProxyReadyCondition,
 		webhookReady:            &webhookReadyCondition,
+		managedPipelineValid:    &managedPipelineValidCondition,
 	}
 }
 
@@ -71,6 +77,7 @@ type dspaStatus struct {
 	mlmdProxyReady          *metav1.Condition
 	dspaReady               *metav1.Condition
 	webhookReady            *metav1.Condition
+	managedPipelineValid    *metav1.Condition
 }
 
 func (s *dspaStatus) SetDatabaseNotReady(err error, reason string) {
@@ -160,6 +167,25 @@ func (s *dspaStatus) SetMLMDProxyStatus(mlmdProxyReady metav1.Condition) {
 	s.mlmdProxyReady = &mlmdProxyReady
 }
 
+func (s *dspaStatus) SetManagedPipelineValid() {
+	condition := BuildTrueCondition(config.ManagedPipelineValid, "All managed pipeline names are valid")
+	s.managedPipelineValid = &condition
+}
+
+func (s *dspaStatus) SetManagedPipelineInvalid(err error, reason string) {
+	message := ""
+	if err != nil {
+		message = err.Error()
+	}
+	condition := BuildFalseCondition(config.ManagedPipelineValid, reason, message)
+	s.managedPipelineValid = &condition
+}
+
+func (s *dspaStatus) SetManagedPipelineNotApplicable() {
+	condition := BuildFalseCondition(config.ManagedPipelineValid, "NotApplicable", "Managed pipelines not configured or no explicit pipeline list")
+	s.managedPipelineValid = &condition
+}
+
 // SetDSPANotReady is an override option for reporting a custom
 // overall DSP Ready state. This is the condition type that
 // reports on the overall state of the DSPA. If this is never
@@ -184,12 +210,13 @@ func (s *dspaStatus) GetConditions() []metav1.Condition {
 		*s.getWorkflowControllerReadyCondition(),
 		*s.getMLMDProxyReadyCondition(),
 		*s.getWebhookReadyCondition(),
+		*s.getManagedPipelineValidCondition(),
 	}
 
 	allReady := true
 	failureMessages := ""
 	for _, c := range componentConditions {
-		if (c.Status == metav1.ConditionFalse || c.Status == metav1.ConditionUnknown) && c.Reason != "NotApplicable" {
+		if (c.Status == metav1.ConditionFalse || c.Status == metav1.ConditionUnknown) && !isNonBlockingReason(c.Reason) {
 			allReady = false
 			failureMessages += fmt.Sprintf("%s \n", c.Message)
 		}
@@ -229,14 +256,19 @@ func (s *dspaStatus) GetConditions() []metav1.Condition {
 		*s.workflowControllerReady,
 		*s.mlmdProxyReady,
 		*s.webhookReady,
+		*s.managedPipelineValid,
 		*crReady,
 	}
 
-	for i, condition := range s.dspa.Status.Conditions {
-		if condition.Status == conditions[i].Status {
-			conditions[i].LastTransitionTime = condition.LastTransitionTime
+	previousConditions := make(map[string]metav1.Condition, len(s.dspa.Status.Conditions))
+	for _, c := range s.dspa.Status.Conditions {
+		previousConditions[c.Type] = c
+	}
+	for i := range conditions {
+		conditions[i].ObservedGeneration = s.dspa.Generation
+		if prev, ok := previousConditions[conditions[i].Type]; ok && prev.Status == conditions[i].Status {
+			conditions[i].LastTransitionTime = prev.LastTransitionTime
 		}
-		condition.ObservedGeneration = s.dspa.Generation
 	}
 
 	return conditions
@@ -274,6 +306,10 @@ func (s *dspaStatus) getWebhookReadyCondition() *metav1.Condition {
 	return s.webhookReady
 }
 
+func (s *dspaStatus) getManagedPipelineValidCondition() *metav1.Condition {
+	return s.managedPipelineValid
+}
+
 func BuildTrueCondition(conditionType string, message string) metav1.Condition {
 	condition := metav1.Condition{}
 	condition.Type = conditionType
@@ -304,4 +340,12 @@ func BuildUnknownCondition(conditionType string) metav1.Condition {
 	condition.LastTransitionTime = metav1.Now()
 
 	return condition
+}
+
+// isNonBlockingReason returns true for condition reasons that should not
+// degrade the overall CrReady status. "NotApplicable" means the feature is
+// not configured; "ManagedPipelinesFetchError" means a transient fetch
+// failure occurred but the controller allows deployment to proceed.
+func isNonBlockingReason(reason string) bool {
+	return reason == "NotApplicable" || reason == config.ManagedPipelinesFetchError
 }

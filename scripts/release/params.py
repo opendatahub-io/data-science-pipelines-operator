@@ -27,6 +27,10 @@ TAGGED_REPOS = {
         "TAG": "main-94ae1e9",
         "REPO": "mlmd-grpc-server"
     },
+    "IMAGES_PIPELINES_COMPONENTS": {
+        "TAG": "odh-stable",
+        "REPO": "odh-pipelines-components",
+    },
 }
 
 STATIC_REPOS = {

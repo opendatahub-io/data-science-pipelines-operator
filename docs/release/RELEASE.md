@@ -17,6 +17,8 @@ DSPO and DSP versioning is tied together
 > Note: In main branch all images should point to `latest` and not any specific versions, as `main` is rapidly moving,
 > it is likely to quickly become incompatible with any specific tags/shas that are hardcoded.
 
+For release notes: upgrading DSPO may cause a **one-time** API server pod rollout for DSPAs that use `managedPipelines`, because `configHash` reflects resolved params (including defaulted pipelines-components image), not only the CR spec.
+
 ## Release pre-requisites
 
 Need GitHub repo admin permissions for DSPO and DSP repos.

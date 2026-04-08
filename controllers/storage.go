@@ -51,7 +51,7 @@ var minioTemplates = []string{
 
 func joinHostPort(host, port string) (string, error) {
 	if host == "" {
-		return "", errors.New("Object Storage Connection missing host")
+		return "", errors.New("object storage connection missing host")
 	}
 	if port == "" {
 		return host, nil
@@ -160,7 +160,7 @@ var ConnectAndQueryObjStore = func(
 	if len(pemCerts) != 0 || proxyConfig != nil {
 		tr, err := getTransportWithProxyAndCACert(log, pemCerts, proxyConfig, secure)
 		if err != nil {
-			errorMessage := "Encountered error when processing custom ca bundle or proxy configuration."
+			errorMessage := "encountered error when processing custom ca bundle or proxy configuration"
 			log.Error(err, errorMessage)
 			return false, errors.New(errorMessage)
 		}
@@ -189,19 +189,19 @@ var ConnectAndQueryObjStore = func(
 			}
 			// This condition is added to handle the service unavailble error when the external route pod takes long time to send successful readiness checks
 			if err.Code == "503 Service Unavailable" {
-				errorMessage := "503 Service Unavailable. This could be a special condition when minio external route is used " +
+				errorMessage := "503 service unavailable: this could be a special condition when minio external route is used " +
 					"and health check is trying to reach the service, where the pod is up and running but takes long time " +
-					"to pass the successful readiness checks."
+					"to pass the successful readiness checks"
 				log.Info(errorMessage)
 				return false, errors.New(errorMessage)
 			}
 		}
 
 		if util.IsX509UnknownAuthorityError(err) {
-			errorMessage := "Encountered x509 UnknownAuthorityError when connecting to ObjectStore. " +
-				"If using an tls S3 connection with  self-signed certs, you may specify a custom CABundle " +
-				"to mount on the DSP API Server via the DSPA cr under the spec.apiServer.cABundle field. If you have already " +
-				"provided a CABundle, verify the validity of the provided CABundle."
+			errorMessage := "encountered x509 UnknownAuthorityError when connecting to ObjectStore: " +
+				"if using a TLS S3 connection with self-signed certs, you may specify a custom CABundle " +
+				"to mount on the DSP API Server via the DSPA cr under the spec.apiServer.cABundle field; if you have already " +
+				"provided a CABundle, verify the validity of the provided CABundle"
 			log.Info(errorMessage)
 			return false, errors.New(errorMessage)
 		}
@@ -229,21 +229,21 @@ func (r *DSPAReconciler) isObjectStorageAccessible(ctx context.Context, dsp *dsp
 
 	endpoint, err := joinHostPort(params.ObjectStorageConnection.Host, params.ObjectStorageConnection.Port)
 	if err != nil {
-		errorMessage := "Could not determine Object Storage Endpoint"
+		errorMessage := "could not determine object storage endpoint"
 		log.Error(err, errorMessage)
 		return false, errors.New(errorMessage)
 	}
 
 	accesskey, err := base64.StdEncoding.DecodeString(params.ObjectStorageConnection.AccessKeyID)
 	if err != nil {
-		errorMessage := "Could not decode Object Storage Access Key ID"
+		errorMessage := "could not decode object storage access key ID"
 		log.Error(err, errorMessage)
 		return false, errors.New(errorMessage)
 	}
 
 	secretkey, err := base64.StdEncoding.DecodeString(params.ObjectStorageConnection.SecretAccessKey)
 	if err != nil {
-		errorMessage := "Could not decode Object Storage Secret Access Key"
+		errorMessage := "could not decode object storage secret access key"
 		log.Error(err, errorMessage)
 		return false, errors.New(errorMessage)
 	}

@@ -10,6 +10,7 @@ Images:
   DriverImage: $(IMAGES_DRIVER)
   KubeRBACProxy: $(kube-rbac-proxy)
   MariaDB: $(IMAGES_MARIADB)
+  PipelinesComponents: $(IMAGES_PIPELINES_COMPONENTS)
 ManagedPipelinesMetadata:
   Iris:
     Name: "[Demo] iris-training"
@@ -24,5 +25,6 @@ DSPO:
     ObjectStore:
       ConnectionTimeout: $(DSPO_HEALTHCHECK_OBJECTSTORE_CONNECTIONTIMEOUT)
   RequeueTime: $(DSPO_REQUEUE_TIME)
+  ManagedPipelinesImages: '$(MANAGEDPIPELINES_IMAGES)'
   PlatformVersion: $(PLATFORMVERSION)
   FIPSEnabled: $(FIPSENABLED)

@@ -48,8 +48,27 @@ endif
 
 # Image URL to use all building/pushing image targets
 IMG ?= quay.io/opendatahub/data-science-pipelines-operator:main
+
+# FIPS_ENABLED controls whether FIPS-compliant build flags are used.
+# Default is 1 (enabled) for production. Set to 0 for local builds on
+# Apple Silicon to avoid QEMU emulation issues with FIPS.
+FIPS_ENABLED ?= 1
+
+# TARGETARCH specifies the target architecture for the binary (amd64 or arm64).
+# Default is amd64.
+TARGETARCH ?= amd64
+
+# PLATFORM_FLAG controls the --platform argument for container builds.
+# When FIPS_ENABLED=0, we skip the platform flag to let the build run natively
+# and use Go's cross-compilation instead of QEMU emulation.
+ifeq ($(FIPS_ENABLED),0)
+PLATFORM_FLAG ?=
+else
+PLATFORM_FLAG ?= --platform linux/$(TARGETARCH)
+endif
+
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.25.0
+ENVTEST_K8S_VERSION = 1.34.0
 # Namespace to deploy the operator
 OPERATOR_NS ?= opendatahub
 # Namespace where the webhook and related resources live
@@ -153,7 +172,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 
 .PHONY: podman-build
 podman-build: ## Build container image with the manager.
-	podman build -t ${IMG} .
+	podman build $(PLATFORM_FLAG) --build-arg FIPS_ENABLED=$(FIPS_ENABLED) --build-arg TARGETARCH=$(TARGETARCH) -t ${IMG} .
 
 .PHONY: podman-push
 podman-push: ## Push container image with the manager.
@@ -213,7 +232,7 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest
 ## Tool Versions
 arch:= $(shell uname -m)
 
-KUSTOMIZE_VERSION ?= v5.2.1
+KUSTOMIZE_VERSION ?= v5.7.0
 CONTROLLER_TOOLS_VERSION ?= v0.16.5
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
@@ -230,7 +249,7 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
-	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@release-0.16
+	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@release-0.23
 
 .PHONY: bundle
 bundle: manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.
