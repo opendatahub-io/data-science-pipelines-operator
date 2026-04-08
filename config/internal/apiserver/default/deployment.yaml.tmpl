@@ -232,6 +232,9 @@ spec:
             - --pipelinesStoreKubernetes=true
             - --disableWebhook=true
             {{ end }}
+            {{ if .APIServer.ManagedPipelines }}
+            - --managedPipelinesDir=/config/managed-pipelines
+            {{ end }}
           ports:
             - containerPort: 8888
               name: http
