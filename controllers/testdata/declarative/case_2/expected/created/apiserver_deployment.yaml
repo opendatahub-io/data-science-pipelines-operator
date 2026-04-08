@@ -147,6 +147,7 @@ spec:
             - --config=/config
             - -logtostderr=true
             - --sampleconfig=/config/sample_config.json
+            - --managedPipelinesDir=/config/managed-pipelines
           ports:
             - containerPort: 8888
               name: http
