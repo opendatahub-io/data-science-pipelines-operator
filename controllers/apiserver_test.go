@@ -224,6 +224,7 @@ func TestDeployAPIServerWithManagedPipelines(t *testing.T) {
 	value, found = getEnvValue(t, apiC, "MANAGED_PIPELINES_UPLOAD_TAGS")
 	require.True(t, found)
 	assert.Equal(t, wantTags, value)
+	assert.Contains(t, apiC.Args, "--managedPipelinesDir=/config/managed-pipelines")
 
 	// Init container gets default requests/limits when CR omits resources
 	require.NotNil(t, initC.Resources.Requests)
@@ -363,6 +364,7 @@ func TestDeployAPIServerWithoutManagedPipelines(t *testing.T) {
 	require.NotNil(t, apiC)
 	_, found := getEnvValue(t, apiC, "MANAGED_PIPELINES_UPLOAD_TAGS")
 	assert.False(t, found)
+	assert.NotContains(t, apiC.Args, "--managedPipelinesDir=/config/managed-pipelines")
 
 	// Verify managed pipelines is nil (backward compatibility)
 	assert.Nil(t, dspa.Spec.APIServer.ManagedPipelines)
