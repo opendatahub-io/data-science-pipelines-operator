@@ -17,14 +17,13 @@ limitations under the License.
 package controllers
 
 import (
-	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
 )
 
 // relatedImageEnvPrefix matches env vars forwarded to the managed-pipelines init
-// container through DSPO.ManagedPipelinesImages (e.g. RELATED_IMAGE_AUTOML_RUNTIME).
+// container (e.g. RELATED_IMAGE_AUTOML_RUNTIME).
 const relatedImageEnvPrefix = "RELATED_IMAGE_"
 
 // ManagedPipelineImageEnvVar is a name/value pair from the operator environment.
@@ -33,28 +32,26 @@ type ManagedPipelineImageEnvVar struct {
 	Value string
 }
 
-// ManagedPipelineImageEnvFromJSON parses a JSON object and returns name/value entries
-// whose keys are RELATED_IMAGE_* env var names, sorted by name.
-func ManagedPipelineImageEnvFromJSON(raw string) ([]ManagedPipelineImageEnvVar, error) {
-	m := map[string]string{}
-	if err := json.Unmarshal([]byte(raw), &m); err != nil {
-		return nil, fmt.Errorf("invalid DSPO managed pipeline images JSON mapping: %w", err)
-	}
-	cleaned := make(map[string]string, len(m))
-	for rawKey, rawValue := range m {
-		key := strings.TrimSpace(rawKey)
+// ManagedPipelineImageEnvFromEnviron returns RELATED_IMAGE_* env vars from an
+// os.Environ()-style list ("KEY=VALUE"), sorted by key. Returns an error if
+// any RELATED_IMAGE_* prefixed var has an invalid name; empty values are ignored.
+func ManagedPipelineImageEnvFromEnviron(environ []string) ([]ManagedPipelineImageEnvVar, error) {
+	cleaned := make(map[string]string)
+	for _, raw := range environ {
+		key, value, found := strings.Cut(raw, "=")
+		if !found {
+			continue
+		}
+		key = strings.TrimSpace(key)
 		if !strings.HasPrefix(key, relatedImageEnvPrefix) {
-			return nil, fmt.Errorf("invalid env var name %q: must start with %q", key, relatedImageEnvPrefix)
+			continue
 		}
 		if len(key) == len(relatedImageEnvPrefix) || !isValidEnvVarName(key) {
-			return nil, fmt.Errorf("invalid env var name %q: must contain only [A-Z0-9_] and non-empty suffix", key)
+			return nil, fmt.Errorf("invalid RELATED_IMAGE_* env var name %q: must contain only [A-Z0-9_] with a non-empty suffix after the prefix", key)
 		}
-		value := strings.TrimSpace(rawValue)
+		value = strings.TrimSpace(value)
 		if value == "" {
-			return nil, fmt.Errorf("empty image value for env var %q", key)
-		}
-		if prev, exists := cleaned[key]; exists {
-			return nil, fmt.Errorf("duplicate env var key %q after whitespace trimming (values %q and %q)", key, prev, value)
+			continue
 		}
 		cleaned[key] = value
 	}
