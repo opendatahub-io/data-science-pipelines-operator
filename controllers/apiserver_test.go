@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"os"
 	"strings"
 	"testing"
 
@@ -78,6 +79,20 @@ func getEnvValue(t testing.TB, c *corev1.Container, name string) (string, bool) 
 		}
 	}
 	return "", false
+}
+
+func clearRelatedImageEnv(t *testing.T) {
+	t.Helper()
+	for _, raw := range os.Environ() {
+		key, value, found := strings.Cut(raw, "=")
+		if !found {
+			continue
+		}
+		if strings.HasPrefix(key, relatedImageEnvPrefix) {
+			os.Unsetenv(key)
+			t.Cleanup(func() { os.Setenv(key, value) })
+		}
+	}
 }
 
 func TestDeployAPIServer(t *testing.T) {
@@ -829,7 +844,10 @@ func TestExtractParams_ManagedPipelinesVolumeSizeLimit(t *testing.T) {
 // parsed as non-strings and can break manifest apply / OpenAPI validation.
 func TestAPIServerDeploymentTemplate_ManagedPipelineImageEnvValuesAreYAMLStrings(t *testing.T) {
 	t.Cleanup(func() { viper.Reset() })
-	viper.Set(config.ManagedPipelinesImagesConfigName, `{"RELATED_IMAGE_BOOLISH":"true","RELATED_IMAGE_NULLISH":"null","RELATED_IMAGE_NUMERIC":"123"}`)
+	clearRelatedImageEnv(t)
+	t.Setenv("RELATED_IMAGE_BOOLISH", "true")
+	t.Setenv("RELATED_IMAGE_NULLISH", "null")
+	t.Setenv("RELATED_IMAGE_NUMERIC", "123")
 
 	ctx, params, reconciler := CreateNewTestObjects()
 	dspa := testutil.CreateDSPAWithManagedPipelines(
@@ -896,7 +914,9 @@ func TestAPIServerDeploymentTemplate_ManagedPipelineImageEnvValuesAreYAMLStrings
 
 func TestDeployAPIServerWithManagedPipelines_ForwardsConfiguredManagedPipelineImageEnv(t *testing.T) {
 	t.Cleanup(func() { viper.Reset() })
-	viper.Set(config.ManagedPipelinesImagesConfigName, `{"RELATED_IMAGE_TOOLBOX":"registry.example/toolbox@sha256:aaa","RELATED_IMAGE_RHEL_AI":"registry.example/rhelai@sha256:bbb"}`)
+	clearRelatedImageEnv(t)
+	t.Setenv("RELATED_IMAGE_TOOLBOX", "registry.example/toolbox@sha256:aaa")
+	t.Setenv("RELATED_IMAGE_RHEL_AI", "registry.example/rhelai@sha256:bbb")
 
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
@@ -938,7 +958,8 @@ func TestDeployAPIServerWithManagedPipelines_ForwardsConfiguredManagedPipelineIm
 
 func TestDeployAPIServerWithManagedPipelines_ForwardsConfiguredManagedPipelineImageEnv_QuotesSpecialChars(t *testing.T) {
 	t.Cleanup(func() { viper.Reset() })
-	viper.Set(config.ManagedPipelinesImagesConfigName, `{"RELATED_IMAGE_TOOLBOX":"registry.example/img:latest\"withquotes"}`)
+	clearRelatedImageEnv(t)
+	t.Setenv("RELATED_IMAGE_TOOLBOX", `registry.example/img:latest"withquotes`)
 
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
@@ -970,7 +991,8 @@ func TestDeployAPIServerWithManagedPipelines_ForwardsConfiguredManagedPipelineIm
 
 func TestExtractParams_ManagedPipelineImageEnvVarsNilWithoutManagedPipelines(t *testing.T) {
 	t.Cleanup(func() { viper.Reset() })
-	viper.Set(config.ManagedPipelinesImagesConfigName, `{"RELATED_IMAGE_SHOULD_NOT_APPEAR":"x"}`)
+	clearRelatedImageEnv(t)
+	t.Setenv("RELATED_IMAGE_SHOULD_NOT_APPEAR", "x")
 
 	dspa := testutil.CreateEmptyDSPA()
 	dspa.Name = "dspa"
@@ -986,7 +1008,8 @@ func TestExtractParams_ManagedPipelineImageEnvVarsNilWithoutManagedPipelines(t *
 
 func TestExtractParams_ManagedPipelineImageEnvVarsDefaultsToEmpty(t *testing.T) {
 	t.Cleanup(func() { viper.Reset() })
-	// Do NOT set DSPO.ManagedPipelinesImages — should default to "{}" and produce empty slice.
+	clearRelatedImageEnv(t)
+	// Do not set any RELATED_IMAGE_* env vars.
 
 	dspa := testutil.CreateDSPAWithManagedPipelines("img:latest", nil, nil)
 	dspa.Name = "dspa"
@@ -1001,7 +1024,7 @@ func TestExtractParams_ManagedPipelineImageEnvVarsDefaultsToEmpty(t *testing.T) 
 
 func TestDeployAPIServerWithManagedPipelines_EmptyMappingNoRelatedImageEnv(t *testing.T) {
 	t.Cleanup(func() { viper.Reset() })
-	viper.Set(config.ManagedPipelinesImagesConfigName, `{}`)
+	clearRelatedImageEnv(t)
 
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
@@ -1033,40 +1056,27 @@ func TestDeployAPIServerWithManagedPipelines_EmptyMappingNoRelatedImageEnv(t *te
 	}
 }
 
-func TestExtractParams_ManagedPipelineImageEnvVarsInvalidJSON(t *testing.T) {
-	t.Cleanup(func() { viper.Reset() })
-	viper.Set(config.ManagedPipelinesImagesConfigName, `{"RELATED_IMAGE_X":`)
-
-	dspa := testutil.CreateDSPAWithManagedPipelines("img:latest", nil, nil)
-	dspa.Name = "dspa"
-	dspa.Namespace = "ns"
-
-	ctx, params, reconciler := CreateNewTestObjects()
-	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "invalid DSPO managed pipeline images JSON mapping")
-}
-
 func TestReconcileAPIServer_ConfigHashIncludesManagedPipelineImageEnvVars(t *testing.T) {
 	ctx, _, reconciler := CreateNewTestObjects()
 	t.Cleanup(func() { viper.Reset() })
+	clearRelatedImageEnv(t)
 
 	dspa := testutil.CreateDSPAWithManagedPipelines("same-img", nil, nil)
 	dspa.Name = "dspa"
 	dspa.Namespace = "ns"
 
-	viper.Set(config.ManagedPipelinesImagesConfigName, `{"RELATED_IMAGE_X":"digest-one"}`)
+	t.Setenv("RELATED_IMAGE_X", "digest-one")
 	params1 := &DSPAParams{}
 	require.NoError(t, params1.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
 	require.NoError(t, reconciler.ReconcileAPIServer(ctx, dspa, params1))
 
-	viper.Set(config.ManagedPipelinesImagesConfigName, `{"RELATED_IMAGE_X":"digest-two"}`)
+	t.Setenv("RELATED_IMAGE_X", "digest-two")
 	params2 := &DSPAParams{}
 	require.NoError(t, params2.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
 	require.NoError(t, reconciler.ReconcileAPIServer(ctx, dspa, params2))
 
 	assert.NotEqual(t, params1.APIServerConfigHash, params2.APIServerConfigHash,
-		"hash should change when DSPO.ManagedPipelinesImages changes")
+		"hash should change when RELATED_IMAGE_* env vars change")
 }
 
 func TestExtractParams_ManagedPipelinesResourcesMergePartialRequests(t *testing.T) {
@@ -1097,7 +1107,8 @@ func TestExtractParams_ManagedPipelinesResourcesMergePartialRequests(t *testing.
 
 func TestDeployAPIServerWithManagedPipelines_OnlyDetectedManagedImageEnvVarsOnInitContainer(t *testing.T) {
 	t.Cleanup(func() { viper.Reset() })
-	viper.Set(config.ManagedPipelinesImagesConfigName, `{"RELATED_IMAGE_SENTINEL":"registry.example/sentinel@sha256:ccc"}`)
+	clearRelatedImageEnv(t)
+	t.Setenv("RELATED_IMAGE_SENTINEL", "registry.example/sentinel@sha256:ccc")
 
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
@@ -1134,12 +1145,13 @@ func TestDeployAPIServerWithManagedPipelines_OnlyDetectedManagedImageEnvVarsOnIn
 	require.True(t, found)
 	assert.Equal(t, "registry.example/sentinel@sha256:ccc", value)
 	assert.Equal(t, len(params.ManagedPipelineImageEnvVars), managedImageEnvCount,
-		"init container should carry exactly the RELATED_IMAGE_* env vars from DSPO.ManagedPipelinesImages")
+		"init container should carry exactly the RELATED_IMAGE_* env vars from operator environment")
 }
 
 func TestReconcileAPIServer_ConfigHashIdempotent(t *testing.T) {
 	t.Cleanup(func() { viper.Reset() })
-	viper.Set(config.ManagedPipelinesImagesConfigName, `{"RELATED_IMAGE_X":"digest-same"}`)
+	clearRelatedImageEnv(t)
+	t.Setenv("RELATED_IMAGE_X", "digest-same")
 
 	ctx, _, reconciler := CreateNewTestObjects()
 

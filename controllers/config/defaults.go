@@ -127,7 +127,6 @@ const (
 	RequeueTimeConfigName                    = "DSPO.RequeueTime"
 	ApiServerIncludeOwnerReferenceConfigName = "DSPO.ApiServer.IncludeOwnerReference"
 	FIPSEnabledConfigName                    = "DSPO.FIPSEnabled"
-	ManagedPipelinesImagesConfigName         = "DSPO.ManagedPipelinesImages"
 )
 
 // DSPA Status Condition Types
