@@ -35,6 +35,9 @@ spec:
         image: $(IMAGES_DSPO)
         name: manager
         # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
+        envFrom:
+          - configMapRef:
+              name: dspo-parameters
         env:
           # Env vars are prioritized over --config
           - name: IMAGES_APISERVER
@@ -81,8 +84,6 @@ spec:
             value: $(ARGOWORKFLOWSCONTROLLERS)
           - name: MANAGEDPIPELINES
             value: $(MANAGEDPIPELINES)
-          - name: DSPO_MANAGEDPIPELINESIMAGES
-            value: $(MANAGEDPIPELINES_IMAGES)
           - name: DSPO_PLATFORMVERSION
             value: $(PLATFORMVERSION)
           - name: DSPO_FIPSENABLED
