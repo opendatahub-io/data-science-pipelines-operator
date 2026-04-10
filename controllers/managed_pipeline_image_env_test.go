@@ -25,9 +25,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestManagedPipelineImageEnvFromJSON_PrefixAndSorting(t *testing.T) {
+func TestManagedPipelineImageEnvFromEnviron_PrefixAndSorting(t *testing.T) {
 	t.Parallel()
-	got, err := ManagedPipelineImageEnvFromJSON(`{"RELATED_IMAGE_Z":"last-alpha","RELATED_IMAGE_A":"first-alpha"}`)
+	got, err := ManagedPipelineImageEnvFromEnviron([]string{
+		"RELATED_IMAGE_Z=last-alpha",
+		"RELATED_IMAGE_A=first-alpha",
+	})
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 	assert.Equal(t, "RELATED_IMAGE_A", got[0].Name)
@@ -36,92 +39,78 @@ func TestManagedPipelineImageEnvFromJSON_PrefixAndSorting(t *testing.T) {
 	assert.Equal(t, "last-alpha", got[1].Value)
 }
 
-func TestManagedPipelineImageEnvFromJSON_EmptyObject(t *testing.T) {
+func TestManagedPipelineImageEnvFromEnviron_EmptyInput(t *testing.T) {
 	t.Parallel()
-	got, err := ManagedPipelineImageEnvFromJSON(`{}`)
+	got, err := ManagedPipelineImageEnvFromEnviron(nil)
 	require.NoError(t, err)
 	assert.Empty(t, got)
 }
 
-func TestManagedPipelineImageEnvFromJSON_RejectsMalformedJSON(t *testing.T) {
+func TestManagedPipelineImageEnvFromEnviron_IgnoresNonMatchingEntries(t *testing.T) {
 	t.Parallel()
-	_, err := ManagedPipelineImageEnvFromJSON(`{"RELATED_IMAGE_X":`)
-	require.Error(t, err)
-}
-
-func TestManagedPipelineImageEnvFromJSON_RejectsInvalidNameChars(t *testing.T) {
-	t.Parallel()
-	_, err := ManagedPipelineImageEnvFromJSON(`{"RELATED_IMAGE_lower":"bad"}`)
-	require.Error(t, err)
-
-	_, err = ManagedPipelineImageEnvFromJSON(`{"RELATED_IMAGE_has-dash":"bad"}`)
-	require.Error(t, err)
-
-	_, err = ManagedPipelineImageEnvFromJSON(`{"RELATED_IMAGE_OK":"good"}`)
+	got, err := ManagedPipelineImageEnvFromEnviron([]string{
+		"NOT_RELATED_IMAGE_X=img",
+		"PATH=/usr/bin",
+		"MALFORMED_ENTRY_WITHOUT_EQUALS",
+		"RELATED_IMAGE_OK=good",
+	})
 	require.NoError(t, err)
+	require.Len(t, got, 1)
+	assert.Equal(t, "RELATED_IMAGE_OK", got[0].Name)
+	assert.Equal(t, "good", got[0].Value)
 }
 
-func TestManagedPipelineImageEnvFromJSON_RejectsMissingRelatedImagePrefix(t *testing.T) {
+func TestManagedPipelineImageEnvFromEnviron_RejectsBarePrefix(t *testing.T) {
 	t.Parallel()
-	_, err := ManagedPipelineImageEnvFromJSON(`{"NOT_RELATED_IMAGE_X":"img"}`)
+	_, err := ManagedPipelineImageEnvFromEnviron([]string{"RELATED_IMAGE_=bad"})
 	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid RELATED_IMAGE_* env var name")
 }
 
-func TestManagedPipelineImageEnvFromJSON_RejectsEmptyString(t *testing.T) {
+func TestManagedPipelineImageEnvFromEnviron_RejectsLowercaseSuffix(t *testing.T) {
 	t.Parallel()
-	_, err := ManagedPipelineImageEnvFromJSON(``)
+	_, err := ManagedPipelineImageEnvFromEnviron([]string{"RELATED_IMAGE_lower=bad"})
 	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid RELATED_IMAGE_* env var name")
 }
 
-func TestManagedPipelineImageEnvFromJSON_RejectsJSONArray(t *testing.T) {
+func TestManagedPipelineImageEnvFromEnviron_RejectsDashInName(t *testing.T) {
 	t.Parallel()
-	_, err := ManagedPipelineImageEnvFromJSON(`["RELATED_IMAGE_X"]`)
+	_, err := ManagedPipelineImageEnvFromEnviron([]string{"RELATED_IMAGE_HAS-DASH=bad"})
 	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid RELATED_IMAGE_* env var name")
 }
 
-func TestManagedPipelineImageEnvFromJSON_RejectsNonStringValues(t *testing.T) {
+func TestManagedPipelineImageEnvFromEnviron_IgnoresEmptyValue(t *testing.T) {
 	t.Parallel()
-	_, err := ManagedPipelineImageEnvFromJSON(`{"RELATED_IMAGE_X":123}`)
-	require.Error(t, err)
+	got, err := ManagedPipelineImageEnvFromEnviron([]string{"RELATED_IMAGE_X="})
+	require.NoError(t, err)
+	assert.Empty(t, got)
 }
 
-func TestManagedPipelineImageEnvFromJSON_RejectsBarePrefix(t *testing.T) {
+func TestManagedPipelineImageEnvFromEnviron_IgnoresWhitespaceOnlyValue(t *testing.T) {
 	t.Parallel()
-	_, err := ManagedPipelineImageEnvFromJSON(`{"RELATED_IMAGE_":"img"}`)
-	require.Error(t, err)
+	got, err := ManagedPipelineImageEnvFromEnviron([]string{"RELATED_IMAGE_X=   "})
+	require.NoError(t, err)
+	assert.Empty(t, got)
 }
 
-func TestManagedPipelineImageEnvFromJSON_RejectsEmptyValue(t *testing.T) {
+func TestManagedPipelineImageEnvFromEnviron_TrimsWhitespaceFromValue(t *testing.T) {
 	t.Parallel()
-	_, err := ManagedPipelineImageEnvFromJSON(`{"RELATED_IMAGE_X":""}`)
-	require.Error(t, err)
-}
-
-func TestManagedPipelineImageEnvFromJSON_RejectsWhitespaceOnlyValue(t *testing.T) {
-	t.Parallel()
-	_, err := ManagedPipelineImageEnvFromJSON(`{"RELATED_IMAGE_X":"   "}`)
-	require.Error(t, err)
-}
-
-func TestManagedPipelineImageEnvFromJSON_TrimsWhitespaceFromValue(t *testing.T) {
-	t.Parallel()
-	got, err := ManagedPipelineImageEnvFromJSON(`{"RELATED_IMAGE_X":"  registry.example/img@sha256:abc  "}`)
+	got, err := ManagedPipelineImageEnvFromEnviron([]string{"RELATED_IMAGE_X=  registry.example/img@sha256:abc  "})
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	assert.Equal(t, "registry.example/img@sha256:abc", got[0].Value)
 }
 
-func TestManagedPipelineImageEnvFromJSON_TrimsWhitespaceFromKey(t *testing.T) {
+func TestManagedPipelineImageEnvFromEnviron_LastValueWinsOnDuplicateKey(t *testing.T) {
 	t.Parallel()
-	got, err := ManagedPipelineImageEnvFromJSON(`{"  RELATED_IMAGE_X  ":"img"}`)
+	got, err := ManagedPipelineImageEnvFromEnviron([]string{
+		"RELATED_IMAGE_X=first",
+		"RELATED_IMAGE_X=second",
+	})
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	assert.Equal(t, "RELATED_IMAGE_X", got[0].Name)
-}
-
-func TestManagedPipelineImageEnvFromJSON_WhitespaceKeyCollisionReturnsError(t *testing.T) {
-	t.Parallel()
-	_, err := ManagedPipelineImageEnvFromJSON(`{"  RELATED_IMAGE_X  ":"first","RELATED_IMAGE_X":"second"}`)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "duplicate env var key")
+	assert.Equal(t, "second", got[0].Value)
 }
