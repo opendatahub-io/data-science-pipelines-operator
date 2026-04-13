@@ -309,9 +309,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	err = params.ExtractParams(ctx, dspa, r.Client, r.Log)
 	if err != nil {
 		log.Error(err, "Encountered error when parsing CR")
-		if errors.Is(err, ErrManagedPipelinesImageUnset) {
-			r.setStatusAsNotReady(config.APIServerReady, err, dspaStatus.SetApiServerStatus)
-		}
+		r.setStatusAsNotReady(config.APIServerReady, err, dspaStatus.SetApiServerStatus)
 		return ctrl.Result{Requeue: true, RequeueAfter: requeueTime}, nil
 	}
 
