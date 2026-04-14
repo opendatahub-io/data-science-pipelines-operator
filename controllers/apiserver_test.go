@@ -773,7 +773,7 @@ func TestReconcile_SetsAPIServerNotReadyOnExtractParamsErrors(t *testing.T) {
 				d.Namespace = "testnamespace"
 				return d
 			},
-			wantMsgContains: []string{"not found"},
+			wantMsgContains: []string{`configmaps "missing-launcher-cm"`, "not found"},
 		},
 	}
 	for _, tt := range tests {
