@@ -306,9 +306,13 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	requeueTime := config.GetDurationConfigWithDefault(config.RequeueTimeConfigName, config.DefaultRequeueTime)
 
+	// ExtractParams resolves CR fields, operator config, and cluster references before any component
+	// reconciles. Failures here block the whole reconcile; we surface them on APIServerReady 
+	// and the API server is the first workload that consumes these parameters—without inventing a
+	// new condition type or touching downstream component conditions that never ran.
 	err = params.ExtractParams(ctx, dspa, r.Client, r.Log)
 	if err != nil {
-		log.Error(err, "Encountered error when parsing CR")
+		log.Error(err, "Failed to extract or resolve DSPA parameters")
 		r.setStatusAsNotReady(config.APIServerReady, err, dspaStatus.SetApiServerStatus)
 		return ctrl.Result{Requeue: true, RequeueAfter: requeueTime}, nil
 	}
