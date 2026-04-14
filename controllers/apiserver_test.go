@@ -46,15 +46,15 @@ const (
 	dsPipelineAPIServerContainerName  = "ds-pipeline-api-server"
 )
 
-func requireAPIServerReadyCondition(t *testing.T, dspa *dspav1.DataSciencePipelinesApplication) *metav1.Condition {
+func requireDSPAStatusCondition(t *testing.T, dspa *dspav1.DataSciencePipelinesApplication, conditionType string) metav1.Condition {
 	t.Helper()
 	for i := range dspa.Status.Conditions {
-		if dspa.Status.Conditions[i].Type == config.APIServerReady {
-			return &dspa.Status.Conditions[i]
+		if dspa.Status.Conditions[i].Type == conditionType {
+			return dspa.Status.Conditions[i]
 		}
 	}
-	t.Fatalf("expected APIServerReady condition in status")
-	return nil
+	t.Fatalf("expected condition type %q in status", conditionType)
+	return metav1.Condition{}
 }
 
 // getInitManagedPipelinesContainer returns the init-managed-pipelines container from the deployment, or nil if not found.
@@ -745,7 +745,6 @@ func TestReconcile_SetsAPIServerNotReadyOnExtractParamsErrors(t *testing.T) {
 		{
 			name: "invalid_related_image_env_var_name",
 			prepareDSPA: func(t *testing.T) *dspav1.DataSciencePipelinesApplication {
-				clearRelatedImageEnv(t)
 				t.Setenv("RELATED_IMAGE_toolbox", "registry.example/x:latest")
 				d := testutil.CreateDSPAWithManagedPipelines("img:latest", nil, nil)
 				d.Name = "dspa-extract-bad-related"
@@ -780,6 +779,7 @@ func TestReconcile_SetsAPIServerNotReadyOnExtractParamsErrors(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Cleanup(viper.Reset)
 			viper.Reset()
+			clearRelatedImageEnv(t)
 
 			dspa := tt.prepareDSPA(t)
 			ctx, _, reconciler := CreateNewTestObjects()
@@ -790,16 +790,24 @@ func TestReconcile_SetsAPIServerNotReadyOnExtractParamsErrors(t *testing.T) {
 			})
 			require.NoError(t, err)
 			assert.True(t, result.Requeue, "should requeue when ExtractParams fails")
-			assert.NotZero(t, result.RequeueAfter, "RequeueAfter should be set")
+			wantRequeueAfter := config.GetDurationConfigWithDefault(config.RequeueTimeConfigName, config.DefaultRequeueTime)
+			assert.Equal(t, wantRequeueAfter, result.RequeueAfter, "RequeueAfter should match configured value")
 
 			updated := &dspav1.DataSciencePipelinesApplication{}
 			require.NoError(t, reconciler.Get(ctx, types.NamespacedName{Name: dspa.Name, Namespace: dspa.Namespace}, updated))
 
-			apiCond := requireAPIServerReadyCondition(t, updated)
+			apiCond := requireDSPAStatusCondition(t, updated, config.APIServerReady)
 			assert.Equal(t, metav1.ConditionFalse, apiCond.Status)
 			assert.Equal(t, config.FailingToDeploy, apiCond.Reason)
 			for _, sub := range tt.wantMsgContains {
 				assert.Contains(t, apiCond.Message, sub)
+			}
+
+			crCond := requireDSPAStatusCondition(t, updated, config.CrReady)
+			assert.Equal(t, metav1.ConditionFalse, crCond.Status)
+			assert.Equal(t, config.FailingToDeploy, crCond.Reason)
+			for _, sub := range tt.wantMsgContains {
+				assert.Contains(t, crCond.Message, sub)
 			}
 		})
 	}

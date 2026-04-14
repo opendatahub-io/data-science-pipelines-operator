@@ -314,6 +314,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	if err != nil {
 		log.Error(err, "Failed to extract or resolve DSPA parameters")
 		r.setStatusAsNotReady(config.APIServerReady, err, dspaStatus.SetApiServerStatus)
+		dspaStatus.SetDSPANotReady(err, config.FailingToDeploy)
 		return ctrl.Result{Requeue: true, RequeueAfter: requeueTime}, nil
 	}
 
