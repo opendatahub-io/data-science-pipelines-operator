@@ -17,14 +17,17 @@ echo "go.mod Go version: $GOMOD_VERSION"
 
 ERRORS=0
 CHECKED=0
+FOUND=0
 
 while IFS= read -r dockerfile; do
     relative="${dockerfile#"$REPO_ROOT"/}"
+    FOUND=$((FOUND + 1))
     while IFS= read -r line; do
         docker_version=$(echo "$line" | sed -E 's/.*go-toolset:([0-9]+\.[0-9]+).*/\1/')
 
         if [[ ! "$docker_version" =~ ^[0-9]+\.[0-9]+$ ]]; then
-            echo "WARNING: Could not parse Go version from line in $relative: $line" >&2
+            echo "ERROR: Could not parse Go version from line in $relative: $line" >&2
+            ERRORS=$((ERRORS + 1))
             continue
         fi
 
@@ -41,8 +44,13 @@ done < <(cd "$REPO_ROOT" && git ls-files '*Dockerfile*' | xargs grep -il 'go-too
 
 echo ""
 
-if [[ $CHECKED -eq 0 ]]; then
+if [[ $FOUND -eq 0 ]]; then
     echo "ERROR: No Dockerfiles with 'go-toolset:' found." >&2
+    exit 1
+fi
+
+if [[ $CHECKED -eq 0 ]]; then
+    echo "ERROR: Found $FOUND Dockerfile(s) with 'go-toolset:', but could not parse any Go version." >&2
     exit 1
 fi
 
