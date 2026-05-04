@@ -6,7 +6,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
-GOMOD_VERSION=$(grep -E '^go [0-9]' "$REPO_ROOT/go.mod" | awk '{print $2}' | sed -E 's/^([0-9]+\.[0-9]+).*/\1/')
+GOMOD_VERSION=$(grep -E '^go [0-9]' "$REPO_ROOT/go.mod" | awk '{print $2}' | sed -E 's/^([0-9]+\.[0-9]+).*/\1/' || true)
 
 if [[ -z "$GOMOD_VERSION" ]]; then
     echo "ERROR: Could not extract Go version from go.mod" >&2
@@ -39,8 +39,8 @@ while IFS= read -r dockerfile; do
         else
             echo "  OK: $relative (Go $docker_version)"
         fi
-    done < <(grep -iE '(FROM|ARG).*go-toolset:' "$dockerfile")
-done < <(cd "$REPO_ROOT" && git ls-files '*Dockerfile*' | xargs grep -il 'go-toolset:' | sed "s|^|$REPO_ROOT/|")
+    done < <(grep -iE '(FROM|ARG).*go-toolset:' "$dockerfile" || true)
+done < <(cd "$REPO_ROOT" && (git ls-files '*Dockerfile*' | xargs grep -il 'go-toolset:' | sed "s|^|$REPO_ROOT/|") || true)
 
 echo ""
 
@@ -50,13 +50,13 @@ if [[ $FOUND -eq 0 ]]; then
 fi
 
 if [[ $CHECKED -eq 0 ]]; then
-    echo "ERROR: Found $FOUND Dockerfile(s) with 'go-toolset:', but could not parse any Go version." >&2
+    echo "ERROR: Found $FOUND Dockerfile(s) with 'go-toolset:', but could not parse any Go version reference." >&2
     exit 1
 fi
 
 if [[ $ERRORS -gt 0 ]]; then
-    echo "FAILED: $ERRORS Dockerfile(s) have a Go version mismatch with go.mod ($GOMOD_VERSION)." >&2
+    echo "FAILED: $ERRORS go-toolset reference(s) have a Go version mismatch with go.mod ($GOMOD_VERSION)." >&2
     exit 1
 fi
 
-echo "PASSED: All $CHECKED Dockerfile(s) use Go $GOMOD_VERSION, matching go.mod."
+echo "PASSED: All $CHECKED go-toolset reference(s) use Go $GOMOD_VERSION, matching go.mod."
