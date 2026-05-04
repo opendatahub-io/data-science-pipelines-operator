@@ -39,8 +39,8 @@ while IFS= read -r dockerfile; do
         else
             echo "  OK: $relative (Go $docker_version)"
         fi
-    done < <(grep -iE '(FROM|ARG).*go-toolset:' "$dockerfile" || true)
-done < <(cd "$REPO_ROOT" && (git ls-files '*Dockerfile*' | xargs grep -il 'go-toolset:' | sed "s|^|$REPO_ROOT/|") || true)
+    done < <(grep -iE '^\s*(FROM|ARG).*go-toolset:' "$dockerfile" || true)
+done < <(cd "$REPO_ROOT" && (git ls-files '*Dockerfile*' | xargs grep -ilE '^\s*(FROM|ARG).*go-toolset:' | sed "s|^|$REPO_ROOT/|") || true)
 
 echo ""
 
@@ -55,7 +55,7 @@ if [[ $CHECKED -eq 0 ]]; then
 fi
 
 if [[ $ERRORS -gt 0 ]]; then
-    echo "FAILED: $ERRORS go-toolset reference(s) have a Go version mismatch with go.mod ($GOMOD_VERSION)." >&2
+    echo "FAILED: $ERRORS error(s) found when checking go-toolset references against go.mod ($GOMOD_VERSION)." >&2
     exit 1
 fi
 
