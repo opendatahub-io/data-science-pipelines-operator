@@ -12,9 +12,9 @@ metadata:
     pipelinesascode.tekton.dev/on-comment: "^/test-early-gate"
   labels:
     appstudio.openshift.io/application: opendatahub-builds
-    appstudio.openshift.io/component: early-gate-test
+    appstudio.openshift.io/component: odh-operator-ci
     pipelines.appstudio.openshift.io/type: build
-  name: early-gate-test-on-comment
+  name: odh-operator-ci-on-comment
   namespace: open-data-hub-tenant
 spec:
   params:
