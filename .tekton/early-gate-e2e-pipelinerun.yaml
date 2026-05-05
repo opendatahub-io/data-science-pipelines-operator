@@ -17,7 +17,7 @@ metadata:
       body.issue.state == "open"
   labels:
     appstudio.openshift.io/application: opendatahub-builds
-    appstudio.openshift.io/component: dsp-operator-e2e-early-gate
+    appstudio.openshift.io/component: early-gate-test
     pipelines.appstudio.openshift.io/type: build
   name: dsp-operator-e2e-early-gate-on-comment
   namespace: open-data-hub-tenant
