@@ -2,7 +2,7 @@ apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
   annotations:
-    build.appstudio.openshift.io/repo: https://github.com/opendatahub-io/opendatahub-operator?rev={{revision}}
+    build.appstudio.openshift.io/repo: https://github.com/opendatahub-io/data-science-pipelines-operator?rev={{revision}}
     build.appstudio.redhat.com/commit_sha: '{{revision}}'
     build.appstudio.redhat.com/target_branch: '{{target_branch}}'
     pipelinesascode.tekton.dev/cancel-in-progress: "true"
@@ -21,6 +21,17 @@ metadata:
   namespace: open-data-hub-tenant
 spec:
   params:
+  # ADD THIS PARAMETER FIRST - Include the DSP operator image built by PR pipeline
+  - name: group-components
+    value: |
+      {
+        "odh-data-science-pipelines-operator-controller-ci": {
+          "image": "quay.io/opendatahub/odh-data-science-pipelines-operator-controller:on-pr-{{revision}}",
+          "git.url": "https://github.com/opendatahub-io/data-science-pipelines-operator",
+          "git.commit": "{{revision}}"
+        }
+      }
+
   - name: operator-git-url
     value: '{{source_url}}'
   - name: operator-revision
@@ -67,6 +78,9 @@ spec:
     serviceAccountName: build-pipeline-odh-early-gate
   workspaces:
   - name: git-auth
+    secret:
+      secretName: '{{ git_auth_secret }}'
+  - name: netrc
     secret:
       secretName: '{{ git_auth_secret }}'
 status: {}
