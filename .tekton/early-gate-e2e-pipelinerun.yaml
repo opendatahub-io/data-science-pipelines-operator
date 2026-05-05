@@ -2,11 +2,13 @@ apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
   annotations:
+    # Points to the component repo where the PR is opened
     build.appstudio.openshift.io/repo: https://github.com/opendatahub-io/data-science-pipelines-operator?rev={{revision}}
     build.appstudio.redhat.com/commit_sha: '{{revision}}'
     build.appstudio.redhat.com/target_branch: '{{target_branch}}'
     pipelinesascode.tekton.dev/cancel-in-progress: "true"
     pipelinesascode.tekton.dev/max-keep-runs: "3"
+    # Trigger on /test-early-gate comment
     pipelinesascode.tekton.dev/on-cel-expression: |
       event == "issue_comment" &&
       (body.comment.body == "/test-early-gate" || body.comment.body.startsWith("/test-early-gate ")) &&
@@ -15,13 +17,14 @@ metadata:
       body.issue.state == "open"
   labels:
     appstudio.openshift.io/application: opendatahub-builds
-    appstudio.openshift.io/component: odh-early-gate
+    appstudio.openshift.io/component: dsp-operator-e2e-early-gate
     pipelines.appstudio.openshift.io/type: build
-  name: odh-early-gate-on-pull-request
+  name: dsp-operator-e2e-early-gate-on-comment
   namespace: open-data-hub-tenant
 spec:
   params:
-  # Include the DSP operator image built by PR pipeline
+  # REQUIRED: Include the component image built by the PR pipeline
+  # This tells the e2e pipeline which component to test
   - name: group-components
     value: |
       {
@@ -32,17 +35,22 @@ spec:
         }
       }
 
-  # FIXED: Build the opendatahub-operator from its main branch
+  # Build the opendatahub-operator from main branch (NOT the component repo!)
+  # The component image from group-components will be embedded in the operator
   - name: operator-git-url
     value: 'https://github.com/opendatahub-io/opendatahub-operator'
   - name: operator-revision
     value: 'main'
+
+  # Output images - use unique tags to avoid conflicts
   - name: operator-output-image
     value: quay.io/opendatahub/opendatahub-operator:e2e-dsp-pr-{{revision}}
   - name: bundle-output-image
     value: quay.io/opendatahub/opendatahub-operator-bundle:e2e-dsp-pr-{{revision}}
   - name: catalog-output-image
     value: quay.io/opendatahub/opendatahub-operator-catalog:e2e-dsp-pr-{{revision}}
+
+  # Operator build configuration
   - name: operator-dockerfile
     value: Dockerfiles/rhoai.Dockerfile
   - name: build-version-tag
@@ -50,10 +58,14 @@ spec:
   - name: operator-build-args
     value:
     - BUILD_TYPE=CI
+
+  # Pipeline configuration
   - name: pipeline-type
     value: "pull-request"
   - name: image-expires-after
     value: "7d"
+
+  # ODH-Build-Config repository (for bundle and catalog)
   - name: build-config-git-url
     value: "https://github.com/opendatahub-io/ODH-Build-Config"
   - name: build-config-revision
@@ -62,10 +74,14 @@ spec:
     value: "v4.20"
   - name: quay-tag
     value: "odh-stable"
+
+  # Utils repository (for processors)
   - name: utils-repo-url
     value: "https://github.com/red-hat-data-services/RHOAI-Konflux-Automation.git"
   - name: utils-repo-ref
     value: "odh"
+
+  # Reference to the central e2e pipeline in odh-konflux-central
   pipelineRef:
     resolver: git
     params:
@@ -75,8 +91,12 @@ spec:
       value: 'earlygate'
     - name: pathInRepo
       value: e2e-early-gate/early-gate-e2e-pipeline.yaml
+
+  # Use the same ServiceAccount as the PR pipeline
   taskRunTemplate:
-    serviceAccountName: build-pipeline-odh-early-gate
+    serviceAccountName: build-pipeline-odh-data-science-pipelines-operator-controller
+
+  # Required workspaces
   workspaces:
   - name: git-auth
     secret:
