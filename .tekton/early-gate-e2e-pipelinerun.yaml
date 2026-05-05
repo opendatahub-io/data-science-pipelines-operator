@@ -8,13 +8,8 @@ metadata:
     build.appstudio.redhat.com/target_branch: '{{target_branch}}'
     pipelinesascode.tekton.dev/cancel-in-progress: "true"
     pipelinesascode.tekton.dev/max-keep-runs: "3"
-    # Trigger on /test-early-gate comment
-    pipelinesascode.tekton.dev/on-cel-expression: |
-      event == "issue_comment" &&
-      (body.comment.body == "/test-early-gate" || body.comment.body.startsWith("/test-early-gate ")) &&
-      (body.action == "created" || body.action == "edited") &&
-      body.issue.pull_request != null &&
-      body.issue.state == "open"
+    pipelinesascode.tekton.dev/on-event: "[issue_comment]"
+    pipelinesascode.tekton.dev/on-comment: "^/test-early-gate"
   labels:
     appstudio.openshift.io/application: opendatahub-builds
     appstudio.openshift.io/component: early-gate-test
