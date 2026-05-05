@@ -21,7 +21,7 @@ metadata:
   namespace: open-data-hub-tenant
 spec:
   params:
-  # ADD THIS PARAMETER FIRST - Include the DSP operator image built by PR pipeline
+  # Include the DSP operator image built by PR pipeline
   - name: group-components
     value: |
       {
@@ -32,16 +32,17 @@ spec:
         }
       }
 
+  # FIXED: Build the opendatahub-operator from its main branch
   - name: operator-git-url
-    value: '{{source_url}}'
+    value: 'https://github.com/opendatahub-io/opendatahub-operator'
   - name: operator-revision
-    value: '{{revision}}'
+    value: 'main'
   - name: operator-output-image
-    value: quay.io/opendatahub/opendatahub-operator:odh-pr-{{revision}}
+    value: quay.io/opendatahub/opendatahub-operator:e2e-dsp-pr-{{revision}}
   - name: bundle-output-image
-    value: quay.io/opendatahub/opendatahub-operator-bundle:odh-pr-{{revision}}
+    value: quay.io/opendatahub/opendatahub-operator-bundle:e2e-dsp-pr-{{revision}}
   - name: catalog-output-image
-    value: quay.io/opendatahub/opendatahub-operator-catalog:odh-pr-{{revision}}
+    value: quay.io/opendatahub/opendatahub-operator-catalog:e2e-dsp-pr-{{revision}}
   - name: operator-dockerfile
     value: Dockerfiles/rhoai.Dockerfile
   - name: build-version-tag
