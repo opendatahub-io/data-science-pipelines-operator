@@ -19,7 +19,7 @@ metadata:
     appstudio.openshift.io/application: opendatahub-builds
     appstudio.openshift.io/component: early-gate-test
     pipelines.appstudio.openshift.io/type: build
-  name: dsp-operator-e2e-early-gate-on-comment
+  name: early-gate-test-on-comment
   namespace: open-data-hub-tenant
 spec:
   params:
