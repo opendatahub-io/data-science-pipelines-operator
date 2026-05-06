@@ -7,6 +7,11 @@ on:
       - '**/Dockerfile*'
       - '.github/scripts/verify-go-version-consistency.sh'
       - '.github/workflows/go-version-consistency.yml'
+  push:
+    branches:
+      - main
+      - stable
+      - 'rhoai-*'
 
 jobs:
   verify-go-version:
