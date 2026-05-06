@@ -56,7 +56,7 @@ COPY --from=stage1 /build/bin /build/bin
 USER root
 
 RUN dnf -y install \
-    python39 \
+    python3 \
     python3-pip \
     golang \
     git \

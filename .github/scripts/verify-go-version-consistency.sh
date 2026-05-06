@@ -62,7 +62,7 @@ while IFS= read -r dockerfile; do
         docker_version=$(echo "$line" | sed -E 's/.*[Ff][Rr][Oo][Mm][[:space:]]+(--[^[:space:]]+[[:space:]]+)*(golang|[^[:space:]]*go-toolset):([0-9]+\.[0-9]+(\.[0-9]+)?).*/\3/')
 
         if [[ ! "$docker_version" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
-            docker_version=$(echo "$line" | sed -E 's/.*go-toolset:([0-9]+\.[0-9]+(\.[0-9]+)?).*/\1/')
+            docker_version=$(echo "$line" | sed -E 's/.*(go-toolset|golang):([0-9]+\.[0-9]+(\.[0-9]+)?).*/\2/')
         fi
 
         if [[ ! "$docker_version" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
@@ -93,7 +93,7 @@ while IFS= read -r dockerfile; do
         else
             echo "  OK: $relative (Go $resolved_version)"
         fi
-    done < <(grep -iE '^\s*(FROM|ARG).*go-toolset:' "$dockerfile" || grep -iE '^FROM[[:space:]]+(--[^[:space:]]+[[:space:]]+)*(golang):' "$dockerfile" || true)
+    done < <(grep -iE '^\s*(FROM|ARG).*(go-toolset|golang):' "$dockerfile" || true)
 done < <(cd "$REPO_ROOT" && (git ls-files -z '*Dockerfile*' | xargs -0 grep -liE -- '(FROM[[:space:]]+(--[^[:space:]]+[[:space:]]+)*(golang|[^[:space:]]*go-toolset):|ARG[[:space:]]+.*go-toolset:)' | sed "s|^|$REPO_ROOT/|") || true)
 
 echo ""
