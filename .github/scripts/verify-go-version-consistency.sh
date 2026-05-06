@@ -94,7 +94,7 @@ while IFS= read -r dockerfile; do
             echo "  OK: $relative (Go $resolved_version)"
         fi
     done < <(grep -iE '^\s*(FROM|ARG).*(go-toolset|golang):' "$dockerfile" || true)
-done < <(cd "$REPO_ROOT" && (git ls-files -z '*Dockerfile*' | xargs -0 grep -liE -- '(FROM[[:space:]]+(--[^[:space:]]+[[:space:]]+)*(golang|[^[:space:]]*go-toolset):|ARG[[:space:]]+.*go-toolset:)' | sed "s|^|$REPO_ROOT/|") || true)
+done < <(cd "$REPO_ROOT" && (git ls-files -z '*Dockerfile*' | xargs -0 grep -liE -- '(FROM[[:space:]]+(--[^[:space:]]+[[:space:]]+)*(golang|[^[:space:]]*go-toolset):|ARG[[:space:]]+.*(go-toolset|golang):)' | sed "s|^|$REPO_ROOT/|") || true)
 
 echo ""
 
