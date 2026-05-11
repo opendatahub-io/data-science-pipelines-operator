@@ -21,7 +21,7 @@ spec:
   # REQUIRED: Include the component image built by the PR pipeline
   # This tells the e2e pipeline which component to test
   - name: group-components
-    value: '{ "odh-data-science-pipelines-operator-controller-ci": "opendatahub/odh-data-science-pipelines-operator-controller" }'
+    value: '{ "odh-data-science-pipelines-operator-controller-ci": "opendatahub/data-science-pipelines-operator" }'
   # Build the opendatahub-operator from main branch (NOT the component repo!)
   # The component image from group-components will be embedded in the operator
   - name: operator-git-url
