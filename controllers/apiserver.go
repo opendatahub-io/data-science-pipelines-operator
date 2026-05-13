@@ -149,6 +149,9 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1.Dat
 	if params.APIServerWorkspaceJSON != "" {
 		combinedConfigHashInput = sampleConfigJSON + params.APIServerWorkspaceJSON
 	}
+	if params.APIServerPluginsJson != "" {
+		combinedConfigHashInput += params.APIServerPluginsJson
+	}
 	combinedConfigHashInput += params.PlatformVersion
 	if params.APIServer != nil && params.APIServer.ManagedPipelines != nil {
 		managedSpec, err := json.Marshal(params.APIServer.ManagedPipelines)
@@ -164,7 +167,7 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1.Dat
 		combinedConfigHashInput = combinedConfigHashInput + string(imgEnv)
 	}
 
-	// Config hash for pod rollout when sample config, workspace, managed pipelines, or platform version change.
+	// Config hash for pod rollout when sample config, workspace, plugins, managed pipelines, or platform version change.
 	params.APIServerConfigHash = fmt.Sprintf("%x", sha256.Sum256([]byte(combinedConfigHashInput)))
 
 	log.Info("Applying APIServer Resources")

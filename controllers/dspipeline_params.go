@@ -36,6 +36,7 @@ import (
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/util"
 	routev1 "github.com/openshift/api/route/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -171,6 +172,9 @@ type MLflowPluginSettings struct {
 	ExperimentDescription string `json:"experimentDescription,omitempty"`
 	DefaultExperimentName string `json:"defaultExperimentName"`
 	KFPBaseURL            string `json:"kfpBaseURL,omitempty"`
+	KFPRunURLPathTemplate string `json:"kfpRunURLPathTemplate,omitempty"`
+	MLflowBaseURL         string `json:"mlflowBaseURL,omitempty"`
+	MLflowUIPathPrefix    string `json:"mlflowUIPathPrefix,omitempty"`
 	InjectUserEnvVars     bool   `json:"injectUserEnvVars,omitempty"`
 }
 
@@ -267,6 +271,23 @@ func (p *DSPAParams) RetrieveMLflowEndpoint(ctx context.Context, client client.C
 		return mlflow.Status.Address.URL, nil
 	}
 	return "", errors.New("MLflow resource missing Status.Address.URL field. Unable to resolve endpoint")
+}
+
+func (p *DSPAParams) IsAPIServerDeploymentReady(ctx context.Context, client client.Client) (bool, error) {
+	deployment := &appsv1.Deployment{}
+	namespacedName := types.NamespacedName{
+		Name:      p.APIServerDefaultResourceName,
+		Namespace: p.Namespace,
+	}
+	if err := client.Get(ctx, namespacedName, deployment); err != nil {
+		if apierrs.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	availableCondition := util.GetDeploymentCondition(deployment.Status, appsv1.DeploymentAvailable)
+	return availableCondition != nil && availableCondition.Status == v1.ConditionTrue, nil
 }
 
 func (p *DSPAParams) RetrieveOrCreateSecret(ctx context.Context, client client.Client, secretName, secretKey string, generatedPasswordLength int, log logr.Logger) (string, error) {
@@ -756,16 +777,19 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	}
 
 	if dsp.Spec.MLflow != nil {
-		defaultMode := dspa.AutoDetect
-		mlflowCfg := dspa.MLflowConfig{
-			IntegrationMode:   &defaultMode,
-			InjectUserEnvVars: dsp.Spec.MLflow.InjectUserEnvVars,
+		integrationMode := dspa.AutoDetect
+		if dsp.Spec.MLflow.IntegrationMode != nil {
+			integrationMode = *dsp.Spec.MLflow.IntegrationMode
 		}
 
-		// Override default IntegrationMode if specified.
-		disabledMode := dspa.Disabled
-		if *dsp.Spec.MLflow.IntegrationMode == dspa.Disabled {
-			mlflowCfg.IntegrationMode = &disabledMode
+		injectUserEnvVars := false
+		if dsp.Spec.MLflow.InjectUserEnvVars != nil {
+			injectUserEnvVars = *dsp.Spec.MLflow.InjectUserEnvVars
+		}
+
+		mlflowCfg := dspa.MLflowConfig{
+			IntegrationMode:   &integrationMode,
+			InjectUserEnvVars: &injectUserEnvVars,
 		}
 
 		p.MLflow = &mlflowCfg
@@ -812,21 +836,53 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 
 		setResourcesDefault(config.APIServerResourceRequirements, &p.APIServer.Resources)
 
-		if p.MLflow != nil && *p.MLflow.IntegrationMode == dspa.AutoDetect {
-			// Retrieve internal MLflow service endpoint for use in API Server MLflow plugin config.
-			mlflowEndpoint, err := p.RetrieveMLflowEndpoint(ctx, client, log)
-			if err == nil {
-				apiServerExternalUrl, err := util.GetRouteHostname(ctx, p.APIServerServiceName, p.Namespace, client)
-				if err != nil {
-					log.Info("Unable to retrieve API server route for KFP base URL", "error", err)
-				}
-				pluginCfg, err := BuildMLflowPluginConfigJson(mlflowEndpoint, p.CustomCABundleRootMountPath, *p.MLflow.InjectUserEnvVars, apiServerExternalUrl)
-				if err != nil {
-					log.Info("Failed to build MLflow plugin config. MLflow API server plugin will not be enabled.")
-				}
-				p.APIServerPluginsJson = pluginCfg
+		mlflowMode := dspa.AutoDetect
+		if p.MLflow != nil && p.MLflow.IntegrationMode != nil {
+			mlflowMode = *p.MLflow.IntegrationMode
+		}
+
+		if p.MLflow != nil && mlflowMode == dspa.AutoDetect {
+			apiServerReady, readinessErr := p.IsAPIServerDeploymentReady(ctx, client)
+			if readinessErr != nil {
+				log.Error(readinessErr, "failed to determine APIServer readiness. MLflow API server plugin config generation deferred.")
+			} else if !apiServerReady {
+				log.V(1).Info("APIServer deployment is not ready yet. Deferring MLflow API server plugin config generation.")
 			} else {
-				log.Error(err, "failed to retrieve MLflow internal endpoint. MLflow API server plugin will not be enabled.")
+				// Retrieve internal MLflow service endpoint for use in API Server MLflow plugin config.
+				mlflowEndpoint, err := p.RetrieveMLflowEndpoint(ctx, client, log)
+				if err == nil {
+					apiServerExternalURL, routeErr := util.GetRouteHostname(ctx, p.APIServerServiceName, p.Namespace, client)
+					if routeErr != nil {
+						log.Info("Unable to retrieve API server route for KFP base URL", "error", routeErr)
+					}
+					if apiServerExternalURL == "" {
+						log.V(1).Info("APIServer route is not available yet. Deferring MLflow API server plugin config generation.")
+					} else {
+						// Resolve effective CA bundle file path before building plugin config so
+						// APIServer override values are reflected even though global path fields
+						// are updated later in ExtractParams.
+						effectiveCABundleRootMountPath := p.CustomCABundleRootMountPath
+						if p.APIServer.CABundleFileMountPath != "" {
+							effectiveCABundleRootMountPath = p.APIServer.CABundleFileMountPath
+						}
+						effectiveCABundleFileName := dspTrustedCAConfigMapKey
+						if p.APIServer.CABundleFileName != "" {
+							effectiveCABundleFileName = p.APIServer.CABundleFileName
+						}
+						effectiveCABundleFilePath := fmt.Sprintf("%s/%s", effectiveCABundleRootMountPath, effectiveCABundleFileName)
+						injectUserEnvVars := false
+						if p.MLflow.InjectUserEnvVars != nil {
+							injectUserEnvVars = *p.MLflow.InjectUserEnvVars
+						}
+						pluginCfg, err := BuildMLflowPluginConfigJson(mlflowEndpoint, effectiveCABundleFilePath, injectUserEnvVars, apiServerExternalURL)
+						if err != nil {
+							log.Info("Failed to build MLflow plugin config. MLflow API server plugin will not be enabled.")
+						}
+						p.APIServerPluginsJson = pluginCfg
+					}
+				} else {
+					log.Error(err, "failed to retrieve MLflow internal endpoint. MLflow API server plugin will not be enabled.")
+				}
 			}
 		}
 
@@ -1085,6 +1141,9 @@ func BuildMLflowPluginConfigJson(mlflowEndpoint string, caBundlePath string, inj
 		ExperimentDescription: "Created by AI Pipelines.",
 		DefaultExperimentName: "AIP-default",
 		KFPBaseURL:            kfpBaseURL,
+		KFPRunURLPathTemplate: "/develop-train/pipelines/runs/{namespace}/runs/{run_id}",
+		MLflowBaseURL:         kfpBaseURL,
+		MLflowUIPathPrefix:    "/mlflow",
 		InjectUserEnvVars:     injectUserEnvVars,
 	}
 
