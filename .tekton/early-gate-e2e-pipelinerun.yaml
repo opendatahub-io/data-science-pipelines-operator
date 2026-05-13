@@ -18,57 +18,12 @@ metadata:
   namespace: open-data-hub-tenant
 spec:
   params:
-  # REQUIRED: Include the component image built by the PR pipeline
-  # This tells the e2e pipeline which component to test
   - name: group-components
     value: '{ "odh-data-science-pipelines-operator-controller-ci": "opendatahub/data-science-pipelines-operator" }'
-  # Build the opendatahub-operator from main branch (NOT the component repo!)
-  # The component image from group-components will be embedded in the operator
-  - name: operator-git-url
-    value: 'https://github.com/opendatahub-io/opendatahub-operator'
-  - name: operator-revision
-    value: 'main'
-
-  # Output images - use unique tags to avoid conflicts
-  - name: operator-output-image
-    value: quay.io/opendatahub/opendatahub-operator:e2e-dsp-pr-{{revision}}
-  - name: bundle-output-image
-    value: quay.io/opendatahub/opendatahub-operator-bundle:e2e-dsp-pr-{{revision}}
-  - name: catalog-output-image
-    value: quay.io/opendatahub/opendatahub-operator-catalog:e2e-dsp-pr-{{revision}}
-
-  # Operator build configuration
-  - name: operator-dockerfile
-    value: Dockerfiles/rhoai.Dockerfile
-  - name: build-version-tag
-    value: "odh-stable"
-  - name: operator-build-args
-    value:
-    - BUILD_TYPE=CI
-
-  # Pipeline configuration
-  - name: pipeline-type
-    value: "pull-request"
-  - name: image-expires-after
-    value: "7d"
-
-  # ODH-Build-Config repository (for bundle and catalog)
-  - name: build-config-git-url
-    value: "https://github.com/opendatahub-io/ODH-Build-Config"
-  - name: build-config-revision
-    value: "main"
-  - name: openshift-version
-    value: "v4.20"
-  - name: quay-tag
-    value: "odh-stable"
-
-  # Utils repository (for processors)
-  - name: utils-repo-url
-    value: "https://github.com/red-hat-data-services/RHOAI-Konflux-Automation.git"
-  - name: utils-repo-ref
-    value: "odh"
-
-  # Reference to the central e2e pipeline in odh-konflux-central
+  - name: git-url
+    value: '{{source_url}}'
+  - name: revision
+    value: '{{revision}}'
   pipelineRef:
     resolver: git
     params:
@@ -77,13 +32,9 @@ spec:
     - name: revision
       value: 'earlygate'
     - name: pathInRepo
-      value: e2e-early-gate/early-gate-e2e-pipeline.yaml
-
-  # Use the same ServiceAccount as the PR pipeline
+      value: e2e-early-gate/early-gate-component-pipeline.yaml
   taskRunTemplate:
     serviceAccountName: build-pipeline-odh-data-science-pipelines-operator-controller
-
-  # Required workspaces
   workspaces:
   - name: git-auth
     secret:
