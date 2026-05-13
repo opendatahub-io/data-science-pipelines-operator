@@ -10,4 +10,4 @@ patchesStrategicMerge:
 images:
   - name: controller
     newName: quay.io/opendatahub/data-science-pipelines-operator
-    newTag: main
+    newTag: odh-main
