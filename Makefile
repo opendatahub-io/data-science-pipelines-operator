@@ -47,7 +47,7 @@ ifeq ($(USE_IMAGE_DIGESTS), true)
 endif
 
 # Image URL to use all building/pushing image targets
-IMG ?= quay.io/opendatahub/data-science-pipelines-operator:main
+IMG ?= quay.io/opendatahub/data-science-pipelines-operator:odh-main
 
 # FIPS_ENABLED controls whether FIPS-compliant build flags are used.
 # Default is 1 (enabled) for production. Set to 0 for local builds on

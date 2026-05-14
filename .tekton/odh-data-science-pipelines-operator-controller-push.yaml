@@ -23,7 +23,7 @@ spec:
   - name: revision
     value: '{{revision}}'
   - name: output-image
-    value: quay.io/opendatahub/data-science-pipelines-operator:main
+    value: quay.io/opendatahub/data-science-pipelines-operator:odh-main
   - name: dockerfile
     value: Dockerfile
   - name: path-context

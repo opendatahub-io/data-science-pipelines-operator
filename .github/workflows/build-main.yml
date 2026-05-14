@@ -22,7 +22,7 @@ jobs:
         id: tags
         run: |
           commit_sha=${{ github.event.after }}
-          tag=main-${commit_sha:0:7}
+          tag=odh-main-${commit_sha:0:7}
           echo "tag=${tag}" >> $GITHUB_OUTPUT
       - name: Build Image
         uses: ./.github/actions/build
@@ -34,13 +34,11 @@ jobs:
           IMAGE_REPO: ${{ env.IMAGE_REPO_DSPO }}
           DOCKERFILE: Dockerfile
           GH_REPO: ${{ github.repository }}
-      - name: Tag latest
+      - name: Tag odh-main
         shell: bash
         env:
           IMG: quay.io/${{ env.QUAY_ORG }}/${{ env.IMAGE_REPO_DSPO }}
           NEWEST_TAG: ${{ steps.tags.outputs.tag }}
         run: |
-          podman tag ${IMG}:${NEWEST_TAG} ${IMG}:latest
-          podman push ${IMG}:latest
-          podman tag ${IMG}:${NEWEST_TAG} ${IMG}:main
-          podman push ${IMG}:main
+          podman tag ${IMG}:${NEWEST_TAG} ${IMG}:odh-main
+          podman push ${IMG}:odh-main

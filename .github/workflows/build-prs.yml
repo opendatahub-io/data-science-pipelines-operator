@@ -66,7 +66,7 @@ jobs:
       cancel-in-progress: true
     env:
       SOURCE_BRANCH: ${{ needs.fetch-data.outputs.head_sha }}
-      TARGET_IMAGE_TAG: pr-${{ needs.fetch-data.outputs.pr_number }}
+      TARGET_IMAGE_TAG: odh-pr-${{ needs.fetch-data.outputs.pr_number }}
     steps:
       - uses: actions/checkout@v3
       - name: Build Image
@@ -140,7 +140,7 @@ jobs:
       group: ${{ github.workflow }}-clean-pr-images-${{ needs.fetch-data.outputs.pr_number }}
       cancel-in-progress: true
     env:
-      TARGET_IMAGE_TAG: pr-${{ needs.fetch-data.outputs.pr_number }}
+      TARGET_IMAGE_TAG: odh-pr-${{ needs.fetch-data.outputs.pr_number }}
     steps:
       - name: Delete PR image
         shell: bash
