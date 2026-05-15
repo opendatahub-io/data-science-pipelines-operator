@@ -1,0 +1,38 @@
+name: Build image (arm64)
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    paths:
+      - Dockerfile
+      - Makefile
+      - go.mod
+      - go.sum
+      - .github/workflows/build-arm64.yml
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Build image (cross-compile to amd64)
+        run: make podman-build BUILDER_ARCH=arm64 IMG=localhost/dspo:amd64
+      - name: Verify amd64 image architecture
+        run: |
+          arch=$(podman inspect localhost/dspo:amd64 --format '{{.Architecture}}')
+          echo "Image architecture: $arch"
+          [ "$arch" = "amd64" ] || { echo "Expected amd64, got $arch"; exit 1; }
+      - name: Build image (native arm64)
+        run: make podman-build BUILDER_ARCH=arm64 TARGETARCH=arm64 IMG=localhost/dspo:arm64
+      - name: Verify arm64 image architecture
+        run: |
+          arch=$(podman inspect localhost/dspo:arm64 --format '{{.Architecture}}')
+          echo "Image architecture: $arch"
+          [ "$arch" = "arm64" ] || { echo "Expected arm64, got $arch"; exit 1; }
