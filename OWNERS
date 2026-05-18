@@ -1,6 +1,5 @@
 approvers:
   - dsp-developers
-  - gmfrasca
   - hbelmiro
   - HumairAK
   - mprahl
@@ -8,13 +7,11 @@ approvers:
   - nsingla
   - VaniHaripriya
 reviewers:
-  - gmfrasca
   - hbelmiro
-  - HumairAK
   - VaniHaripriya
-  - mprahl
   - alyssacgoins
   - nsingla
   - sduvvuri1603
 emeritus_approvers:
   - accorvin
+  - gmfrasca
