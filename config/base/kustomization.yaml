@@ -188,5 +188,19 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.WEBHOOK_ANNOTATIONS
+  - name: RELATED_IMAGE_ODH_AUTOML_IMAGE
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.RELATED_IMAGE_ODH_AUTOML_IMAGE
+  - name: RELATED_IMAGE_ODH_AUTORAG_IMAGE
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.RELATED_IMAGE_ODH_AUTORAG_IMAGE
 configurations:
   - params.yaml

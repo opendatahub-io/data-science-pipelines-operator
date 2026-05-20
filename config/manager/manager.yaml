@@ -90,6 +90,10 @@ spec:
             value: $(FIPSENABLED)
           - name: WEBHOOK_ANNOTATIONS
             value: $(WEBHOOK_ANNOTATIONS)
+          - name: RELATED_IMAGE_ODH_AUTOML_IMAGE
+            value: $(RELATED_IMAGE_ODH_AUTOML_IMAGE)
+          - name: RELATED_IMAGE_ODH_AUTORAG_IMAGE
+            value: $(RELATED_IMAGE_ODH_AUTORAG_IMAGE)
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
