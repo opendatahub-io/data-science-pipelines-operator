@@ -42,13 +42,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/client-go/discovery"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
-
-	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	admv1 "k8s.io/api/admissionregistration/v1"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -158,15 +154,6 @@ func initConfig(configPath string) error {
 	})
 
 	return nil
-}
-
-func isCRDAvailable(cfg *rest.Config, groupVersion string) bool {
-	dc, err := discovery.NewDiscoveryClientForConfig(cfg)
-	if err != nil {
-		return false
-	}
-	_, err = dc.ServerResourcesForGroupVersion(groupVersion)
-	return err == nil
 }
 
 func main() {
@@ -281,14 +268,10 @@ func main() {
 		},
 	}
 
-	if isCRDAvailable(restCfg, mlflowv1.GroupVersion.String()) {
-		mlflowSyncPeriod := 5 * time.Minute
-		mgrOpts.Cache.ByObject[&mlflowv1.MLflow{}] = cache.ByObject{SyncPeriod: &mlflowSyncPeriod}
-		setupLog.Info("MLflow CRD detected, caching MLflow resources", "syncPeriod", mlflowSyncPeriod)
-	} else {
-		mgrOpts.Client.Cache.DisableFor = append(mgrOpts.Client.Cache.DisableFor, &mlflowv1.MLflow{})
-		setupLog.Info("MLflow CRD not found, MLflow cache disabled")
-	}
+	// MLflow CRs are read during reconcile; always bypass the client cache so
+	// behavior does not depend on whether the CRD existed at operator startup.
+	mgrOpts.Client.Cache.DisableFor = append(mgrOpts.Client.Cache.DisableFor, &mlflowv1.MLflow{})
+	setupLog.Info("MLflow reads use direct API access (bypass controller-runtime client cache)")
 
 	mgr, err := ctrl.NewManager(restCfg, mgrOpts)
 	if err != nil {
@@ -319,6 +302,8 @@ func main() {
 
 	if err = (&controllers.DSPAReconciler{
 		Client:                  mgr.GetClient(),
+		APIReader:               mgr.GetAPIReader(),
+		MLflowEndpointCacheTTL:  controllers.DefaultMLflowEndpointCacheTTL,
 		Scheme:                  mgr.GetScheme(),
 		Log:                     ctrl.Log,
 		TemplatesPath:           "config/internal/",

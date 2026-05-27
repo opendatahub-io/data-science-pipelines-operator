@@ -110,6 +110,8 @@ type DSPAParams struct {
 	FIPSEnabled             bool
 	MLflow                  *dspa.MLflowConfig
 	APIServerPluginsJson    string
+	// GrantMlflowWorkloadRBAC is true when mlflow.kubeflow.org Role rules should be applied this reconcile.
+	GrantMlflowWorkloadRBAC bool
 
 	// Proxy configuration for all DSPA components
 	ProxyConfig *dspa.ProxyConfig
@@ -127,6 +129,9 @@ type DSPAParams struct {
 	// operator process environment and forwarded to the managed-pipelines init
 	// container when enabled.
 	ManagedPipelineImageEnvVars []ManagedPipelineImageEnvVar
+	// ResolveMLflowEndpoint optionally overrides MLflow endpoint lookup.
+	// When nil, ExtractParams falls back to direct client reads.
+	ResolveMLflowEndpoint func(context.Context, string, logr.Logger) (string, error)
 }
 
 type DBConnection struct {
@@ -162,7 +167,7 @@ type PluginConfig struct {
 }
 
 type TLSConfig struct {
-	InsecureSkipVerify bool   `json:"insecureSkipVerify,omitempty" mapstructure:"insecureSkipVerify"`
+	InsecureSkipVerify bool   `json:"insecureSkipVerify" mapstructure:"insecureSkipVerify"`
 	CABundlePath       string `json:"caBundlePath,omitempty" mapstructure:"caBundlePath"`
 }
 
@@ -175,7 +180,7 @@ type MLflowPluginSettings struct {
 	KFPRunURLPathTemplate string `json:"kfpRunURLPathTemplate,omitempty"`
 	MLflowBaseURL         string `json:"mlflowBaseURL,omitempty"`
 	MLflowUIPathPrefix    string `json:"mlflowUIPathPrefix,omitempty"`
-	InjectUserEnvVars     bool   `json:"injectUserEnvVars,omitempty"`
+	InjectUserEnvVars     bool   `json:"injectUserEnvVars"`
 }
 
 // UsingExternalDB will return true if an external Database is specified in the CR, otherwise false.
@@ -776,23 +781,19 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		p.PodToPodTLS = *dsp.Spec.PodToPodTLS
 	}
 
+	integrationMode := dspa.AutoDetect
+	injectUserEnvVars := false
 	if dsp.Spec.MLflow != nil {
-		integrationMode := dspa.AutoDetect
 		if dsp.Spec.MLflow.IntegrationMode != nil {
 			integrationMode = *dsp.Spec.MLflow.IntegrationMode
 		}
-
-		injectUserEnvVars := false
 		if dsp.Spec.MLflow.InjectUserEnvVars != nil {
 			injectUserEnvVars = *dsp.Spec.MLflow.InjectUserEnvVars
 		}
-
-		mlflowCfg := dspa.MLflowConfig{
-			IntegrationMode:   &integrationMode,
-			InjectUserEnvVars: &injectUserEnvVars,
-		}
-
-		p.MLflow = &mlflowCfg
+	}
+	p.MLflow = &dspa.MLflowConfig{
+		IntegrationMode:   &integrationMode,
+		InjectUserEnvVars: &injectUserEnvVars,
 	}
 
 	p.ProxyConfig = dsp.Spec.Proxy
@@ -836,12 +837,9 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 
 		setResourcesDefault(config.APIServerResourceRequirements, &p.APIServer.Resources)
 
-		mlflowMode := dspa.AutoDetect
-		if p.MLflow != nil && p.MLflow.IntegrationMode != nil {
-			mlflowMode = *p.MLflow.IntegrationMode
-		}
+		mlflowMode := *p.MLflow.IntegrationMode
 
-		if p.MLflow != nil && mlflowMode == dspa.AutoDetect {
+		if mlflowMode == dspa.AutoDetect {
 			apiServerReady, readinessErr := p.IsAPIServerDeploymentReady(ctx, client)
 			if readinessErr != nil {
 				log.Error(readinessErr, "failed to determine APIServer readiness. MLflow API server plugin config generation deferred.")
@@ -849,13 +847,20 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 				log.V(1).Info("APIServer deployment is not ready yet. Deferring MLflow API server plugin config generation.")
 			} else {
 				// Retrieve internal MLflow service endpoint for use in API Server MLflow plugin config.
-				mlflowEndpoint, err := p.RetrieveMLflowEndpoint(ctx, client, log)
+				var (
+					mlflowEndpoint string
+					err            error
+				)
+				if p.ResolveMLflowEndpoint != nil {
+					mlflowEndpoint, err = p.ResolveMLflowEndpoint(ctx, p.Namespace, log)
+				} else {
+					mlflowEndpoint, err = p.RetrieveMLflowEndpoint(ctx, client, log)
+				}
 				if err == nil {
 					apiServerExternalURL, routeErr := util.GetRouteHostname(ctx, p.APIServerServiceName, p.Namespace, client)
 					if routeErr != nil {
 						log.Info("Unable to retrieve API server route for KFP base URL", "error", routeErr)
-					}
-					if apiServerExternalURL == "" {
+					} else if apiServerExternalURL == "" {
 						log.V(1).Info("APIServer route is not available yet. Deferring MLflow API server plugin config generation.")
 					} else {
 						// Resolve effective CA bundle file path before building plugin config so
@@ -885,6 +890,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 				}
 			}
 		}
+		p.GrantMlflowWorkloadRBAC = p.APIServerPluginsJson != ""
 
 		if p.APIServer.CustomServerConfig == nil {
 			p.APIServer.CustomServerConfig = &dspa.ScriptConfigMap{

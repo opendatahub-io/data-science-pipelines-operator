@@ -51,7 +51,6 @@ OTHER_OPTIONS = {
     "PLATFORMVERSION": "\"v0.0.0\"",
     "FIPSENABLED": "false",
     "WEBHOOK_ANNOTATIONS": "",
-    "MLFLOW": "\"{}\"",
 }
 
 

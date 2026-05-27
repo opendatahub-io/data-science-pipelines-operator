@@ -141,6 +141,7 @@ rules:
       - list
       - patch
       - delete
+{{- if .GrantMlflowWorkloadRBAC }}
   - apiGroups:
       - mlflow.kubeflow.org
     resources:
@@ -159,3 +160,4 @@ rules:
       - get
       - update
       - list
+{{- end }}

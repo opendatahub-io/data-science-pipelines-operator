@@ -21,8 +21,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sync"
+	"time"
 
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/dspastatus"
+	mlflowv1 "github.com/opendatahub-io/mlflow-operator/api/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
@@ -52,6 +55,8 @@ const (
 	finalizerName              = "datasciencepipelinesapplications.opendatahub.io/finalizer"
 	errorUpdatingDspaStatusMsg = "Encountered error when updating the DSPA status"
 	k8sWebhookName             = "ds-pipelines-webhook"
+	// DefaultMLflowEndpointCacheTTL is used when DSPAReconciler.MLflowEndpointCacheTTL is unset (<= 0).
+	DefaultMLflowEndpointCacheTTL = 45 * time.Second
 )
 
 // DSPAReconciler reconciles a DSPAParams object
@@ -67,6 +72,61 @@ type DSPAReconciler struct {
 	// resolveImageDigest/isRegistryAllowed. Empty (default) keeps permissive
 	// behavior to match existing operator image handling.
 	AllowedRegistries []string
+	// APIReader bypasses controller-runtime cache and talks directly to API server.
+	// Used for MLflow endpoint lookups so cache startup state does not affect behavior.
+	APIReader client.Reader
+	// MLflowEndpointCacheTTL controls how long endpoint lookups are reused per namespace.
+	// Values <= 0 use DefaultMLflowEndpointCacheTTL.
+	MLflowEndpointCacheTTL time.Duration
+	mlflowEndpointCache    map[string]mlflowEndpointCacheEntry
+	mlflowEndpointCacheMu  sync.RWMutex
+}
+
+type mlflowEndpointCacheEntry struct {
+	endpoint string
+	expires  time.Time
+}
+
+func (r *DSPAReconciler) retrieveMLflowEndpointCached(ctx context.Context, namespace string, log logr.Logger) (string, error) {
+	if namespace == "" {
+		return "", fmt.Errorf("namespace must be set for MLflow endpoint lookup")
+	}
+	ttl := r.MLflowEndpointCacheTTL
+	if ttl <= 0 {
+		ttl = DefaultMLflowEndpointCacheTTL
+	}
+	now := time.Now()
+	r.mlflowEndpointCacheMu.RLock()
+	entry, found := r.mlflowEndpointCache[namespace]
+	r.mlflowEndpointCacheMu.RUnlock()
+	if found && now.Before(entry.expires) {
+		return entry.endpoint, nil
+	}
+
+	mlflowObj := &mlflowv1.MLflow{}
+	reader := r.APIReader
+	if reader == nil {
+		reader = r.Client
+	}
+	namespacedName := types.NamespacedName{Name: "mlflow", Namespace: namespace}
+	if err := reader.Get(ctx, namespacedName, mlflowObj); err != nil {
+		return "", err
+	}
+	if mlflowObj.Status.Address == nil || mlflowObj.Status.Address.URL == "" {
+		return "", fmt.Errorf("MLflow resource missing Status.Address.URL field. Unable to resolve endpoint")
+	}
+
+	r.mlflowEndpointCacheMu.Lock()
+	if r.mlflowEndpointCache == nil {
+		r.mlflowEndpointCache = map[string]mlflowEndpointCacheEntry{}
+	}
+	r.mlflowEndpointCache[namespace] = mlflowEndpointCacheEntry{
+		endpoint: mlflowObj.Status.Address.URL,
+		expires:  now.Add(ttl),
+	}
+	r.mlflowEndpointCacheMu.Unlock()
+	log.V(1).Info("Resolved MLflow endpoint via direct API read", "namespace", namespace, "cacheTtl", ttl.String())
+	return mlflowObj.Status.Address.URL, nil
 }
 
 func (r *DSPAReconciler) ApplyDir(owner mf.Owner, params *DSPAParams, directory string, fns ...mf.Transformer) error {
@@ -219,6 +279,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	params := &DSPAParams{
 		WebhookAnnotations: r.WebhookAnnotations,
 	}
+	params.ResolveMLflowEndpoint = r.retrieveMLflowEndpointCached
 
 	dspa := &dspav1.DataSciencePipelinesApplication{}
 	err := r.Get(ctx, req.NamespacedName, dspa)

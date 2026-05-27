@@ -56,7 +56,9 @@ type DSPASpec struct {
 	// +kubebuilder:validation:Optional
 	Proxy *ProxyConfig `json:"proxy,omitempty"`
 
-	// MLflow configuration for MLflow API Server plugin
+	// MLflow configuration for the API server MLflow plugin.
+	// Omitting this field defaults to integrationMode AUTODETECT and injectUserEnvVars false.
+	// Set integrationMode to DISABLED to opt out of MLflow integration.
 	// +kubebuilder:validation:Optional
 	MLflow *MLflowConfig `json:"mlflow,omitempty"`
 }

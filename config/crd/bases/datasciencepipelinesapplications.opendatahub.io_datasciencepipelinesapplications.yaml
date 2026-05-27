@@ -612,7 +612,10 @@ spec:
                 default: v2
                 type: string
               mlflow:
-                description: MLflow configuration for MLflow API Server plugin
+                description: |-
+                  MLflow configuration for the API server MLflow plugin.
+                  Omitting this field defaults to integrationMode AUTODETECT and injectUserEnvVars false.
+                  Set integrationMode to DISABLED to opt out of MLflow integration.
                 properties:
                   injectUserEnvVars:
                     default: false
