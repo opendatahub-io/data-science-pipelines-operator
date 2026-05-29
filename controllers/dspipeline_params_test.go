@@ -526,7 +526,37 @@ func TestBuildMLflowPluginConfigJson_InjectUserEnvVarsTrue(t *testing.T) {
 	require.Equal(t, true, settings["injectUserEnvVars"])
 }
 
-func TestRetrieveMLflowEndpoint_NotFound(t *testing.T) {
+func TestValidateMLflowEndpointURL(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		raw     string
+		wantErr bool
+	}{
+		{name: "valid https", raw: "https://mlflow:5000/mlflow"},
+		{name: "valid http", raw: "http://mlflow.svc.cluster.local/mlflow"},
+		{name: "empty", raw: "", wantErr: true},
+		{name: "missing scheme", raw: "mlflow:5000/mlflow", wantErr: true},
+		{name: "scheme relative", raw: "//evil.example/mlflow", wantErr: true},
+		{name: "javascript scheme", raw: "javascript:alert(1)", wantErr: true},
+		{name: "missing host", raw: "https:///mlflow", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := validateMLflowEndpointURL(tt.raw)
+			if tt.wantErr {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "must be http/https with non-empty host")
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestLookupMLflowEndpoint_NotFound(t *testing.T) {
 	t.Parallel()
 
 	scheme := testSchemeWithMlflowApps(t)
@@ -534,13 +564,12 @@ func TestRetrieveMLflowEndpoint_NotFound(t *testing.T) {
 		WithScheme(scheme).
 		Build()
 
-	params := DSPAParams{Namespace: "dsp-test"}
-	_, err := params.RetrieveMLflowEndpoint(context.Background(), kc, logr.Discard())
+	_, err := lookupMLflowEndpoint(context.Background(), kc, "dsp-test", logr.Discard())
 	require.Error(t, err)
 	require.True(t, apierrs.IsNotFound(err))
 }
 
-func TestRetrieveMLflowEndpoint_MissingURL(t *testing.T) {
+func TestLookupMLflowEndpoint_MissingURL(t *testing.T) {
 	t.Parallel()
 
 	ml := &mlflowv1.MLflow{
@@ -550,13 +579,12 @@ func TestRetrieveMLflowEndpoint_MissingURL(t *testing.T) {
 	scheme := testSchemeWithMlflowApps(t)
 	kc := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ml).Build()
 
-	params := DSPAParams{Namespace: "dsp-test"}
-	_, err := params.RetrieveMLflowEndpoint(context.Background(), kc, logr.Discard())
+	_, err := lookupMLflowEndpoint(context.Background(), kc, "dsp-test", logr.Discard())
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "MLflow resource missing Status.Address.URL")
 }
 
-func TestRetrieveMLflowEndpoint_Success(t *testing.T) {
+func TestLookupMLflowEndpoint_Success(t *testing.T) {
 	t.Parallel()
 
 	const wantURL = "https://internal-mlflow:5000/mlflow"
@@ -569,10 +597,27 @@ func TestRetrieveMLflowEndpoint_Success(t *testing.T) {
 	scheme := testSchemeWithMlflowApps(t)
 	kc := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ml).Build()
 
-	params := DSPAParams{Namespace: "dsp-ns"}
-	got, err := params.RetrieveMLflowEndpoint(context.Background(), kc, logr.Discard())
+	got, err := lookupMLflowEndpoint(context.Background(), kc, "dsp-ns", logr.Discard())
 	require.NoError(t, err)
 	require.Equal(t, wantURL, got)
+}
+
+func TestLookupMLflowEndpoint_InvalidURL(t *testing.T) {
+	t.Parallel()
+
+	ml := &mlflowv1.MLflow{
+		ObjectMeta: metav1.ObjectMeta{Name: "mlflow", Namespace: "dsp-ns"},
+		Status: mlflowv1.MLflowStatus{
+			Address: &mlflowv1.MLflowAddressStatus{URL: "javascript:alert(1)"},
+		},
+	}
+	scheme := testSchemeWithMlflowApps(t)
+	kc := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ml).Build()
+
+	_, err := lookupMLflowEndpoint(context.Background(), kc, "dsp-ns", logr.Discard())
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "invalid Status.Address.URL")
+	require.Contains(t, err.Error(), "must be http/https with non-empty host")
 }
 
 func TestIsAPIServerDeploymentReady_NotFound(t *testing.T) {
@@ -653,7 +698,7 @@ func TestIsAPIServerDeploymentReady_WrongDeploymentName_ReturnsFalseNotFoundSema
 }
 
 // Retrieves the MLflow CR named "mlflow" only.
-func TestRetrieveMLflowEndpoint_UsesMlflowNamedObject(t *testing.T) {
+func TestLookupMLflowEndpoint_UsesMlflowNamedObject(t *testing.T) {
 	t.Parallel()
 
 	wrong := &mlflowv1.MLflow{
@@ -663,14 +708,13 @@ func TestRetrieveMLflowEndpoint_UsesMlflowNamedObject(t *testing.T) {
 	scheme := testSchemeWithMlflowApps(t)
 	kc := fake.NewClientBuilder().WithScheme(scheme).WithObjects(wrong).Build()
 
-	params := DSPAParams{Namespace: "dsp-ns"}
-	_, err := params.RetrieveMLflowEndpoint(context.Background(), kc, logr.Discard())
+	_, err := lookupMLflowEndpoint(context.Background(), kc, "dsp-ns", logr.Discard())
 	require.True(t, apierrs.IsNotFound(err))
 
 	ml := wrong.DeepCopy()
 	ml.Name = "mlflow"
 	kcWith := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ml).Build()
-	got, err := params.RetrieveMLflowEndpoint(context.Background(), kcWith, logr.Discard())
+	got, err := lookupMLflowEndpoint(context.Background(), kcWith, "dsp-ns", logr.Discard())
 	require.NoError(t, err)
 	require.Equal(t, "https://x", got)
 }

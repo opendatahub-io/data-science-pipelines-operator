@@ -52,10 +52,10 @@ import (
 )
 
 const (
-	finalizerName              = "datasciencepipelinesapplications.opendatahub.io/finalizer"
-	errorUpdatingDspaStatusMsg = "Encountered error when updating the DSPA status"
-	k8sWebhookName             = "ds-pipelines-webhook"
-	// DefaultMLflowEndpointCacheTTL is used when DSPAReconciler.MLflowEndpointCacheTTL is unset (<= 0).
+	finalizerName                 = "datasciencepipelinesapplications.opendatahub.io/finalizer"
+	errorUpdatingDspaStatusMsg    = "Encountered error when updating the DSPA status"
+	k8sWebhookName                = "ds-pipelines-webhook"
+	mlflowCRName                  = "mlflow"
 	DefaultMLflowEndpointCacheTTL = 45 * time.Second
 )
 
@@ -75,8 +75,7 @@ type DSPAReconciler struct {
 	// APIReader bypasses controller-runtime cache and talks directly to API server.
 	// Used for MLflow endpoint lookups so cache startup state does not affect behavior.
 	APIReader client.Reader
-	// MLflowEndpointCacheTTL controls how long endpoint lookups are reused per namespace.
-	// Values <= 0 use DefaultMLflowEndpointCacheTTL.
+	// MLflowEndpointCacheTTL is the duration to cache the MLflow endpoint.
 	MLflowEndpointCacheTTL time.Duration
 	mlflowEndpointCache    map[string]mlflowEndpointCacheEntry
 	mlflowEndpointCacheMu  sync.RWMutex
@@ -87,10 +86,36 @@ type mlflowEndpointCacheEntry struct {
 	expires  time.Time
 }
 
-func (r *DSPAReconciler) retrieveMLflowEndpointCached(ctx context.Context, namespace string, log logr.Logger) (string, error) {
+// removeExpiredMLflowCacheLocked removes expired entries from r.mlflowEndpointCache.
+func (r *DSPAReconciler) removeExpiredMLflowCacheLocked(now time.Time) {
+	for ns, entry := range r.mlflowEndpointCache {
+		if !now.Before(entry.expires) {
+			delete(r.mlflowEndpointCache, ns)
+		}
+	}
+}
+
+func lookupMLflowEndpoint(ctx context.Context, reader client.Reader, namespace string, log logr.Logger) (string, error) {
 	if namespace == "" {
 		return "", fmt.Errorf("namespace must be set for MLflow endpoint lookup")
 	}
+	mlflowObj := &mlflowv1.MLflow{}
+	namespacedName := types.NamespacedName{Name: mlflowCRName, Namespace: namespace}
+	if err := reader.Get(ctx, namespacedName, mlflowObj); err != nil {
+		log.V(1).Info("Unable to retrieve MLflow resource", "name", mlflowCRName, "namespace", namespace)
+		return "", err
+	}
+	if mlflowObj.Status.Address == nil || mlflowObj.Status.Address.URL == "" {
+		return "", fmt.Errorf("MLflow resource missing Status.Address.URL field. Unable to resolve endpoint")
+	}
+	endpoint := mlflowObj.Status.Address.URL
+	if err := validateMLflowEndpointURL(endpoint); err != nil {
+		return "", fmt.Errorf("MLflow resource has invalid Status.Address.URL: %w", err)
+	}
+	return endpoint, nil
+}
+
+func (r *DSPAReconciler) retrieveMLflowEndpointCached(ctx context.Context, namespace string, log logr.Logger) (string, error) {
 	ttl := r.MLflowEndpointCacheTTL
 	if ttl <= 0 {
 		ttl = DefaultMLflowEndpointCacheTTL
@@ -102,31 +127,35 @@ func (r *DSPAReconciler) retrieveMLflowEndpointCached(ctx context.Context, names
 	if found && now.Before(entry.expires) {
 		return entry.endpoint, nil
 	}
+	if found {
+		r.mlflowEndpointCacheMu.Lock()
+		if entry, ok := r.mlflowEndpointCache[namespace]; ok && !now.Before(entry.expires) {
+			delete(r.mlflowEndpointCache, namespace)
+		}
+		r.mlflowEndpointCacheMu.Unlock()
+	}
 
-	mlflowObj := &mlflowv1.MLflow{}
 	reader := r.APIReader
 	if reader == nil {
 		reader = r.Client
 	}
-	namespacedName := types.NamespacedName{Name: "mlflow", Namespace: namespace}
-	if err := reader.Get(ctx, namespacedName, mlflowObj); err != nil {
+	endpoint, err := lookupMLflowEndpoint(ctx, reader, namespace, log)
+	if err != nil {
 		return "", err
-	}
-	if mlflowObj.Status.Address == nil || mlflowObj.Status.Address.URL == "" {
-		return "", fmt.Errorf("MLflow resource missing Status.Address.URL field. Unable to resolve endpoint")
 	}
 
 	r.mlflowEndpointCacheMu.Lock()
 	if r.mlflowEndpointCache == nil {
 		r.mlflowEndpointCache = map[string]mlflowEndpointCacheEntry{}
 	}
+	r.removeExpiredMLflowCacheLocked(now)
 	r.mlflowEndpointCache[namespace] = mlflowEndpointCacheEntry{
-		endpoint: mlflowObj.Status.Address.URL,
+		endpoint: endpoint,
 		expires:  now.Add(ttl),
 	}
 	r.mlflowEndpointCacheMu.Unlock()
 	log.V(1).Info("Resolved MLflow endpoint via direct API read", "namespace", namespace, "cacheTtl", ttl.String())
-	return mlflowObj.Status.Address.URL, nil
+	return endpoint, nil
 }
 
 func (r *DSPAReconciler) ApplyDir(owner mf.Owner, params *DSPAParams, directory string, fns ...mf.Transformer) error {

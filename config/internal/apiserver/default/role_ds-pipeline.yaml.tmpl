@@ -51,12 +51,6 @@ rules:
       - get
       - list
   - apiGroups:
-      - ""
-    resources:
-      - configmaps
-    verbs:
-      - get
-  - apiGroups:
       - argoproj.io
     resources:
       - workflows
@@ -110,6 +104,12 @@ rules:
     resources:
       - routes
 {{- if .GrantMlflowWorkloadRBAC }}
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
   - apiGroups:
       - mlflow.kubeflow.org
     resources:

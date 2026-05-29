@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -42,8 +43,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	mlflowv1 "github.com/opendatahub-io/mlflow-operator/api/v1"
 )
 
 const MlmdIsRequired = "MLMD explicitly disabled in DSPA, but is a required component for DSP"
@@ -129,8 +128,7 @@ type DSPAParams struct {
 	// operator process environment and forwarded to the managed-pipelines init
 	// container when enabled.
 	ManagedPipelineImageEnvVars []ManagedPipelineImageEnvVar
-	// ResolveMLflowEndpoint optionally overrides MLflow endpoint lookup.
-	// When nil, ExtractParams falls back to direct client reads.
+	// ResolveMLflowEndpoint resolves the MLflow tracking endpoint for AUTODETECT integration.
 	ResolveMLflowEndpoint func(context.Context, string, logr.Logger) (string, error)
 }
 
@@ -257,25 +255,6 @@ func (p *DSPAParams) RetrieveSecret(ctx context.Context, client client.Client, s
 		return "", err
 	}
 	return base64.StdEncoding.EncodeToString(secret.Data[secretKey]), nil
-}
-
-func (p *DSPAParams) RetrieveMLflowEndpoint(ctx context.Context, client client.Client, log logr.Logger) (string, error) {
-	mlflowName := "mlflow"
-	mlflow := &mlflowv1.MLflow{}
-	namespacedName := types.NamespacedName{
-		Name:      mlflowName,
-		Namespace: p.Namespace,
-	}
-	err := client.Get(ctx, namespacedName, mlflow)
-	if err != nil {
-		log.V(1).Info(fmt.Sprintf("Unable to retrieve mlflow resource [%s].", mlflowName))
-		return "", err
-	}
-	status := mlflow.Status
-	if status.Address != nil && status.Address.URL != "" {
-		return mlflow.Status.Address.URL, nil
-	}
-	return "", errors.New("MLflow resource missing Status.Address.URL field. Unable to resolve endpoint")
 }
 
 func (p *DSPAParams) IsAPIServerDeploymentReady(ctx context.Context, client client.Client) (bool, error) {
@@ -851,42 +830,39 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 					mlflowEndpoint string
 					err            error
 				)
-				if p.ResolveMLflowEndpoint != nil {
+				if p.ResolveMLflowEndpoint == nil {
+					log.Info("ResolveMLflowEndpoint is not configured. Deferring MLflow API server plugin config generation.")
+				} else {
 					mlflowEndpoint, err = p.ResolveMLflowEndpoint(ctx, p.Namespace, log)
-				} else {
-					mlflowEndpoint, err = p.RetrieveMLflowEndpoint(ctx, client, log)
-				}
-				if err == nil {
-					apiServerExternalURL, routeErr := util.GetRouteHostname(ctx, p.APIServerServiceName, p.Namespace, client)
-					if routeErr != nil {
-						log.Info("Unable to retrieve API server route for KFP base URL", "error", routeErr)
-					} else if apiServerExternalURL == "" {
-						log.V(1).Info("APIServer route is not available yet. Deferring MLflow API server plugin config generation.")
+					if err != nil {
+						log.Error(err, "failed to retrieve MLflow internal endpoint. MLflow API server plugin will not be enabled.")
 					} else {
-						// Resolve effective CA bundle file path before building plugin config so
-						// APIServer override values are reflected even though global path fields
-						// are updated later in ExtractParams.
-						effectiveCABundleRootMountPath := p.CustomCABundleRootMountPath
-						if p.APIServer.CABundleFileMountPath != "" {
-							effectiveCABundleRootMountPath = p.APIServer.CABundleFileMountPath
+						apiServerExternalURL, routeErr := util.GetRouteHostname(ctx, p.APIServerServiceName, p.Namespace, client)
+						if routeErr != nil {
+							log.Info("Unable to retrieve API server route for KFP base URL", "error", routeErr)
+						} else if apiServerExternalURL == "" {
+							log.V(1).Info("APIServer route is not available yet. Deferring MLflow API server plugin config generation.")
+						} else {
+							// Resolve effective CA bundle file path before building plugin config so
+							// APIServer override values are reflected even though global path fields
+							// are updated later in ExtractParams.
+							effectiveCABundleRootMountPath := p.CustomCABundleRootMountPath
+							if p.APIServer.CABundleFileMountPath != "" {
+								effectiveCABundleRootMountPath = p.APIServer.CABundleFileMountPath
+							}
+							effectiveCABundleFileName := dspTrustedCAConfigMapKey
+							if p.APIServer.CABundleFileName != "" {
+								effectiveCABundleFileName = p.APIServer.CABundleFileName
+							}
+							effectiveCABundleFilePath := fmt.Sprintf("%s/%s", effectiveCABundleRootMountPath, effectiveCABundleFileName)
+							pluginCfg, err := BuildMLflowPluginConfigJson(mlflowEndpoint, effectiveCABundleFilePath, *p.MLflow.InjectUserEnvVars, apiServerExternalURL)
+							if err != nil {
+								log.Info("Failed to build MLflow plugin config. MLflow API server plugin will not be enabled.", "error", err)
+							} else {
+								p.APIServerPluginsJson = pluginCfg
+							}
 						}
-						effectiveCABundleFileName := dspTrustedCAConfigMapKey
-						if p.APIServer.CABundleFileName != "" {
-							effectiveCABundleFileName = p.APIServer.CABundleFileName
-						}
-						effectiveCABundleFilePath := fmt.Sprintf("%s/%s", effectiveCABundleRootMountPath, effectiveCABundleFileName)
-						injectUserEnvVars := false
-						if p.MLflow.InjectUserEnvVars != nil {
-							injectUserEnvVars = *p.MLflow.InjectUserEnvVars
-						}
-						pluginCfg, err := BuildMLflowPluginConfigJson(mlflowEndpoint, effectiveCABundleFilePath, injectUserEnvVars, apiServerExternalURL)
-						if err != nil {
-							log.Info("Failed to build MLflow plugin config. MLflow API server plugin will not be enabled.")
-						}
-						p.APIServerPluginsJson = pluginCfg
 					}
-				} else {
-					log.Error(err, "failed to retrieve MLflow internal endpoint. MLflow API server plugin will not be enabled.")
 				}
 			}
 		}
@@ -1138,6 +1114,14 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 
 	p.SetupOwner(dsp)
 
+	return nil
+}
+
+func validateMLflowEndpointURL(raw string) error {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") {
+		return fmt.Errorf("invalid MLflow endpoint %q: must be http/https with non-empty host", raw)
+	}
 	return nil
 }
 

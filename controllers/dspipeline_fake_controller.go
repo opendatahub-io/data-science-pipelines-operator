@@ -56,6 +56,7 @@ func NewFakeController() *DSPAReconciler {
 	// Generate DSPAReconciler using Fake Client
 	r := &DSPAReconciler{
 		Client:        FakeClient,
+		APIReader:     FakeClient,
 		Log:           ctrl.Log.WithName("controllers").WithName("ds-pipelines-controller"),
 		Scheme:        FakeScheme,
 		TemplatesPath: "../config/internal/",
@@ -65,7 +66,11 @@ func NewFakeController() *DSPAReconciler {
 }
 
 func CreateNewTestObjects() (context.Context, *DSPAParams, *DSPAReconciler) {
-	return context.Background(), &DSPAParams{}, NewFakeController()
+	reconciler := NewFakeController()
+	params := &DSPAParams{
+		ResolveMLflowEndpoint: reconciler.retrieveMLflowEndpointCached,
+	}
+	return context.Background(), params, reconciler
 }
 
 func (r *DSPAReconciler) IsResourceCreated(ctx context.Context, obj client.Object, name, namespace string) (bool, error) {
