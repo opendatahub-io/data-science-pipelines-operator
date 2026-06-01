@@ -1,0 +1,47 @@
+apiVersion: chaos.operatorchaos.io/v1alpha1
+kind: ChaosExperiment
+metadata:
+  name: dspo-mariadb-network-partition
+  namespace: ${DSPA_NAMESPACE}
+spec:
+  tier: 2
+  target:
+    operator: data-science-pipelines-operator
+    component: mariadb
+    resource: Deployment/mariadb-${DSPA_NAME}
+
+  steadyState:
+    checks:
+      - type: conditionTrue
+        apiVersion: apps/v1
+        kind: Deployment
+        name: mariadb-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+        conditionType: Available
+      - type: conditionTrue
+        apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
+        kind: DataSciencePipelinesApplication
+        name: ${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+        conditionType: DatabaseAvailable
+    timeout: 30s
+
+  injection:
+    type: NetworkPartition
+    parameters:
+      labelSelector: "app=mariadb-${DSPA_NAME},component=data-science-pipelines"
+    ttl: 30s
+
+  hypothesis:
+    description: >
+      Cascading failure: When MariaDB is network-partitioned, the APIServer
+      loses database connectivity. The operator health check reports
+      DatabaseAvailable=False. After the partition heals (TTL expires or
+      NetworkPolicy is removed), the health check passes on the next
+      reconcile cycle and all conditions restore to True.
+    recoveryTimeout: 60s
+
+  blastRadius:
+    maxPodsAffected: 1
+    allowedNamespaces:
+      - ${DSPA_NAMESPACE}

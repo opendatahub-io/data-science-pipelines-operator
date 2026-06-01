@@ -15,6 +15,7 @@ fi
 CLEAN_INFRA=false
 SKIP_DEPLOY=false
 SKIP_CLEANUP=false
+SETUP_ONLY=false
 K8SAPISERVERHOST=""
 DSPA_NAMESPACE="test-dspa"
 DSPA_EXTERNAL_NAMESPACE="dspa-ext"
@@ -421,6 +422,10 @@ while [ "$#" -gt 0 ]; do
       TARGET="rhoai"
       shift
       ;;
+    --setup-only)
+      SETUP_ONLY=true
+      shift
+      ;;
     # The clean-infra option is helpful when rerunning tests on the same target environment, as it eliminates
     # the need to manually delete the necessary infrastructure. By default, this setting is set to false.
     # If true, before running the test, it delete the necessary infrastructure.
@@ -566,6 +571,11 @@ else
   if [ "$DEPLOY_EXTERNAL_ARGO" = true ]; then
     setup_external_argo
   fi
+fi
+
+if [ "$SETUP_ONLY" = true ]; then
+  echo "Setup complete (--setup-only). Skipping tests."
+  exit 0
 fi
 
 run_tests

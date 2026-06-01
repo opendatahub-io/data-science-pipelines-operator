@@ -1,0 +1,45 @@
+apiVersion: chaos.operatorchaos.io/v1alpha1
+kind: ChaosExperiment
+metadata:
+  name: dspo-operator-pod-kill
+spec:
+  tier: 1
+  target:
+    operator: data-science-pipelines-operator
+    component: dspo-controller
+    resource: Deployment/${OPERATOR_DEPLOYMENT_NAME}
+
+  steadyState:
+    checks:
+      - type: conditionTrue
+        apiVersion: apps/v1
+        kind: Deployment
+        name: ${OPERATOR_DEPLOYMENT_NAME}
+        namespace: ${OPERATOR_NAMESPACE}
+        conditionType: Available
+      - type: conditionTrue
+        apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
+        kind: DataSciencePipelinesApplication
+        name: ${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+        conditionType: Ready
+    timeout: 30s
+
+  injection:
+    type: PodKill
+    parameters:
+      labelSelector: "app.kubernetes.io/name=data-science-pipelines-operator"
+    count: 1
+    ttl: 30s
+
+  hypothesis:
+    description: >
+      When the DSPO operator manager pod is killed, the ReplicaSet recreates
+      it. Leader election is re-acquired and reconciliation of all DSPA
+      instances resumes. All DSPA status conditions remain True.
+    recoveryTimeout: 60s
+
+  blastRadius:
+    maxPodsAffected: 1
+    allowedNamespaces:
+      - ${OPERATOR_NAMESPACE}

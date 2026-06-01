@@ -1,0 +1,56 @@
+apiVersion: chaos.operatorchaos.io/v1alpha1
+kind: ChaosExperiment
+metadata:
+  name: dspo-apiserver-configmap-drift
+spec:
+  tier: 2
+  target:
+    operator: data-science-pipelines-operator
+    component: apiserver
+    resource: ConfigMap/ds-pipeline-server-config-${DSPA_NAME}
+
+  steadyState:
+    checks:
+      - type: conditionTrue
+        apiVersion: apps/v1
+        kind: Deployment
+        name: ds-pipeline-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+        conditionType: Available
+      - type: conditionTrue
+        apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
+        kind: DataSciencePipelinesApplication
+        name: ${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+        conditionType: APIServerReady
+      - type: resourceExists
+        apiVersion: v1
+        kind: ConfigMap
+        name: ds-pipeline-server-config-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+    timeout: 30s
+
+  injection:
+    type: ConfigDrift
+    parameters:
+      resourceType: ConfigMap
+      name: ds-pipeline-server-config-${DSPA_NAME}
+      namespace: ${DSPA_NAMESPACE}
+      key: chaos-injected
+      value: "true"
+    ttl: 30s
+
+  # Stability test: the chaos operator injects an extra key and removes it
+  # after the TTL. This validates that the APIServer tolerates the extra key
+  # during the injection window, not that DSPO corrects the drift.
+  hypothesis:
+    description: >
+      When the APIServer server-config ConfigMap is mutated with an extra key,
+      APIServerReady remains True because the extra key does not invalidate
+      the existing config.
+    recoveryTimeout: 60s
+
+  blastRadius:
+    maxPodsAffected: 1
+    allowedNamespaces:
+      - ${DSPA_NAMESPACE}

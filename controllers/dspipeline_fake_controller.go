@@ -1,4 +1,4 @@
-//go:build test_all || test_unit
+//go:build test_all || test_unit || test_chaos
 
 /*
 

@@ -1,0 +1,235 @@
+operator:
+  name: data-science-pipelines-operator
+  namespace: ${OPERATOR_NAMESPACE}
+  repository: https://github.com/opendatahub-io/data-science-pipelines-operator
+
+components:
+  - name: dspo-controller
+    controller: DSPAReconciler
+    managedResources:
+      - apiVersion: apps/v1
+        kind: Deployment
+        name: ${OPERATOR_DEPLOYMENT_NAME}
+        namespace: ${OPERATOR_NAMESPACE}
+        labels:
+          app.kubernetes.io/name: data-science-pipelines-operator
+    steadyState:
+      checks:
+        - type: conditionTrue
+          apiVersion: apps/v1
+          kind: Deployment
+          name: ${OPERATOR_DEPLOYMENT_NAME}
+          namespace: ${OPERATOR_NAMESPACE}
+          conditionType: Available
+      timeout: 30s
+
+  - name: apiserver
+    controller: DSPAReconciler
+    managedResources:
+      - apiVersion: apps/v1
+        kind: Deployment
+        name: ds-pipeline-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+        labels:
+          app: ds-pipeline-${DSPA_NAME}
+          component: data-science-pipelines
+          dspa: ${DSPA_NAME}
+        ownerRef: DataSciencePipelinesApplication
+        expectedSpec:
+          replicas: 1
+      - apiVersion: v1
+        kind: Service
+        name: ds-pipeline-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+      - apiVersion: v1
+        kind: ServiceAccount
+        name: ds-pipeline-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+      - apiVersion: v1
+        kind: ServiceAccount
+        name: pipeline-runner-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+      - apiVersion: v1
+        kind: ConfigMap
+        name: ds-pipeline-server-config-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+      - apiVersion: v1
+        kind: ConfigMap
+        name: kfp-launcher
+        namespace: ${DSPA_NAMESPACE}
+      - apiVersion: rbac.authorization.k8s.io/v1
+        kind: Role
+        name: ds-pipeline-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+      - apiVersion: rbac.authorization.k8s.io/v1
+        kind: RoleBinding
+        name: ds-pipeline-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+    finalizers:
+      - datasciencepipelinesapplications.opendatahub.io/finalizer
+    steadyState:
+      checks:
+        - type: conditionTrue
+          apiVersion: apps/v1
+          kind: Deployment
+          name: ds-pipeline-${DSPA_NAME}
+          namespace: ${DSPA_NAMESPACE}
+          conditionType: Available
+        - type: conditionTrue
+          apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
+          kind: DataSciencePipelinesApplication
+          name: ${DSPA_NAME}
+          namespace: ${DSPA_NAMESPACE}
+          conditionType: APIServerReady
+        - type: resourceExists
+          apiVersion: v1
+          kind: Service
+          name: ds-pipeline-${DSPA_NAME}
+          namespace: ${DSPA_NAMESPACE}
+      timeout: 30s
+
+  - name: workflow-controller
+    controller: DSPAReconciler
+    managedResources:
+      - apiVersion: apps/v1
+        kind: Deployment
+        name: ds-pipeline-workflow-controller-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+        labels:
+          app: ds-pipeline-workflow-controller-${DSPA_NAME}
+          component: data-science-pipelines
+          dspa: ${DSPA_NAME}
+        ownerRef: DataSciencePipelinesApplication
+        expectedSpec:
+          replicas: 1
+      - apiVersion: v1
+        kind: Service
+        name: ds-pipeline-workflow-controller-metrics-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+      - apiVersion: v1
+        kind: ServiceAccount
+        name: ds-pipeline-workflow-controller-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+      - apiVersion: v1
+        kind: ConfigMap
+        name: ds-pipeline-workflow-controller-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+      - apiVersion: rbac.authorization.k8s.io/v1
+        kind: Role
+        name: ds-pipeline-workflow-controller-role-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+      - apiVersion: rbac.authorization.k8s.io/v1
+        kind: RoleBinding
+        name: ds-pipeline-workflow-controller-rolebinding-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+    steadyState:
+      checks:
+        - type: conditionTrue
+          apiVersion: apps/v1
+          kind: Deployment
+          name: ds-pipeline-workflow-controller-${DSPA_NAME}
+          namespace: ${DSPA_NAMESPACE}
+          conditionType: Available
+        - type: conditionTrue
+          apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
+          kind: DataSciencePipelinesApplication
+          name: ${DSPA_NAME}
+          namespace: ${DSPA_NAMESPACE}
+          conditionType: WorkflowControllerReady
+      timeout: 30s
+
+  - name: mariadb
+    controller: DSPAReconciler
+    managedResources:
+      - apiVersion: apps/v1
+        kind: Deployment
+        name: mariadb-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+        labels:
+          app: mariadb-${DSPA_NAME}
+          component: data-science-pipelines
+          dspa: ${DSPA_NAME}
+        ownerRef: DataSciencePipelinesApplication
+        expectedSpec:
+          replicas: 1
+      - apiVersion: v1
+        kind: Service
+        name: mariadb-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+      - apiVersion: v1
+        kind: PersistentVolumeClaim
+        name: mariadb-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+      - apiVersion: v1
+        kind: ServiceAccount
+        name: ds-pipelines-mariadb-sa-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+      - apiVersion: v1
+        kind: Secret
+        name: ds-pipeline-db-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+    steadyState:
+      checks:
+        - type: conditionTrue
+          apiVersion: apps/v1
+          kind: Deployment
+          name: mariadb-${DSPA_NAME}
+          namespace: ${DSPA_NAMESPACE}
+          conditionType: Available
+        - type: conditionTrue
+          apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
+          kind: DataSciencePipelinesApplication
+          name: ${DSPA_NAME}
+          namespace: ${DSPA_NAMESPACE}
+          conditionType: DatabaseAvailable
+      timeout: 30s
+
+  - name: minio
+    controller: DSPAReconciler
+    managedResources:
+      - apiVersion: apps/v1
+        kind: Deployment
+        name: minio-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+        labels:
+          app: minio-${DSPA_NAME}
+          component: data-science-pipelines
+          dspa: ${DSPA_NAME}
+        ownerRef: DataSciencePipelinesApplication
+        expectedSpec:
+          replicas: 1
+      - apiVersion: v1
+        kind: Service
+        name: minio-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+      - apiVersion: v1
+        kind: PersistentVolumeClaim
+        name: minio-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+      - apiVersion: v1
+        kind: ServiceAccount
+        name: ds-pipelines-minio-sa-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+      - apiVersion: v1
+        kind: Secret
+        name: ds-pipeline-s3-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+    steadyState:
+      checks:
+        - type: conditionTrue
+          apiVersion: apps/v1
+          kind: Deployment
+          name: minio-${DSPA_NAME}
+          namespace: ${DSPA_NAMESPACE}
+          conditionType: Available
+        - type: conditionTrue
+          apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
+          kind: DataSciencePipelinesApplication
+          name: ${DSPA_NAME}
+          namespace: ${DSPA_NAMESPACE}
+          conditionType: ObjectStoreAvailable
+      timeout: 30s
+
+recovery:
+  reconcileTimeout: 300s
+  maxReconcileCycles: 100

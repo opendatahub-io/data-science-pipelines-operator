@@ -1,0 +1,44 @@
+apiVersion: chaos.operatorchaos.io/v1alpha1
+kind: ChaosExperiment
+metadata:
+  name: dspo-workflow-controller-pod-kill
+spec:
+  tier: 1
+  target:
+    operator: data-science-pipelines-operator
+    component: workflow-controller
+    resource: Deployment/ds-pipeline-workflow-controller-${DSPA_NAME}
+
+  steadyState:
+    checks:
+      - type: conditionTrue
+        apiVersion: apps/v1
+        kind: Deployment
+        name: ds-pipeline-workflow-controller-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+        conditionType: Available
+      - type: conditionTrue
+        apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
+        kind: DataSciencePipelinesApplication
+        name: ${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+        conditionType: WorkflowControllerReady
+    timeout: 30s
+
+  injection:
+    type: PodKill
+    parameters:
+      labelSelector: "app=ds-pipeline-workflow-controller-${DSPA_NAME},component=data-science-pipelines"
+    count: 1
+    ttl: 30s
+
+  hypothesis:
+    description: >
+      When the Argo WorkflowController pod is killed, the ReplicaSet recreates it
+      and the WorkflowControllerReady condition restores to True.
+    recoveryTimeout: 60s
+
+  blastRadius:
+    maxPodsAffected: 1
+    allowedNamespaces:
+      - ${DSPA_NAMESPACE}
