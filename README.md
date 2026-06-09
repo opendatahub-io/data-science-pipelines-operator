@@ -535,17 +535,15 @@ All the component images are available [here][component-images] and for thirdpar
 podman build . -f backend/Dockerfile -t quay.io/your_repo/dsp-apiserver:sometag
 ```
 
-> **Building on Apple Silicon**: Use `FIPS_ENABLED=0` to avoid QEMU emulation issues when cross-compiling to linux/amd64:
+> **Building on Apple Silicon**:
 >
 > ```bash
 > # Build amd64 image on Apple Silicon
-> make podman-build IMG=quay.io/your_repo/data-science-pipelines-operator:tag FIPS_ENABLED=0 
+> make podman-build IMG=quay.io/your_repo/data-science-pipelines-operator:tag
 >
 > # Build arm64 image for local Kind testing
-> TARGETARCH=arm64 make podman-build IMG=quay.io/your_repo/data-science-pipelines-operator:tag FIPS_ENABLED=0 
+> TARGETARCH=arm64 make podman-build IMG=quay.io/your_repo/data-science-pipelines-operator:tag
 > ```
->
-> This builds without FIPS support, which is acceptable for local development. Production images are built on amd64 CI runners with FIPS enabled.
 
 **To run the tests:**
 
