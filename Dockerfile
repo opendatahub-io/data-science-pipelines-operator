@@ -1,8 +1,7 @@
 # Build the manager binary
-FROM --platform=${BUILDPLATFORM:-linux/amd64} registry.access.redhat.com/ubi9/go-toolset:1.25@sha256:df073e37d0cfe6c83df9fd4891b14252f3822cb511000c48f32c632f0d24920f AS builder
+FROM --platform=$BUILDPLATFORM registry.access.redhat.com/ubi9/go-toolset:1.26.3@sha256:d36470d5258da00f618b7aca9bdaab8e05134aa938bd6c42d9bd17d50ed45e76 AS builder
 ARG TARGETOS=linux
 ARG TARGETARCH=amd64
-ARG FIPS_ENABLED=1
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -18,18 +17,10 @@ COPY api/ api/
 COPY controllers/ controllers/
 
 # Build
-# FIPS_ENABLED=1 (default): FIPS-compliant build with strictfipsruntime (requires CGO)
-# FIPS_ENABLED=0: Non-FIPS build for local development on Apple Silicon (pure Go, no CGO)
 USER root
-RUN if [ "${FIPS_ENABLED}" != "0" ] && [ "${FIPS_ENABLED}" != "1" ]; then \
-      echo "ERROR: FIPS_ENABLED must be '0' or '1', got '${FIPS_ENABLED}'" && exit 1; \
-    elif [ "${FIPS_ENABLED}" = "1" ]; then \
-      CGO_ENABLED=1 GOOS=${TARGETOS} GOARCH=${TARGETARCH} GO111MODULE=on \
-        GOEXPERIMENT=strictfipsruntime go build -tags strictfipsruntime -a -o manager main.go; \
-    else \
-      CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} GO111MODULE=on \
-        go build -a -o manager main.go; \
-    fi
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} GOFIPS140=v1.0.0 \
+    go build -tags no_openssl -a -o manager main.go
 
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
 WORKDIR /
