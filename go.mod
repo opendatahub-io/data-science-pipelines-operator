@@ -1,6 +1,10 @@
 module github.com/opendatahub-io/data-science-pipelines-operator
 
-go 1.26.3
+go 1.26
+
+toolchain go1.26.3
+
+godebug fips140=auto
 
 require (
 	github.com/anthhub/forwarder v1.1.0
