@@ -27,6 +27,7 @@ import (
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/testutil"
 	mlflowv1 "github.com/opendatahub-io/mlflow-operator/api/v1"
+	routev1 "github.com/openshift/api/route/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -469,6 +470,122 @@ func TestExtractParams_WithoutResourceTTL(t *testing.T) {
 	err := params.ExtractParams(ctx, dspa, client.Client, client.Log)
 	require.NoError(t, err)
 	assert.Empty(t, params.CompiledPipelineSpecPatch)
+}
+
+func TestExtractParams_MLflowEndpointLookupUsesDSPONamespace(t *testing.T) {
+	t.Setenv("DSPO_NAMESPACE", "opendatahub")
+
+	ctx, params, reconciler := CreateNewTestObjects()
+
+	var lookupNamespace string
+	params.ResolveMLflowEndpoint = func(ctx context.Context, ns string, log logr.Logger) (string, error) {
+		lookupNamespace = ns
+		return "https://mlflow.opendatahub.svc.cluster.local/mlflow", nil
+	}
+
+	dspa := testutil.CreateEmptyDSPA()
+	dspa.Namespace = "test-dspa-mlflow"
+	dspa.Spec.APIServer = &dspav1.APIServer{Deploy: true}
+	dspa.Spec.PodToPodTLS = testutil.BoolPtr(false)
+
+	deploy := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Name: "ds-pipeline-testdspa", Namespace: "test-dspa-mlflow"},
+		Status: appsv1.DeploymentStatus{
+			Conditions: []appsv1.DeploymentCondition{{
+				Type:   appsv1.DeploymentAvailable,
+				Status: corev1.ConditionTrue,
+			}},
+		},
+	}
+	route := &routev1.Route{
+		ObjectMeta: metav1.ObjectMeta{Name: "ds-pipeline-testdspa", Namespace: "test-dspa-mlflow"},
+		Spec:       routev1.RouteSpec{Host: "dsp-api.example.com"},
+	}
+	require.NoError(t, reconciler.Client.Create(ctx, deploy))
+	require.NoError(t, reconciler.Client.Create(ctx, route))
+
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	require.NoError(t, err)
+	require.Equal(t, "opendatahub", lookupNamespace)
+	require.NotEmpty(t, params.APIServerPluginsJson)
+	require.True(t, params.GrantMlflowWorkloadRBAC)
+}
+
+func TestExtractParams_MLflowPluginConfigUsesServiceWhenRouteUnavailable(t *testing.T) {
+	t.Setenv("DSPO_NAMESPACE", "opendatahub")
+
+	ctx, params, reconciler := CreateNewTestObjects()
+
+	params.ResolveMLflowEndpoint = func(ctx context.Context, ns string, log logr.Logger) (string, error) {
+		return "https://mlflow.opendatahub.svc.cluster.local/mlflow", nil
+	}
+
+	dspa := testutil.CreateEmptyDSPA()
+	dspa.Namespace = "test-dspa-mlflow"
+	dspa.Spec.APIServer = &dspav1.APIServer{Deploy: true}
+	dspa.Spec.PodToPodTLS = testutil.BoolPtr(false)
+
+	deploy := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Name: "ds-pipeline-testdspa", Namespace: "test-dspa-mlflow"},
+		Status: appsv1.DeploymentStatus{
+			Conditions: []appsv1.DeploymentCondition{{
+				Type:   appsv1.DeploymentAvailable,
+				Status: corev1.ConditionTrue,
+			}},
+		},
+	}
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "ds-pipeline-testdspa", Namespace: "test-dspa-mlflow"},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{{Port: 8888}},
+		},
+	}
+	require.NoError(t, reconciler.Client.Create(ctx, deploy))
+	require.NoError(t, reconciler.Client.Create(ctx, svc))
+
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	require.NoError(t, err)
+	require.NotEmpty(t, params.APIServerPluginsJson)
+
+	var pluginCfg map[string]any
+	require.NoError(t, json.Unmarshal([]byte(params.APIServerPluginsJson), &pluginCfg))
+	settings, ok := pluginCfg["settings"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, "http://ds-pipeline-testdspa.test-dspa-mlflow.svc.cluster.local:8888", settings["kfpBaseURL"])
+}
+
+func TestExtractParams_MLflowEndpointLookupSkippedWhenDSPONamespaceUnset(t *testing.T) {
+	t.Setenv("DSPO_NAMESPACE", "")
+
+	ctx, params, reconciler := CreateNewTestObjects()
+
+	lookupCalled := false
+	params.ResolveMLflowEndpoint = func(ctx context.Context, ns string, log logr.Logger) (string, error) {
+		lookupCalled = true
+		return "https://mlflow.example/mlflow", nil
+	}
+
+	dspa := testutil.CreateEmptyDSPA()
+	dspa.Namespace = "test-dspa-mlflow"
+	dspa.Spec.APIServer = &dspav1.APIServer{Deploy: true}
+	dspa.Spec.PodToPodTLS = testutil.BoolPtr(false)
+
+	deploy := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Name: "ds-pipeline-testdspa", Namespace: "test-dspa-mlflow"},
+		Status: appsv1.DeploymentStatus{
+			Conditions: []appsv1.DeploymentCondition{{
+				Type:   appsv1.DeploymentAvailable,
+				Status: corev1.ConditionTrue,
+			}},
+		},
+	}
+	require.NoError(t, reconciler.Client.Create(ctx, deploy))
+
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	require.NoError(t, err)
+	require.False(t, lookupCalled)
+	require.Empty(t, params.APIServerPluginsJson)
+	require.False(t, params.GrantMlflowWorkloadRBAC)
 }
 
 func testSchemeWithMlflowApps(t *testing.T) *runtime.Scheme {
