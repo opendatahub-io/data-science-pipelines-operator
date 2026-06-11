@@ -20,6 +20,7 @@ K8SAPISERVERHOST=""
 DSPA_NAMESPACE="test-dspa"
 DSPA_EXTERNAL_NAMESPACE="dspa-ext"
 DSPA_K8S_NAMESPACE="test-k8s-dspa"
+DSPA_MLFLOW_NAMESPACE="test-dspa-mlflow"
 MINIO_NAMESPACE="test-minio"
 MARIADB_NAMESPACE="test-mariadb"
 PYPISERVER_NAMESPACE="test-pypiserver"
@@ -33,6 +34,16 @@ INTEGRATION_TESTS_DIR="${GIT_WORKSPACE}/tests"
 DSPA_PATH="${GIT_WORKSPACE}/tests/resources/dspa-lite.yaml"
 DSPA_EXTERNAL_PATH="${GIT_WORKSPACE}/tests/resources/dspa-external-lite.yaml"
 DSPA_K8S_PATH="${GIT_WORKSPACE}/tests/resources/dspa-k8s.yaml"
+DSPA_MLFLOW_PATH="${GIT_WORKSPACE}/tests/resources/dspa-mlflow-lite.yaml"
+DSPA_MLFLOW_NAME="test-dspa-mlflow"
+MLFLOW_NAMESPACE="${MLFLOW_NAMESPACE:-opendatahub}"
+MLFLOW_CA_BUNDLE_NAME="${MLFLOW_CA_BUNDLE_NAME:-mlflow-ca-bundle}"
+MLFLOW_CA_BUNDLE_KEY="${MLFLOW_CA_BUNDLE_KEY:-ca-bundle.crt}"
+MLFLOW_TLS_SECRET_NAME="${MLFLOW_TLS_SECRET_NAME:-mlflow-tls}"
+MLFLOW_TLS_SECRET_CERT_KEY="${MLFLOW_TLS_SECRET_CERT_KEY:-tls.crt}"
+DSP_TESTS_IMAGE_TAG="${DSP_TESTS_IMAGE_TAG:-master}"
+DSP_TESTS_IMAGE="${DSP_TESTS_IMAGE:-quay.io/opendatahub/ds-pipelines-tests:${DSP_TESTS_IMAGE_TAG}}"
+TESTS_SCRIPT_DIR="${GIT_WORKSPACE}/.github/scripts/tests"
 CONFIG_DIR="${GIT_WORKSPACE}/config"
 RESOURCES_DIR_CRD="${GIT_WORKSPACE}/.github/resources"
 OPENDATAHUB_NAMESPACE="opendatahub"
@@ -41,6 +52,8 @@ ENDPOINT_TYPE="service"
 DSPO_IMAGE_REF="${DSPO_IMAGE_REF:-}"
 CONTAINER_CLI="${CONTAINER_CLI:-docker}"
 RUN_PKG_UPLOADER_IN_CONTAINER="${RUN_PKG_UPLOADER_IN_CONTAINER:-true}"
+MLFLOW_ONLY="${MLFLOW_ONLY:-false}"
+MLFLOW_TEST_LABEL="${MLFLOW_TEST_LABEL:-${TEST_LABEL:-MLflow}}"
 
 get_dspo_image() {
   if [ ! -z "$DSPO_IMAGE_REF" ]; then
@@ -254,6 +267,46 @@ create_dspa_k8s_namespace() {
   kubectl create namespace $DSPA_K8S_NAMESPACE
 }
 
+create_dspa_mlflow_namespace() {
+  echo "---------------------------------"
+  echo "Create DSPA Namespace for MLflow-enabled DSPA"
+  echo "---------------------------------"
+  kubectl get namespace $DSPA_MLFLOW_NAMESPACE >/dev/null 2>&1 || \
+  kubectl create namespace $DSPA_MLFLOW_NAMESPACE
+}
+
+copy_mlflow_ca_bundle() {
+  echo "---------------------------------"
+  echo "Copy MLflow CA bundle (${MLFLOW_CA_BUNDLE_NAME}) to ${DSPA_MLFLOW_NAMESPACE}"
+  echo "---------------------------------"
+  local ca_pem=""
+  local ca_source=""
+  local jsonpath_key=""
+  if kubectl get configmap "${MLFLOW_CA_BUNDLE_NAME}" -n "${MLFLOW_NAMESPACE}" >/dev/null 2>&1; then
+    jsonpath_key="${MLFLOW_CA_BUNDLE_KEY//./\\.}"
+    ca_pem="$(kubectl get configmap "${MLFLOW_CA_BUNDLE_NAME}" -n "${MLFLOW_NAMESPACE}" \
+      -o "jsonpath={.data.${jsonpath_key}}")"
+    ca_source="${MLFLOW_NAMESPACE}/${MLFLOW_CA_BUNDLE_NAME}"
+  elif kubectl get secret "${MLFLOW_TLS_SECRET_NAME}" -n "${MLFLOW_NAMESPACE}" >/dev/null 2>&1; then
+    jsonpath_key="${MLFLOW_TLS_SECRET_CERT_KEY//./\\.}"
+    ca_pem="$(kubectl get secret "${MLFLOW_TLS_SECRET_NAME}" -n "${MLFLOW_NAMESPACE}" \
+      -o "jsonpath={.data.${jsonpath_key}}" | base64 -d)"
+    ca_source="${MLFLOW_NAMESPACE}/${MLFLOW_TLS_SECRET_NAME} (${MLFLOW_TLS_SECRET_CERT_KEY})"
+  else
+    echo "Neither ConfigMap ${MLFLOW_CA_BUNDLE_NAME} nor Secret ${MLFLOW_TLS_SECRET_NAME} found in ${MLFLOW_NAMESPACE}" >&2
+    exit 1
+  fi
+  if [ -z "${ca_pem}" ]; then
+    echo "MLflow CA material from ${ca_source} is empty" >&2
+    exit 1
+  fi
+  echo "Using MLflow CA from ${ca_source}"
+  kubectl create configmap "${MLFLOW_CA_BUNDLE_NAME}" \
+    --from-literal="${MLFLOW_CA_BUNDLE_KEY}=${ca_pem}" \
+    -n "${DSPA_MLFLOW_NAMESPACE}" \
+    --dry-run=client -o yaml | kubectl apply -f -
+}
+
 apply_mariadb_minio_secrets_configmaps_external_namespace() {
   echo "---------------------------------"
   echo "Apply MariaDB and Minio Secrets and Configmaps in the External Namespace"
@@ -265,7 +318,7 @@ apply_pip_server_configmap() {
   echo "---------------------------------"
   echo "Apply PIP Server ConfigMap"
   echo "---------------------------------"
-  for ns in $DSPA_NAMESPACE $DSPA_K8S_NAMESPACE; do
+  for ns in $DSPA_NAMESPACE $DSPA_K8S_NAMESPACE $DSPA_MLFLOW_NAMESPACE; do
     echo "Applying ConfigMap in namespace: $ns"
     ( cd "${GIT_WORKSPACE}/.github/resources/pypiserver/base" && kubectl apply -f "$RESOURCES_DIR_PYPI/nginx-tls-config.yaml" -n "$ns" )
   done
@@ -313,6 +366,88 @@ run_tests_dspa_k8s() {
   ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_K8S_NAMESPACE} DSPAPATH=${DSPA_K8S_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} INTTEST_AWF_MANAGEMENT_STATE=${AWF_MANAGEMENT_STATE} INTTEST_SKIP_DEPLOY=${SKIP_DEPLOY} INTTEST_SKIP_CLEANUP=${SKIP_CLEANUP})
 }
 
+deploy_dspa_mlflow() {
+  echo "---------------------------------"
+  echo "Deploy MLflow-enabled DSPA"
+  echo "---------------------------------"
+  if [ ! -f "${DSPA_MLFLOW_PATH}" ]; then
+    echo "MLflow DSPA manifest not found at ${DSPA_MLFLOW_PATH}" >&2
+    exit 1
+  fi
+  kubectl apply -f "${DSPA_MLFLOW_PATH}" -n "${DSPA_MLFLOW_NAMESPACE}"
+}
+
+wait_for_dspa_mlflow_deployment() {
+  local deployment_name="ds-pipeline-${DSPA_MLFLOW_NAME}"
+  local elapsed=0
+  echo "---------------------------------"
+  echo "Wait for MLflow-enabled DSPA API server (${deployment_name})"
+  echo "---------------------------------"
+  echo "Waiting for deployment ${deployment_name} to be ready..."
+  while [ "${elapsed}" -lt "${DSPA_DEPLOY_WAIT_TIMEOUT}" ]; do
+    if kubectl wait --for=condition=available \
+        "deployment/${deployment_name}" \
+        -n "${DSPA_MLFLOW_NAMESPACE}" \
+        --timeout=5s >/dev/null 2>&1; then
+      return 0
+    fi
+    elapsed=$((elapsed + 5))
+    sleep 5
+  done
+  echo "Timed out waiting for deployment ${deployment_name} after ${DSPA_DEPLOY_WAIT_TIMEOUT}s"
+  kubectl get "deployment/${deployment_name}" -n "${DSPA_MLFLOW_NAMESPACE}" || true
+  return 1
+}
+
+wait_for_dspa_mlflow_plugin() {
+  local deployment_name="ds-pipeline-${DSPA_MLFLOW_NAME}"
+  local server_config_cm="ds-pipeline-server-config-${DSPA_MLFLOW_NAME}"
+  local elapsed=0
+
+  # Plugin config is generated only after the API server deployment is Available, then
+  # server-config and the deployment configHash annotation are updated on the next reconcile.
+  echo "Waiting for MLflow plugin in ${server_config_cm}..."
+  elapsed=0
+  while [ "${elapsed}" -lt "${DSPA_DEPLOY_WAIT_TIMEOUT}" ]; do
+    if kubectl get configmap "${server_config_cm}" -n "${DSPA_MLFLOW_NAMESPACE}" -o jsonpath='{.data.config\.json}' 2>/dev/null \
+        | grep -q '"mlflow"'; then
+      break
+    fi
+    elapsed=$((elapsed + 5))
+    sleep 5
+  done
+  if [ "${elapsed}" -ge "${DSPA_DEPLOY_WAIT_TIMEOUT}" ]; then
+    echo "Timed out waiting for MLflow plugin in ${server_config_cm} after ${DSPA_DEPLOY_WAIT_TIMEOUT}s"
+    kubectl get configmap "${server_config_cm}" -n "${DSPA_MLFLOW_NAMESPACE}" -o yaml || true
+    return 1
+  fi
+
+  echo "Waiting for API server rollout after MLflow plugin config..."
+  if ! kubectl rollout status "deployment/${deployment_name}" \
+      -n "${DSPA_MLFLOW_NAMESPACE}" \
+      --timeout="${DSPA_DEPLOY_WAIT_TIMEOUT}s"; then
+    kubectl get "deployment/${deployment_name}" -n "${DSPA_MLFLOW_NAMESPACE}" || true
+    return 1
+  fi
+}
+
+run_tests_dspa_mlflow() {
+  echo "---------------------------------"
+  echo "Run DSP MLflow tests for DSPA with MLflow enabled"
+  echo "---------------------------------"
+  create_dspa_mlflow_namespace
+  copy_mlflow_ca_bundle
+  deploy_dspa_mlflow
+  wait_for_dspa_mlflow_deployment
+  wait_for_dspa_mlflow_plugin
+  (
+    export DSPA_MLFLOW_NAMESPACE MLFLOW_NAMESPACE DSP_TESTS_IMAGE DSP_TESTS_IMAGE_TAG CONTAINER_CLI
+    export DSPA_NAME="${DSPA_MLFLOW_NAME}"
+    export TEST_LABEL="${MLFLOW_TEST_LABEL}"
+    bash "${TESTS_SCRIPT_DIR}/run_dsp_mlflow_tests.sh"
+  )
+}
+
 update_dspo_env() {
   echo "---------------------------------"
   echo "Update DSPO Environment Variable"
@@ -357,6 +492,7 @@ setup_kind_requirements() {
   create_dspa_namespace
   create_namespace_dspa_external_connections
   create_dspa_k8s_namespace
+  create_dspa_mlflow_namespace
   apply_mariadb_minio_secrets_configmaps_external_namespace
   apply_pip_server_configmap
 }
@@ -375,6 +511,7 @@ setup_openshift_ci_requirements() {
   create_dspa_namespace
   create_namespace_dspa_external_connections
   create_dspa_k8s_namespace
+  create_dspa_mlflow_namespace
   apply_mariadb_minio_secrets_configmaps_external_namespace
   apply_pip_server_configmap
 }
@@ -388,6 +525,7 @@ setup_rhoai_requirements() {
   create_dspa_namespace
   create_namespace_dspa_external_connections
   create_dspa_k8s_namespace
+  create_dspa_mlflow_namespace
   apply_mariadb_minio_secrets_configmaps_external_namespace
   apply_pip_server_configmap
 }
@@ -408,6 +546,10 @@ while [ "$#" -gt 0 ]; do
       ;;
     --skip-cleanup)
       SKIP_CLEANUP=true
+      shift
+      ;;
+    --mlflow-only)
+      MLFLOW_ONLY=true
       shift
       ;;
     --kind)
@@ -548,6 +690,11 @@ done
 if [ "$K8SAPISERVERHOST" = "" ]; then
   echo "K8SAPISERVERHOST is empty. It will use suite_test.go::Defaultk8sApiServerHost"
   echo "If the TARGET is OpenShift or RHOAI. You can use: oc whoami --show-server"
+fi
+
+if [ "${MLFLOW_ONLY}" = "true" ]; then
+  run_tests_dspa_mlflow
+  exit 0
 fi
 
 if [ "$SKIP_DEPLOY" = true ]; then
