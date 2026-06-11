@@ -19,7 +19,7 @@ COPY controllers/ controllers/
 # Build
 USER root
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} GOFIPS140=v1.0.0 \
+    GOTOOLCHAIN=local CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} GOFIPS140=v1.0.0 \
     go build -tags no_openssl -a -o manager main.go
 
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
