@@ -832,17 +832,28 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 				)
 				if p.ResolveMLflowEndpoint == nil {
 					log.Info("ResolveMLflowEndpoint is not configured. Deferring MLflow API server plugin config generation.")
+				} else if p.DSPONamespace == "" {
+					log.V(1).Info("DSPO_NAMESPACE is not set. Deferring MLflow API server plugin config generation.")
 				} else {
-					mlflowEndpoint, err = p.ResolveMLflowEndpoint(ctx, p.Namespace, log)
+					mlflowEndpoint, err = p.ResolveMLflowEndpoint(ctx, p.DSPONamespace, log)
 					if err != nil {
 						log.Error(err, "failed to retrieve MLflow internal endpoint. MLflow API server plugin will not be enabled.")
 					} else {
 						apiServerExternalURL, routeErr := util.GetRouteHostname(ctx, p.APIServerServiceName, p.Namespace, client)
 						if routeErr != nil {
 							log.Info("Unable to retrieve API server route for KFP base URL", "error", routeErr)
-						} else if apiServerExternalURL == "" {
-							log.V(1).Info("APIServer route is not available yet. Deferring MLflow API server plugin config generation.")
-						} else {
+						}
+						if apiServerExternalURL == "" {
+							var svcErr error
+							apiServerExternalURL, svcErr = util.GetServiceHostname(ctx, p.APIServerServiceName, p.Namespace, client)
+							if svcErr != nil {
+								log.Info("Unable to retrieve API server service for KFP base URL", "error", svcErr)
+							}
+							if apiServerExternalURL == "" {
+								log.V(1).Info("APIServer external URL is not available yet. Deferring MLflow API server plugin config generation.")
+							}
+						}
+						if apiServerExternalURL != "" {
 							// Resolve effective CA bundle file path before building plugin config so
 							// APIServer override values are reflected even though global path fields
 							// are updated later in ExtractParams.
@@ -855,7 +866,12 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 								effectiveCABundleFileName = p.APIServer.CABundleFileName
 							}
 							effectiveCABundleFilePath := fmt.Sprintf("%s/%s", effectiveCABundleRootMountPath, effectiveCABundleFileName)
-							pluginCfg, err := BuildMLflowPluginConfigJson(mlflowEndpoint, effectiveCABundleFilePath, *p.MLflow.InjectUserEnvVars, apiServerExternalURL)
+							pluginCfg, err := BuildMLflowPluginConfigJson(
+								mlflowEndpoint,
+								effectiveCABundleFilePath,
+								*p.MLflow.InjectUserEnvVars,
+								apiServerExternalURL,
+							)
 							if err != nil {
 								log.Info("Failed to build MLflow plugin config. MLflow API server plugin will not be enabled.", "error", err)
 							} else {
@@ -1125,7 +1141,12 @@ func validateMLflowEndpointURL(raw string) error {
 	return nil
 }
 
-func BuildMLflowPluginConfigJson(mlflowEndpoint string, caBundlePath string, injectUserEnvVars bool, kfpBaseURL string) (string, error) {
+func BuildMLflowPluginConfigJson(
+	mlflowEndpoint string,
+	caBundlePath string,
+	injectUserEnvVars bool,
+	kfpBaseURL string,
+) (string, error) {
 	settings := MLflowPluginSettings{
 		WorkspacesEnabled:     true,
 		ExperimentDescription: "Created by AI Pipelines.",
