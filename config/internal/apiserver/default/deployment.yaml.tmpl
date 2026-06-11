@@ -187,10 +187,6 @@ spec:
               value: "{{.DBConnection.Host}}"
             - name: DBCONFIG_MYSQLCONFIG_PORT
               value: "{{.DBConnection.Port}}"
-            {{ if .FIPSEnabled }}
-            - name: V2_LAUNCHER_COMMAND
-              value: "launcher-v2-fips"
-            {{ end }}
             - name: CACHEENABLED
               value: "{{.APIServer.CacheEnabled}}"
             {{ if .CompiledPipelineSpecPatch }}

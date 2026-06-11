@@ -4,8 +4,6 @@ go 1.26
 
 toolchain go1.26.3
 
-godebug fips140=auto
-
 require (
 	github.com/anthhub/forwarder v1.1.0
 	github.com/fsnotify/fsnotify v1.9.0

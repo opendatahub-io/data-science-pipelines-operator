@@ -37,8 +37,6 @@ spec:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: metadata.name
-            - name: ARGO_EXEC_PATH
-              value: /bin/argoexec-fips
           image: argowfcontroller:test2
           imagePullPolicy: IfNotPresent
           livenessProbe:

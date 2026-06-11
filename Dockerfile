@@ -23,6 +23,9 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
     go build -tags no_openssl -a -o manager main.go
 
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
+
+ENV GODEBUG=fips140=auto
+
 WORKDIR /
 COPY --from=builder /workspace/manager .
 COPY config/internal config/internal

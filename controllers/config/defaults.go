@@ -126,7 +126,6 @@ const (
 	DBConnectionTimeoutConfigName            = "DSPO.HealthCheck.Database.ConnectionTimeout"
 	RequeueTimeConfigName                    = "DSPO.RequeueTime"
 	ApiServerIncludeOwnerReferenceConfigName = "DSPO.ApiServer.IncludeOwnerReference"
-	FIPSEnabledConfigName                    = "DSPO.FIPSEnabled"
 )
 
 // DSPA Status Condition Types
@@ -182,8 +181,6 @@ const DefaultRequeueTime = time.Second * 20
 const DefaultApiServerIncludeOwnerReferenceConfigName = true
 
 const DefaultPlatformVersion = "v0.0.0"
-
-const DefaultFIPSEnabled = false
 
 const (
 	DefaultArgoWorkflowsControllersManagementState = "Managed"

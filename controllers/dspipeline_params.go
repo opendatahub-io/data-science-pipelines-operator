@@ -106,7 +106,6 @@ type DSPAParams struct {
 	PodToPodTLS bool
 
 	APIServerServiceDNSName string
-	FIPSEnabled             bool
 	MLflow                  *dspa.MLflowConfig
 	APIServerPluginsJson    string
 	// GrantMlflowWorkloadRBAC is true when mlflow.kubeflow.org Role rules should be applied this reconcile.
@@ -749,7 +748,6 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.CustomCABundleRootMountPath = config.CustomCABundleRootMountPath
 	p.PiplinesCABundleMountPath = config.GetCABundleFileMountPath()
 	p.PodToPodTLS = false
-	p.FIPSEnabled = config.GetBoolConfigWithDefault(config.FIPSEnabledConfigName, config.DefaultFIPSEnabled)
 	p.WebhookName = "ds-pipelines-webhook"
 	dspTrustedCAConfigMapKey := config.CustomDSPTrustedCAConfigMapKey
 

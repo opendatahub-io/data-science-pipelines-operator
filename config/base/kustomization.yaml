@@ -174,13 +174,6 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.PLATFORMVERSION
-  - name: FIPSENABLED
-    objref:
-      kind: ConfigMap
-      name: dspo-parameters
-      apiVersion: v1
-    fieldref:
-      fieldpath: data.FIPSENABLED
   - name: WEBHOOK_ANNOTATIONS
     objref:
       kind: ConfigMap

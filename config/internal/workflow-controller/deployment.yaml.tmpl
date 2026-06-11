@@ -42,10 +42,6 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.name
-        {{ if .FIPSEnabled }}
-        - name: ARGO_EXEC_PATH
-          value: "/bin/argoexec-fips"
-        {{ end }}
         {{ if .ProxyConfig }}
         {{ if .ProxyConfig.HTTPProxy }}
         - name: HTTP_PROXY
