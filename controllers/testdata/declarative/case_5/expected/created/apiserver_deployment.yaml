@@ -87,8 +87,12 @@ spec:
               value: "9000"
             - name: V2_LAUNCHER_IMAGE
               value: "launcherimage:test5"
+            - name: V2_LAUNCHER_COMMAND
+              value: "/bin/fips-wrapper.sh launcher-v2"
             - name: V2_DRIVER_IMAGE
               value: "driverimage:test5"
+            - name: V2_DRIVER_COMMAND
+              value: "/bin/fips-wrapper.sh driver"
             - name: METADATA_GRPC_SERVICE_SERVICE_HOST
               value: "ds-pipeline-metadata-grpc-testdsp5.default.svc.cluster.local"
             - name: METADATA_GRPC_SERVICE_SERVICE_PORT

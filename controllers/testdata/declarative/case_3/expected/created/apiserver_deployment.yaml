@@ -75,8 +75,12 @@ spec:
               value: "80"
             - name: V2_LAUNCHER_IMAGE
               value: "argolauncherimage:test3"
+            - name: V2_LAUNCHER_COMMAND
+              value: "/bin/fips-wrapper.sh launcher-v2"
             - name: V2_DRIVER_IMAGE
               value: "argodriverimage:test3"
+            - name: V2_DRIVER_COMMAND
+              value: "/bin/fips-wrapper.sh driver"
             - name: METADATA_GRPC_SERVICE_SERVICE_HOST
               value: "ds-pipeline-metadata-grpc-testdsp3.default.svc.cluster.local"
             - name: METADATA_GRPC_SERVICE_SERVICE_PORT
