@@ -24,7 +24,7 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
 
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
 
-ENV GODEBUG=fips140=auto
+ENV GODEBUG=fips140=on
 
 WORKDIR /
 COPY --from=builder /workspace/manager .
