@@ -25,7 +25,7 @@ spec:
     - name: url
       value: https://github.com/opendatahub-io/odh-konflux-central.git
     - name: revision
-      value: 'earlygate'
+      value: 'earlygate2'
     - name: pathInRepo
       value: e2e-early-gate/early-gate-test-pipeline.yaml
   taskRunTemplate:
