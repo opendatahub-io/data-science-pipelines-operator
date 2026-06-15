@@ -27,7 +27,7 @@ spec:
     - name: revision
       value: 'earlygate2'
     - name: pathInRepo
-      value: e2e-early-gate/early-gate-test-pipeline.yaml
+      value: early-gate/early-gate-test-pipeline.yaml
   taskRunTemplate:
     serviceAccountName: build-pipeline-early-gate-ci
   workspaces:
