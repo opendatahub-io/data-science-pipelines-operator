@@ -44,13 +44,19 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref }}
         run: |
-          if ! git show "origin/${BASE_REF}:chaos/knowledge/dspo-default.yaml" > /tmp/base-knowledge.yaml 2>/dev/null; then
-            echo "No base knowledge file found on target branch, skipping diff"
+          files=$(git ls-tree -r --name-only "origin/${BASE_REF}" chaos/knowledge/ 2>/dev/null)
+          if [ -z "$files" ]; then
+            echo "No base knowledge directory found on target branch, skipping diff"
             exit 0
           fi
+          echo "$files" | while read -r file; do
+            rel="${file#chaos/knowledge/}"
+            mkdir -p "/tmp/base-knowledge/$(dirname "$rel")"
+            git show "origin/${BASE_REF}:${file}" > "/tmp/base-knowledge/${rel}"
+          done
           go tool operator-chaos diff \
-            --source /tmp/base-knowledge.yaml \
-            --target chaos/knowledge/dspo-default.yaml \
+            --source /tmp/base-knowledge \
+            --target chaos/knowledge \
             --breaking
 
       - name: Run chaos SDK tests
