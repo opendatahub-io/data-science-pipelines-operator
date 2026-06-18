@@ -19,6 +19,7 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
@@ -46,7 +47,10 @@ func (r *DSPAReconciler) ReconcileWorkflowController(dsp *dspav1.DataSciencePipe
 
 	// Get the management state for the WorkflowController subcomponent from the config
 	// Expected format example: {"managementState":"Managed"}
-	dspoArgoWorkflowsControllersJSON := config.GetStringConfigWithDefault("DSPO.ArgoWorkflowsControllers", config.DefaultArgoWorkflowsControllers)
+	dspoArgoWorkflowsControllersJSON := strings.Trim(
+		config.GetStringConfigWithDefault("DSPO.ArgoWorkflowsControllers", config.DefaultArgoWorkflowsControllers),
+		"\"",
+	)
 
 	var argoWorkflowsControllersConfig ArgoWorkflowsControllersConfig
 	if err := json.Unmarshal([]byte(dspoArgoWorkflowsControllersJSON), &argoWorkflowsControllersConfig); err != nil {
