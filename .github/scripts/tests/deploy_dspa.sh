@@ -12,8 +12,16 @@ echo "Waiting for operator to create the APIServer deployment..."
 kubectl -n "$DSPA_NAMESPACE" wait --for=create --timeout=300s \
   deployment/ds-pipeline-"$DSPA_NAME"
 
-echo "Waiting for DSPA to become ready..."
+echo "Waiting for all DSPA deployments to become ready..."
 kubectl -n "$DSPA_NAMESPACE" wait --timeout=300s \
-  --for=condition=Available deployment/ds-pipeline-"$DSPA_NAME"
+  --for=condition=Available deployment --all
+
+echo "Waiting for DSPA APIServerReady condition..."
+kubectl -n "$DSPA_NAMESPACE" wait --timeout=300s \
+  --for=condition=APIServerReady dspa/"$DSPA_NAME"
+
+echo "Waiting for all pods to be ready..."
+kubectl -n "$DSPA_NAMESPACE" wait --timeout=300s \
+  --for=condition=Ready pod --all
 
 echo "DSPA deployment is ready."
