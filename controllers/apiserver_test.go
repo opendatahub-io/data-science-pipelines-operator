@@ -1233,3 +1233,101 @@ func TestReconcileAPIServer_ConfigHashIdempotent(t *testing.T) {
 	assert.Equal(t, params1.APIServerConfigHash, params2.APIServerConfigHash,
 		"hash should be identical across reconciles with the same input")
 }
+
+func TestManagedPipelineSampleEntry_VersionNameIsPlatformVersionOnly(t *testing.T) {
+	const platformVersion = "rhoai-3.5-ea.2"
+
+	t.Run("minimal_entry", func(t *testing.T) {
+		viper.Reset()
+		viper.Set("DSPO.PlatformVersion", platformVersion)
+		t.Cleanup(func() { viper.Reset() })
+
+		_, _, reconciler := CreateNewTestObjects()
+		dspa := testutil.CreateDSPAWithManagedPipelines("img", []dspav1.ManagedPipeline{{Name: "trainer-ostf"}}, nil)
+		dspa.Spec.APIServer.EnableSamplePipeline = false
+
+		jsonStr, err := reconciler.generateSampleConfigJSON(dspa, config.ResolvedPlatformVersion())
+		require.NoError(t, err)
+
+		var out struct {
+			Pipelines []map[string]string `json:"pipelines"`
+		}
+		require.NoError(t, json.Unmarshal([]byte(jsonStr), &out))
+		require.Len(t, out.Pipelines, 1)
+		assert.Equal(t, platformVersion, out.Pipelines[0]["versionName"],
+			"managed pipeline versionName should be the platform version only")
+	})
+
+	t.Run("config_entry", func(t *testing.T) {
+		viper.Reset()
+		viper.Set("ManagedPipelinesMetadata.foo.Name", "Display Foo")
+		viper.Set("ManagedPipelinesMetadata.foo.Filepath", "/custom/foo.yaml")
+		viper.Set("ManagedPipelinesMetadata.foo.Description", "From config")
+		viper.Set("DSPO.PlatformVersion", platformVersion)
+		t.Cleanup(func() { viper.Reset() })
+
+		_, _, reconciler := CreateNewTestObjects()
+		dspa := testutil.CreateDSPAWithManagedPipelines("img", []dspav1.ManagedPipeline{{Name: "foo"}}, nil)
+		dspa.Spec.APIServer.EnableSamplePipeline = false
+
+		jsonStr, err := reconciler.generateSampleConfigJSON(dspa, config.ResolvedPlatformVersion())
+		require.NoError(t, err)
+
+		var out struct {
+			Pipelines []map[string]string `json:"pipelines"`
+		}
+		require.NoError(t, json.Unmarshal([]byte(jsonStr), &out))
+		require.Len(t, out.Pipelines, 1)
+		assert.Equal(t, platformVersion, out.Pipelines[0]["versionName"],
+			"managed pipeline versionName should be the platform version only, even when config metadata exists")
+	})
+
+	t.Run("iris_sample_unchanged", func(t *testing.T) {
+		viper.Reset()
+		viper.Set("ManagedPipelinesMetadata.iris.Name", "[Demo] iris")
+		viper.Set("ManagedPipelinesMetadata.iris.Filepath", "/samples/iris.yaml")
+		viper.Set("DSPO.PlatformVersion", platformVersion)
+		t.Cleanup(func() { viper.Reset() })
+
+		_, _, reconciler := CreateNewTestObjects()
+		dspa := testutil.CreateEmptyDSPA()
+		dspa.Spec.APIServer = &dspav1.APIServer{Deploy: true, EnableSamplePipeline: true}
+		dspa.Spec.APIServer.ManagedPipelines = nil
+
+		jsonStr, err := reconciler.generateSampleConfigJSON(dspa, config.ResolvedPlatformVersion())
+		require.NoError(t, err)
+
+		var out struct {
+			Pipelines []map[string]string `json:"pipelines"`
+		}
+		require.NoError(t, json.Unmarshal([]byte(jsonStr), &out))
+		require.Len(t, out.Pipelines, 1)
+		assert.Equal(t, "[Demo] iris - "+platformVersion, out.Pipelines[0]["versionName"],
+			"iris sample pipeline versionName should keep the original format")
+	})
+
+	t.Run("mixed_iris_and_managed", func(t *testing.T) {
+		viper.Reset()
+		viper.Set("ManagedPipelinesMetadata.iris.Name", "[Demo] iris")
+		viper.Set("ManagedPipelinesMetadata.iris.Filepath", "/samples/iris.yaml")
+		viper.Set("DSPO.PlatformVersion", platformVersion)
+		t.Cleanup(func() { viper.Reset() })
+
+		_, _, reconciler := CreateNewTestObjects()
+		dspa := testutil.CreateDSPAWithManagedPipelines("img", []dspav1.ManagedPipeline{{Name: "trainer-ostf"}}, nil)
+		dspa.Spec.APIServer.EnableSamplePipeline = true
+
+		jsonStr, err := reconciler.generateSampleConfigJSON(dspa, config.ResolvedPlatformVersion())
+		require.NoError(t, err)
+
+		var out struct {
+			Pipelines []map[string]string `json:"pipelines"`
+		}
+		require.NoError(t, json.Unmarshal([]byte(jsonStr), &out))
+		require.Len(t, out.Pipelines, 2)
+		assert.Equal(t, "[Demo] iris - "+platformVersion, out.Pipelines[0]["versionName"],
+			"iris sample pipeline versionName should keep the original format")
+		assert.Equal(t, platformVersion, out.Pipelines[1]["versionName"],
+			"managed pipeline versionName should be the platform version only")
+	})
+}
