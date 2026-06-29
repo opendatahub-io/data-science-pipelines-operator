@@ -1263,6 +1263,7 @@ func TestManagedPipelineSampleEntry_VersionNameIsPlatformVersionOnly(t *testing.
 		viper.Set("ManagedPipelinesMetadata.foo.Name", "Display Foo")
 		viper.Set("ManagedPipelinesMetadata.foo.Filepath", "/custom/foo.yaml")
 		viper.Set("ManagedPipelinesMetadata.foo.Description", "From config")
+		viper.Set("ManagedPipelinesMetadata.foo.VersionName", "Custom Version Label")
 		viper.Set("DSPO.PlatformVersion", platformVersion)
 		t.Cleanup(func() { viper.Reset() })
 
