@@ -23,7 +23,7 @@ import (
 )
 
 // relatedImageEnvPrefix matches env vars forwarded to the managed-pipelines init
-// container (e.g. RELATED_IMAGE_AUTOML_RUNTIME).
+// container (e.g. RELATED_IMAGE_ODH_AUTOML_IMAGE).
 const relatedImageEnvPrefix = "RELATED_IMAGE_"
 
 // ManagedPipelineImageEnvVar is a name/value pair from the operator environment.
