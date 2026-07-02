@@ -139,6 +139,14 @@ rules:
   verbs:
   - '*'
 - apiGroups:
+  - config.openshift.io
+  resources:
+  - apiservers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - datasciencepipelinesapplications.opendatahub.io
   resources:
   - datasciencepipelinesapplications

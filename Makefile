@@ -181,11 +181,11 @@ test-chaos: envtest ## Run SDK chaos tests (envtest, no cluster needed).
 
 .PHONY: build
 build: generate fmt vet ## Build manager binary.
-	go build -o bin/manager main.go
+	go build -o bin/manager .
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./main.go
+	go run .
 
 .PHONY: podman-build
 podman-build: ## Build container image with the manager.

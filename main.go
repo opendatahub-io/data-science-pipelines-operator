@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -32,8 +33,10 @@ import (
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers"
 	buildv1 "github.com/openshift/api/build/v1"
+	configv1 "github.com/openshift/api/config/v1"
 	imagev1 "github.com/openshift/api/image/v1"
 	routev1 "github.com/openshift/api/route/v1"
+	tlspkg "github.com/openshift/controller-runtime-common/pkg/tls"
 	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -107,6 +110,7 @@ func init() {
 	utilruntime.Must(buildv1.AddToScheme(scheme))
 	utilruntime.Must(imagev1.AddToScheme(scheme))
 	utilruntime.Must(routev1.AddToScheme(scheme))
+	utilruntime.Must(configv1.Install(scheme))
 
 	utilruntime.Must(dspav1.AddToScheme(scheme))
 	utilruntime.Must(mlflowv1.AddToScheme(scheme))
@@ -168,7 +172,10 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	flag.IntVar(&maxConcurrentReconciles, "MaxConcurrentReconciles", config.DefaultMaxConcurrentReconciles, "Maximum concurrent reconciles")
+	flag.IntVar(
+		&maxConcurrentReconciles, "MaxConcurrentReconciles",
+		config.DefaultMaxConcurrentReconciles,
+		"Maximum concurrent reconciles")
 	opts := zap.Options{
 		Development: true,
 		TimeEncoder: zapcore.TimeEncoderOfLayout(time.RFC3339),
@@ -212,12 +219,31 @@ func main() {
 
 	restCfg := ctrl.GetConfigOrDie()
 
+	// Fetch the cluster TLS security profile for webhook and metrics servers (OpenShift only)
+	bootstrapClient, err := client.New(restCfg, client.Options{Scheme: scheme})
+	if err != nil {
+		setupLog.Error(err, "unable to create bootstrap client for TLS profile")
+		os.Exit(1)
+	}
+	tlsResult, err := fetchTLSProfile(context.Background(), bootstrapClient)
+	if err != nil {
+		setupLog.Error(err, "unable to resolve TLS profile, failing startup")
+		os.Exit(1)
+	}
+	tlsOpts := tlsResult.TLSOpts
+	profile := tlsResult.ProfileSpec
+	hasOpenShiftConfigAPI := tlsResult.HasOpenShiftConfig
+
 	mgrOpts := ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
 			BindAddress: metricsAddr,
+			TLSOpts:     tlsOpts,
 		},
-		WebhookServer:          webhook.NewServer(webhook.Options{Port: 9443}),
+		WebhookServer: webhook.NewServer(webhook.Options{
+			Port:    9443,
+			TLSOpts: tlsOpts,
+		}),
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "f9eb95d5.opendatahub.io",
@@ -247,7 +273,9 @@ func main() {
 				// Pod is watched via WatchesRawSource with a handler that filters
 				// by component=data-science-pipelines label, so we can scope the
 				// informer to only cache pods with that label.
-				&corev1.Pod{}: {Label: labels.SelectorFromSet(labels.Set{config.DSPComponentk8sLabel: config.DSPComponentk8sLabelValue})},
+				&corev1.Pod{}: {Label: labels.SelectorFromSet(labels.Set{
+					config.DSPComponentk8sLabel: config.DSPComponentk8sLabelValue,
+				})},
 				// ConfigMap and Secret are also watched for external resources
 				// (odh-trusted-ca-bundle, service-ca secrets) that lack the dsp-version
 				// label. Strip data payloads instead of filtering by label so the
@@ -326,8 +354,26 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Register SecurityProfileWatcher on OpenShift: cancel context on TLS profile change so pod restarts
+	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
+	defer cancel()
+	if hasOpenShiftConfigAPI {
+		watcher := &tlspkg.SecurityProfileWatcher{
+			Client:                mgr.GetClient(),
+			InitialTLSProfileSpec: profile,
+			OnProfileChange: func(_ context.Context, _, _ configv1.TLSProfileSpec) {
+				setupLog.Info("TLS profile changed, initiating graceful shutdown to reload")
+				cancel()
+			},
+		}
+		if err := watcher.SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to register TLS security profile watcher")
+			os.Exit(1)
+		}
+	}
+
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
