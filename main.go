@@ -65,7 +65,9 @@ var (
 // stripManagedFields removes managed fields from cached objects to reduce memory.
 func stripManagedFields(i interface{}) (interface{}, error) {
 	if obj, ok := i.(client.Object); ok {
-		obj.SetManagedFields(nil)
+		cp := obj.DeepCopyObject().(client.Object)
+		cp.SetManagedFields(nil)
+		return cp, nil
 	}
 	return i, nil
 }
@@ -76,12 +78,14 @@ func stripManagedFields(i interface{}) (interface{}, error) {
 // to types that have a per-type Transform override in ByObject.
 func stripConfigMapData(i interface{}) (interface{}, error) {
 	if cm, ok := i.(*corev1.ConfigMap); ok {
-		cm.Data = nil
-		cm.BinaryData = nil
-		if cm.Annotations != nil {
-			delete(cm.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
+		cp := cm.DeepCopy()
+		cp.Data = nil
+		cp.BinaryData = nil
+		if cp.Annotations != nil {
+			delete(cp.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
 		}
-		cm.SetManagedFields(nil)
+		cp.SetManagedFields(nil)
+		return cp, nil
 	}
 	return i, nil
 }
@@ -92,12 +96,14 @@ func stripConfigMapData(i interface{}) (interface{}, error) {
 // to types that have a per-type Transform override in ByObject.
 func stripSecretData(i interface{}) (interface{}, error) {
 	if s, ok := i.(*corev1.Secret); ok {
-		s.Data = nil
-		s.StringData = nil
-		if s.Annotations != nil {
-			delete(s.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
+		cp := s.DeepCopy()
+		cp.Data = nil
+		cp.StringData = nil
+		if cp.Annotations != nil {
+			delete(cp.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
 		}
-		s.SetManagedFields(nil)
+		cp.SetManagedFields(nil)
+		return cp, nil
 	}
 	return i, nil
 }
