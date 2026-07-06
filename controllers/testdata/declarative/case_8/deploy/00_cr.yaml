@@ -1,0 +1,23 @@
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: testdsp8
+spec:
+  dspVersion: v2
+  podToPodTLS: false
+  objectStorage:
+    minio:
+      image: minio:test8
+  database:
+    mariaDB:
+      deploy: true
+  mlmd:
+    deploy: true
+  apiServer:
+    deploy: true
+    enableOauth: true
+    enableSamplePipeline: false
+  proxy:
+    httpProxy: "http://proxy.example:8080"
+    httpsProxy: "http://proxy.example:8080"
+    noProxy: "localhost,127.0.0.1,.svc.cluster.local,kubernetes.default.svc"

@@ -1,0 +1,13 @@
+kind: DataScienceCluster
+apiVersion: datasciencecluster.opendatahub.io/v1
+metadata:
+  name: data-science-pipelines-operator
+spec:
+  components:
+    datasciencepipelines:
+      managementState: Managed
+      devFlags:
+        manifests:
+          - uri: https://github.com/opendatahub-io/data-science-pipelines-operator/tarball/main
+            contextDir: config
+            sourcePath: overlays/odh

@@ -1,0 +1,271 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ds-pipeline-testdsp2
+  namespace: default
+  labels:
+    dsp-version: v2
+    app: ds-pipeline-testdsp2
+    component: data-science-pipelines
+    dspa: testdsp2
+spec:
+  selector:
+    matchLabels:
+      app: ds-pipeline-testdsp2
+      component: data-science-pipelines
+      dspa: testdsp2
+  template:
+    metadata:
+      annotations:
+        configHash: 650f2b104160c90456c3e8c8f51c73f82f8bd5567b21e4b6d01b6bf67cbc1da9
+      labels:
+        dsp-version: v2
+        app: ds-pipeline-testdsp2
+        component: data-science-pipelines
+        dspa: testdsp2
+    spec:
+      initContainers:
+        - name: init-managed-pipelines
+          image: pipelines-components:test2
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          env:
+            - name: ALL_PIPELINES
+              value: "true"
+            - name: MANAGED_PIPELINES_UPLOAD_TAGS
+              value: "managed=true,rhoai-version=v1.2.3"
+          volumeMounts:
+            - name: managed-pipelines
+              mountPath: /config/managed-pipelines
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+      containers:
+        - env:
+            - name: POD_NAMESPACE
+              value: "default"
+            - name: DBCONFIG_USER
+              value: "testuser"
+            - name: DBCONFIG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: "password"
+                  name: "ds-pipeline-db-testdsp2"
+            - name: DBCONFIG_DBNAME
+              value: "randomDBName"
+            - name: DBCONFIG_HOST
+              value: "mariadb-testdsp2.default.svc.cluster.local"
+            - name: DBCONFIG_PORT
+              value: "3306"
+            - name: ML_PIPELINE_SERVICE_NAME
+              value: "ds-pipeline-testdsp2"
+            - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_HOST
+              value: "ds-pipeline-visualizationserver"
+            - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
+              value: "8888"
+            - name: OBJECTSTORECONFIG_CREDENTIALSSECRET
+              value: "ds-pipeline-s3-testdsp2"
+            - name: OBJECTSTORECONFIG_CREDENTIALSACCESSKEYKEY
+              value: "accesskey"
+            - name: OBJECTSTORECONFIG_CREDENTIALSSECRETKEYKEY
+              value: "secretkey"
+            - name: DEFAULTPIPELINERUNNERSERVICEACCOUNT
+              value: "pipeline-runner-testdsp2"
+            - name: OBJECTSTORECONFIG_BUCKETNAME
+              value: "mlpipeline"
+            - name: OBJECTSTORECONFIG_ACCESSKEY
+              valueFrom:
+                secretKeyRef:
+                  key: "accesskey"
+                  name: "ds-pipeline-s3-testdsp2"
+            - name: OBJECTSTORECONFIG_SECRETACCESSKEY
+              valueFrom:
+                secretKeyRef:
+                  key: "secretkey"
+                  name: "ds-pipeline-s3-testdsp2"
+            - name: OBJECTSTORECONFIG_SECURE
+              value: "false"
+            - name: OBJECTSTORECONFIG_HOST
+              value: "minio-testdsp2.default.svc.cluster.local"
+            - name: OBJECTSTORECONFIG_PORT
+              value: "9000"
+            - name: V2_LAUNCHER_IMAGE
+              value: "argolauncherimage:test2"
+            - name: V2_DRIVER_IMAGE
+              value: "argodriverimage:test2"
+            - name: METADATA_GRPC_SERVICE_SERVICE_HOST
+              value: "ds-pipeline-metadata-grpc-testdsp2.default.svc.cluster.local"
+            - name: METADATA_GRPC_SERVICE_SERVICE_PORT
+              value: "8080"
+            - name: ML_PIPELINE_SERVICE_HOST
+              value: ds-pipeline-testdsp2.default.svc.cluster.local
+            - name: ML_PIPELINE_SERVICE_PORT_GRPC
+              value: "8887"
+            - name: SIGNED_URL_EXPIRY_TIME_SECONDS
+              value: "60"
+            - name: EXECUTIONTYPE
+              value: Workflow
+            - name: DB_DRIVER_NAME
+              value: mysql
+            - name: DBCONFIG_MYSQLCONFIG_USER
+              value: "testuser"
+            - name: DBCONFIG_MYSQLCONFIG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: "password"
+                  name: "ds-pipeline-db-testdsp2"
+            - name: DBCONFIG_MYSQLCONFIG_DBNAME
+              value: "randomDBName"
+            - name: DBCONFIG_MYSQLCONFIG_HOST
+              value: "mariadb-testdsp2.default.svc.cluster.local"
+            - name: DBCONFIG_MYSQLCONFIG_PORT
+              value: "3306"
+            - name: CACHEENABLED
+              value: "false"
+            - name: COMPILED_PIPELINE_SPEC_PATCH
+              value: '{"ttlStrategy":{"secondsAfterCompletion":3600}}'
+            - name: MANAGED_PIPELINES_UPLOAD_TAGS
+              value: "managed=true,rhoai-version=v1.2.3"
+          image: api-server:test2
+          # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
+          name: ds-pipeline-api-server
+          command: ['/bin/apiserver']
+          args:
+            - --config=/config
+            - -logtostderr=true
+            - --sampleconfig=/config/sample_config.json
+            - --managedPipelinesDir=/config/managed-pipelines
+          ports:
+            - containerPort: 8888
+              name: http
+              protocol: TCP
+            - containerPort: 8887
+              name: grpc
+              protocol: TCP
+          livenessProbe:
+            exec:
+              command:
+                - wget
+                - -q
+                - -S
+                - -O
+                - '-'
+                - http://localhost:8888/apis/v1beta1/healthz
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+          readinessProbe:
+            exec:
+              command:
+                - wget
+                - -q
+                - -S
+                - -O
+                - '-'
+                - http://localhost:8888/apis/v1beta1/healthz
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+          resources:
+            requests:
+              cpu: 1231m
+              memory: 1Gi
+            limits:
+              cpu: 2522m
+              memory: 5Gi
+          volumeMounts:
+            - name: server-config
+              mountPath: /config/config.json
+              subPath: testserverconfigmapkeydspa2
+            - mountPath: /config/sample_config.json
+              name: sample-config
+              subPath: sample_config.json
+            - mountPath: /samples/
+              name: sample-pipeline
+            - name: managed-pipelines
+              mountPath: /config/managed-pipelines
+        - name: kube-rbac-proxy
+          args:
+            - --secure-listen-address=0.0.0.0:8443
+            - --proxy-endpoints-port=8444
+            - --upstream=http://localhost:8888
+            - --tls-cert-file=/etc/tls/private/tls.crt
+            - --tls-private-key-file=/etc/tls/private/tls.key
+            - --config-file=/etc/kube-rbac-proxy/config-file.yaml
+            - --ignore-paths=/healthz,/apis/v1beta1/healthz,/metrics
+          image: kube-rbac-proxy:test2
+          ports:
+            - containerPort: 8443
+              name: proxy
+              protocol: TCP
+            - containerPort: 8444
+              name: proxy-metrics
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: proxy-metrics
+              scheme: HTTPS
+            initialDelaySeconds: 30
+            timeoutSeconds: 1
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: proxy-metrics
+              scheme: HTTPS
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          resources:
+            limits:
+              cpu: 100m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          volumeMounts:
+            - mountPath: /etc/tls/private
+              name: proxy-tls
+            - mountPath: /etc/kube-rbac-proxy
+              name: proxy-config
+      volumes:
+        - name: proxy-tls
+          secret:
+            secretName: ds-pipelines-proxy-tls-testdsp2
+            defaultMode: 420
+        - name: proxy-config
+          configMap:
+            defaultMode: 420
+            name: kube-rbac-proxy-config-ds-pipeline-testdsp2
+        - name: server-config
+          configMap:
+            defaultMode: 420
+            name: testserverconfigmapdspa2
+        - configMap:
+            defaultMode: 420
+            name: sample-config-testdsp2
+          name: sample-config
+        - configMap:
+            defaultMode: 420
+            name: sample-pipeline-testdsp2
+          name: sample-pipeline
+        - name: managed-pipelines
+          emptyDir:
+            sizeLimit: "1024Mi"
+      serviceAccountName: ds-pipeline-testdsp2

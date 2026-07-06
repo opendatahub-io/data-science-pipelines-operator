@@ -1,0 +1,45 @@
+apiVersion: chaos.operatorchaos.io/v1alpha1
+kind: ChaosExperiment
+metadata:
+  name: dspo-apiserver-pod-kill
+spec:
+  tier: 1
+  target:
+    operator: data-science-pipelines-operator
+    component: apiserver
+    resource: Deployment/ds-pipeline-${DSPA_NAME}
+
+  steadyState:
+    checks:
+      - type: conditionTrue
+        apiVersion: apps/v1
+        kind: Deployment
+        name: ds-pipeline-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+        conditionType: Available
+      - type: conditionTrue
+        apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
+        kind: DataSciencePipelinesApplication
+        name: ${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+        conditionType: APIServerReady
+    timeout: 30s
+
+  injection:
+    type: PodKill
+    parameters:
+      labelSelector: "app=ds-pipeline-${DSPA_NAME},component=data-science-pipelines"
+    count: 1
+    ttl: 30s
+
+  hypothesis:
+    description: >
+      When the APIServer pod is killed, the ReplicaSet recreates it.
+      The operator detects the pod restart and APIServerReady condition
+      restores to True within the recovery timeout.
+    recoveryTimeout: 60s
+
+  blastRadius:
+    maxPodsAffected: 1
+    allowedNamespaces:
+      - ${DSPA_NAMESPACE}

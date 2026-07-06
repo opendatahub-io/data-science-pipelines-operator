@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mariadb
+  namespace: test-mariadb
+  labels:
+    app: mariadb
+    component: data-science-pipelines
+spec:
+  strategy:
+    type: Recreate  # Need this since backing PVC is ReadWriteOnce, which creates resource lock condition in default Rolling strategy
+  selector:
+    matchLabels:
+      app: mariadb
+      component: data-science-pipelines
+  template:
+    metadata:
+      labels:
+        app: mariadb
+        component: data-science-pipelines
+    spec:
+      containers:
+        - name: mariadb
+          image: quay.io/sclorg/mariadb-105-c9s:latest
+          ports:
+            - containerPort: 3306
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - "-i"
+                - "-c"
+                - >-
+                  MYSQL_PWD=$MYSQL_PASSWORD mysql -u $MYSQL_USER -e 'SELECT 1'
+            failureThreshold: 3
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 3306
+            timeoutSeconds: 1
+          env:
+            - name: MYSQL_USER
+              value: "mlpipeline"
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: "password"
+                  name: "ds-pipeline-db-test"
+            - name: MYSQL_DATABASE
+              value: "mlpipeline"
+            - name: MYSQL_ALLOW_EMPTY_PASSWORD
+              value: "true"
+          resources:
+            limits:
+              cpu: 60m
+              memory: 500Mi
+            requests:
+              cpu: 60m
+              memory: 500Mi
+          volumeMounts:
+            - name: mariadb-persistent-storage
+              mountPath: /var/lib/mysql
+            - name: mariadb-certs
+              mountPath: /.mariadb/certs
+            - name: tls-config
+              mountPath: /etc/my.cnf.d/z-custom-my.cnf
+              subPath: z-custom-my.cnf
+            - name: ca-bundle
+              mountPath: /.mariadb/certs/CAs
+      volumes:
+        - name: mariadb-certs
+          secret:
+            secretName: mariadb-certs
+            items:
+              - key: public.crt
+                path: public.crt
+              - key: private.key
+                path: private.key
+            defaultMode: 420
+        - name: mariadb-persistent-storage
+          persistentVolumeClaim:
+            claimName: mariadb-test
+        - name: tls-config
+          configMap:
+            name: tls-config
+            defaultMode: 420
+        - name: ca-bundle
+          configMap:
+            name: self-signed-ca
+            items:
+              - key: public.crt
+                path: public.crt
+            defaultMode: 420

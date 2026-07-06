@@ -1,0 +1,23 @@
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: testdspa
+spec:
+  podToPodTLS: false
+  dSPVersion: v2
+  apiServer:
+    deploy: true
+    workspace:
+      volumeClaimTemplateSpec:
+        accessModes:
+        - ReadWriteOnce
+        storageClassName: standard-csi
+  database:
+    mariaDB:
+      deploy: true
+  objectStorage:
+    minio:
+      deploy: false
+      image: someimage
+  mlmd:
+    deploy: true

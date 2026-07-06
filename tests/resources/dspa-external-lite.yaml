@@ -1,0 +1,80 @@
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: dspa-ext
+spec:
+  dspVersion: v2
+  podToPodTLS: false
+  apiServer:
+    deploy: true
+    enableOauth: false
+    enableSamplePipeline: true
+    cABundle:
+      configMapName: root-ca
+      configMapKey: public.crt
+    resources:
+      limits:
+        cpu: 20m
+        memory: 500Mi
+      requests:
+        cpu: 20m
+        memory: 100m
+  scheduledWorkflow:
+    deploy: true
+    resources:
+      limits:
+        cpu: 20m
+        memory: 500Mi
+      requests:
+        cpu: 20m
+        memory: 100m
+  persistenceAgent:
+    deploy: true
+    resources:
+      limits:
+        cpu: 20m
+        memory: 500Mi
+      requests:
+        cpu: 20m
+        memory: 100Mi
+  mlmd:
+    deploy: true
+    envoy:
+      image: quay.io/maistra/proxyv2-ubi8:2.5.0
+      deployRoute: false
+      resources:
+        limits:
+          cpu: 20m
+          memory: 500Mi
+        requests:
+          cpu: 20m
+          memory: 100Mi
+    grpc:
+      resources:
+        limits:
+          cpu: 20m
+          memory: 500Mi
+        requests:
+          cpu: 20m
+          memory: 100Mi
+  database:
+    customExtraParams: '{"tls":"true"}'
+    externalDB:
+      host: mariadb.test-mariadb.svc.cluster.local
+      port: "3306"
+      username: mlpipeline
+      pipelineDBName: mlpipeline
+      passwordSecret:
+        name: ds-pipeline-db-test
+        key: password
+  objectStorage:
+    externalStorage:
+      bucket: mlpipeline
+      host: minio.test-minio.svc.cluster.local
+      port: "9000"
+      region: us-east-2
+      s3CredentialsSecret:
+        accessKey: accesskey
+        secretKey: secretkey
+        secretName: minio
+      scheme: https

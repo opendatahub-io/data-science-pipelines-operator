@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: sample-config-testdsp2
+    namespace: default
+    labels:
+        dsp-version: v2
+        app: ds-pipeline-testdsp2
+        component: data-science-pipelines
+data:
+    sample_config.json: |-
+        {"loadSamplesOnRestart":true,"pipelines":[{"description":"[source code](https://github.com/opendatahub-io/data-science-pipelines/tree/master/samples/iris-sklearn) A simple pipeline to demonstrate a basic ML Training workflow","file":"/samples/iris-pipeline-compiled.yaml","name":"[Demo] iris-training","versionDescription":"","versionName":"[Demo] iris-training - v1.2.3"}]}

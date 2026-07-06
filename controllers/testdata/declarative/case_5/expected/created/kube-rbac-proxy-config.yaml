@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kube-rbac-proxy-config-ds-pipeline-testdsp5
+  namespace: default
+  labels:
+    app: ds-pipeline-testdsp5
+    component: data-science-pipelines
+data:
+  config-file.yaml: |-
+    authorization:
+      resourceAttributes:
+        namespace: default
+        apiGroup: datasciencepipelinesapplications.opendatahub.io
+        resource: datasciencepipelinesapplications
+        subresource: api
+        name: testdsp5

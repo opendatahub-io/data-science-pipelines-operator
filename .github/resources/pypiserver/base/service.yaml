@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pypi-server
+spec:
+  selector:
+    app: pypi-server
+  ports:
+    - name: pypi-server
+      port: 8080
+      protocol: TCP
+      targetPort: 8080

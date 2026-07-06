@@ -1,0 +1,30 @@
+name: "Set up Go"
+description: "Installs Go from Red Hat go-toolset image (includes FIPS support)"
+runs:
+  using: composite
+  steps:
+    - name: Extract Go from go-toolset
+      shell: bash
+      env:
+        GO_TOOLSET_IMAGE: "registry.access.redhat.com/ubi9/go-toolset:1.26.3@sha256:d36470d5258da00f618b7aca9bdaab8e05134aa938bd6c42d9bd17d50ed45e76"
+      run: |
+        set -euo pipefail
+        docker rm -f go-toolset 2>/dev/null || true
+        docker create --name go-toolset "$GO_TOOLSET_IMAGE"
+        docker cp go-toolset:/usr/lib/golang $HOME/go-toolset
+        docker rm go-toolset
+        echo "GOROOT=$HOME/go-toolset" >> $GITHUB_ENV
+        echo "$HOME/go-toolset/bin" >> $GITHUB_PATH
+        echo "$HOME/go/bin" >> $GITHUB_PATH
+    - name: Verify Go installation
+      shell: bash
+      run: go version
+    - name: Cache Go modules and build cache
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4.3.0
+      with:
+        path: |
+          ~/go/pkg/mod
+          ~/.cache/go-build
+        key: go-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          go-${{ runner.os }}-

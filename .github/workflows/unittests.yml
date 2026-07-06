@@ -1,0 +1,17 @@
+name: Unit Tests
+on:
+  push:
+    branches:
+      - main
+      - stable
+      - v*.*.*
+  pull_request:
+jobs:
+  unittest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Go
+        uses: ./.github/actions/setup-go
+      - name: Run Unit Tests
+        run: make unittest

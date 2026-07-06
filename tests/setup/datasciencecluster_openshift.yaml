@@ -1,0 +1,10 @@
+apiVersion: datasciencecluster.opendatahub.io/v1
+kind: DataScienceCluster
+metadata:
+  name: opendatahub
+spec:
+  components:
+    dashboard:
+      managementState: Managed
+    datasciencepipelines:
+      managementState: Managed

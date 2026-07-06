@@ -1,0 +1,53 @@
+apiVersion: chaos.operatorchaos.io/v1alpha1
+kind: ChaosExperiment
+metadata:
+  name: dspo-mariadb-pod-kill
+spec:
+  tier: 1
+  target:
+    operator: data-science-pipelines-operator
+    component: mariadb
+    resource: Deployment/mariadb-${DSPA_NAME}
+
+  steadyState:
+    checks:
+      - type: conditionTrue
+        apiVersion: apps/v1
+        kind: Deployment
+        name: mariadb-${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+        conditionType: Available
+      - type: conditionTrue
+        apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
+        kind: DataSciencePipelinesApplication
+        name: ${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+        conditionType: DatabaseAvailable
+      - type: conditionTrue
+        apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
+        kind: DataSciencePipelinesApplication
+        name: ${DSPA_NAME}
+        namespace: ${DSPA_NAMESPACE}
+        conditionType: APIServerReady
+    timeout: 30s
+
+  injection:
+    type: PodKill
+    parameters:
+      labelSelector: "app=mariadb-${DSPA_NAME},component=data-science-pipelines"
+    count: 1
+    ttl: 30s
+
+  hypothesis:
+    description: >
+      Cascading failure: When the MariaDB pod is killed, the APIServer health
+      check detects the database is down and reports DatabaseAvailable=False.
+      The MariaDB pod is recreated by its ReplicaSet. On the next reconcile
+      cycle the health check passes and both DatabaseAvailable and
+      APIServerReady conditions restore to True.
+    recoveryTimeout: 60s
+
+  blastRadius:
+    maxPodsAffected: 1
+    allowedNamespaces:
+      - ${DSPA_NAMESPACE}

@@ -1,0 +1,72 @@
+name: KinD DSPO/DSP Integration Tests - External Argo
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - stable
+      - v*.*.*
+  pull_request:
+    paths:
+      - go.mod
+      - go.sum
+      - controllers/**
+      - api/**
+      - config/**
+      - tests/**
+      - .github/resources/**
+      - .github/actions/**
+      - '.github/workflows/kind-integration-byoargo.yml'
+      - '.github/scripts/tests/tests.sh'
+      - '.github/scripts/python_package_upload/**'
+      - Makefile
+    types:
+      - opened
+      - reopened
+      - closed
+      - synchronize
+
+concurrency:
+  group: ${{ github.head_ref }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+env:
+  GIT_WORKSPACE: ${{ github.workspace }}
+
+jobs:
+  dspo-byoargo-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: ./.github/actions/setup-go
+        id: go
+
+      - name: Setup and start KinD cluster
+        uses: ./.github/actions/kind
+
+      - name: Free up disk space
+        uses: kubeflow/pipelines/.github/actions/github-disk-cleanup@master
+
+      - name: Run test
+        id: test
+        working-directory: ${{ github.workspace }}/.github/scripts/tests
+        run: |
+          sh tests.sh --kind --deploy-external-argo
+        continue-on-error: true
+
+      - name: Collect events and logs
+        if: steps.test.outcome != 'success'
+        working-directory: ${{ github.workspace }}/.github/scripts/tests
+        run: |
+          ./collect_logs.sh --dspa-ns test-dspa --dspo-ns opendatahub
+          ./collect_logs.sh --dspa-ns dspa-ext --dspo-ns opendatahub
+          ./collect_logs.sh --dspa-ns test-k8s-dspa --dspo-ns opendatahub
+          ./collect_logs.sh --dspa-ns argo --dspo-ns opendatahub
+          exit 1

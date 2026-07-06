@@ -1,0 +1,720 @@
+//go:build test_all || test_unit
+
+/*
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package controllers
+
+import (
+	"context"
+	"encoding/json"
+	"testing"
+	"time"
+
+	"github.com/go-logr/logr"
+	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/testutil"
+	mlflowv1 "github.com/opendatahub-io/mlflow-operator/api/v1"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+)
+
+type Client struct {
+	Clientset kubernetes.Interface
+}
+
+func TestExtractParams_WithEmptyDSPA(t *testing.T) {
+	dspa := testutil.CreateEmptyDSPA()
+	ctx, params, reconciler := CreateNewTestObjects()
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	assert.Nil(t, err)
+}
+
+func TestExtractParams_CABundle(t *testing.T) {
+
+	ctx, _, client := CreateNewTestObjects()
+
+	tt := []struct {
+		msg                         string
+		dsp                         *dspav1.DataSciencePipelinesApplication
+		CustomCABundleRootMountPath string
+		CustomSSLCertDir            *string
+		PiplinesCABundleMountPath   string
+		SSLCertFileEnv              string
+		APICustomPemCerts           [][]byte
+		CustomCABundle              *dspav1.CABundle
+		ConfigMapPreReq             []*v1.ConfigMap
+		errorMsg                    string
+	}{
+		{
+			msg:                         "no bundle provided",
+			dsp:                         testutil.CreateEmptyDSPA(),
+			CustomCABundleRootMountPath: "/dsp-custom-certs",
+			CustomSSLCertDir:            nil,
+			PiplinesCABundleMountPath:   "/dsp-custom-certs/dsp-ca.crt",
+			APICustomPemCerts:           nil,
+			CustomCABundle:              nil,
+		},
+		{
+			msg:                         "user bundle provided, but no configmap",
+			dsp:                         testutil.CreateDSPAWithAPIServerCABundle("testcakey", "testcaname"),
+			CustomCABundleRootMountPath: "/dsp-custom-certs",
+			CustomSSLCertDir:            nil,
+			PiplinesCABundleMountPath:   "/dsp-custom-certs/dsp-ca.crt",
+			APICustomPemCerts:           nil,
+			CustomCABundle:              nil,
+			ConfigMapPreReq:             []*v1.ConfigMap{},
+			errorMsg:                    "configmaps \"testcaname\" not found",
+		},
+		{
+			msg:                         "user bundle provided",
+			dsp:                         testutil.CreateDSPAWithAPIServerCABundle("testcakey", "testcaname"),
+			CustomCABundleRootMountPath: "/dsp-custom-certs",
+			CustomSSLCertDir:            strPtr("/dsp-custom-certs:/etc/ssl/certs:/etc/pki/tls/certs"),
+			PiplinesCABundleMountPath:   "/dsp-custom-certs/dsp-ca.crt",
+			APICustomPemCerts:           [][]byte{[]byte("bundle-contents")},
+			CustomCABundle:              &dspav1.CABundle{ConfigMapKey: "dsp-ca.crt", ConfigMapName: "dsp-trusted-ca-testdspa"},
+			ConfigMapPreReq: []*v1.ConfigMap{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "testcaname", Namespace: "testnamespace"},
+					Data:       map[string]string{"testcakey": "bundle-contents"},
+				},
+			},
+		},
+		{
+			msg:                         "odh-trusted-ca bundle provided",
+			dsp:                         testutil.CreateEmptyDSPA(),
+			CustomCABundleRootMountPath: "/dsp-custom-certs",
+			CustomSSLCertDir:            strPtr("/dsp-custom-certs:/etc/ssl/certs:/etc/pki/tls/certs"),
+			PiplinesCABundleMountPath:   "/dsp-custom-certs/dsp-ca.crt",
+			APICustomPemCerts:           [][]byte{[]byte("odh-bundle-contents")},
+			CustomCABundle:              &dspav1.CABundle{ConfigMapKey: "dsp-ca.crt", ConfigMapName: "dsp-trusted-ca-testdspa"},
+			ConfigMapPreReq: []*v1.ConfigMap{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "odh-trusted-ca-bundle", Namespace: "testnamespace"},
+					Data:       map[string]string{"testcakey": "odh-bundle-contents"},
+				},
+			},
+		},
+		{
+			msg:                         "some empty values in odh-trusted-ca bundle provided",
+			dsp:                         testutil.CreateEmptyDSPA(),
+			CustomCABundleRootMountPath: "/dsp-custom-certs",
+			CustomSSLCertDir:            strPtr("/dsp-custom-certs:/etc/ssl/certs:/etc/pki/tls/certs"),
+			PiplinesCABundleMountPath:   "/dsp-custom-certs/dsp-ca.crt",
+			APICustomPemCerts:           [][]byte{[]byte("odh-bundle-contents-2")},
+			CustomCABundle:              &dspav1.CABundle{ConfigMapKey: "dsp-ca.crt", ConfigMapName: "dsp-trusted-ca-testdspa"},
+			ConfigMapPreReq: []*v1.ConfigMap{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "odh-trusted-ca-bundle", Namespace: "testnamespace"},
+					Data:       map[string]string{"ca-bundle.crt": "", "odh-ca-bundle.crt": "odh-bundle-contents-2"},
+				},
+			},
+		},
+		{
+			msg:                         "some empty values in odh-trusted-ca bundle provided",
+			dsp:                         testutil.CreateEmptyDSPA(),
+			CustomCABundleRootMountPath: "/dsp-custom-certs",
+			CustomSSLCertDir:            nil,
+			PiplinesCABundleMountPath:   "/dsp-custom-certs/dsp-ca.crt",
+			APICustomPemCerts:           nil,
+			CustomCABundle:              nil,
+			ConfigMapPreReq: []*v1.ConfigMap{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "odh-trusted-ca-bundle", Namespace: "testnamespace"},
+					Data:       map[string]string{"ca-bundle.crt": "", "odh-ca-bundle.crt": ""},
+				},
+			},
+		},
+		{
+			msg:                         "both user and odh-trusted-ca bundle provided",
+			dsp:                         testutil.CreateDSPAWithAPIServerCABundle("testcakey", "testcaname"),
+			CustomCABundleRootMountPath: "/dsp-custom-certs",
+			CustomSSLCertDir:            strPtr("/dsp-custom-certs:/etc/ssl/certs:/etc/pki/tls/certs"),
+			PiplinesCABundleMountPath:   "/dsp-custom-certs/dsp-ca.crt",
+			APICustomPemCerts:           [][]byte{[]byte("odh-bundle-contents"), []byte("bundle-contents")},
+			CustomCABundle:              &dspav1.CABundle{ConfigMapKey: "dsp-ca.crt", ConfigMapName: "dsp-trusted-ca-testdspa"},
+			ConfigMapPreReq: []*v1.ConfigMap{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "odh-trusted-ca-bundle", Namespace: "testnamespace"},
+					Data:       map[string]string{"testcakey": "odh-bundle-contents"},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "testcaname", Namespace: "testnamespace"},
+					Data:       map[string]string{"testcakey": "bundle-contents"},
+				},
+			},
+		},
+		{
+			msg:                         "both user and odh-trusted-ca bundle provided with non empty SSL_CERT_FILE",
+			dsp:                         testutil.CreateDSPAWithAPIServerCABundle("testcakey", "testcaname"),
+			CustomCABundleRootMountPath: "/dsp-custom-certs",
+			CustomSSLCertDir:            strPtr("/dsp-custom-certs:/etc/ssl/certs:/etc/pki/tls/certs"),
+			PiplinesCABundleMountPath:   "/dsp-custom-certs/dsp-ca.crt",
+			APICustomPemCerts:           [][]byte{[]byte("odh-bundle-contents"), []byte("bundle-contents"), []byte("dummycontent")},
+			CustomCABundle:              &dspav1.CABundle{ConfigMapKey: "dsp-ca.crt", ConfigMapName: "dsp-trusted-ca-testdspa"},
+			ConfigMapPreReq: []*v1.ConfigMap{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "odh-trusted-ca-bundle", Namespace: "testnamespace"},
+					Data:       map[string]string{"testcakey": "odh-bundle-contents"},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "testcaname", Namespace: "testnamespace"},
+					Data:       map[string]string{"testcakey": "bundle-contents"},
+				},
+			},
+			SSLCertFileEnv: "testdata/tls/dummy-ca-bundle.crt",
+		},
+
+		{
+			msg:                         "pod to pod tls enabled",
+			dsp:                         testutil.CreateDSPAWithAPIServerPodtoPodTlsEnabled(),
+			CustomCABundleRootMountPath: "/dsp-custom-certs",
+			CustomSSLCertDir:            strPtr("/dsp-custom-certs:/etc/ssl/certs:/etc/pki/tls/certs"),
+			PiplinesCABundleMountPath:   "/dsp-custom-certs/dsp-ca.crt",
+			APICustomPemCerts:           [][]byte{[]byte("service-ca-contents")},
+			CustomCABundle:              &dspav1.CABundle{ConfigMapKey: "dsp-ca.crt", ConfigMapName: "dsp-trusted-ca-testdspa"},
+			ConfigMapPreReq: []*v1.ConfigMap{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "openshift-service-ca.crt", Namespace: "testnamespace"},
+					Data:       map[string]string{"service-ca.crt": "service-ca-contents"},
+				},
+			},
+		},
+		{
+			msg:                         "pod to pod tls enabled with sys certs",
+			dsp:                         testutil.CreateDSPAWithAPIServerPodtoPodTlsEnabled(),
+			CustomCABundleRootMountPath: "/dsp-custom-certs",
+			CustomSSLCertDir:            strPtr("/dsp-custom-certs:/etc/ssl/certs:/etc/pki/tls/certs"),
+			PiplinesCABundleMountPath:   "/dsp-custom-certs/dsp-ca.crt",
+			APICustomPemCerts:           [][]byte{[]byte("service-ca-contents"), []byte("dummycontent")},
+			CustomCABundle:              &dspav1.CABundle{ConfigMapKey: "dsp-ca.crt", ConfigMapName: "dsp-trusted-ca-testdspa"},
+			ConfigMapPreReq: []*v1.ConfigMap{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "openshift-service-ca.crt", Namespace: "testnamespace"},
+					Data:       map[string]string{"service-ca.crt": "service-ca-contents"},
+				},
+			},
+			SSLCertFileEnv: "testdata/tls/dummy-ca-bundle.crt",
+		},
+	}
+
+	for _, test := range tt {
+		t.Run(test.msg, func(t *testing.T) {
+			if test.SSLCertFileEnv == "" {
+				t.Setenv("SSL_CERT_FILE", "testdata/tls/empty-ca-bundle.crt")
+			} else {
+				t.Setenv("SSL_CERT_FILE", test.SSLCertFileEnv)
+			}
+
+			if test.ConfigMapPreReq != nil && len(test.ConfigMapPreReq) > 0 {
+				for _, cfg := range test.ConfigMapPreReq {
+					err := client.Create(ctx, cfg)
+					assert.Nil(t, err)
+				}
+			}
+
+			actualParams := &DSPAParams{}
+			extractError := actualParams.ExtractParams(ctx, test.dsp, client.Client, client.Log)
+			if test.errorMsg != "" {
+				assert.Contains(t, extractError.Error(), test.errorMsg)
+			} else {
+				assert.Nil(t, extractError)
+			}
+
+			actualCustomCABundleRootMountPath := actualParams.CustomCABundleRootMountPath
+			assert.Equal(t, test.CustomCABundleRootMountPath, actualCustomCABundleRootMountPath)
+
+			actualCustomSSLCertDir := actualParams.CustomSSLCertDir
+			assert.Equal(t, test.CustomSSLCertDir, actualCustomSSLCertDir)
+
+			actualPipelinesCABundleMountPath := actualParams.PiplinesCABundleMountPath
+			assert.Equal(t, test.PiplinesCABundleMountPath, actualPipelinesCABundleMountPath)
+
+			actualAPICustomPemCerts := actualParams.APICustomPemCerts
+			assert.Equal(t, test.APICustomPemCerts, actualAPICustomPemCerts)
+
+			actualCustomCABundle := actualParams.CustomCABundle
+			assert.Equal(t, test.CustomCABundle, actualCustomCABundle)
+
+			if test.ConfigMapPreReq != nil && len(test.ConfigMapPreReq) > 0 {
+				for _, cfg := range test.ConfigMapPreReq {
+					err := client.Delete(ctx, cfg)
+					assert.Nil(t, err)
+				}
+			}
+		})
+	}
+}
+
+func strPtr(v string) *string {
+	return &v
+}
+
+func TestExtractParams_WithCustomKfpLauncherConfigMap(t *testing.T) {
+	ctx, params, client := CreateNewTestObjects()
+	cmDataExpected := map[string]string{
+		"this-is-the-only-thing": "that-should-be-in-kfp-launcher-now",
+	}
+	cm := v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "my-custom-kfp-launcher",
+			Namespace: "testnamespace",
+		},
+		Data: cmDataExpected,
+	}
+	err := client.Create(ctx, &cm)
+	require.Nil(t, err)
+
+	dspa := testutil.CreateDSPAWithCustomKfpLauncherConfigMap("my-custom-kfp-launcher")
+	err = params.ExtractParams(ctx, dspa, client.Client, client.Log)
+	require.Nil(t, err)
+
+	cmDataExpectedJson, err := json.Marshal(cmDataExpected)
+	require.Equal(t, string(cmDataExpectedJson), params.CustomKfpLauncherConfigMapData)
+}
+
+func TestExtractParams_WithWorkspace(t *testing.T) {
+	ctx, params, client := CreateNewTestObjects()
+
+	storageClass := "standard-csi"
+	block := corev1.PersistentVolumeBlock
+
+	workspace := &dspav1.APIServerWorkspace{
+		VolumeClaimTemplateSpec: corev1.PersistentVolumeClaimSpec{
+			AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+			VolumeMode:       &block,
+			StorageClassName: &storageClass,
+		},
+	}
+
+	dspa := testutil.CreateEmptyDSPA()
+	dspa.Spec.APIServer = &dspav1.APIServer{Deploy: true, Workspace: workspace}
+
+	err := params.ExtractParams(ctx, dspa, client.Client, client.Log)
+	require.NoError(t, err)
+	require.NotEmpty(t, params.APIServerWorkspaceJSON)
+
+	unmarshalled := map[string]corev1.PersistentVolumeClaimSpec{"VolumeClaimTemplateSpec": {}}
+	err = json.Unmarshal([]byte(params.APIServerWorkspaceJSON), &unmarshalled)
+
+	require.NoError(t, err)
+	require.Equal(t, workspace.VolumeClaimTemplateSpec.AccessModes, unmarshalled["VolumeClaimTemplateSpec"].AccessModes)
+	require.NotNil(t, unmarshalled["VolumeClaimTemplateSpec"].VolumeMode)
+	require.Equal(t, *workspace.VolumeClaimTemplateSpec.VolumeMode, *unmarshalled["VolumeClaimTemplateSpec"].VolumeMode)
+	require.Equal(t, *workspace.VolumeClaimTemplateSpec.StorageClassName, *unmarshalled["VolumeClaimTemplateSpec"].StorageClassName)
+}
+
+func TestSetupCompiledPipelineSpecPatch(t *testing.T) {
+	tt := []struct {
+		name           string
+		params         DSPAParams
+		expectedPatch  string
+		expectedFields map[string]interface{}
+	}{
+		{
+			name: "no ResourceTTL set - empty patch",
+			params: DSPAParams{
+				APIServer: &dspav1.APIServer{Deploy: true},
+			},
+			expectedPatch: "",
+		},
+		{
+			name: "nil APIServer - empty patch",
+			params: DSPAParams{
+				APIServer: nil,
+			},
+			expectedPatch: "",
+		},
+		{
+			name: "ResourceTTL set to 1h (3600s)",
+			params: DSPAParams{
+				APIServer: &dspav1.APIServer{
+					Deploy:      true,
+					ResourceTTL: &metav1.Duration{Duration: 1 * time.Hour},
+				},
+			},
+			expectedFields: map[string]interface{}{
+				"ttlStrategy": map[string]interface{}{
+					"secondsAfterCompletion": float64(3600),
+				},
+			},
+		},
+		{
+			name: "ResourceTTL set to 0s",
+			params: DSPAParams{
+				APIServer: &dspav1.APIServer{
+					Deploy:      true,
+					ResourceTTL: &metav1.Duration{Duration: 0},
+				},
+			},
+			expectedFields: map[string]interface{}{
+				"ttlStrategy": map[string]interface{}{
+					"secondsAfterCompletion": float64(0),
+				},
+			},
+		},
+		{
+			name: "ResourceTTL set to 24h (86400s)",
+			params: DSPAParams{
+				APIServer: &dspav1.APIServer{
+					Deploy:      true,
+					ResourceTTL: &metav1.Duration{Duration: 24 * time.Hour},
+				},
+			},
+			expectedFields: map[string]interface{}{
+				"ttlStrategy": map[string]interface{}{
+					"secondsAfterCompletion": float64(86400),
+				},
+			},
+		},
+		{
+			name: "ResourceTTL set to 30m (1800s)",
+			params: DSPAParams{
+				APIServer: &dspav1.APIServer{
+					Deploy:      true,
+					ResourceTTL: &metav1.Duration{Duration: 30 * time.Minute},
+				},
+			},
+			expectedFields: map[string]interface{}{
+				"ttlStrategy": map[string]interface{}{
+					"secondsAfterCompletion": float64(1800),
+				},
+			},
+		},
+		{
+			name: "ResourceTTL set to empty duration (zero value)",
+			params: DSPAParams{
+				APIServer: &dspav1.APIServer{
+					Deploy:      true,
+					ResourceTTL: &metav1.Duration{}, // empty/zero duration
+				},
+			},
+			expectedFields: map[string]interface{}{
+				"ttlStrategy": map[string]interface{}{
+					"secondsAfterCompletion": float64(0),
+				},
+			},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.params.SetupCompiledPipelineSpecPatch(logr.Discard())
+
+			if tc.expectedPatch != "" {
+				assert.Equal(t, tc.expectedPatch, tc.params.CompiledPipelineSpecPatch)
+			} else if tc.expectedFields != nil {
+				// Verify the JSON contains expected fields
+				var actualFields map[string]interface{}
+				err := json.Unmarshal([]byte(tc.params.CompiledPipelineSpecPatch), &actualFields)
+				require.NoError(t, err)
+				assert.Equal(t, tc.expectedFields, actualFields)
+			} else {
+				assert.Empty(t, tc.params.CompiledPipelineSpecPatch)
+			}
+		})
+	}
+}
+
+func TestExtractParams_WithResourceTTL(t *testing.T) {
+	ctx, params, client := CreateNewTestObjects()
+
+	dspa := testutil.CreateDSPAWithResourceTTL(1 * time.Hour)
+
+	err := params.ExtractParams(ctx, dspa, client.Client, client.Log)
+	require.NoError(t, err)
+	require.NotEmpty(t, params.CompiledPipelineSpecPatch)
+
+	var patchFields map[string]interface{}
+	err = json.Unmarshal([]byte(params.CompiledPipelineSpecPatch), &patchFields)
+	require.NoError(t, err)
+
+	ttlStrategy, ok := patchFields["ttlStrategy"].(map[string]interface{})
+	require.True(t, ok, "ttlStrategy should be a map")
+
+	secondsAfterCompletion, ok := ttlStrategy["secondsAfterCompletion"].(float64)
+	require.True(t, ok, "secondsAfterCompletion should be a number")
+	assert.Equal(t, float64(3600), secondsAfterCompletion)
+}
+
+func TestExtractParams_WithoutResourceTTL(t *testing.T) {
+	ctx, params, client := CreateNewTestObjects()
+
+	dspa := testutil.CreateEmptyDSPA()
+	dspa.Spec.APIServer = &dspav1.APIServer{Deploy: true}
+	dspa.Spec.PodToPodTLS = testutil.BoolPtr(false)
+
+	err := params.ExtractParams(ctx, dspa, client.Client, client.Log)
+	require.NoError(t, err)
+	assert.Empty(t, params.CompiledPipelineSpecPatch)
+}
+
+func testSchemeWithMlflowApps(t *testing.T) *runtime.Scheme {
+	t.Helper()
+	scheme := runtime.NewScheme()
+	utilruntime.Must(mlflowv1.AddToScheme(scheme))
+	utilruntime.Must(appsv1.AddToScheme(scheme))
+	utilruntime.Must(corev1.AddToScheme(scheme))
+	return scheme
+}
+
+func TestBuildMLflowPluginConfigJson_DefaultCase(t *testing.T) {
+	t.Parallel()
+
+	const mlflowEp = "https://mlflow.test.svc.cluster.local/mlflow"
+
+	out, err := BuildMLflowPluginConfigJson(mlflowEp, "/var/trust/ca-bundle.crt", false, "https://test.example/host")
+	require.NoError(t, err)
+
+	var cfg map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal([]byte(out), &cfg))
+	require.JSONEq(t, `"`+mlflowEp+`"`, string(cfg["endpoint"]))
+	require.JSONEq(t, `"30s"`, string(cfg["timeout"]))
+
+	var tls map[string]interface{}
+	require.NoError(t, json.Unmarshal(cfg["tls"], &tls))
+	require.Equal(t, false, tls["insecureSkipVerify"], "explicit false TLS verify must remain in JSON for consumers")
+	require.Equal(t, "/var/trust/ca-bundle.crt", tls["caBundlePath"])
+
+	var settings map[string]interface{}
+	require.NoError(t, json.Unmarshal(cfg["settings"], &settings))
+	require.Equal(t, false, settings["injectUserEnvVars"])
+	require.Contains(t, settings, "workspacesEnabled")
+	require.Equal(t, true, settings["workspacesEnabled"])
+	require.Equal(t, "/mlflow", settings["mlflowUIPathPrefix"])
+	require.Equal(t, "https://test.example/host", settings["kfpBaseURL"])
+}
+
+func TestBuildMLflowPluginConfigJson_InjectUserEnvVarsTrue(t *testing.T) {
+	t.Parallel()
+
+	out, err := BuildMLflowPluginConfigJson(
+		"https://svc/mlflow",
+		"",
+		true,
+		"https://kfp.example/",
+	)
+	require.NoError(t, err)
+
+	var root map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal([]byte(out), &root))
+
+	var settings map[string]interface{}
+	require.NoError(t, json.Unmarshal(root["settings"], &settings))
+	require.Equal(t, true, settings["injectUserEnvVars"])
+}
+
+func TestValidateMLflowEndpointURL(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		raw     string
+		wantErr bool
+	}{
+		{name: "valid https", raw: "https://mlflow:5000/mlflow"},
+		{name: "valid http", raw: "http://mlflow.svc.cluster.local/mlflow"},
+		{name: "empty", raw: "", wantErr: true},
+		{name: "missing scheme", raw: "mlflow:5000/mlflow", wantErr: true},
+		{name: "scheme relative", raw: "//evil.example/mlflow", wantErr: true},
+		{name: "javascript scheme", raw: "javascript:alert(1)", wantErr: true},
+		{name: "missing host", raw: "https:///mlflow", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := validateMLflowEndpointURL(tt.raw)
+			if tt.wantErr {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "must be http/https with non-empty host")
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestLookupMLflowEndpoint_NotFound(t *testing.T) {
+	t.Parallel()
+
+	scheme := testSchemeWithMlflowApps(t)
+	kc := fake.NewClientBuilder().
+		WithScheme(scheme).
+		Build()
+
+	_, err := lookupMLflowEndpoint(context.Background(), kc, "dsp-test", logr.Discard())
+	require.Error(t, err)
+	require.True(t, apierrs.IsNotFound(err))
+}
+
+func TestLookupMLflowEndpoint_MissingURL(t *testing.T) {
+	t.Parallel()
+
+	ml := &mlflowv1.MLflow{
+		ObjectMeta: metav1.ObjectMeta{Name: "mlflow", Namespace: "dsp-test"},
+		Status:     mlflowv1.MLflowStatus{},
+	}
+	scheme := testSchemeWithMlflowApps(t)
+	kc := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ml).Build()
+
+	_, err := lookupMLflowEndpoint(context.Background(), kc, "dsp-test", logr.Discard())
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "MLflow resource missing Status.Address.URL")
+}
+
+func TestLookupMLflowEndpoint_Success(t *testing.T) {
+	t.Parallel()
+
+	const wantURL = "https://internal-mlflow:5000/mlflow"
+	ml := &mlflowv1.MLflow{
+		ObjectMeta: metav1.ObjectMeta{Name: "mlflow", Namespace: "dsp-ns"},
+		Status: mlflowv1.MLflowStatus{
+			Address: &mlflowv1.MLflowAddressStatus{URL: wantURL},
+		},
+	}
+	scheme := testSchemeWithMlflowApps(t)
+	kc := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ml).Build()
+
+	got, err := lookupMLflowEndpoint(context.Background(), kc, "dsp-ns", logr.Discard())
+	require.NoError(t, err)
+	require.Equal(t, wantURL, got)
+}
+
+func TestLookupMLflowEndpoint_InvalidURL(t *testing.T) {
+	t.Parallel()
+
+	ml := &mlflowv1.MLflow{
+		ObjectMeta: metav1.ObjectMeta{Name: "mlflow", Namespace: "dsp-ns"},
+		Status: mlflowv1.MLflowStatus{
+			Address: &mlflowv1.MLflowAddressStatus{URL: "javascript:alert(1)"},
+		},
+	}
+	scheme := testSchemeWithMlflowApps(t)
+	kc := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ml).Build()
+
+	_, err := lookupMLflowEndpoint(context.Background(), kc, "dsp-ns", logr.Discard())
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "invalid Status.Address.URL")
+	require.Contains(t, err.Error(), "must be http/https with non-empty host")
+}
+
+func TestIsAPIServerDeploymentReady_NotFound(t *testing.T) {
+	t.Parallel()
+
+	scheme := testSchemeWithMlflowApps(t)
+	kc := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+	params := DSPAParams{
+		Namespace:                    "dsp-ns",
+		APIServerDefaultResourceName: "ds-pipeline-testdspa",
+	}
+	ready, err := params.IsAPIServerDeploymentReady(context.Background(), kc)
+	require.NoError(t, err)
+	require.False(t, ready)
+}
+
+func TestIsAPIServerDeploymentReady_Transitioning(t *testing.T) {
+	t.Parallel()
+
+	deploy := appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Name: "ds-pipeline-testdspa", Namespace: "dsp-ns"},
+	}
+	scheme := testSchemeWithMlflowApps(t)
+	kc := fake.NewClientBuilder().WithScheme(scheme).WithObjects(&deploy).Build()
+
+	params := DSPAParams{
+		Namespace:                    "dsp-ns",
+		APIServerDefaultResourceName: "ds-pipeline-testdspa",
+	}
+	ready, err := params.IsAPIServerDeploymentReady(context.Background(), kc)
+	require.NoError(t, err)
+	require.False(t, ready)
+}
+
+func TestIsAPIServerDeploymentReady_Available(t *testing.T) {
+	t.Parallel()
+
+	deploy := appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Name: "ds-pipeline-testdspa", Namespace: "dsp-ns"},
+		Status: appsv1.DeploymentStatus{
+			Conditions: []appsv1.DeploymentCondition{
+				{
+					Type:   appsv1.DeploymentAvailable,
+					Status: corev1.ConditionTrue,
+				},
+			},
+		},
+	}
+	scheme := testSchemeWithMlflowApps(t)
+	kc := fake.NewClientBuilder().WithScheme(scheme).WithObjects(deploy.DeepCopy()).Build()
+
+	params := DSPAParams{
+		Namespace:                    "dsp-ns",
+		APIServerDefaultResourceName: "ds-pipeline-testdspa",
+	}
+	ready, err := params.IsAPIServerDeploymentReady(context.Background(), kc)
+	require.NoError(t, err)
+	require.True(t, ready)
+}
+
+func TestIsAPIServerDeploymentReady_WrongDeploymentName_ReturnsFalseNotFoundSemantics(t *testing.T) {
+	t.Parallel()
+
+	deploy := appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Name: "some-other-deployment", Namespace: "dsp-ns"},
+	}
+	scheme := testSchemeWithMlflowApps(t)
+	kc := fake.NewClientBuilder().WithScheme(scheme).WithObjects(deploy.DeepCopy()).Build()
+
+	params := DSPAParams{
+		Namespace:                    "dsp-ns",
+		APIServerDefaultResourceName: "ds-pipeline-testdspa",
+	}
+	ready, err := params.IsAPIServerDeploymentReady(context.Background(), kc)
+	require.NoError(t, err)
+	require.False(t, ready)
+}
+
+// Retrieves the MLflow CR named "mlflow" only.
+func TestLookupMLflowEndpoint_UsesMlflowNamedObject(t *testing.T) {
+	t.Parallel()
+
+	wrong := &mlflowv1.MLflow{
+		ObjectMeta: metav1.ObjectMeta{Name: "other", Namespace: "dsp-ns"},
+		Status:     mlflowv1.MLflowStatus{Address: &mlflowv1.MLflowAddressStatus{URL: "https://x"}},
+	}
+	scheme := testSchemeWithMlflowApps(t)
+	kc := fake.NewClientBuilder().WithScheme(scheme).WithObjects(wrong).Build()
+
+	_, err := lookupMLflowEndpoint(context.Background(), kc, "dsp-ns", logr.Discard())
+	require.True(t, apierrs.IsNotFound(err))
+
+	ml := wrong.DeepCopy()
+	ml.Name = "mlflow"
+	kcWith := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ml).Build()
+	got, err := lookupMLflowEndpoint(context.Background(), kcWith, "dsp-ns", logr.Discard())
+	require.NoError(t, err)
+	require.Equal(t, "https://x", got)
+}

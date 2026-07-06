@@ -1,0 +1,92 @@
+name: KinD Chaos Integration Tests
+
+on:
+  push:
+    branches:
+      - main
+      - stable
+  pull_request:
+    paths:
+      - '**'
+      - '!**/*.md'
+      - '!.gitleaks.toml'
+      - '!.gitignore'
+      - '!.pre-commit-config.yaml'
+      - '!.yamllint.yaml'
+      - '!LICENSE'
+      - '!OWNERS'
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+concurrency:
+  group: ${{ github.head_ref || github.run_id }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+env:
+  GIT_WORKSPACE: ${{ github.workspace }}
+  # DSPA_NAME must match metadata.name in tests/resources/dspa-lite.yaml
+  DSPA_NAME: test-dspa
+  DSPA_NAMESPACE: test-dspa
+  OPERATOR_NAMESPACE: opendatahub
+  OPERATOR_DEPLOYMENT_NAME: data-science-pipelines-operator-controller-manager
+
+jobs:
+  chaos-live:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff  # v5.6.0
+        with:
+          go-version-file: go.mod
+
+      - name: Setup and start KinD cluster
+        uses: ./.github/actions/kind
+
+      - name: Deploy DSPO and dependencies
+        working-directory: ${{ github.workspace }}/.github/scripts/tests
+        run: sh tests.sh --kind --setup-only
+
+      - name: Deploy DSPA for chaos testing
+        working-directory: ${{ github.workspace }}
+        run: .github/scripts/tests/deploy_dspa.sh tests/resources/dspa-lite.yaml
+
+      - name: Resolve chaos templates
+        run: make chaos-resolve
+
+      - name: Run chaos experiments
+        id: chaos-run
+        run: |
+          go tool operator-chaos suite tmp/chaos-resolved/experiments/ \
+            --knowledge tmp/chaos-resolved/knowledge/dspo-default.yaml \
+            --recursive \
+            --report-dir chaos/reports/ \
+            --max-tier 2
+        continue-on-error: true
+
+      - name: Collect logs on failure
+        if: failure() || steps.chaos-run.outcome == 'failure'
+        working-directory: ${{ github.workspace }}/.github/scripts/tests
+        run: ./collect_logs.sh --dspa-ns $DSPA_NAMESPACE --dspo-ns $OPERATOR_NAMESPACE
+
+      - name: Upload raw chaos results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: chaos-raw-results
+          path: chaos/reports/
+          if-no-files-found: ignore
+
+      - name: Fail if chaos experiments failed
+        if: steps.chaos-run.outcome == 'failure'
+        run: exit 1

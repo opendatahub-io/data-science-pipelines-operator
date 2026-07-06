@@ -1,0 +1,12 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: odh-olm-test
+  namespace: olm
+spec:
+  displayName: ''
+  grpcPodConfig:
+    securityContextConfig: restricted
+  image: "${CATALOG_BASE_IMG}"
+  publisher: ''
+  sourceType: grpc

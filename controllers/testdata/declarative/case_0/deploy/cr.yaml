@@ -1,0 +1,15 @@
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: testdsp0
+spec:
+  podToPodTLS: false
+  apiServer:
+    enableSamplePipeline: true
+    argoLauncherImage: argolauncherimage:test0
+    argoDriverImage: argodriverimage:test0
+  objectStorage:
+    minio:
+      image: minio:test0
+  mlmd:
+    deploy: true

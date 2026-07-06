@@ -1,0 +1,29 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  annotations:
+    service.beta.openshift.io/inject-cabundle: 'true'
+  name: config-service-cabundle
+  namespace: test-minio
+data:
+  service-ca.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIIDUTCCAjmgAwIBAgIIfb5THW7z1V0wDQYJKoZIhvcNAQELBQAwNjE0MDIGA1UE
+    Awwrb3BlbnNoaWZ0LXNlcnZpY2Utc2VydmluZy1zaWduZXJAMTcwNDgzNTI5MDAe
+    Fw0yNDAxMDkyMTIxMjlaFw0yNjAzMDkyMTIxMzBaMDYxNDAyBgNVBAMMK29wZW5z
+    aGlmdC1zZXJ2aWNlLXNlcnZpbmctc2lnbmVyQDE3MDQ4MzUyOTAwggEiMA0GCSqG
+    SIb3DQEBAQUAA4IBDwAwggEKAoIBAQC9CkH6LdzFqMSKNFAxPfsPJAXJekUJjts4
+    I85PcL8bQpAFnswZoHyjfBbtw9QdLBFFxAS/3mPH9oTgBFYZY9sQmKXbdcjbQZ0C
+    LlqLIlK3yDoRg/NLBY0Sv0mbOdDrESaz2T0/HUkalM1e5+zuQluNy8MY+ysBuJjJ
+    CpmeGEpCNf7SfsP1j9VHpjFkBgMqCmLI0oKUH/Ez9MjwrA7yQnquW6a3QbNlm1T/
+    UyulJejBdHuktwiEMuDc9BNumfGNU/OPV1zo5hz8WCpVunoXKEXqHODc29MxY3o9
+    gBdeA4/dEJqsIbyBdqnphVS0duX7u+po+0GAaoVANMhcW48OGY0NAgMBAAGjYzBh
+    MA4GA1UdDwEB/wQEAwICpDAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBTsuxk/
+    WaxmQIo6OUsYm1ks6jAUBDAfBgNVHSMEGDAWgBTsuxk/WaxmQIo6OUsYm1ks6jAU
+    BDANBgkqhkiG9w0BAQsFAAOCAQEAdKkXhYTpJNTrlp0S8UIjLwAHTqWUQOHMoiPm
+    LYTzkWCA+yIhcwhw8Y+AbV6/hNEkQdkgVI+cexz1rkGm9Jxz1OL00mGunWgUMgJr
+    umu4qZnyS2ErpeaMqOZMKpeQmiwkwnT1OUdUAI8kJN21tQ+uD6F47QseJwdKTMc/
+    YeZ7Zyo9LYJMWGKKlYYM/u7PDPwHZxT8v+15SXqR72eBM1kWNdVB5NeUK2bLxUok
+    1RcDfiLDiVy3ctZqm4Tx4WTr/uRxsss0ctLdRvltF+kSgdAQFympeFgTF7MGsoft
+    OIfz84aEwS656SHPKBaqgPNYrnseSrpxtc30pfs7GUPG+FqFOQ==
+    -----END CERTIFICATE-----

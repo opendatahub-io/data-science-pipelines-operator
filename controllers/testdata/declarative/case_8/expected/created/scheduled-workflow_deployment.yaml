@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ds-pipeline-scheduledworkflow-testdsp8
+    component: data-science-pipelines
+    dsp-version: v2
+    dspa: testdsp8
+  name: ds-pipeline-scheduledworkflow-testdsp8
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: ds-pipeline-scheduledworkflow-testdsp8
+      component: data-science-pipelines
+      dspa: testdsp8
+  template:
+    metadata:
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+      labels:
+        app: ds-pipeline-scheduledworkflow-testdsp8
+        component: data-science-pipelines
+        dsp-version: v2
+        dspa: testdsp8
+    spec:
+      containers:
+        - env:
+            - name: NAMESPACE
+              value: default
+            - name: CRON_SCHEDULE_TIMEZONE
+              value: UTC
+            - name: HTTP_PROXY
+              value: "http://proxy.example:8080"
+            - name: HTTPS_PROXY
+              value: "http://proxy.example:8080"
+            - name: NO_PROXY
+              value: "localhost,127.0.0.1,.svc.cluster.local,kubernetes.default.svc"
+          image: scheduledworkflow:test8
+          name: ds-pipeline-scheduledworkflow
+          command:
+            - controller
+            - --mlPipelineAPIServerName=ds-pipeline-testdsp8
+            - --mlPipelineServiceGRPCPort=8887
+            - --logtostderr=true
+            - --namespace=default
+          livenessProbe:
+            exec:
+              command:
+                - test
+                - -x
+                - controller
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 2
+          readinessProbe:
+            exec:
+              command:
+                - test
+                - -x
+                - controller
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+          resources:
+            limits:
+              cpu: 250m
+              memory: 250Mi
+            requests:
+              cpu: 120m
+              memory: 100Mi
+      serviceAccountName: ds-pipeline-scheduledworkflow-testdsp8

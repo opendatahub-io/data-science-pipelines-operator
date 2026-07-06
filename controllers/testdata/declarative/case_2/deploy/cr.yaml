@@ -1,0 +1,104 @@
+# Test:
+# Various DSPA fields, resources, apiserver fields, custom script
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: testdsp2
+spec:
+  podToPodTLS: false
+  apiServer:
+    deploy: true
+    image: api-server:test2
+    argoLauncherImage: argolauncherimage:test2
+    argoDriverImage: argodriverimage:test2
+    enableOauth: true
+    enableSamplePipeline: true
+    cacheEnabled: false
+    resourceTTL: 1h
+    managedPipelines:
+      image: pipelines-components:test2
+      resources:
+        requests:
+          cpu: 250m
+          memory: 512Mi
+    customServerConfigMap:
+      name: testserverconfigmapdspa2
+      key: testserverconfigmapkeydspa2
+    resources:
+      requests:
+        cpu: "1231m"
+        memory: "1Gi"
+      limits:
+        cpu: "2522m"
+        memory: "5Gi"
+  persistenceAgent:
+    deploy: true
+    image: persistenceagent:test2
+    numWorkers: 5
+    resources:
+      requests:
+        cpu: "1233m"
+        memory: "1Gi"
+      limits:
+        cpu: "2524m"
+        memory: "5Gi"
+  scheduledWorkflow:
+    deploy: true
+    image: scheduledworkflow:test2
+    cronScheduleTimezone: EST
+    resources:
+      requests:
+        cpu: "1235m"
+        memory: "1Gi"
+      limits:
+        cpu: "2526m"
+        memory: "5Gi"
+  database:
+    mariaDB:
+      deploy: true
+      image: mariadb:test2
+      username: testuser
+      pipelineDBName: randomDBName
+      pvcSize: 32Gi
+      resources:
+        requests:
+          cpu: "1212m"
+          memory: "1Gi"
+        limits:
+          cpu: "2554m"
+          memory: "5Gi"
+  objectStorage:
+    minio:
+      deploy: true
+      image: minio:test2
+      bucket: mlpipeline
+      pvcSize: 40Gi
+      resources:
+        requests:
+          cpu: "1334m"
+          memory: "1Gi"
+        limits:
+          cpu: "2535m"
+          memory: "5Gi"
+  mlmd:
+    deploy: true
+    grpc:
+      resources:
+        requests:
+          cpu: "1334m"
+          memory: "1Gi"
+        limits:
+          cpu: "2535m"
+          memory: "5Gi"
+      image: mlmdgrpc:test2
+      port: "8080"
+    envoy:
+      resources:
+        requests:
+          cpu: "1334m"
+          memory: "1Gi"
+        limits:
+          cpu: "2535m"
+          memory: "5Gi"
+      image: mlmdenvoy:test2
+      deployRoute: false

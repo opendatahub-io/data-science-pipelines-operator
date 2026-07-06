@@ -1,0 +1,23 @@
+Images:
+  ApiServer: api-server:test3
+  PersistenceAgent: persistenceagent:test3
+  ScheduledWorkflow: scheduledworkflow:test3
+  MlmdEnvoy: mlmdenvoy:test3
+  MlmdGRPC: mlmdgrpc:test3
+  ArgoExecImage: argoexec:test3
+  ArgoWorkflowController: argowfcontroller:test3
+  LauncherImage: launcherimage:test3
+  DriverImage: driverimage:test3
+  KubeRBACProxy: kube-rbac-proxy:test3
+  MariaDB: mariadb:test3
+  Minio: minio:test3
+ManagedPipelinesMetadata:
+  Iris:
+    Name: "[Demo] iris-training"
+    Description: "[source code](https://github.com/opendatahub-io/data-science-pipelines/tree/master/samples/iris-sklearn) A simple pipeline to demonstrate a basic ML Training workflow"
+    Filepath: /samples/iris-pipeline-compiled.yaml
+    VersionName: "[Demo] iris-training"
+DSPO:
+  PlatformVersion: v0.0.0
+  ApiServer:
+    IncludeOwnerReference: false

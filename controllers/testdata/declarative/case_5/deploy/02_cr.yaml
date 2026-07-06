@@ -1,0 +1,24 @@
+# Test:
+# DSPA CA bundle, ensure user provided CA Bundle results in dsp-trusted-ca config map creation and utilization in artifact config.
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: testdsp5
+spec:
+  podToPodTLS: true
+  dspVersion: v2
+  objectStorage:
+    minio:
+      image: minio:test5
+  database:
+    mariaDB:
+      deploy: true
+  mlmd:
+    deploy: true
+  apiServer:
+    deploy: true
+    enableSamplePipeline: false
+    caBundleFileName: testcabundleconfigmapkey5.crt
+    cABundle:
+      configMapName: testcabundleconfigmap5
+      configMapKey: testcabundleconfigmapkey5.crt

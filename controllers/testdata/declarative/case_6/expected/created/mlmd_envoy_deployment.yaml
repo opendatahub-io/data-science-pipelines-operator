@@ -1,0 +1,128 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ds-pipeline-metadata-envoy-testdsp6
+  namespace: default
+  labels:
+    dsp-version: v2
+    app: ds-pipeline-metadata-envoy-testdsp6
+    component: data-science-pipelines
+    dspa: testdsp6
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ds-pipeline-metadata-envoy-testdsp6
+      component: data-science-pipelines
+      dspa: testdsp6
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "false"
+      labels:
+        dsp-version: v2
+        app: ds-pipeline-metadata-envoy-testdsp6
+        component: data-science-pipelines
+        dspa: testdsp6
+    spec:
+      containers:
+        - image: mlmdenvoy:test6
+          name: container
+          command: ["/usr/local/bin/envoy"]
+          args: [
+            "-c",
+            "/etc/envoy.yaml"
+          ]
+          ports:
+            - containerPort: 9090
+              name: md-envoy
+              protocol: TCP
+            - containerPort: 9901
+              name: envoy-admin
+              protocol: TCP
+          livenessProbe:
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            tcpSocket:
+              port: md-envoy
+            timeoutSeconds: 2
+          readinessProbe:
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            tcpSocket:
+              port: md-envoy
+            timeoutSeconds: 2
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 100m
+              memory: 256Mi
+          volumeMounts:
+            - mountPath: /etc/envoy.yaml
+              name: envoy-config
+              subPath: envoy.yaml
+        - name: kube-rbac-proxy
+          image: kube-rbac-proxy:test6
+          args:
+            - --secure-listen-address=0.0.0.0:8443
+            - --proxy-endpoints-port=8444
+            - --upstream=http://127.0.0.1:9090
+            - --config-file=/etc/kube-rbac-proxy/config-file.yaml
+            - --tls-cert-file=/etc/tls/private/tls.crt
+            - --tls-private-key-file=/etc/tls/private/tls.key
+            - --ignore-paths=/healthz,/apis/v1beta1/healthz,/metrics
+          ports:
+            - containerPort: 8443
+              name: proxy
+              protocol: TCP
+            - containerPort: 8444
+              name: proxy-metrics
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: proxy-metrics
+              scheme: HTTPS
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 1
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: proxy-metrics
+              scheme: HTTPS
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 1
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 100m
+              memory: 256Mi
+          volumeMounts:
+            - mountPath: /etc/tls/private
+              name: proxy-tls
+            - mountPath: /etc/kube-rbac-proxy
+              name: proxy-config
+      serviceAccountName: ds-pipeline-metadata-envoy-testdsp6
+      volumes:
+        - name: envoy-config
+          configMap:
+            name: ds-pipeline-metadata-envoy-config-testdsp6
+            defaultMode: 420
+        - name: proxy-tls
+          secret:
+            secretName: ds-pipelines-envoy-proxy-tls-testdsp6
+            defaultMode: 420
+        - name: proxy-tls-upstream
+          configMap:
+            name: dsp-trusted-ca-testdsp6
+            defaultMode: 420
+        - name: proxy-config
+          configMap:
+            name: kube-rbac-proxy-metadata-config-testdsp6
+            defaultMode: 420

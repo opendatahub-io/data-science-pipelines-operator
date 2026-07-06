@@ -1,0 +1,92 @@
+# Test:
+# image setting via DSPA
+# disabling sample config
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: testdsp4
+spec:
+  podToPodTLS: false
+  apiServer:
+    deploy: true
+    image: this-apiserver-image-from-cr-should-be-used:test4
+    enableSamplePipeline: false
+    argoLauncherImage: this-argolauncher-image-from-cr-should-be-used:test4
+    argoDriverImage: this-argodriver-image-from-cr-should-be-used:test4
+    enableOauth: true
+    resources:
+      requests:
+        cpu: "1231m"
+        memory: "1Gi"
+      limits:
+        cpu: "2522m"
+        memory: "5Gi"
+  persistenceAgent:
+    deploy: true
+    image: this-persistenceagent-image-from-cr-should-be-used:test4
+    numWorkers: 5
+    resources:
+      requests:
+        cpu: "1233m"
+        memory: "1Gi"
+      limits:
+        cpu: "2524m"
+        memory: "5Gi"
+  scheduledWorkflow:
+    deploy: true
+    image: this-scheduledworkflow-image-from-cr-should-be-used:test4
+    cronScheduleTimezone: EST
+    resources:
+      requests:
+        cpu: "1235m"
+        memory: "1Gi"
+      limits:
+        cpu: "2526m"
+        memory: "5Gi"
+  mlmd:
+    deploy: true
+    grpc:
+      image: this-grpc-image-from-cr-should-be-used:test4
+      resources:
+        requests:
+          cpu: "1235m"
+          memory: "1Gi"
+        limits:
+          cpu: "2526m"
+          memory: "5Gi"
+    envoy:
+      image: this-envoy-image-from-cr-should-be-used:test4
+      resources:
+        requests:
+          cpu: "1235m"
+          memory: "1Gi"
+        limits:
+          cpu: "2526m"
+          memory: "5Gi"
+  database:
+    mariaDB:
+      deploy: true
+      image: this-mariadb-image-from-cr-should-be-used:test4
+      username: testuser
+      pipelineDBName: randomDBName
+      pvcSize: 32Gi
+      resources:
+        requests:
+          cpu: "1212m"
+          memory: "1Gi"
+        limits:
+          cpu: "2554m"
+          memory: "5Gi"
+  objectStorage:
+    minio:
+      deploy: true
+      image: this-minio-image-from-cr-should-be-used:test4
+      bucket: mlpipeline
+      pvcSize: 40Gi
+      resources:
+        requests:
+          cpu: "1334m"
+          memory: "1Gi"
+        limits:
+          cpu: "2535m"
+          memory: "5Gi"

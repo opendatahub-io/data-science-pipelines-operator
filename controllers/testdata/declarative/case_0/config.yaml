@@ -1,0 +1,24 @@
+# When a minimal DSPA is deployed
+Images:
+  ApiServer: api-server:test0
+  PersistenceAgent: persistenceagent:test0
+  ScheduledWorkflow: scheduledworkflow:test0
+  MlmdEnvoy: mlmdenvoy:test0
+  MlmdGRPC: mlmdgrpc:test0
+  ArgoExecImage: argoexec:test0
+  ArgoWorkflowController: argowfcontroller:test0
+  LauncherImage: launcherimage:test0
+  DriverImage: driverimage:test0
+  KubeRBACProxy: kube-rbac-proxy:test0
+  MariaDB: mariadb:test0
+  Minio: minio:test0
+ManagedPipelinesMetadata:
+  Iris:
+    Name: "[Demo] iris-training"
+    Description: "[source code](https://github.com/opendatahub-io/data-science-pipelines/tree/master/samples/iris-sklearn) A simple pipeline to demonstrate a basic ML Training workflow"
+    Filepath: /samples/iris-pipeline-compiled.yaml
+    VersionName: "[Demo] iris-training"
+DSPO:
+  PlatformVersion: v0.0.0
+  ApiServer:
+    IncludeOwnerReference: false

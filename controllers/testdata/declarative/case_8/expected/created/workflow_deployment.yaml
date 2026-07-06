@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ds-pipeline-workflow-controller-testdsp8
+    component: data-science-pipelines
+    dsp-version: v2
+    dspa: testdsp8
+  name: ds-pipeline-workflow-controller-testdsp8
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: ds-pipeline-workflow-controller-testdsp8
+      component: data-science-pipelines
+      dspa: testdsp8
+  template:
+    metadata:
+      labels:
+        app: ds-pipeline-workflow-controller-testdsp8
+        component: data-science-pipelines
+        dsp-version: v2
+        dspa: testdsp8
+    spec:
+      containers:
+        - args:
+            - --configmap
+            - ds-pipeline-workflow-controller-testdsp8
+            - --executor-image
+            - argoexec:test8
+            - --namespaced
+          command:
+            - workflow-controller
+          env:
+            - name: LEADER_ELECTION_IDENTITY
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+            - name: HTTP_PROXY
+              value: "http://proxy.example:8080"
+            - name: HTTPS_PROXY
+              value: "http://proxy.example:8080"
+            - name: NO_PROXY
+              value: "localhost,127.0.0.1,.svc.cluster.local,kubernetes.default.svc"
+          image: argowfcontroller:test8
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: 6060
+              scheme: HTTP
+            initialDelaySeconds: 90
+            periodSeconds: 60
+            successThreshold: 1
+            timeoutSeconds: 30
+          name: ds-pipeline-workflow-controller
+          ports:
+            - containerPort: 9090
+              name: metrics
+              protocol: TCP
+            - containerPort: 6060
+              protocol: TCP
+          resources:
+            limits:
+              cpu: 250m
+              memory: 1Gi
+            requests:
+              cpu: 120m
+              memory: 500Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        runAsNonRoot: true
+      serviceAccount: ds-pipeline-workflow-controller-testdsp8
+      serviceAccountName: ds-pipeline-workflow-controller-testdsp8

@@ -1,0 +1,63 @@
+name: Chaos Validation
+on:
+  push:
+    branches:
+      - main
+      - stable
+  pull_request:
+    paths:
+      - '**'
+      - '!**/*.md'
+      - '!.gitleaks.toml'
+      - '!.gitignore'
+      - '!.pre-commit-config.yaml'
+      - '!.yamllint.yaml'
+      - '!LICENSE'
+      - '!OWNERS'
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+
+jobs:
+  chaos-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff  # v5.6.0
+        with:
+          go-version-file: go.mod
+
+      - name: Ensure envsubst is available
+        run: command -v envsubst >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq gettext-base; }
+
+      - name: Validate chaos knowledge and experiments
+        run: make chaos-validate
+
+      - name: Detect breaking changes
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          files=$(git ls-tree -r --name-only "origin/${BASE_REF}" chaos/knowledge/ 2>/dev/null)
+          if [ -z "$files" ]; then
+            echo "No base knowledge directory found on target branch, skipping diff"
+            exit 0
+          fi
+          echo "$files" | while read -r file; do
+            rel="${file#chaos/knowledge/}"
+            mkdir -p "/tmp/base-knowledge/$(dirname "$rel")"
+            git show "origin/${BASE_REF}:${file}" > "/tmp/base-knowledge/${rel}"
+          done
+          go tool operator-chaos diff \
+            --source /tmp/base-knowledge \
+            --target chaos/knowledge \
+            --breaking
+
+      - name: Run chaos SDK tests
+        run: make test-chaos
