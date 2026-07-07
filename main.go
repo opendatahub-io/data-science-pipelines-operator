@@ -225,7 +225,9 @@ func main() {
 		setupLog.Error(err, "unable to create bootstrap client for TLS profile")
 		os.Exit(1)
 	}
-	tlsResult, err := fetchTLSProfile(context.Background(), bootstrapClient)
+	bootstrapCtx, bootstrapCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer bootstrapCancel()
+	tlsResult, err := fetchTLSProfile(bootstrapCtx, bootstrapClient)
 	if err != nil {
 		setupLog.Error(err, "unable to resolve TLS profile, failing startup")
 		os.Exit(1)
