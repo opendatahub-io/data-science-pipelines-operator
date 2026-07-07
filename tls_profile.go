@@ -34,6 +34,9 @@ func fetchTLSProfile(ctx context.Context, cli client.Client) (*tlsResult, error)
 			apierrors.IsTimeout(err),
 			apierrors.IsTooManyRequests(err):
 			l.Info("Transient API error reading TLS profile, using Intermediate TLS profile as fallback", "error", err)
+			// Mark OpenShift config as present so SecurityProfileWatcher still registers.
+			// When the API recovers, the watcher will detect the real profile and trigger a restart.
+			result.HasOpenShiftConfig = true
 		default:
 			return nil, fmt.Errorf("failed to fetch TLS profile: %w", err)
 		}
