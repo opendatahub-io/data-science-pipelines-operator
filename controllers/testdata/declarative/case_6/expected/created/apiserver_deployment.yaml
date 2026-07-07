@@ -55,6 +55,8 @@ spec:
               value: "secretkey"
             - name: DEFAULTPIPELINERUNNERSERVICEACCOUNT
               value: "pipeline-runner-testdsp6"
+            - name: ALLOWEDSERVICEACCOUNTS
+              value: "pipeline-runner-testdsp6"
             - name: OBJECTSTORECONFIG_BUCKETNAME
               value: "mlpipeline"
             - name: OBJECTSTORECONFIG_ACCESSKEY

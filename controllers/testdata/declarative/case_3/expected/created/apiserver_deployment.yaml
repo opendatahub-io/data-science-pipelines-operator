@@ -55,6 +55,8 @@ spec:
               value: "testsecretkey3"
             - name: DEFAULTPIPELINERUNNERSERVICEACCOUNT
               value: "pipeline-runner-testdsp3"
+            - name: ALLOWEDSERVICEACCOUNTS
+              value: "pipeline-runner-testdsp3"
             - name: OBJECTSTORECONFIG_BUCKETNAME
               value: "testbucket3"
             - name: OBJECTSTORECONFIG_ACCESSKEY
