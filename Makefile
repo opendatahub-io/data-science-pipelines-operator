@@ -53,6 +53,13 @@ IMG ?= quay.io/opendatahub/data-science-pipelines-operator:odh-stable
 # Default is amd64.
 TARGETARCH ?= amd64
 
+# BUILDER_ARCH selects the builder stage platform in the Dockerfile (multiarch or arm64).
+# Default is multiarch for production builds on Linux.
+# Mac users must set BUILDER_ARCH=arm64 for local development because the
+# multiarch image segfaults under QEMU emulation on Apple Silicon.
+BUILDER_ARCH ?= multiarch
+
+
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.34.0
 # Namespace to deploy the operator
@@ -181,15 +188,18 @@ test-chaos: envtest ## Run SDK chaos tests (envtest, no cluster needed).
 
 .PHONY: build
 build: generate fmt vet ## Build manager binary.
-	go build -o bin/manager main.go
+	go build -o bin/manager .
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./main.go
+	go run .
 
 .PHONY: podman-build
 podman-build: ## Build container image with the manager.
-	podman build --platform linux/$(TARGETARCH) --build-arg TARGETARCH=$(TARGETARCH) -t ${IMG} .
+	podman build --platform linux/$(TARGETARCH) \
+		--build-arg "TARGETARCH=$(TARGETARCH)" \
+		--build-arg "BUILDER_ARCH=$(BUILDER_ARCH)" \
+		-t "$(IMG)" .
 
 .PHONY: podman-push
 podman-push: ## Push container image with the manager.

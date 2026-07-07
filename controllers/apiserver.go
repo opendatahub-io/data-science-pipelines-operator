@@ -81,6 +81,7 @@ func (r *DSPAReconciler) GenerateSamplePipelineMetadataBlock(pipeline string, pl
 func (r *DSPAReconciler) managedPipelineSampleEntry(pipelineName string, platformVersion string) map[string]string {
 	item, err := r.GenerateSamplePipelineMetadataBlock(pipelineName, platformVersion)
 	if err == nil {
+		item["versionName"] = platformVersion
 		return item
 	}
 	r.Log.Info("Managed pipeline metadata not found in operator config; using minimal sample_config entry",
@@ -90,7 +91,7 @@ func (r *DSPAReconciler) managedPipelineSampleEntry(pipelineName string, platfor
 		"name":               pipelineName,
 		"file":               fmt.Sprintf("/config/managed-pipelines/%s.yaml", pipelineName),
 		"description":        "",
-		"versionName":        fmt.Sprintf("%s - %s", pipelineName, platformVersion),
+		"versionName":        platformVersion,
 		"versionDescription": "",
 	}
 }
