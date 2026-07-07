@@ -19,6 +19,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -213,6 +214,65 @@ var (
 )
 
 type DBExtraParams map[string]string
+
+// allowedDBExtraParams defines the set of database connection parameter keys
+// that may be specified via spec.database.customExtraParams. Keys not in this
+// map are rejected to prevent injection of driver-level flags (e.g.
+// allowAllFiles, allowCleartextPasswords) that could be exploited for
+// file-exfiltration or credential-theft attacks.
+// Uses map[string]struct{} instead of map[string]bool so a key cannot be
+// accidentally added with value false, which would silently disable it.
+var allowedDBExtraParams = map[string]struct{}{
+	// MySQL / MariaDB safe parameters
+	"tls":                  {},
+	"charset":              {},
+	"loc":                  {},
+	"timeout":              {},
+	"readTimeout":          {},
+	"writeTimeout":         {},
+	"parseTime":            {},
+	"collation":            {},
+	"sql_mode":             {},
+	"checkConnLiveness":    {},
+	"clientFoundRows":      {},
+	"columnsWithAlias":     {},
+	"maxAllowedPacket":     {},
+	"rejectReadOnly":       {},
+	"timeTruncate":         {},
+	"connectionAttributes": {},
+	// PostgreSQL equivalents for future support
+	"sslmode":          {},
+	"connect_timeout":  {},
+	"application_name": {},
+}
+
+// ValidateDBExtraParams unmarshals a JSON string of database extra parameters
+// and validates that every key is present in the allow-list. Returns the
+// parsed map on success or an error listing the first disallowed key found.
+func ValidateDBExtraParams(raw string) (map[string]string, error) {
+	var params map[string]string
+	if err := json.Unmarshal([]byte(raw), &params); err != nil {
+		return nil, fmt.Errorf("customExtraParams is not valid JSON: %w", err)
+	}
+	for key := range params {
+		if _, ok := allowedDBExtraParams[key]; !ok {
+			return nil, fmt.Errorf("customExtraParams contains disallowed key %q; allowed keys: %v",
+				key, allowedKeysList())
+		}
+	}
+	return params, nil
+}
+
+// allowedKeysList returns a sorted slice of allowed parameter key names for
+// use in error messages.
+func allowedKeysList() []string {
+	keys := make([]string, 0, len(allowedDBExtraParams))
+	for k := range allowedDBExtraParams {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
 
 func createResourceRequirement(RequestsCPU resource.Quantity, RequestsMemory resource.Quantity, LimitsCPU resource.Quantity, LimitsMemory resource.Quantity) dspav1.ResourceRequirements {
 	return dspav1.ResourceRequirements{

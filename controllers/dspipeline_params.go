@@ -19,15 +19,15 @@ package controllers
 import (
 	"bytes"
 	"context"
+	crand "crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"net/url"
 	"os"
 	"strings"
-	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -235,11 +235,14 @@ func (p *DSPAParams) RetrieveAndSetExternalRoute(ctx context.Context, client cli
 }
 
 func passwordGen(n int) string {
-	rand.Seed(time.Now().UnixNano())
-	var chars = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890")
-	b := make([]rune, n)
+	const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
+	b := make([]byte, n)
 	for i := range b {
-		b[i] = chars[rand.Intn(len(chars))]
+		idx, err := crand.Int(crand.Reader, big.NewInt(int64(len(chars))))
+		if err != nil {
+			panic(fmt.Sprintf("crypto/rand failure: %v", err))
+		}
+		b[i] = chars[idx.Int64()]
 	}
 	return string(b)
 }
@@ -407,13 +410,13 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 		p.DBConnection.DecodedPassword = string(decodedPasswordBytes)
 	}
 
-	// User specified custom Extra parameters will always take precedence
+	// User specified custom Extra parameters will always take precedence.
+	// Parameters are validated against an allow-list to prevent injection
+	// of dangerous driver-level flags (e.g. allowAllFiles).
 	if dsp.Spec.Database.CustomExtraParams != nil {
-		// Validate CustomExtraParams is a valid params json
-		var validParamsJson map[string]string
-		err := json.Unmarshal([]byte(*dsp.Spec.Database.CustomExtraParams), &validParamsJson)
+		_, err := config.ValidateDBExtraParams(*dsp.Spec.Database.CustomExtraParams)
 		if err != nil {
-			log.Info(fmt.Sprintf("Encountered error when validating CustomExtraParams field in DSPA, please ensure the params are well-formed: Error: %v", err))
+			log.Info(fmt.Sprintf("Rejected CustomExtraParams in DSPA: %v", err))
 			return err
 		}
 		p.DBConnection.ExtraParams = *dsp.Spec.Database.CustomExtraParams
