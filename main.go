@@ -252,6 +252,7 @@ func main() {
 				apierrors.IsTimeout(adherenceErr),
 				apierrors.IsTooManyRequests(adherenceErr):
 				setupLog.Info("Transient error reading TLS adherence policy", "error", adherenceErr)
+				tlsAdherenceFetched = true // watcher self-heals when the API recovers
 			default:
 				setupLog.Error(adherenceErr, "failed to fetch TLS adherence policy")
 				os.Exit(1)
