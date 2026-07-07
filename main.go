@@ -40,6 +40,8 @@ import (
 	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -236,6 +238,29 @@ func main() {
 	profile := tlsResult.ProfileSpec
 	hasOpenShiftConfigAPI := tlsResult.HasOpenShiftConfig
 
+	// Fetch the TLS adherence policy (only meaningful on OpenShift clusters with the config API)
+	tlsAdherenceFetched := false
+	var tlsAdherence configv1.TLSAdherencePolicy
+	if hasOpenShiftConfigAPI {
+		var adherenceErr error
+		tlsAdherence, adherenceErr = tlspkg.FetchAPIServerTLSAdherencePolicy(bootstrapCtx, bootstrapClient)
+		if adherenceErr != nil {
+			switch {
+			case apierrors.IsNotFound(adherenceErr), apimeta.IsNoMatchError(adherenceErr):
+				setupLog.Info("APIServer TLS adherence policy unavailable")
+			case apierrors.IsServiceUnavailable(adherenceErr),
+				apierrors.IsTimeout(adherenceErr),
+				apierrors.IsTooManyRequests(adherenceErr):
+				setupLog.Info("Transient error reading TLS adherence policy", "error", adherenceErr)
+			default:
+				setupLog.Error(adherenceErr, "failed to fetch TLS adherence policy")
+				os.Exit(1)
+			}
+		} else {
+			tlsAdherenceFetched = true
+		}
+	}
+
 	mgrOpts := ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
@@ -367,6 +392,13 @@ func main() {
 				setupLog.Info("TLS profile changed, initiating graceful shutdown to reload")
 				cancel()
 			},
+		}
+		if tlsAdherenceFetched {
+			watcher.InitialTLSAdherencePolicy = tlsAdherence
+			watcher.OnAdherencePolicyChange = func(_ context.Context, _, _ configv1.TLSAdherencePolicy) {
+				setupLog.Info("TLS adherence policy changed, initiating graceful shutdown to reload")
+				cancel()
+			}
 		}
 		if err := watcher.SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to register TLS security profile watcher")
