@@ -860,3 +860,34 @@ func TestLookupMLflowEndpoint_UsesMlflowNamedObject(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "https://x", got)
 }
+
+func TestPasswordGen_Length(t *testing.T) {
+	t.Parallel()
+	for _, n := range []int{0, 1, 12, 24, 64} {
+		pw := passwordGen(n)
+		assert.Len(t, pw, n, "passwordGen(%d) should return a string of length %d", n, n)
+	}
+}
+
+func TestPasswordGen_ValidChars(t *testing.T) {
+	t.Parallel()
+	const validChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
+	pw := passwordGen(1000)
+	for i, c := range pw {
+		assert.Contains(t, validChars, string(c), "character at index %d (%q) is not in the allowed set", i, string(c))
+	}
+}
+
+func TestPasswordGen_Uniqueness(t *testing.T) {
+	t.Parallel()
+	pw1 := passwordGen(32)
+	pw2 := passwordGen(32)
+	assert.NotEqual(t, pw1, pw2, "two consecutive calls to passwordGen(32) should produce different output")
+}
+
+func TestPasswordGen_NoPanic(t *testing.T) {
+	t.Parallel()
+	assert.NotPanics(t, func() {
+		passwordGen(16)
+	}, "passwordGen should not panic under normal conditions")
+}
