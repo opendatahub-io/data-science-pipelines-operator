@@ -537,12 +537,15 @@ podman build . -f backend/Dockerfile -t quay.io/your_repo/dsp-apiserver:sometag
 
 > **Building on Apple Silicon**:
 >
+> The multiarch Go toolset image segfaults under QEMU emulation on Apple Silicon.
+> Set `BUILDER_ARCH=arm64` to use the native arm64 Go toolset instead:
+>
 > ```bash
-> # Build amd64 image on Apple Silicon
-> make podman-build IMG=quay.io/your_repo/data-science-pipelines-operator:tag
+> # Build amd64 image on Apple Silicon (cross-compile for OpenShift)
+> make podman-build BUILDER_ARCH=arm64 IMG=quay.io/your_repo/data-science-pipelines-operator:tag
 >
 > # Build arm64 image for local Kind testing
-> TARGETARCH=arm64 make podman-build IMG=quay.io/your_repo/data-science-pipelines-operator:tag
+> make podman-build BUILDER_ARCH=arm64 TARGETARCH=arm64 IMG=quay.io/your_repo/data-science-pipelines-operator:tag
 > ```
 
 **To run the tests:**

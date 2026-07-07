@@ -1,5 +1,8 @@
 # Build the manager binary
-FROM --platform=$BUILDPLATFORM registry.access.redhat.com/ubi9/go-toolset:1.26.3@sha256:d36470d5258da00f618b7aca9bdaab8e05134aa938bd6c42d9bd17d50ed45e76 AS builder
+ARG BUILDER_ARCH=multiarch
+FROM registry.access.redhat.com/ubi9/go-toolset:1.26.3@sha256:45bd06d392349dfdb09073514cfebcc5082db33301347b51dcae8e5516a89126 AS go-toolset-multiarch
+FROM registry.access.redhat.com/ubi9/go-toolset:1.26.3@sha256:3880436381044c6d89c2311f2a7dc8d64224668bf84b43810982b5a9ddd851d0 AS go-toolset-arm64
+FROM go-toolset-${BUILDER_ARCH} AS builder
 ARG TARGETOS=linux
 ARG TARGETARCH=amd64
 
@@ -13,6 +16,7 @@ RUN GOTOOLCHAIN=local go mod download
 
 # Copy the go source
 COPY main.go main.go
+COPY tls_profile.go tls_profile.go
 COPY api/ api/
 COPY controllers/ controllers/
 
@@ -20,7 +24,7 @@ COPY controllers/ controllers/
 USER root
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
     GOTOOLCHAIN=local CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} GOFIPS140=v1.0.0 \
-    go build -tags no_openssl -a -o manager main.go
+    go build -tags no_openssl -a -o manager .
 
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
 
