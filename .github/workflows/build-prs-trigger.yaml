@@ -23,12 +23,17 @@ jobs:
       - uses: actions/checkout@v2
       - name: Save PR payload
         shell: bash
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_STATE: ${{ github.event.pull_request.state }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT_ACTION: ${{ github.event.action }}
         run: |
           mkdir -p ./pr
-          echo ${{ github.event.pull_request.number }} >> ./pr/pr_number
-          echo ${{ github.event.pull_request.state }} >> ./pr/pr_state
-          echo ${{ github.event.pull_request.head.sha }} >> ./pr/head_sha
-          echo ${{ github.event.action }} >> ./pr/event_action
+          echo "$PR_NUMBER" >> ./pr/pr_number
+          echo "$PR_STATE" >> ./pr/pr_state
+          echo "$HEAD_SHA" >> ./pr/head_sha
+          echo "$EVENT_ACTION" >> ./pr/event_action
       - uses: actions/upload-artifact@v4
         with:
           name: pr
