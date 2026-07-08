@@ -246,7 +246,7 @@ func main() {
 		tlsAdherence, adherenceErr = tlspkg.FetchAPIServerTLSAdherencePolicy(bootstrapCtx, bootstrapClient)
 		if adherenceErr != nil {
 			switch {
-			case apierrors.IsNotFound(adherenceErr), apimeta.IsNoMatchError(adherenceErr):
+			case apierrors.IsNotFound(adherenceErr), apimeta.IsNoMatchError(adherenceErr), apierrors.IsForbidden(adherenceErr):
 				setupLog.Info("APIServer TLS adherence policy unavailable")
 			case apierrors.IsServiceUnavailable(adherenceErr),
 				apierrors.IsTimeout(adherenceErr),

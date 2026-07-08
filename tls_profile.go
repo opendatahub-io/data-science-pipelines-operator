@@ -30,6 +30,8 @@ func fetchTLSProfile(ctx context.Context, cli client.Client) (*tlsResult, error)
 			l.Info("config.openshift.io API not available (non-OpenShift cluster), using Intermediate TLS profile as fallback")
 		case apierrors.IsNotFound(err):
 			l.Info("APIServer resource not found, using Intermediate TLS profile as fallback")
+		case apierrors.IsForbidden(err):
+			l.Info("Insufficient RBAC to read APIServer TLS profile, using Intermediate TLS profile as fallback")
 		case apierrors.IsServiceUnavailable(err),
 			apierrors.IsTimeout(err),
 			apierrors.IsTooManyRequests(err):

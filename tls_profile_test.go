@@ -5,14 +5,19 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"testing"
 
 	configv1 "github.com/openshift/api/config/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 )
 
 func TestFetchTLSProfile_IntermediateProfile(t *testing.T) {
@@ -116,6 +121,33 @@ func TestFetchTLSProfile_NextProtosAlwaysSet(t *testing.T) {
 	for _, fn := range result.TLSOpts {
 		fn(cfg)
 	}
+	assert.Equal(t, []string{"h2", "http/1.1"}, cfg.NextProtos)
+}
+
+func TestFetchTLSProfile_Forbidden(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, configv1.Install(scheme))
+
+	cli := fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+		Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			return apierrors.NewForbidden(
+				schema.GroupResource{Group: "config.openshift.io", Resource: "apiservers"},
+				"cluster",
+				fmt.Errorf("User \"system:serviceaccount:opendatahub:dspo\" cannot get resource \"apiservers\" in API group \"config.openshift.io\" at the cluster scope"),
+			)
+		},
+	}).Build()
+
+	result, err := fetchTLSProfile(context.Background(), cli)
+	require.NoError(t, err)
+	assert.False(t, result.HasOpenShiftConfig)
+
+	cfg := &tls.Config{}
+	for _, fn := range result.TLSOpts {
+		fn(cfg)
+	}
+	assert.Equal(t, uint16(tls.VersionTLS12), cfg.MinVersion)
+	assert.NotEmpty(t, cfg.CipherSuites)
 	assert.Equal(t, []string{"h2", "http/1.1"}, cfg.NextProtos)
 }
 
