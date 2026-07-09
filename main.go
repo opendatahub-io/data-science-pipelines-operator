@@ -40,8 +40,6 @@ import (
 	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -245,21 +243,9 @@ func main() {
 		var adherenceErr error
 		tlsAdherence, adherenceErr = tlspkg.FetchAPIServerTLSAdherencePolicy(bootstrapCtx, bootstrapClient)
 		if adherenceErr != nil {
-			switch {
-			case apierrors.IsNotFound(adherenceErr), apimeta.IsNoMatchError(adherenceErr):
-				setupLog.Info("APIServer TLS adherence policy unavailable")
-			case apierrors.IsServiceUnavailable(adherenceErr),
-				apierrors.IsTimeout(adherenceErr),
-				apierrors.IsTooManyRequests(adherenceErr):
-				setupLog.Info("Transient error reading TLS adherence policy", "error", adherenceErr)
-				tlsAdherenceFetched = true // watcher self-heals when the API recovers
-			default:
-				setupLog.Error(adherenceErr, "failed to fetch TLS adherence policy")
-				os.Exit(1)
-			}
-		} else {
-			tlsAdherenceFetched = true
+			setupLog.Info("unable to fetch TLS adherence policy, watcher will retry", "error", adherenceErr)
 		}
+		tlsAdherenceFetched = true
 	}
 
 	mgrOpts := ctrl.Options{
