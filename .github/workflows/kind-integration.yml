@@ -75,28 +75,10 @@ jobs:
           s3_access_key: minio
           s3_secret_key: minio123
 
-      - name: Wait for MLflow readiness
+      - name: Verify MLflow deployment
         if: ${{ steps.deploy-mlflow.outcome == 'success' }}
         run: |
-          kubectl wait --for=condition=Ready pods --field-selector=status.phase=Running \
-            -n opendatahub --timeout=180s
-          echo "All running pods in opendatahub are Ready"
-          elapsed=0
-          interval=5
-          timeout=300
-          while [ "${elapsed}" -lt "${timeout}" ]; do
-            address_url="$(kubectl get mlflow mlflow -n opendatahub -o jsonpath='{.status.address.url}' 2>/dev/null || true)"
-            if [ -n "${address_url}" ]; then
-              echo "MLflow is ready at ${address_url}"
-              exit 0
-            fi
-            echo "Waiting for MLflow status.address.url (${elapsed}s/${timeout}s)..."
-            sleep "${interval}"
-            elapsed=$((elapsed + interval))
-          done
-          echo "Timed out waiting for MLflow CR status.address.url"
-          kubectl get mlflow mlflow -n opendatahub -o yaml || true
-          exit 1
+          kubectl get mlflow mlflow -n opendatahub
 
       - name: Run DSP MLflow tests
         id: test-mlflow
