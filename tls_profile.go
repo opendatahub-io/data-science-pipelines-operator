@@ -32,6 +32,7 @@ func fetchTLSProfile(ctx context.Context, cli client.Client) (*tlsResult, error)
 			l.Info("APIServer resource not found, using Intermediate TLS profile as fallback")
 		case apierrors.IsServiceUnavailable(err),
 			apierrors.IsTimeout(err),
+			apierrors.IsServerTimeout(err),
 			apierrors.IsTooManyRequests(err):
 			l.Info("Transient API error reading TLS profile, using Intermediate TLS profile as fallback", "error", err)
 			// Mark OpenShift config as present so SecurityProfileWatcher still registers.
