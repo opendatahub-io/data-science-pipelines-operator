@@ -85,6 +85,63 @@ func TestDeployWorkflowController(t *testing.T) {
 
 }
 
+func TestDeployWorkflowControllerWithReplicas(t *testing.T) {
+	testNamespace := "testnamespace"
+	testDSPAName := "testdspa"
+	expectedWorkflowControllerName := "ds-pipeline-workflow-controller-testdspa"
+	replicas := int32(2)
+
+	// Construct DSPASpec with WorkflowController replicas for HA
+	dspa := &dspav1.DataSciencePipelinesApplication{
+		Spec: dspav1.DSPASpec{
+			PodToPodTLS: testutil.BoolPtr(false),
+			APIServer:   &dspav1.APIServer{},
+			WorkflowController: &dspav1.WorkflowController{
+				Deploy:   true,
+				Replicas: &replicas,
+			},
+			Database: &dspav1.Database{
+				DisableHealthCheck: false,
+				MariaDB: &dspav1.MariaDB{
+					Deploy: true,
+				},
+			},
+			MLMD: &dspav1.MLMD{Deploy: true},
+			ObjectStorage: &dspav1.ObjectStorage{
+				DisableHealthCheck: false,
+				Minio: &dspav1.Minio{
+					Deploy: false,
+					Image:  "someimage",
+				},
+			},
+		},
+	}
+
+	// Enrich DSPA with name+namespace
+	dspa.Namespace = testNamespace
+	dspa.Name = testDSPAName
+
+	// Create Context, Fake Controller and Params
+	ctx, params, reconciler := CreateNewTestObjects()
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	assert.Nil(t, err)
+	assert.NotNil(t, params.WorkflowController.Replicas)
+	assert.Equal(t, int32(2), *params.WorkflowController.Replicas)
+
+	// Run test reconciliation
+	workflowControllerEnabled, err := reconciler.ReconcileWorkflowController(dspa, params)
+	assert.Nil(t, err)
+	assert.True(t, workflowControllerEnabled)
+
+	// Ensure WorkflowController Deployment exists with requested replicas
+	deployment := &appsv1.Deployment{}
+	created, err := reconciler.IsResourceCreated(ctx, deployment, expectedWorkflowControllerName, testNamespace)
+	assert.True(t, created)
+	assert.Nil(t, err)
+	assert.NotNil(t, deployment.Spec.Replicas)
+	assert.Equal(t, int32(2), *deployment.Spec.Replicas)
+}
+
 func TestDontDeployWorkflowController(t *testing.T) {
 	testNamespace := "testnamespace"
 	testDSPAName := "testdspa"
