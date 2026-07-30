@@ -701,18 +701,43 @@ func TestLookupMLflowEndpoint_MissingURL(t *testing.T) {
 	require.Contains(t, err.Error(), "MLflow resource missing Status.Address.URL")
 }
 
+// mlflowAvailableCondition builds an "Available" condition as mlflow-operator
+// sets it on the MLflow CR.
+func mlflowAvailableCondition(status metav1.ConditionStatus) metav1.Condition {
+	return metav1.Condition{
+		Type:               mlflowAvailableConditionType,
+		Status:             status,
+		Reason:             "Test",
+		LastTransitionTime: metav1.Now(),
+	}
+}
+
+// readyMlflowDeployment builds a fully-ready Deployment for the MLflow
+// backing workload.
+func readyMlflowDeployment(name, namespace string, replicas int32) *appsv1.Deployment {
+	return &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
+		Spec:       appsv1.DeploymentSpec{Replicas: &replicas},
+		Status:     appsv1.DeploymentStatus{ReadyReplicas: replicas},
+	}
+}
+
 func TestLookupMLflowEndpoint_Success(t *testing.T) {
 	t.Parallel()
 
-	const wantURL = "https://internal-mlflow:5000/mlflow"
+	const wantURL = "https://mlflow.dsp-ns.svc:8443/mlflow"
 	ml := &mlflowv1.MLflow{
 		ObjectMeta: metav1.ObjectMeta{Name: "mlflow", Namespace: "dsp-ns"},
 		Status: mlflowv1.MLflowStatus{
-			Address: &mlflowv1.MLflowAddressStatus{URL: wantURL},
+			Address:    &mlflowv1.MLflowAddressStatus{URL: wantURL},
+			Conditions: []metav1.Condition{mlflowAvailableCondition(metav1.ConditionTrue)},
 		},
 	}
 	scheme := testSchemeWithMlflowApps(t)
-	kc := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ml).Build()
+	kc := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(ml, readyMlflowDeployment("mlflow", "dsp-ns", 1)).
+		Build()
 
 	got, err := lookupMLflowEndpoint(context.Background(), kc, "dsp-ns", logr.Discard())
 	require.NoError(t, err)
@@ -735,6 +760,132 @@ func TestLookupMLflowEndpoint_InvalidURL(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "invalid Status.Address.URL")
 	require.Contains(t, err.Error(), "must be http/https with non-empty host")
+}
+
+func TestLookupMLflowEndpoint_NotAvailable(t *testing.T) {
+	t.Parallel()
+
+	ml := &mlflowv1.MLflow{
+		ObjectMeta: metav1.ObjectMeta{Name: "mlflow", Namespace: "dsp-ns"},
+		Status: mlflowv1.MLflowStatus{
+			Address:    &mlflowv1.MLflowAddressStatus{URL: "https://mlflow.dsp-ns.svc:8443/mlflow"},
+			Conditions: []metav1.Condition{mlflowAvailableCondition(metav1.ConditionFalse)},
+		},
+	}
+	scheme := testSchemeWithMlflowApps(t)
+	kc := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ml).Build()
+
+	_, err := lookupMLflowEndpoint(context.Background(), kc, "dsp-ns", logr.Discard())
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "is not Available")
+}
+
+func TestLookupMLflowEndpoint_NoConditions(t *testing.T) {
+	t.Parallel()
+
+	// No Conditions at all (never reconciled) must not be treated as Available.
+	ml := &mlflowv1.MLflow{
+		ObjectMeta: metav1.ObjectMeta{Name: "mlflow", Namespace: "dsp-ns"},
+		Status: mlflowv1.MLflowStatus{
+			Address: &mlflowv1.MLflowAddressStatus{URL: "https://mlflow.dsp-ns.svc:8443/mlflow"},
+		},
+	}
+	scheme := testSchemeWithMlflowApps(t)
+	kc := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ml).Build()
+
+	_, err := lookupMLflowEndpoint(context.Background(), kc, "dsp-ns", logr.Discard())
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "is not Available")
+}
+
+// Reproduces mlflow-operator being scaled down while its stale MLflow CR
+// still reports Available=True; the live Deployment check must catch it.
+func TestLookupMLflowEndpoint_StaleAvailableCondition_DeploymentScaledDown(t *testing.T) {
+	t.Parallel()
+
+	ml := &mlflowv1.MLflow{
+		ObjectMeta: metav1.ObjectMeta{Name: "mlflow", Namespace: "dsp-ns"},
+		Status: mlflowv1.MLflowStatus{
+			Address:    &mlflowv1.MLflowAddressStatus{URL: "https://mlflow.dsp-ns.svc:8443/mlflow"},
+			Conditions: []metav1.Condition{mlflowAvailableCondition(metav1.ConditionTrue)},
+		},
+	}
+	scheme := testSchemeWithMlflowApps(t)
+	kc := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(ml, readyMlflowDeployment("mlflow", "dsp-ns", 0)).
+		Build()
+
+	_, err := lookupMLflowEndpoint(context.Background(), kc, "dsp-ns", logr.Discard())
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "underlying deployment is not ready")
+}
+
+func TestLookupMLflowEndpoint_StaleAvailableCondition_DeploymentMissing(t *testing.T) {
+	t.Parallel()
+
+	ml := &mlflowv1.MLflow{
+		ObjectMeta: metav1.ObjectMeta{Name: "mlflow", Namespace: "dsp-ns"},
+		Status: mlflowv1.MLflowStatus{
+			Address:    &mlflowv1.MLflowAddressStatus{URL: "https://mlflow.dsp-ns.svc:8443/mlflow"},
+			Conditions: []metav1.Condition{mlflowAvailableCondition(metav1.ConditionTrue)},
+		},
+	}
+	scheme := testSchemeWithMlflowApps(t)
+	kc := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ml).Build()
+
+	_, err := lookupMLflowEndpoint(context.Background(), kc, "dsp-ns", logr.Discard())
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "underlying deployment is not ready")
+}
+
+func TestLookupMLflowEndpoint_DeploymentNotFullyReady(t *testing.T) {
+	t.Parallel()
+
+	ml := &mlflowv1.MLflow{
+		ObjectMeta: metav1.ObjectMeta{Name: "mlflow", Namespace: "dsp-ns"},
+		Status: mlflowv1.MLflowStatus{
+			Address:    &mlflowv1.MLflowAddressStatus{URL: "https://mlflow.dsp-ns.svc:8443/mlflow"},
+			Conditions: []metav1.Condition{mlflowAvailableCondition(metav1.ConditionTrue)},
+		},
+	}
+	deploy := readyMlflowDeployment("mlflow", "dsp-ns", 2)
+	deploy.Status.ReadyReplicas = 1 // desired 2, only 1 ready
+	scheme := testSchemeWithMlflowApps(t)
+	kc := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ml, deploy).Build()
+
+	_, err := lookupMLflowEndpoint(context.Background(), kc, "dsp-ns", logr.Discard())
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "underlying deployment is not ready")
+}
+
+func TestVerifyMLflowDeploymentReady(t *testing.T) {
+	t.Parallel()
+
+	scheme := testSchemeWithMlflowApps(t)
+
+	t.Run("ready", func(t *testing.T) {
+		t.Parallel()
+		kc := fake.NewClientBuilder().WithScheme(scheme).WithObjects(readyMlflowDeployment("mlflow", "dsp-ns", 1)).Build()
+		err := verifyMLflowDeploymentReady(context.Background(), kc, "dsp-ns")
+		require.NoError(t, err)
+	})
+
+	t.Run("deployment not found", func(t *testing.T) {
+		t.Parallel()
+		kc := fake.NewClientBuilder().WithScheme(scheme).Build()
+		err := verifyMLflowDeploymentReady(context.Background(), kc, "dsp-ns")
+		require.Error(t, err)
+		require.True(t, apierrs.IsNotFound(err))
+	})
+
+	t.Run("scaled to zero", func(t *testing.T) {
+		t.Parallel()
+		kc := fake.NewClientBuilder().WithScheme(scheme).WithObjects(readyMlflowDeployment("mlflow", "dsp-ns", 0)).Build()
+		err := verifyMLflowDeploymentReady(context.Background(), kc, "dsp-ns")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "not ready")
+	})
 }
 
 func TestIsAPIServerDeploymentReady_NotFound(t *testing.T) {
@@ -818,9 +969,13 @@ func TestIsAPIServerDeploymentReady_WrongDeploymentName_ReturnsFalseNotFoundSema
 func TestLookupMLflowEndpoint_UsesMlflowNamedObject(t *testing.T) {
 	t.Parallel()
 
+	const wantURL = "https://mlflow.dsp-ns.svc:8443/mlflow"
 	wrong := &mlflowv1.MLflow{
 		ObjectMeta: metav1.ObjectMeta{Name: "other", Namespace: "dsp-ns"},
-		Status:     mlflowv1.MLflowStatus{Address: &mlflowv1.MLflowAddressStatus{URL: "https://x"}},
+		Status: mlflowv1.MLflowStatus{
+			Address:    &mlflowv1.MLflowAddressStatus{URL: wantURL},
+			Conditions: []metav1.Condition{mlflowAvailableCondition(metav1.ConditionTrue)},
+		},
 	}
 	scheme := testSchemeWithMlflowApps(t)
 	kc := fake.NewClientBuilder().WithScheme(scheme).WithObjects(wrong).Build()
@@ -830,8 +985,11 @@ func TestLookupMLflowEndpoint_UsesMlflowNamedObject(t *testing.T) {
 
 	ml := wrong.DeepCopy()
 	ml.Name = "mlflow"
-	kcWith := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ml).Build()
+	kcWith := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(ml, readyMlflowDeployment("mlflow", "dsp-ns", 1)).
+		Build()
 	got, err := lookupMLflowEndpoint(context.Background(), kcWith, "dsp-ns", logr.Discard())
 	require.NoError(t, err)
-	require.Equal(t, "https://x", got)
+	require.Equal(t, wantURL, got)
 }

@@ -26,6 +26,7 @@ import (
 
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/dspastatus"
 	mlflowv1 "github.com/opendatahub-io/mlflow-operator/api/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
@@ -95,6 +96,8 @@ func (r *DSPAReconciler) removeExpiredMLflowCacheLocked(now time.Time) {
 	}
 }
 
+const mlflowAvailableConditionType = "Available"
+
 func lookupMLflowEndpoint(ctx context.Context, reader client.Reader, namespace string, log logr.Logger) (string, error) {
 	if namespace == "" {
 		return "", fmt.Errorf("namespace must be set for MLflow endpoint lookup")
@@ -112,7 +115,38 @@ func lookupMLflowEndpoint(ctx context.Context, reader client.Reader, namespace s
 	if err := validateMLflowEndpointURL(endpoint); err != nil {
 		return "", fmt.Errorf("MLflow resource has invalid Status.Address.URL: %w", err)
 	}
+
+	// Fast-path: mlflow-operator, if running, already reflects deployment
+	// readiness here.
+	if !meta.IsStatusConditionTrue(mlflowObj.Status.Conditions, mlflowAvailableConditionType) {
+		return "", fmt.Errorf("MLflow resource is not %s", mlflowAvailableConditionType)
+	}
+
+	// Available can be stale if mlflow-operator itself is down, so
+	// cross-check the live Deployment directly.
+	if err := verifyMLflowDeploymentReady(ctx, reader, namespace); err != nil {
+		return "", fmt.Errorf("MLflow endpoint resolved but underlying deployment is not ready: %w", err)
+	}
+
 	return endpoint, nil
+}
+
+// verifyMLflowDeploymentReady checks the MLflow deployment in the namespace.
+func verifyMLflowDeploymentReady(ctx context.Context, reader client.Reader, namespace string) error {
+	deployment := &appsv1.Deployment{}
+	if err := reader.Get(ctx, types.NamespacedName{Name: mlflowCRName, Namespace: namespace}, deployment); err != nil {
+		return fmt.Errorf("failed to get MLflow deployment %s/%s: %w", namespace, mlflowCRName, err)
+	}
+
+	desiredReplicas := int32(1)
+	if deployment.Spec.Replicas != nil {
+		desiredReplicas = *deployment.Spec.Replicas
+	}
+	if desiredReplicas == 0 || deployment.Status.ReadyReplicas < desiredReplicas {
+		return fmt.Errorf("MLflow deployment %s/%s not ready: %d/%d replicas ready",
+			namespace, mlflowCRName, deployment.Status.ReadyReplicas, desiredReplicas)
+	}
+	return nil
 }
 
 func (r *DSPAReconciler) retrieveMLflowEndpointCached(ctx context.Context, namespace string, log logr.Logger) (string, error) {
