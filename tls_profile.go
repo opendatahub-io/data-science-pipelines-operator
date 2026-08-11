@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -12,6 +13,29 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
+
+type tlsAdherenceFetchAction int
+
+const (
+	tlsAdherenceFetchRetry tlsAdherenceFetchAction = iota
+	tlsAdherenceFetchFatal
+)
+
+func classifyTLSAdherenceFetchError(err error) tlsAdherenceFetchAction {
+	switch {
+	case apierrors.IsNotFound(err), apimeta.IsNoMatchError(err):
+		return tlsAdherenceFetchRetry
+	case apierrors.IsServiceUnavailable(err),
+		apierrors.IsTimeout(err),
+		apierrors.IsServerTimeout(err),
+		apierrors.IsTooManyRequests(err),
+		apierrors.IsInternalError(err),
+		errors.Is(err, context.DeadlineExceeded):
+		return tlsAdherenceFetchRetry
+	default:
+		return tlsAdherenceFetchFatal
+	}
+}
 
 type tlsResult struct {
 	TLSOpts            []func(*tls.Config)

@@ -5,15 +5,48 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"testing"
 
 	configv1 "github.com/openshift/api/config/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
+
+func TestClassifyTLSAdherenceFetchError(t *testing.T) {
+	tests := []struct {
+		name   string
+		err    error
+		action tlsAdherenceFetchAction
+	}{
+		{
+			name:   "not found",
+			err:    apierrors.NewNotFound(schema.GroupResource{Group: "config.openshift.io", Resource: "apiservers"}, "cluster"),
+			action: tlsAdherenceFetchRetry,
+		},
+		{
+			name:   "internal error",
+			err:    apierrors.NewInternalError(errors.New("apiserver unavailable")),
+			action: tlsAdherenceFetchRetry,
+		},
+		{
+			name:   "forbidden",
+			err:    apierrors.NewForbidden(schema.GroupResource{Group: "config.openshift.io", Resource: "apiservers"}, "cluster", errors.New("denied")),
+			action: tlsAdherenceFetchFatal,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.action, classifyTLSAdherenceFetchError(tt.err))
+		})
+	}
+}
 
 func TestFetchTLSProfile_IntermediateProfile(t *testing.T) {
 	scheme := runtime.NewScheme()
