@@ -243,9 +243,19 @@ func main() {
 		var adherenceErr error
 		tlsAdherence, adherenceErr = tlspkg.FetchAPIServerTLSAdherencePolicy(bootstrapCtx, bootstrapClient)
 		if adherenceErr != nil {
-			setupLog.Info("unable to fetch TLS adherence policy, watcher will retry", "error", adherenceErr)
+			switch classifyTLSAdherenceFetchError(adherenceErr) {
+			case tlsAdherenceFetchRetry:
+				// On a confirmed OpenShift cluster (hasOpenShiftConfigAPI=true) NotFound/NoMatch is a
+				// transient race between the two reads; transient API errors self-heal via the watcher.
+				setupLog.Info("TLS adherence policy lookup unavailable, watcher will retry", "error", adherenceErr)
+				tlsAdherenceFetched = true
+			case tlsAdherenceFetchFatal:
+				setupLog.Error(adherenceErr, "unable to fetch TLS adherence policy")
+				os.Exit(1)
+			}
+		} else {
+			tlsAdherenceFetched = true
 		}
-		tlsAdherenceFetched = true
 	}
 
 	mgrOpts := ctrl.Options{
