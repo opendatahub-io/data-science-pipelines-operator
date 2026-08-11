@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -40,6 +41,8 @@ import (
 	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -243,9 +246,27 @@ func main() {
 		var adherenceErr error
 		tlsAdherence, adherenceErr = tlspkg.FetchAPIServerTLSAdherencePolicy(bootstrapCtx, bootstrapClient)
 		if adherenceErr != nil {
-			setupLog.Info("unable to fetch TLS adherence policy, watcher will retry", "error", adherenceErr)
+			switch {
+			case apierrors.IsNotFound(adherenceErr), apimeta.IsNoMatchError(adherenceErr):
+				// On a confirmed OpenShift cluster (hasOpenShiftConfigAPI=true) this is a transient
+				// race between the two reads; keep tlsAdherenceFetched=true so the watcher retries.
+				setupLog.Info("TLS adherence policy lookup unavailable, watcher will retry", "error", adherenceErr)
+				tlsAdherenceFetched = true
+			case apierrors.IsServiceUnavailable(adherenceErr),
+				apierrors.IsTimeout(adherenceErr),
+				apierrors.IsServerTimeout(adherenceErr),
+				apierrors.IsTooManyRequests(adherenceErr),
+				apierrors.IsInternalError(adherenceErr),
+				errors.Is(adherenceErr, context.DeadlineExceeded):
+				setupLog.Info("Transient API error reading TLS adherence policy, watcher will retry", "error", adherenceErr)
+				tlsAdherenceFetched = true
+			default:
+				setupLog.Error(adherenceErr, "unable to fetch TLS adherence policy")
+				os.Exit(1)
+			}
+		} else {
+			tlsAdherenceFetched = true
 		}
-		tlsAdherenceFetched = true
 	}
 
 	mgrOpts := ctrl.Options{
