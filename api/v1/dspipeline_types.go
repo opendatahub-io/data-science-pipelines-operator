@@ -388,6 +388,15 @@ type WorkflowController struct {
 	Image         string `json:"image,omitempty"`
 	ArgoExecImage string `json:"argoExecImage,omitempty"`
 	CustomConfig  string `json:"customConfig,omitempty"`
+	// Number of replicas for the Argo Workflow Controller Deployment.
+	// Values greater than 1 enable high availability using Argo leader election:
+	// only one replica actively reconciles Workflows while others remain on hot-standby.
+	// See https://argo-workflows.readthedocs.io/en/latest/high-availability/
+	// Default: 1
+	// +kubebuilder:default:=1
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Minimum=1
+	Replicas *int32 `json:"replicas,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
 }
