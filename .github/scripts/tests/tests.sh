@@ -431,6 +431,16 @@ wait_for_dspa_mlflow_plugin() {
   fi
 }
 
+wait_for_dspa_mlflow_storage() {
+  echo "Waiting for DSPA storage deployments to be ready..."
+  kubectl wait -n "${DSPA_MLFLOW_NAMESPACE}" --timeout=90s \
+    --for=condition=Available=true deployments --all
+
+  echo "Waiting for S3 credentials secret..."
+  kubectl wait -n "${DSPA_MLFLOW_NAMESPACE}" --timeout=30s \
+    --for=jsonpath='{.data.accesskey}' secret/ds-pipeline-s3-${DSPA_MLFLOW_NAME}
+}
+
 run_tests_dspa_mlflow() {
   echo "---------------------------------"
   echo "Run DSP MLflow tests for DSPA with MLflow enabled"
@@ -440,6 +450,7 @@ run_tests_dspa_mlflow() {
   deploy_dspa_mlflow
   wait_for_dspa_mlflow_deployment
   wait_for_dspa_mlflow_plugin
+  wait_for_dspa_mlflow_storage
   (
     export DSPA_MLFLOW_NAMESPACE MLFLOW_NAMESPACE DSP_TESTS_IMAGE DSP_TESTS_IMAGE_TAG CONTAINER_CLI
     export DSPA_NAME="${DSPA_MLFLOW_NAME}"
