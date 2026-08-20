@@ -75,26 +75,34 @@ jobs:
           s3_access_key: minio
           s3_secret_key: minio123
 
-      - name: Wait for MLflow readiness
+      - name: Verify MLflow readiness
         if: ${{ steps.deploy-mlflow.outcome == 'success' }}
         run: |
-          kubectl wait --for=condition=Ready pods --field-selector=status.phase=Running \
-            -n opendatahub --timeout=180s
-          echo "All running pods in opendatahub are Ready"
+          echo "Verifying MLflow CA bundle/TLS cert exists..."
+          if kubectl get configmap mlflow-ca-bundle -n opendatahub >/dev/null 2>&1; then
+            echo "✓ Found mlflow-ca-bundle ConfigMap"
+          elif kubectl get secret mlflow-tls -n opendatahub >/dev/null 2>&1; then
+            echo "✓ Found mlflow-tls Secret"
+          else
+            echo "ERROR: Neither mlflow-ca-bundle ConfigMap nor mlflow-tls Secret found in opendatahub namespace"
+            kubectl get configmaps,secrets -n opendatahub | grep mlflow || true
+            exit 1
+          fi
+
+          echo "Waiting for MLflow CR status.address.url (max 60s)..."
           elapsed=0
           interval=5
-          timeout=300
+          timeout=60
           while [ "${elapsed}" -lt "${timeout}" ]; do
             address_url="$(kubectl get mlflow mlflow -n opendatahub -o jsonpath='{.status.address.url}' 2>/dev/null || true)"
             if [ -n "${address_url}" ]; then
-              echo "MLflow is ready at ${address_url}"
+              echo "✓ MLflow is ready at ${address_url}"
               exit 0
             fi
-            echo "Waiting for MLflow status.address.url (${elapsed}s/${timeout}s)..."
             sleep "${interval}"
             elapsed=$((elapsed + interval))
           done
-          echo "Timed out waiting for MLflow CR status.address.url"
+          echo "ERROR: MLflow status.address.url not populated after ${timeout}s"
           kubectl get mlflow mlflow -n opendatahub -o yaml || true
           exit 1
 
