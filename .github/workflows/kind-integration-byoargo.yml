@@ -34,6 +34,9 @@ concurrency:
 env:
   GIT_WORKSPACE: ${{ github.workspace }}
 
+permissions:
+  contents: read
+
 jobs:
   dspo-byoargo-tests:
     runs-on: ubuntu-latest
@@ -50,6 +53,14 @@ jobs:
 
       - name: Setup and start KinD cluster
         uses: ./.github/actions/kind
+
+      - name: Build and push DSP images
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          .github/scripts/build_dsp_images.sh
+        env:
+          REGISTRY_ADDRESS: ${{ env.REGISTRY_ADDRESS }}
 
       - name: Free up disk space
         uses: kubeflow/pipelines/.github/actions/github-disk-cleanup@master

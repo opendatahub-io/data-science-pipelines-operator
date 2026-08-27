@@ -1,0 +1,5 @@
+# BuildKit daemon config for CI - allows pushing to insecure HTTP registries.
+# REGISTRY_ADDRESS is substituted at runtime via envsubst.
+[registry."${REGISTRY_ADDRESS}"]
+  http = true
+  insecure = true
