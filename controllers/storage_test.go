@@ -27,10 +27,13 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/testutil"
 
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -559,4 +562,115 @@ S9IA40yOaVHMI51Fr1i1EIWvP8oJY8rAPWq45JnfFen3tOqKfw==
 	transport, err = getTransportWithProxyAndCACert(reconciler.Log, invalidCerts, nil, true)
 	assert.NotNil(t, err)
 	assert.Nil(t, transport)
+}
+
+func TestObjectStorageHealthCheck_SkippedWhenCredentialsFromEnv(t *testing.T) {
+	testNamespace := "testnamespace"
+	testDSPAName := "testdspa"
+
+	tests := []struct {
+		name                  string
+		credentialsMode       *dspav1.CredentialsMode
+		disableHealthCheck    bool
+		expectHealthCheckSkip bool
+		reason                string
+	}{
+		{
+			name:                  "health check skipped when credentialsMode.fromEnv is true",
+			credentialsMode:       &dspav1.CredentialsMode{FromEnv: true},
+			disableHealthCheck:    false,
+			expectHealthCheckSkip: true,
+			reason:                "IRSA mode - operator doesn't have credentials",
+		},
+		{
+			name:                  "health check skipped when explicitly disabled",
+			credentialsMode:       nil,
+			disableHealthCheck:    true,
+			expectHealthCheckSkip: true,
+			reason:                "explicitly disabled via disableHealthCheck",
+		},
+		{
+			name:                  "health check skipped when credentialsMode nil (backwards compat)",
+			credentialsMode:       nil,
+			disableHealthCheck:    false,
+			expectHealthCheckSkip: false,
+			reason:                "no credentialsMode specified - assume secret-based",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dspa := &dspav1.DataSciencePipelinesApplication{
+				Spec: dspav1.DSPASpec{
+					PodToPodTLS:        testutil.BoolPtr(false),
+					APIServer:          &dspav1.APIServer{Deploy: false},
+					MLMD:               &dspav1.MLMD{Deploy: true},
+					PersistenceAgent:   &dspav1.PersistenceAgent{Deploy: false},
+					ScheduledWorkflow:  &dspav1.ScheduledWorkflow{Deploy: false},
+					WorkflowController: &dspav1.WorkflowController{Deploy: false},
+					Database: &dspav1.Database{
+						DisableHealthCheck: false,
+						MariaDB:            &dspav1.MariaDB{Deploy: false},
+					},
+					ObjectStorage: &dspav1.ObjectStorage{
+						DisableHealthCheck: tt.disableHealthCheck,
+						Minio: &dspav1.Minio{
+							Deploy: false,
+							Image:  "testimage-Minio:test",
+						},
+						ExternalStorage: &dspav1.ExternalStorage{
+							Host:   "s3.amazonaws.com",
+							Bucket: "my-bucket",
+							Scheme: "https",
+							S3CredentialSecret: &dspav1.S3CredentialSecret{
+								SecretName: "aws-connection",
+								AccessKey:  "AWS_ACCESS_KEY_ID",
+								SecretKey:  "AWS_SECRET_ACCESS_KEY",
+							},
+							CredentialsMode: tt.credentialsMode,
+						},
+					},
+				},
+			}
+			dspa.Namespace = testNamespace
+			dspa.Name = testDSPAName
+
+			ctx, params, reconciler := CreateNewTestObjects()
+
+			// Create secret if not using fromEnv mode (otherwise secret retrieval will be skipped)
+			needsSecret := tt.credentialsMode == nil || !tt.credentialsMode.FromEnv
+			if needsSecret {
+				secret := &corev1.Secret{}
+				secret.Name = "aws-connection"
+				secret.Namespace = dspa.Namespace
+				secret.Data = map[string][]byte{
+					"AWS_ACCESS_KEY_ID":     []byte("test-access-key"),
+					"AWS_SECRET_ACCESS_KEY": []byte("test-secret-key"),
+				}
+				err := reconciler.Client.Create(ctx, secret)
+				require.NoError(t, err)
+			}
+
+			err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+			require.NoError(t, err)
+
+			// When credentialsMode.fromEnv is true, we expect AccessKeyID and SecretAccessKey to be empty
+			// because secret retrieval is skipped
+			if tt.credentialsMode != nil && tt.credentialsMode.FromEnv {
+				assert.Empty(t, params.ObjectStorageConnection.AccessKeyID, "expected no credentials when using fromEnv")
+				assert.Empty(t, params.ObjectStorageConnection.SecretAccessKey, "expected no credentials when using fromEnv")
+			}
+
+			// Test the health check behavior
+			accessible, err := reconciler.isObjectStorageAccessible(ctx, dspa, params)
+
+			if tt.expectHealthCheckSkip {
+				// Health check should be skipped - returns ErrObjectStoreSkipped sentinel error
+				assert.ErrorIs(t, err, ErrObjectStoreSkipped, "expected ErrObjectStoreSkipped when health check is skipped")
+				assert.True(t, accessible, "expected storage to be considered accessible when health check is skipped")
+			}
+			// Note: We can't fully test the "health check runs" case without a real S3 endpoint
+			// That would require integration tests
+		})
+	}
 }

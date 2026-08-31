@@ -113,12 +113,14 @@ spec:
               value: "ds-pipeline-visualizationserver"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
               value: "8888"
+            {{ if .ObjectStorageConnection.CredentialsSecret }}
             - name: OBJECTSTORECONFIG_CREDENTIALSSECRET
               value: "{{.ObjectStorageConnection.CredentialsSecret.SecretName}}"
             - name: OBJECTSTORECONFIG_CREDENTIALSACCESSKEYKEY
               value: "{{.ObjectStorageConnection.CredentialsSecret.AccessKey}}"
             - name: OBJECTSTORECONFIG_CREDENTIALSSECRETKEYKEY
               value: "{{.ObjectStorageConnection.CredentialsSecret.SecretKey}}"
+            {{ end }}
             - name: DEFAULTPIPELINERUNNERSERVICEACCOUNT
               value: "pipeline-runner-{{.Name}}"
             - name: ALLOWEDSERVICEACCOUNTS
@@ -127,6 +129,7 @@ spec:
               value: "{{.ObjectStorageConnection.Bucket}}"
             - name: OBJECTSTORECONFIG_REGION
               value: "{{.ObjectStorageConnection.Region}}"
+            {{ if .ObjectStorageConnection.CredentialsSecret }}
             - name: OBJECTSTORECONFIG_ACCESSKEY
               valueFrom:
                 secretKeyRef:
@@ -137,6 +140,7 @@ spec:
                 secretKeyRef:
                   key: "{{.ObjectStorageConnection.CredentialsSecret.SecretKey}}"
                   name: "{{.ObjectStorageConnection.CredentialsSecret.SecretName}}"
+            {{ end }}
             - name: OBJECTSTORECONFIG_SECURE
               value: "{{.ObjectStorageConnection.Secure}}"
             {{ if .ObjectStorageConnection.BasePath }}

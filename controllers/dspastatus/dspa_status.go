@@ -13,6 +13,7 @@ type DSPAStatus interface {
 	SetDatabaseNotReady(err error, reason string)
 
 	SetObjStoreReady()
+	SetObjStoreReadinessSkipped(reason string)
 	SetObjStoreNotReady(err error, reason string)
 
 	SetWebhookReady()
@@ -96,6 +97,11 @@ func (s *dspaStatus) SetDatabaseReady() {
 
 func (s *dspaStatus) SetObjStoreReady() {
 	condition := BuildTrueCondition(config.ObjectStoreAvailable, "Object Store connectivity successfully verified")
+	s.objStoreAvailable = &condition
+}
+
+func (s *dspaStatus) SetObjStoreReadinessSkipped(reason string) {
+	condition := BuildTrueCondition(config.ObjectStoreAvailable, reason)
 	s.objStoreAvailable = &condition
 }
 

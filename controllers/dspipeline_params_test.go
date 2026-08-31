@@ -929,3 +929,209 @@ func TestPasswordGen_NoPanic(t *testing.T) {
 		passwordGen(16)
 	}, "passwordGen should not panic under normal conditions")
 }
+
+func TestExtractParams_CredentialsFromEnv(t *testing.T) {
+	tests := []struct {
+		name               string
+		credentialsFromEnv bool
+		expectedFromEnv    *bool
+	}{
+		{
+			name:               "credentialsFromEnv set to true",
+			credentialsFromEnv: true,
+			expectedFromEnv:    testutil.BoolPtr(true),
+		},
+		{
+			name:               "credentialsFromEnv set to false",
+			credentialsFromEnv: false,
+			expectedFromEnv:    testutil.BoolPtr(false),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dspa := testutil.CreateEmptyDSPA()
+			dspa.Spec.ObjectStorage = &dspav1.ObjectStorage{
+				ExternalStorage: &dspav1.ExternalStorage{
+					Host:   "s3.amazonaws.com",
+					Bucket: "my-bucket",
+					Scheme: "https",
+					S3CredentialSecret: &dspav1.S3CredentialSecret{
+						SecretName: "aws-connection-creds",
+						AccessKey:  "AWS_ACCESS_KEY_ID",
+						SecretKey:  "AWS_SECRET_ACCESS_KEY",
+					},
+					CredentialsMode: &dspav1.CredentialsMode{
+						FromEnv: tt.credentialsFromEnv,
+					},
+				},
+			}
+
+			ctx, params, client := CreateNewTestObjects()
+
+			// Create the secret when credentialsFromEnv is false
+			if !tt.credentialsFromEnv {
+				secret := &corev1.Secret{}
+				secret.Name = "aws-connection-creds"
+				secret.Namespace = dspa.Namespace
+				secret.Data = map[string][]byte{
+					"AWS_ACCESS_KEY_ID":     []byte("test-access-key"),
+					"AWS_SECRET_ACCESS_KEY": []byte("test-secret-key"),
+				}
+				err := client.Client.Create(ctx, secret)
+				require.NoError(t, err)
+			}
+
+			err := params.ExtractParams(ctx, dspa, client.Client, client.Log)
+			require.NoError(t, err)
+
+			require.NotNil(t, params.CredentialsMode)
+			assert.Equal(t, *tt.expectedFromEnv, params.CredentialsMode.FromEnv)
+		})
+	}
+}
+
+func TestExtractParams_ExternalStorageRequiresCredentialsSecret(t *testing.T) {
+	dspa := testutil.CreateEmptyDSPA()
+	dspa.Spec.ObjectStorage = &dspav1.ObjectStorage{
+		ExternalStorage: &dspav1.ExternalStorage{
+			Host:   "s3.amazonaws.com",
+			Bucket: "my-bucket",
+			Scheme: "https",
+			CredentialsMode: &dspav1.CredentialsMode{
+				FromEnv: false,
+			},
+		},
+	}
+
+	ctx, params, client := CreateNewTestObjects()
+	err := params.ExtractParams(ctx, dspa, client.Client, client.Log)
+	require.EqualError(t, err, "s3CredentialsSecret is required unless credentialsMode.fromEnv is true")
+}
+
+func TestSetupObjectParams_CredentialsFromEnv(t *testing.T) {
+	tests := []struct {
+		name                 string
+		credentialsFromEnv   bool
+		shouldRetrieveSecret bool
+	}{
+		{
+			name:                 "credentialsFromEnv true - skip secret retrieval",
+			credentialsFromEnv:   true,
+			shouldRetrieveSecret: false,
+		},
+		{
+			name:                 "credentialsFromEnv false - retrieve from secret",
+			credentialsFromEnv:   false,
+			shouldRetrieveSecret: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dspa := testutil.CreateEmptyDSPA()
+			dspa.Spec.ObjectStorage = &dspav1.ObjectStorage{
+				ExternalStorage: &dspav1.ExternalStorage{
+					Host:   "s3.amazonaws.com",
+					Bucket: "my-bucket",
+					Scheme: "https",
+					S3CredentialSecret: &dspav1.S3CredentialSecret{
+						SecretName: "aws-connection-my-storage",
+						AccessKey:  "AWS_ACCESS_KEY_ID",
+						SecretKey:  "AWS_SECRET_ACCESS_KEY",
+					},
+					CredentialsMode: &dspav1.CredentialsMode{
+						FromEnv: tt.credentialsFromEnv,
+					},
+				},
+			}
+
+			ctx, params, client := CreateNewTestObjects()
+
+			// Create the secret only if we expect retrieval
+			if tt.shouldRetrieveSecret {
+				secret := &corev1.Secret{}
+				secret.Name = "aws-connection-my-storage"
+				secret.Namespace = dspa.Namespace
+				secret.Data = map[string][]byte{
+					"AWS_ACCESS_KEY_ID":     []byte("test-access-key"),
+					"AWS_SECRET_ACCESS_KEY": []byte("test-secret-key"),
+				}
+				err := client.Client.Create(ctx, secret)
+				require.NoError(t, err)
+			}
+
+			err := params.ExtractParams(ctx, dspa, client.Client, client.Log)
+			require.NoError(t, err)
+
+			// Verify FromEnv was set correctly
+			require.NotNil(t, params.CredentialsMode)
+			assert.Equal(t, tt.credentialsFromEnv, params.CredentialsMode.FromEnv)
+
+			// SetupObjectParams should be called during ExtractParams
+			// When credentialsFromEnv is true, AccessKeyID and SecretAccessKey should be empty
+			// When credentialsFromEnv is false, they should be populated from the secret
+			if tt.shouldRetrieveSecret {
+				assert.NotEmpty(t, params.ObjectStorageConnection.AccessKeyID, "expected secret to be retrieved")
+				assert.NotEmpty(t, params.ObjectStorageConnection.SecretAccessKey, "expected secret to be retrieved")
+			} else {
+				assert.Empty(t, params.ObjectStorageConnection.AccessKeyID, "expected no secret retrieval")
+				assert.Empty(t, params.ObjectStorageConnection.SecretAccessKey, "expected no secret retrieval")
+			}
+		})
+	}
+}
+
+func TestExtractParams_ServiceAccountAnnotations(t *testing.T) {
+	tests := []struct {
+		name                      string
+		serviceAccountAnnotations map[string]string
+		expected                  map[string]string
+	}{
+		{
+			name:                      "nil annotations",
+			serviceAccountAnnotations: nil,
+			expected:                  nil,
+		},
+		{
+			name:                      "empty annotations",
+			serviceAccountAnnotations: map[string]string{},
+			expected:                  map[string]string{},
+		},
+		{
+			name: "single IRSA annotation",
+			serviceAccountAnnotations: map[string]string{
+				"eks.amazonaws.com/role-arn": "arn:aws:iam::123456789012:role/my-role",
+			},
+			expected: map[string]string{
+				"eks.amazonaws.com/role-arn": "arn:aws:iam::123456789012:role/my-role",
+			},
+		},
+		{
+			name: "multiple annotations",
+			serviceAccountAnnotations: map[string]string{
+				"eks.amazonaws.com/role-arn":               "arn:aws:iam::123456789012:role/my-role",
+				"eks.amazonaws.com/sts-regional-endpoints": "regional",
+				"custom.annotation/foo":                    "bar",
+			},
+			expected: map[string]string{
+				"eks.amazonaws.com/role-arn":               "arn:aws:iam::123456789012:role/my-role",
+				"eks.amazonaws.com/sts-regional-endpoints": "regional",
+				"custom.annotation/foo":                    "bar",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dspa := testutil.CreateEmptyDSPA()
+			dspa.Spec.ServiceAccountAnnotations = tt.serviceAccountAnnotations
+
+			ctx, params, client := CreateNewTestObjects()
+			err := params.ExtractParams(ctx, dspa, client.Client, client.Log)
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.expected, params.ServiceAccountAnnotations)
+		})
+	}
+}

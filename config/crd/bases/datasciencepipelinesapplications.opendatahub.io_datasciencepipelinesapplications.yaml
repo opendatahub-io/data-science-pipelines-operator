@@ -905,7 +905,9 @@ spec:
                 properties:
                   disableHealthCheck:
                     default: false
-                    description: 'Default: false'
+                    description: |-
+                      True when credential mode is set to fromEnv
+                      Default: false
                     type: boolean
                   enableExternalRoute:
                     default: false
@@ -920,6 +922,18 @@ spec:
                         type: string
                       bucket:
                         type: string
+                      credentialsMode:
+                        properties:
+                          fromEnv:
+                            default: false
+                            description: |-
+                              FromEnv indicates whether object storage credentials should be obtained from
+                              environment variables (e.g., via IRSA, Workload Identity) rather than from a Kubernetes secret.
+                              When true, credentials are expected to be provided via the environment (projected service account tokens).
+                              When false or omitted, credentials are retrieved from the configured Kubernetes secret.
+                              Default: false
+                            type: boolean
+                        type: object
                       host:
                         type: string
                       port:
@@ -950,9 +964,13 @@ spec:
                     required:
                     - bucket
                     - host
-                    - s3CredentialsSecret
                     - scheme
                     type: object
+                    x-kubernetes-validations:
+                    - message: s3CredentialsSecret is required unless credentialsMode.fromEnv
+                        is true
+                      rule: has(self.s3CredentialsSecret) || (has(self.credentialsMode)
+                        && self.credentialsMode.fromEnv)
                   minio:
                     description: Enable DS Pipelines Operator management of Minio.
                       Setting Deploy to false disables operator reconciliation.
@@ -1302,6 +1320,14 @@ spec:
                             x-kubernetes-int-or-string: true
                         type: object
                     type: object
+                type: object
+              serviceAccountAnnotations:
+                additionalProperties:
+                  type: string
+                description: |-
+                  ServiceAccountAnnotations allows users to specify arbitrary annotations
+                  to be applied to DSPA-managed ServiceAccounts (ml-pipeline, pipeline-runner).
+                  Typically used for IRSA/Workload Identity configurations (e.g., eks.amazonaws.com/role-arn).
                 type: object
               workflowController:
                 description: WorkflowController is an argo-specific component that

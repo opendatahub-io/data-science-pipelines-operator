@@ -84,6 +84,8 @@ type DSPAParams struct {
 	WebhookAnnotations                    map[string]string
 	DBConnection
 	ObjectStorageConnection
+	CredentialsMode           *dspa.CredentialsMode
+	ServiceAccountAnnotations map[string]string
 
 	// TLS
 	// The CA bundle path used by API server
@@ -209,10 +211,15 @@ func (p *DSPAParams) UsingExternalStorage(dsp *dspa.DataSciencePipelinesApplicat
 	return false
 }
 
-// ObjectStorageHealthCheckDisabled will return the value if the Object Storage has disableHealthCheck specified in the CR, otherwise false.
+// ObjectStorageHealthCheckDisabled will return the value if the Object Storage has disableHealthCheck specified in the CR,
+// OR if credentialsMode is set to FromEnv, otherwise false.
 func (p *DSPAParams) ObjectStorageHealthCheckDisabled(dsp *dspa.DataSciencePipelinesApplication) bool {
 	if dsp.Spec.ObjectStorage != nil {
-		return dsp.Spec.ObjectStorage.DisableHealthCheck
+		var credentialsMode *dspa.CredentialsMode
+		if dsp.Spec.ObjectStorage.ExternalStorage != nil {
+			credentialsMode = dsp.Spec.ObjectStorage.ExternalStorage.CredentialsMode
+		}
+		return dsp.Spec.ObjectStorage.DisableHealthCheck || credentialsMode.IsFromEnv()
 	}
 	return false
 }
@@ -461,21 +468,28 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 
 		// Port can be empty, which is fine.
 		p.ObjectStorageConnection.Port = dsp.Spec.ObjectStorage.ExternalStorage.Port
-		p.ObjectStorageConnection.CredentialsSecret = dsp.Spec.ObjectStorage.ExternalStorage.S3CredentialSecret
 
-		// Retrieve ObjStore Creds from specified secret.  Ignore error if the secret simply doesn't exist (will be created later)
-		accesskey, err := p.RetrieveSecret(ctx, client, p.ObjectStorageConnection.CredentialsSecret.SecretName, p.ObjectStorageConnection.CredentialsSecret.AccessKey, log)
-		if err != nil && !apierrs.IsNotFound(err) {
-			log.Error(err, "Unexpected error encountered while fetching Object Storage Secret")
-			return err
+		// Retrieve ObjStore Creds from specified secret, unless auth values set by env vars (p.EnvAuth = true)
+		// Ignore error if the secret simply doesn't exist (will be created later)
+		if !p.CredentialsMode.IsFromEnv() {
+			if dsp.Spec.ObjectStorage.ExternalStorage.S3CredentialSecret == nil {
+				return fmt.Errorf("s3CredentialsSecret is required unless credentialsMode.fromEnv is true")
+			}
+			p.ObjectStorageConnection.CredentialsSecret = dsp.Spec.ObjectStorage.ExternalStorage.S3CredentialSecret
+
+			accesskey, err := p.RetrieveSecret(ctx, client, p.ObjectStorageConnection.CredentialsSecret.SecretName, p.ObjectStorageConnection.CredentialsSecret.AccessKey, log)
+			if err != nil && !apierrs.IsNotFound(err) {
+				log.Error(err, "Unexpected error encountered while fetching Object Storage Secret")
+				return err
+			}
+			secretkey, err := p.RetrieveSecret(ctx, client, p.ObjectStorageConnection.CredentialsSecret.SecretName, p.ObjectStorageConnection.CredentialsSecret.SecretKey, log)
+			if err != nil && !apierrs.IsNotFound(err) {
+				log.Error(err, "Unexpected error encountered while fetching Object Storage Secret")
+				return err
+			}
+			p.ObjectStorageConnection.AccessKeyID = accesskey
+			p.ObjectStorageConnection.SecretAccessKey = secretkey
 		}
-		secretkey, err := p.RetrieveSecret(ctx, client, p.ObjectStorageConnection.CredentialsSecret.SecretName, p.ObjectStorageConnection.CredentialsSecret.SecretKey, log)
-		if err != nil && !apierrs.IsNotFound(err) {
-			log.Error(err, "Unexpected error encountered while fetching Object Storage Secret")
-			return err
-		}
-		p.ObjectStorageConnection.AccessKeyID = accesskey
-		p.ObjectStorageConnection.SecretAccessKey = secretkey
 	} else {
 		if p.Minio == nil {
 			return fmt.Errorf("either [spec.objectStorage.minio] or [spec.objectStorage.externalStorage] " +
@@ -553,11 +567,14 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 
 	p.ObjectStorageConnection.Endpoint = endpoint
 
-	if p.ObjectStorageConnection.AccessKeyID == "" || p.ObjectStorageConnection.SecretAccessKey == "" {
-		return fmt.Errorf("object storage password from secret [%s] for keys [%s, %s] was not "+
-			"successfully retrieved, ensure that the secret with this key exist",
-			p.ObjectStorageConnection.CredentialsSecret.SecretName,
-			p.ObjectStorageConnection.CredentialsSecret.AccessKey, p.ObjectStorageConnection.CredentialsSecret.SecretKey)
+	// Only validate credentials are present if not using environment-based auth (IRSA, Workload Identity, etc.)
+	if !p.CredentialsMode.IsFromEnv() {
+		if p.ObjectStorageConnection.AccessKeyID == "" || p.ObjectStorageConnection.SecretAccessKey == "" {
+			return fmt.Errorf("object storage password from secret [%s] for keys [%s, %s] was not "+
+				"successfully retrieved, ensure that the secret with this key exist",
+				p.ObjectStorageConnection.CredentialsSecret.SecretName,
+				p.ObjectStorageConnection.CredentialsSecret.AccessKey, p.ObjectStorageConnection.CredentialsSecret.SecretKey)
+		}
 	}
 	return nil
 
@@ -789,6 +806,13 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	}
 
 	p.ProxyConfig = dsp.Spec.Proxy
+	p.ServiceAccountAnnotations = dsp.Spec.ServiceAccountAnnotations
+
+	// Extract CredentialsMode from ExternalStorage
+	externalObjectStorageEnabled := dsp.Spec.ObjectStorage != nil && dsp.Spec.ObjectStorage.ExternalStorage != nil
+	if externalObjectStorageEnabled && dsp.Spec.ObjectStorage.ExternalStorage.CredentialsMode != nil {
+		p.CredentialsMode = dsp.Spec.ObjectStorage.ExternalStorage.CredentialsMode
+	}
 
 	log := loggr.WithValues("namespace", p.Namespace).WithValues("dspa_name", p.Name)
 

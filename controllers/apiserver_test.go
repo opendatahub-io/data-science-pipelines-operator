@@ -1354,3 +1354,142 @@ func TestManagedPipelineSampleEntry_VersionNameIsPlatformVersionOnly(t *testing.
 			"managed pipeline versionName should be the platform version only")
 	})
 }
+
+func TestReconcileAPIServer_ServiceAccountAnnotations(t *testing.T) {
+	testNamespace := "testnamespace"
+	testDSPAName := "testdspa"
+
+	tests := []struct {
+		name                      string
+		serviceAccountAnnotations map[string]string
+		expectedAnnotations       map[string]string
+	}{
+		{
+			name:                      "no annotations configured",
+			serviceAccountAnnotations: nil,
+			expectedAnnotations:       nil,
+		},
+		{
+			name: "IRSA annotation configured",
+			serviceAccountAnnotations: map[string]string{
+				"eks.amazonaws.com/role-arn": "arn:aws:iam::123456789012:role/my-role",
+			},
+			expectedAnnotations: map[string]string{
+				"eks.amazonaws.com/role-arn": "arn:aws:iam::123456789012:role/my-role",
+			},
+		},
+		{
+			name: "multiple annotations configured",
+			serviceAccountAnnotations: map[string]string{
+				"eks.amazonaws.com/role-arn":               "arn:aws:iam::123456789012:role/my-role",
+				"eks.amazonaws.com/sts-regional-endpoints": "regional",
+			},
+			expectedAnnotations: map[string]string{
+				"eks.amazonaws.com/role-arn":               "arn:aws:iam::123456789012:role/my-role",
+				"eks.amazonaws.com/sts-regional-endpoints": "regional",
+			},
+		},
+		{
+			name: "annotation key containing YAML control characters is escaped",
+			serviceAccountAnnotations: map[string]string{
+				"example.com/key:\n  labels:\n    injected": "value",
+			},
+			expectedAnnotations: map[string]string{
+				"example.com/key:\n  labels:\n    injected": "value",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create DSPA with ServiceAccountAnnotations
+			dspa := &dspav1.DataSciencePipelinesApplication{
+				Spec: dspav1.DSPASpec{
+					PodToPodTLS:               testutil.BoolPtr(false),
+					ServiceAccountAnnotations: tt.serviceAccountAnnotations,
+					APIServer: &dspav1.APIServer{
+						Deploy: true,
+					},
+					MLMD: &dspav1.MLMD{
+						Deploy: true,
+					},
+					Database: &dspav1.Database{
+						DisableHealthCheck: false,
+						MariaDB: &dspav1.MariaDB{
+							Deploy: false,
+						},
+					},
+					ObjectStorage: &dspav1.ObjectStorage{
+						DisableHealthCheck: false,
+						Minio: &dspav1.Minio{
+							Deploy: false,
+							Image:  "testimage-Minio:test",
+						},
+					},
+				},
+			}
+			dspa.Namespace = testNamespace
+			dspa.Name = testDSPAName
+
+			// Create test context and reconciler
+			ctx, params, reconciler := CreateNewTestObjects()
+			err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+			require.NoError(t, err)
+
+			// Run reconciliation
+			err = reconciler.ReconcileAPIServer(ctx, dspa, params)
+			require.NoError(t, err)
+
+			// Verify ml-pipeline ServiceAccount annotations
+			mlPipelineSA := &corev1.ServiceAccount{}
+			namespacedName := types.NamespacedName{
+				Name:      "ds-pipeline-" + testDSPAName,
+				Namespace: testNamespace,
+			}
+			err = reconciler.Client.Get(ctx, namespacedName, mlPipelineSA)
+			require.NoError(t, err)
+
+			// Filter out system annotations added by manifestival
+			filterSystemAnnotations := func(annotations map[string]string) map[string]string {
+				filtered := make(map[string]string)
+				for k, v := range annotations {
+					if k != "kubectl.kubernetes.io/last-applied-configuration" && k != "manifestival" {
+						filtered[k] = v
+					}
+				}
+				return filtered
+			}
+
+			mlPipelineUserAnnotations := filterSystemAnnotations(mlPipelineSA.Annotations)
+			if tt.expectedAnnotations == nil {
+				assert.Empty(t, mlPipelineUserAnnotations, "expected no user-defined annotations")
+			} else {
+				for key, expectedValue := range tt.expectedAnnotations {
+					actualValue, ok := mlPipelineUserAnnotations[key]
+					assert.True(t, ok, "expected annotation %s not found", key)
+					assert.Equal(t, expectedValue, actualValue, "annotation %s has wrong value", key)
+				}
+			}
+
+			// Verify pipeline-runner ServiceAccount annotations
+			pipelineRunnerSA := &corev1.ServiceAccount{}
+			namespacedName = types.NamespacedName{
+				Name:      "pipeline-runner-" + testDSPAName,
+				Namespace: testNamespace,
+			}
+			err = reconciler.Client.Get(ctx, namespacedName, pipelineRunnerSA)
+			require.NoError(t, err)
+
+			pipelineRunnerUserAnnotations := filterSystemAnnotations(pipelineRunnerSA.Annotations)
+			if tt.expectedAnnotations == nil {
+				assert.Empty(t, pipelineRunnerUserAnnotations, "expected no user-defined annotations")
+			} else {
+				for key, expectedValue := range tt.expectedAnnotations {
+					actualValue, ok := pipelineRunnerUserAnnotations[key]
+					assert.True(t, ok, "expected annotation %s not found", key)
+					assert.Equal(t, expectedValue, actualValue, "annotation %s has wrong value", key)
+				}
+			}
+		})
+	}
+}

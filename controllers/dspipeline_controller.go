@@ -453,7 +453,9 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	objStoreAvailable, err := r.isObjectStorageAccessible(ctx, dspa, params)
-	if err != nil {
+	if errors.Is(err, ErrObjectStoreSkipped) {
+		dspaStatus.SetObjStoreReadinessSkipped("Object Store connectivity verification skipped due to CredentialsMode")
+	} else if err != nil {
 		dspaStatus.SetObjStoreNotReady(err, config.FailingToDeploy)
 	} else {
 		dspaStatus.SetObjStoreReady()

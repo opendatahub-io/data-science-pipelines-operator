@@ -6,3 +6,9 @@ metadata:
   labels:
     app: {{.APIServerDefaultResourceName}}
     component: data-science-pipelines
+  {{- if .ServiceAccountAnnotations }}
+  annotations:
+    {{- range $key, $value := .ServiceAccountAnnotations }}
+    {{ printf "%q" $key }}: {{ printf "%q" $value }}
+    {{- end }}
+  {{- end }}
