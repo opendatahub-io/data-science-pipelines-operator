@@ -19,11 +19,11 @@ package config
 import (
 	"bytes"
 	"io"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"os"
 	"text/template"
 
 	mf "github.com/manifestival/manifestival"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // PathPrefix is the file system path which template paths will be prefixed with.

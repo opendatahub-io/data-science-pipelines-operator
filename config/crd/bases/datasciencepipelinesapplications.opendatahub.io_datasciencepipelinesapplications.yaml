@@ -212,6 +212,45 @@ spec:
                     - database
                     - kubernetes
                     type: string
+                  resourceClaims:
+                    description: |-
+                      ResourceClaims defines which ResourceClaims must be allocated
+                      and reserved before the Pod is allowed to start.
+                    items:
+                      description: |-
+                        PodResourceClaim references exactly one ResourceClaim, either directly or
+                        through a ResourceClaimTemplate.
+                      properties:
+                        name:
+                          description: Name uniquely identifies this resource claim
+                            inside the pod.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                          type: string
+                        resourceClaimName:
+                          description: ResourceClaimName names an existing ResourceClaim
+                            in the pod namespace.
+                          maxLength: 253
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                        resourceClaimTemplateName:
+                          description: ResourceClaimTemplateName names a ResourceClaimTemplate
+                            in the pod namespace.
+                          maxLength: 253
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                      required:
+                      - name
+                      type: object
+                      x-kubernetes-validations:
+                      - message: exactly one of resourceClaimName and resourceClaimTemplateName
+                          must be set
+                        rule: has(self.resourceClaimName) != has(self.resourceClaimTemplateName)
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
                   resourceTTL:
                     description: |-
                       ResourceTTL specifies the duration after a pipeline run completes before its
@@ -561,6 +600,45 @@ spec:
                           default MariaDB instance. Default: 10Gi'
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
+                      resourceClaims:
+                        description: |-
+                          ResourceClaims defines which ResourceClaims must be allocated
+                          and reserved before the Pod is allowed to start.
+                        items:
+                          description: |-
+                            PodResourceClaim references exactly one ResourceClaim, either directly or
+                            through a ResourceClaimTemplate.
+                          properties:
+                            name:
+                              description: Name uniquely identifies this resource
+                                claim inside the pod.
+                              maxLength: 63
+                              minLength: 1
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                              type: string
+                            resourceClaimName:
+                              description: ResourceClaimName names an existing ResourceClaim
+                                in the pod namespace.
+                              maxLength: 253
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                              type: string
+                            resourceClaimTemplateName:
+                              description: ResourceClaimTemplateName names a ResourceClaimTemplate
+                                in the pod namespace.
+                              maxLength: 253
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                              type: string
+                          required:
+                          - name
+                          type: object
+                          x-kubernetes-validations:
+                          - message: exactly one of resourceClaimName and resourceClaimTemplateName
+                              must be set
+                            rule: has(self.resourceClaimName) != has(self.resourceClaimTemplateName)
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
                       resources:
                         description: Specify custom Pod resource requirements for
                           this component.
@@ -647,6 +725,45 @@ spec:
                         type: boolean
                       image:
                         type: string
+                      resourceClaims:
+                        description: |-
+                          ResourceClaims defines which ResourceClaims must be allocated
+                          and reserved before the Pod is allowed to start.
+                        items:
+                          description: |-
+                            PodResourceClaim references exactly one ResourceClaim, either directly or
+                            through a ResourceClaimTemplate.
+                          properties:
+                            name:
+                              description: Name uniquely identifies this resource
+                                claim inside the pod.
+                              maxLength: 63
+                              minLength: 1
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                              type: string
+                            resourceClaimName:
+                              description: ResourceClaimName names an existing ResourceClaim
+                                in the pod namespace.
+                              maxLength: 253
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                              type: string
+                            resourceClaimTemplateName:
+                              description: ResourceClaimTemplateName names a ResourceClaimTemplate
+                                in the pod namespace.
+                              maxLength: 253
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                              type: string
+                          required:
+                          - name
+                          type: object
+                          x-kubernetes-validations:
+                          - message: exactly one of resourceClaimName and resourceClaimTemplateName
+                              must be set
+                            rule: has(self.resourceClaimName) != has(self.resourceClaimTemplateName)
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
                       resources:
                         description: |-
                           ResourceRequirements structures compute resource requirements.
@@ -691,6 +808,45 @@ spec:
                         type: string
                       port:
                         type: string
+                      resourceClaims:
+                        description: |-
+                          ResourceClaims defines which ResourceClaims must be allocated
+                          and reserved before the Pod is allowed to start.
+                        items:
+                          description: |-
+                            PodResourceClaim references exactly one ResourceClaim, either directly or
+                            through a ResourceClaimTemplate.
+                          properties:
+                            name:
+                              description: Name uniquely identifies this resource
+                                claim inside the pod.
+                              maxLength: 63
+                              minLength: 1
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                              type: string
+                            resourceClaimName:
+                              description: ResourceClaimName names an existing ResourceClaim
+                                in the pod namespace.
+                              maxLength: 253
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                              type: string
+                            resourceClaimTemplateName:
+                              description: ResourceClaimTemplateName names a ResourceClaimTemplate
+                                in the pod namespace.
+                              maxLength: 253
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                              type: string
+                          required:
+                          - name
+                          type: object
+                          x-kubernetes-validations:
+                          - message: exactly one of resourceClaimName and resourceClaimTemplateName
+                              must be set
+                            rule: has(self.resourceClaimName) != has(self.resourceClaimTemplateName)
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
                       resources:
                         description: |-
                           ResourceRequirements structures compute resource requirements.
@@ -817,6 +973,45 @@ spec:
                           Minio instance. Default: 10Gi'
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
+                      resourceClaims:
+                        description: |-
+                          ResourceClaims defines which ResourceClaims must be allocated
+                          and reserved before the Pod is allowed to start.
+                        items:
+                          description: |-
+                            PodResourceClaim references exactly one ResourceClaim, either directly or
+                            through a ResourceClaimTemplate.
+                          properties:
+                            name:
+                              description: Name uniquely identifies this resource
+                                claim inside the pod.
+                              maxLength: 63
+                              minLength: 1
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                              type: string
+                            resourceClaimName:
+                              description: ResourceClaimName names an existing ResourceClaim
+                                in the pod namespace.
+                              maxLength: 253
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                              type: string
+                            resourceClaimTemplateName:
+                              description: ResourceClaimTemplateName names a ResourceClaimTemplate
+                                in the pod namespace.
+                              maxLength: 253
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                              type: string
+                          required:
+                          - name
+                          type: object
+                          x-kubernetes-validations:
+                          - message: exactly one of resourceClaimName and resourceClaimTemplateName
+                              must be set
+                            rule: has(self.resourceClaimName) != has(self.resourceClaimTemplateName)
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
                       resources:
                         description: Specify custom Pod resource requirements for
                           this component.
@@ -900,6 +1095,45 @@ spec:
                     description: 'Number of worker for Persistence Agent sync job.
                       Default: 2'
                     type: integer
+                  resourceClaims:
+                    description: |-
+                      ResourceClaims defines which ResourceClaims must be allocated
+                      and reserved before the Pod is allowed to start.
+                    items:
+                      description: |-
+                        PodResourceClaim references exactly one ResourceClaim, either directly or
+                        through a ResourceClaimTemplate.
+                      properties:
+                        name:
+                          description: Name uniquely identifies this resource claim
+                            inside the pod.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                          type: string
+                        resourceClaimName:
+                          description: ResourceClaimName names an existing ResourceClaim
+                            in the pod namespace.
+                          maxLength: 253
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                        resourceClaimTemplateName:
+                          description: ResourceClaimTemplateName names a ResourceClaimTemplate
+                            in the pod namespace.
+                          maxLength: 253
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                      required:
+                      - name
+                      type: object
+                      x-kubernetes-validations:
+                      - message: exactly one of resourceClaimName and resourceClaimTemplateName
+                          must be set
+                        rule: has(self.resourceClaimName) != has(self.resourceClaimTemplateName)
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
                   resources:
                     description: Specify custom Pod resource requirements for this
                       component.
@@ -984,6 +1218,45 @@ spec:
                     description: Specify a custom image for DSP ScheduledWorkflow
                       controller.
                     type: string
+                  resourceClaims:
+                    description: |-
+                      ResourceClaims defines which ResourceClaims must be allocated
+                      and reserved before the Pod is allowed to start.
+                    items:
+                      description: |-
+                        PodResourceClaim references exactly one ResourceClaim, either directly or
+                        through a ResourceClaimTemplate.
+                      properties:
+                        name:
+                          description: Name uniquely identifies this resource claim
+                            inside the pod.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                          type: string
+                        resourceClaimName:
+                          description: ResourceClaimName names an existing ResourceClaim
+                            in the pod namespace.
+                          maxLength: 253
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                        resourceClaimTemplateName:
+                          description: ResourceClaimTemplateName names a ResourceClaimTemplate
+                            in the pod namespace.
+                          maxLength: 253
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                      required:
+                      - name
+                      type: object
+                      x-kubernetes-validations:
+                      - message: exactly one of resourceClaimName and resourceClaimTemplateName
+                          must be set
+                        rule: has(self.resourceClaimName) != has(self.resourceClaimTemplateName)
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
                   resources:
                     description: Specify custom Pod resource requirements for this
                       component.
@@ -1037,6 +1310,45 @@ spec:
                     type: boolean
                   image:
                     type: string
+                  resourceClaims:
+                    description: |-
+                      ResourceClaims defines which ResourceClaims must be allocated
+                      and reserved before the Pod is allowed to start.
+                    items:
+                      description: |-
+                        PodResourceClaim references exactly one ResourceClaim, either directly or
+                        through a ResourceClaimTemplate.
+                      properties:
+                        name:
+                          description: Name uniquely identifies this resource claim
+                            inside the pod.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                          type: string
+                        resourceClaimName:
+                          description: ResourceClaimName names an existing ResourceClaim
+                            in the pod namespace.
+                          maxLength: 253
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                        resourceClaimTemplateName:
+                          description: ResourceClaimTemplateName names a ResourceClaimTemplate
+                            in the pod namespace.
+                          maxLength: 253
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                      required:
+                      - name
+                      type: object
+                      x-kubernetes-validations:
+                      - message: exactly one of resourceClaimName and resourceClaimTemplateName
+                          must be set
+                        rule: has(self.resourceClaimName) != has(self.resourceClaimTemplateName)
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
                   resources:
                     description: Specify custom Pod resource requirements for this
                       component.
