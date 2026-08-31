@@ -145,6 +145,18 @@ spec:
               name: ca-bundle
             {{ end }}
         {{ end }}
+      {{ if .MLMD.Envoy.ResourceClaims }}
+      resourceClaims:
+      {{ range .MLMD.Envoy.ResourceClaims }}
+        - name: {{ .Name }}
+          {{ if .ResourceClaimName }}
+          resourceClaimName: {{ .ResourceClaimName }}
+          {{ end }}
+          {{ if .ResourceClaimTemplateName }}
+          resourceClaimTemplateName: {{ .ResourceClaimTemplateName }}
+          {{ end }}
+      {{ end }}
+      {{ end }}
       serviceAccountName: ds-pipeline-metadata-envoy-{{.Name}}
       volumes:
         - name: envoy-config

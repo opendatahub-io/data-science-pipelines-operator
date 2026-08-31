@@ -97,6 +97,18 @@ spec:
             - mountPath: {{ .CustomCABundleRootMountPath  }}
               name: ca-bundle
             {{ end }}
+      {{ if .ScheduledWorkflow.ResourceClaims }}
+      resourceClaims:
+      {{ range .ScheduledWorkflow.ResourceClaims }}
+        - name: {{ .Name }}
+          {{ if .ResourceClaimName }}
+          resourceClaimName: {{ .ResourceClaimName }}
+          {{ end }}
+          {{ if .ResourceClaimTemplateName }}
+          resourceClaimTemplateName: {{ .ResourceClaimTemplateName }}
+          {{ end }}
+      {{ end }}
+      {{ end }}
       serviceAccountName: {{.ScheduledWorkflowDefaultResourceName}}
       volumes:
         {{ if and .CustomCABundle .PodToPodTLS }}

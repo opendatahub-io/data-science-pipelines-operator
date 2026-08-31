@@ -113,6 +113,18 @@ spec:
             - name: ds-pipeline-metadata-grpc-tls-certs-{{.Name}}
               mountPath: "/etc/tls"
             {{ end }}
+      {{ if .MLMD.GRPC.ResourceClaims }}
+      resourceClaims:
+      {{ range .MLMD.GRPC.ResourceClaims }}
+        - name: {{ .Name }}
+          {{ if .ResourceClaimName }}
+          resourceClaimName: {{ .ResourceClaimName }}
+          {{ end }}
+          {{ if .ResourceClaimTemplateName }}
+          resourceClaimTemplateName: {{ .ResourceClaimTemplateName }}
+          {{ end }}
+      {{ end }}
+      {{ end }}
       serviceAccountName: ds-pipeline-metadata-grpc-{{.Name}}
       volumes:
         {{ if .CustomCABundle }}

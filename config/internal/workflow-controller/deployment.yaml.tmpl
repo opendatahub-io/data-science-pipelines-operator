@@ -100,4 +100,16 @@ spec:
         kubernetes.io/os: linux
       securityContext:
         runAsNonRoot: true
+      {{ if .WorkflowController.ResourceClaims }}
+      resourceClaims:
+      {{ range .WorkflowController.ResourceClaims }}
+        - name: {{ .Name }}
+          {{ if .ResourceClaimName }}
+          resourceClaimName: {{ .ResourceClaimName }}
+          {{ end }}
+          {{ if .ResourceClaimTemplateName }}
+          resourceClaimTemplateName: {{ .ResourceClaimTemplateName }}
+          {{ end }}
+      {{ end }}
+      {{ end }}
       serviceAccountName: ds-pipeline-workflow-controller-{{.Name}}

@@ -212,6 +212,54 @@ spec:
                     - database
                     - kubernetes
                     type: string
+                  resourceClaims:
+                    description: |-
+                      ResourceClaims defines which ResourceClaims must be allocated
+                      and reserved before the Pod is allowed to start.
+                    items:
+                      description: |-
+                        PodResourceClaim references exactly one ResourceClaim, either directly
+                        or by naming a ResourceClaimTemplate which is then turned into a ResourceClaim
+                        for the pod.
+
+                        It adds a name to it that uniquely identifies the ResourceClaim inside the Pod.
+                        Containers that need access to the ResourceClaim reference it with this name.
+                      properties:
+                        name:
+                          description: |-
+                            Name uniquely identifies this resource claim inside the pod.
+                            This must be a DNS_LABEL.
+                          type: string
+                        resourceClaimName:
+                          description: |-
+                            ResourceClaimName is the name of a ResourceClaim object in the same
+                            namespace as this pod.
+
+                            Exactly one of ResourceClaimName and ResourceClaimTemplateName must
+                            be set.
+                          type: string
+                        resourceClaimTemplateName:
+                          description: |-
+                            ResourceClaimTemplateName is the name of a ResourceClaimTemplate
+                            object in the same namespace as this pod.
+
+                            The template will be used to create a new ResourceClaim, which will
+                            be bound to this pod. When this pod is deleted, the ResourceClaim
+                            will also be deleted. The pod name and resource name, along with a
+                            generated component, will be used to form a unique name for the
+                            ResourceClaim, which will be recorded in pod.status.resourceClaimStatuses.
+
+                            This field is immutable and no changes will be made to the
+                            corresponding ResourceClaim by the control plane after creating the
+                            ResourceClaim.
+
+                            Exactly one of ResourceClaimName and ResourceClaimTemplateName must
+                            be set.
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
                   resourceTTL:
                     description: |-
                       ResourceTTL specifies the duration after a pipeline run completes before its
@@ -561,6 +609,54 @@ spec:
                           default MariaDB instance. Default: 10Gi'
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
+                      resourceClaims:
+                        description: |-
+                          ResourceClaims defines which ResourceClaims must be allocated
+                          and reserved before the Pod is allowed to start.
+                        items:
+                          description: |-
+                            PodResourceClaim references exactly one ResourceClaim, either directly
+                            or by naming a ResourceClaimTemplate which is then turned into a ResourceClaim
+                            for the pod.
+
+                            It adds a name to it that uniquely identifies the ResourceClaim inside the Pod.
+                            Containers that need access to the ResourceClaim reference it with this name.
+                          properties:
+                            name:
+                              description: |-
+                                Name uniquely identifies this resource claim inside the pod.
+                                This must be a DNS_LABEL.
+                              type: string
+                            resourceClaimName:
+                              description: |-
+                                ResourceClaimName is the name of a ResourceClaim object in the same
+                                namespace as this pod.
+
+                                Exactly one of ResourceClaimName and ResourceClaimTemplateName must
+                                be set.
+                              type: string
+                            resourceClaimTemplateName:
+                              description: |-
+                                ResourceClaimTemplateName is the name of a ResourceClaimTemplate
+                                object in the same namespace as this pod.
+
+                                The template will be used to create a new ResourceClaim, which will
+                                be bound to this pod. When this pod is deleted, the ResourceClaim
+                                will also be deleted. The pod name and resource name, along with a
+                                generated component, will be used to form a unique name for the
+                                ResourceClaim, which will be recorded in pod.status.resourceClaimStatuses.
+
+                                This field is immutable and no changes will be made to the
+                                corresponding ResourceClaim by the control plane after creating the
+                                ResourceClaim.
+
+                                Exactly one of ResourceClaimName and ResourceClaimTemplateName must
+                                be set.
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        type: array
                       resources:
                         description: Specify custom Pod resource requirements for
                           this component.
@@ -647,6 +743,54 @@ spec:
                         type: boolean
                       image:
                         type: string
+                      resourceClaims:
+                        description: |-
+                          ResourceClaims defines which ResourceClaims must be allocated
+                          and reserved before the Pod is allowed to start.
+                        items:
+                          description: |-
+                            PodResourceClaim references exactly one ResourceClaim, either directly
+                            or by naming a ResourceClaimTemplate which is then turned into a ResourceClaim
+                            for the pod.
+
+                            It adds a name to it that uniquely identifies the ResourceClaim inside the Pod.
+                            Containers that need access to the ResourceClaim reference it with this name.
+                          properties:
+                            name:
+                              description: |-
+                                Name uniquely identifies this resource claim inside the pod.
+                                This must be a DNS_LABEL.
+                              type: string
+                            resourceClaimName:
+                              description: |-
+                                ResourceClaimName is the name of a ResourceClaim object in the same
+                                namespace as this pod.
+
+                                Exactly one of ResourceClaimName and ResourceClaimTemplateName must
+                                be set.
+                              type: string
+                            resourceClaimTemplateName:
+                              description: |-
+                                ResourceClaimTemplateName is the name of a ResourceClaimTemplate
+                                object in the same namespace as this pod.
+
+                                The template will be used to create a new ResourceClaim, which will
+                                be bound to this pod. When this pod is deleted, the ResourceClaim
+                                will also be deleted. The pod name and resource name, along with a
+                                generated component, will be used to form a unique name for the
+                                ResourceClaim, which will be recorded in pod.status.resourceClaimStatuses.
+
+                                This field is immutable and no changes will be made to the
+                                corresponding ResourceClaim by the control plane after creating the
+                                ResourceClaim.
+
+                                Exactly one of ResourceClaimName and ResourceClaimTemplateName must
+                                be set.
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        type: array
                       resources:
                         description: |-
                           ResourceRequirements structures compute resource requirements.
@@ -691,6 +835,54 @@ spec:
                         type: string
                       port:
                         type: string
+                      resourceClaims:
+                        description: |-
+                          ResourceClaims defines which ResourceClaims must be allocated
+                          and reserved before the Pod is allowed to start.
+                        items:
+                          description: |-
+                            PodResourceClaim references exactly one ResourceClaim, either directly
+                            or by naming a ResourceClaimTemplate which is then turned into a ResourceClaim
+                            for the pod.
+
+                            It adds a name to it that uniquely identifies the ResourceClaim inside the Pod.
+                            Containers that need access to the ResourceClaim reference it with this name.
+                          properties:
+                            name:
+                              description: |-
+                                Name uniquely identifies this resource claim inside the pod.
+                                This must be a DNS_LABEL.
+                              type: string
+                            resourceClaimName:
+                              description: |-
+                                ResourceClaimName is the name of a ResourceClaim object in the same
+                                namespace as this pod.
+
+                                Exactly one of ResourceClaimName and ResourceClaimTemplateName must
+                                be set.
+                              type: string
+                            resourceClaimTemplateName:
+                              description: |-
+                                ResourceClaimTemplateName is the name of a ResourceClaimTemplate
+                                object in the same namespace as this pod.
+
+                                The template will be used to create a new ResourceClaim, which will
+                                be bound to this pod. When this pod is deleted, the ResourceClaim
+                                will also be deleted. The pod name and resource name, along with a
+                                generated component, will be used to form a unique name for the
+                                ResourceClaim, which will be recorded in pod.status.resourceClaimStatuses.
+
+                                This field is immutable and no changes will be made to the
+                                corresponding ResourceClaim by the control plane after creating the
+                                ResourceClaim.
+
+                                Exactly one of ResourceClaimName and ResourceClaimTemplateName must
+                                be set.
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        type: array
                       resources:
                         description: |-
                           ResourceRequirements structures compute resource requirements.
@@ -817,6 +1009,54 @@ spec:
                           Minio instance. Default: 10Gi'
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
+                      resourceClaims:
+                        description: |-
+                          ResourceClaims defines which ResourceClaims must be allocated
+                          and reserved before the Pod is allowed to start.
+                        items:
+                          description: |-
+                            PodResourceClaim references exactly one ResourceClaim, either directly
+                            or by naming a ResourceClaimTemplate which is then turned into a ResourceClaim
+                            for the pod.
+
+                            It adds a name to it that uniquely identifies the ResourceClaim inside the Pod.
+                            Containers that need access to the ResourceClaim reference it with this name.
+                          properties:
+                            name:
+                              description: |-
+                                Name uniquely identifies this resource claim inside the pod.
+                                This must be a DNS_LABEL.
+                              type: string
+                            resourceClaimName:
+                              description: |-
+                                ResourceClaimName is the name of a ResourceClaim object in the same
+                                namespace as this pod.
+
+                                Exactly one of ResourceClaimName and ResourceClaimTemplateName must
+                                be set.
+                              type: string
+                            resourceClaimTemplateName:
+                              description: |-
+                                ResourceClaimTemplateName is the name of a ResourceClaimTemplate
+                                object in the same namespace as this pod.
+
+                                The template will be used to create a new ResourceClaim, which will
+                                be bound to this pod. When this pod is deleted, the ResourceClaim
+                                will also be deleted. The pod name and resource name, along with a
+                                generated component, will be used to form a unique name for the
+                                ResourceClaim, which will be recorded in pod.status.resourceClaimStatuses.
+
+                                This field is immutable and no changes will be made to the
+                                corresponding ResourceClaim by the control plane after creating the
+                                ResourceClaim.
+
+                                Exactly one of ResourceClaimName and ResourceClaimTemplateName must
+                                be set.
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        type: array
                       resources:
                         description: Specify custom Pod resource requirements for
                           this component.
@@ -900,6 +1140,54 @@ spec:
                     description: 'Number of worker for Persistence Agent sync job.
                       Default: 2'
                     type: integer
+                  resourceClaims:
+                    description: |-
+                      ResourceClaims defines which ResourceClaims must be allocated
+                      and reserved before the Pod is allowed to start.
+                    items:
+                      description: |-
+                        PodResourceClaim references exactly one ResourceClaim, either directly
+                        or by naming a ResourceClaimTemplate which is then turned into a ResourceClaim
+                        for the pod.
+
+                        It adds a name to it that uniquely identifies the ResourceClaim inside the Pod.
+                        Containers that need access to the ResourceClaim reference it with this name.
+                      properties:
+                        name:
+                          description: |-
+                            Name uniquely identifies this resource claim inside the pod.
+                            This must be a DNS_LABEL.
+                          type: string
+                        resourceClaimName:
+                          description: |-
+                            ResourceClaimName is the name of a ResourceClaim object in the same
+                            namespace as this pod.
+
+                            Exactly one of ResourceClaimName and ResourceClaimTemplateName must
+                            be set.
+                          type: string
+                        resourceClaimTemplateName:
+                          description: |-
+                            ResourceClaimTemplateName is the name of a ResourceClaimTemplate
+                            object in the same namespace as this pod.
+
+                            The template will be used to create a new ResourceClaim, which will
+                            be bound to this pod. When this pod is deleted, the ResourceClaim
+                            will also be deleted. The pod name and resource name, along with a
+                            generated component, will be used to form a unique name for the
+                            ResourceClaim, which will be recorded in pod.status.resourceClaimStatuses.
+
+                            This field is immutable and no changes will be made to the
+                            corresponding ResourceClaim by the control plane after creating the
+                            ResourceClaim.
+
+                            Exactly one of ResourceClaimName and ResourceClaimTemplateName must
+                            be set.
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
                   resources:
                     description: Specify custom Pod resource requirements for this
                       component.
@@ -984,6 +1272,54 @@ spec:
                     description: Specify a custom image for DSP ScheduledWorkflow
                       controller.
                     type: string
+                  resourceClaims:
+                    description: |-
+                      ResourceClaims defines which ResourceClaims must be allocated
+                      and reserved before the Pod is allowed to start.
+                    items:
+                      description: |-
+                        PodResourceClaim references exactly one ResourceClaim, either directly
+                        or by naming a ResourceClaimTemplate which is then turned into a ResourceClaim
+                        for the pod.
+
+                        It adds a name to it that uniquely identifies the ResourceClaim inside the Pod.
+                        Containers that need access to the ResourceClaim reference it with this name.
+                      properties:
+                        name:
+                          description: |-
+                            Name uniquely identifies this resource claim inside the pod.
+                            This must be a DNS_LABEL.
+                          type: string
+                        resourceClaimName:
+                          description: |-
+                            ResourceClaimName is the name of a ResourceClaim object in the same
+                            namespace as this pod.
+
+                            Exactly one of ResourceClaimName and ResourceClaimTemplateName must
+                            be set.
+                          type: string
+                        resourceClaimTemplateName:
+                          description: |-
+                            ResourceClaimTemplateName is the name of a ResourceClaimTemplate
+                            object in the same namespace as this pod.
+
+                            The template will be used to create a new ResourceClaim, which will
+                            be bound to this pod. When this pod is deleted, the ResourceClaim
+                            will also be deleted. The pod name and resource name, along with a
+                            generated component, will be used to form a unique name for the
+                            ResourceClaim, which will be recorded in pod.status.resourceClaimStatuses.
+
+                            This field is immutable and no changes will be made to the
+                            corresponding ResourceClaim by the control plane after creating the
+                            ResourceClaim.
+
+                            Exactly one of ResourceClaimName and ResourceClaimTemplateName must
+                            be set.
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
                   resources:
                     description: Specify custom Pod resource requirements for this
                       component.
@@ -1037,6 +1373,54 @@ spec:
                     type: boolean
                   image:
                     type: string
+                  resourceClaims:
+                    description: |-
+                      ResourceClaims defines which ResourceClaims must be allocated
+                      and reserved before the Pod is allowed to start.
+                    items:
+                      description: |-
+                        PodResourceClaim references exactly one ResourceClaim, either directly
+                        or by naming a ResourceClaimTemplate which is then turned into a ResourceClaim
+                        for the pod.
+
+                        It adds a name to it that uniquely identifies the ResourceClaim inside the Pod.
+                        Containers that need access to the ResourceClaim reference it with this name.
+                      properties:
+                        name:
+                          description: |-
+                            Name uniquely identifies this resource claim inside the pod.
+                            This must be a DNS_LABEL.
+                          type: string
+                        resourceClaimName:
+                          description: |-
+                            ResourceClaimName is the name of a ResourceClaim object in the same
+                            namespace as this pod.
+
+                            Exactly one of ResourceClaimName and ResourceClaimTemplateName must
+                            be set.
+                          type: string
+                        resourceClaimTemplateName:
+                          description: |-
+                            ResourceClaimTemplateName is the name of a ResourceClaimTemplate
+                            object in the same namespace as this pod.
+
+                            The template will be used to create a new ResourceClaim, which will
+                            be bound to this pod. When this pod is deleted, the ResourceClaim
+                            will also be deleted. The pod name and resource name, along with a
+                            generated component, will be used to form a unique name for the
+                            ResourceClaim, which will be recorded in pod.status.resourceClaimStatuses.
+
+                            This field is immutable and no changes will be made to the
+                            corresponding ResourceClaim by the control plane after creating the
+                            ResourceClaim.
+
+                            Exactly one of ResourceClaimName and ResourceClaimTemplateName must
+                            be set.
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
                   resources:
                     description: Specify custom Pod resource requirements for this
                       component.

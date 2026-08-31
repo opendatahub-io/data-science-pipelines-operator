@@ -118,6 +118,18 @@ spec:
             - mountPath: {{ .CustomCABundleRootMountPath  }}
               name: ca-bundle
             {{ end }}
+      {{ if .PersistenceAgent.ResourceClaims }}
+      resourceClaims:
+      {{ range .PersistenceAgent.ResourceClaims }}
+        - name: {{ .Name }}
+          {{ if .ResourceClaimName }}
+          resourceClaimName: {{ .ResourceClaimName }}
+          {{ end }}
+          {{ if .ResourceClaimTemplateName }}
+          resourceClaimTemplateName: {{ .ResourceClaimTemplateName }}
+          {{ end }}
+      {{ end }}
+      {{ end }}
       serviceAccountName: ds-pipeline-persistenceagent-{{.Name}}
       volumes:
         - name: persistenceagent-sa-token

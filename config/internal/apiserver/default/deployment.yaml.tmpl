@@ -360,6 +360,18 @@ spec:
               name: ca-bundle
             {{ end }}
         {{ end }}
+      {{ if .APIServer.ResourceClaims }}
+      resourceClaims:
+      {{ range .APIServer.ResourceClaims }}
+        - name: {{ .Name }}
+          {{ if .ResourceClaimName }}
+          resourceClaimName: {{ .ResourceClaimName }}
+          {{ end }}
+          {{ if .ResourceClaimTemplateName }}
+          resourceClaimTemplateName: {{ .ResourceClaimTemplateName }}
+          {{ end }}
+      {{ end }}
+      {{ end }}
       serviceAccountName: {{.APIServerDefaultResourceName}}
       volumes:
         - name: proxy-tls

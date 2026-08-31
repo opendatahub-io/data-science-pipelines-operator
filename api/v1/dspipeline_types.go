@@ -131,6 +131,10 @@ type APIServer struct {
 	ManagedPipelines *ManagedPipelinesSpec `json:"managedPipelines,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
+	// ResourceClaims defines which ResourceClaims must be allocated
+	// and reserved before the Pod is allowed to start.
+	// +kubebuilder:validation:Optional
+	ResourceClaims []corev1.PodResourceClaim `json:"resourceClaims,omitempty"`
 
 	// If the Object store/DB is behind a TLS secured connection that is
 	// unrecognized by the host OpenShift/K8s cluster, then you can
@@ -239,6 +243,10 @@ type PersistenceAgent struct {
 	NumWorkers int `json:"numWorkers,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
+	// ResourceClaims defines which ResourceClaims must be allocated
+	// and reserved before the Pod is allowed to start.
+	// +kubebuilder:validation:Optional
+	ResourceClaims []corev1.PodResourceClaim `json:"resourceClaims,omitempty"`
 }
 
 type ScheduledWorkflow struct {
@@ -253,6 +261,10 @@ type ScheduledWorkflow struct {
 	CronScheduleTimezone string `json:"cronScheduleTimezone,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
+	// ResourceClaims defines which ResourceClaims must be allocated
+	// and reserved before the Pod is allowed to start.
+	// +kubebuilder:validation:Optional
+	ResourceClaims []corev1.PodResourceClaim `json:"resourceClaims,omitempty"`
 }
 
 type Database struct {
@@ -301,6 +313,10 @@ type MariaDB struct {
 	StorageClassName string `json:"storageClassName,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
+	// ResourceClaims defines which ResourceClaims must be allocated
+	// and reserved before the Pod is allowed to start.
+	// +kubebuilder:validation:Optional
+	ResourceClaims []corev1.PodResourceClaim `json:"resourceClaims,omitempty"`
 }
 
 type ExternalDB struct {
@@ -344,6 +360,10 @@ type Minio struct {
 	StorageClassName string `json:"storageClassName,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
+	// ResourceClaims defines which ResourceClaims must be allocated
+	// and reserved before the Pod is allowed to start.
+	// +kubebuilder:validation:Optional
+	ResourceClaims []corev1.PodResourceClaim `json:"resourceClaims,omitempty"`
 	// Specify a custom image for Minio pod.
 	// +kubebuilder:validation:Required
 	Image string `json:"image"`
@@ -360,7 +380,11 @@ type MLMD struct {
 
 type Envoy struct {
 	Resources *ResourceRequirements `json:"resources,omitempty"`
-	Image     string                `json:"image,omitempty"`
+	// ResourceClaims defines which ResourceClaims must be allocated
+	// and reserved before the Pod is allowed to start.
+	// +kubebuilder:validation:Optional
+	ResourceClaims []corev1.PodResourceClaim `json:"resourceClaims,omitempty"`
+	Image          string                    `json:"image,omitempty"`
 	// +kubebuilder:default:=true
 	// +kubebuilder:validation:Optional
 	DeployRoute bool `json:"deployRoute"`
@@ -368,7 +392,11 @@ type Envoy struct {
 
 type GRPC struct {
 	Resources *ResourceRequirements `json:"resources,omitempty"`
-	Image     string                `json:"image,omitempty"`
+	// ResourceClaims defines which ResourceClaims must be allocated
+	// and reserved before the Pod is allowed to start.
+	// +kubebuilder:validation:Optional
+	ResourceClaims []corev1.PodResourceClaim `json:"resourceClaims,omitempty"`
+	Image          string                    `json:"image,omitempty"`
 	// +kubebuilder:validation:Optional
 	Port string `json:"port"`
 }
@@ -390,6 +418,10 @@ type WorkflowController struct {
 	CustomConfig  string `json:"customConfig,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
+	// ResourceClaims defines which ResourceClaims must be allocated
+	// and reserved before the Pod is allowed to start.
+	// +kubebuilder:validation:Optional
+	ResourceClaims []corev1.PodResourceClaim `json:"resourceClaims,omitempty"`
 }
 
 // ResourceRequirements structures compute resource requirements.

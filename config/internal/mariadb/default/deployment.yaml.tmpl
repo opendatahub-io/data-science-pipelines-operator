@@ -27,6 +27,18 @@ spec:
         dspa: {{.Name}}
     spec:
       serviceAccountName: ds-pipelines-mariadb-sa-{{.Name}}
+      {{ if .MariaDB.ResourceClaims }}
+      resourceClaims:
+      {{ range .MariaDB.ResourceClaims }}
+        - name: {{ .Name }}
+          {{ if .ResourceClaimName }}
+          resourceClaimName: {{ .ResourceClaimName }}
+          {{ end }}
+          {{ if .ResourceClaimTemplateName }}
+          resourceClaimTemplateName: {{ .ResourceClaimTemplateName }}
+          {{ end }}
+      {{ end }}
+      {{ end }}
       containers:
         - name: mariadb
           image: {{.MariaDB.Image}}

@@ -23,6 +23,18 @@ spec:
         dspa: {{.Name}}
     spec:
       serviceAccountName: ds-pipelines-minio-sa-{{.Name}}
+      {{ if .Minio.ResourceClaims }}
+      resourceClaims:
+      {{ range .Minio.ResourceClaims }}
+        - name: {{ .Name }}
+          {{ if .ResourceClaimName }}
+          resourceClaimName: {{ .ResourceClaimName }}
+          {{ end }}
+          {{ if .ResourceClaimTemplateName }}
+          resourceClaimTemplateName: {{ .ResourceClaimTemplateName }}
+          {{ end }}
+      {{ end }}
+      {{ end }}
       containers:
         - args:
             - server
