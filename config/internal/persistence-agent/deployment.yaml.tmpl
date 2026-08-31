@@ -121,12 +121,12 @@ spec:
       {{ if .PersistenceAgent.ResourceClaims }}
       resourceClaims:
       {{ range .PersistenceAgent.ResourceClaims }}
-        - name: {{ .Name }}
+        - name: "{{ .Name }}"
           {{ if .ResourceClaimName }}
-          resourceClaimName: {{ .ResourceClaimName }}
+          resourceClaimName: "{{ .ResourceClaimName }}"
           {{ end }}
           {{ if .ResourceClaimTemplateName }}
-          resourceClaimTemplateName: {{ .ResourceClaimTemplateName }}
+          resourceClaimTemplateName: "{{ .ResourceClaimTemplateName }}"
           {{ end }}
       {{ end }}
       {{ end }}

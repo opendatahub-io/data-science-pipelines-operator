@@ -100,12 +100,12 @@ spec:
       {{ if .ScheduledWorkflow.ResourceClaims }}
       resourceClaims:
       {{ range .ScheduledWorkflow.ResourceClaims }}
-        - name: {{ .Name }}
+        - name: "{{ .Name }}"
           {{ if .ResourceClaimName }}
-          resourceClaimName: {{ .ResourceClaimName }}
+          resourceClaimName: "{{ .ResourceClaimName }}"
           {{ end }}
           {{ if .ResourceClaimTemplateName }}
-          resourceClaimTemplateName: {{ .ResourceClaimTemplateName }}
+          resourceClaimTemplateName: "{{ .ResourceClaimTemplateName }}"
           {{ end }}
       {{ end }}
       {{ end }}
