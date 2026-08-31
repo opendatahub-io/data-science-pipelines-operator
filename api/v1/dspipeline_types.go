@@ -62,6 +62,12 @@ type DSPASpec struct {
 	// Set integrationMode to DISABLED to opt out of MLflow integration.
 	// +kubebuilder:validation:Optional
 	MLflow *MLflowConfig `json:"mlflow,omitempty"`
+
+	// ServiceAccountAnnotations allows users to specify arbitrary annotations
+	// to be applied to DSPA-managed ServiceAccounts (ml-pipeline, pipeline-runner).
+	// Typically used for IRSA/Workload Identity configurations (e.g., eks.amazonaws.com/role-arn).
+	// +kubebuilder:validation:Optional
+	ServiceAccountAnnotations map[string]string `json:"serviceAccountAnnotations,omitempty"`
 }
 
 // +kubebuilder:validation:Pattern=`^(Managed|Removed)$`
@@ -372,6 +378,7 @@ type ObjectStorage struct {
 	// Enable DS Pipelines Operator management of Minio. Setting Deploy to false disables operator reconciliation.
 	*Minio           `json:"minio,omitempty"`
 	*ExternalStorage `json:"externalStorage,omitempty"`
+	// True when credential mode is set to fromEnv
 	// Default: false
 	// +kubebuilder:default:=false
 	// +kubebuilder:validation:Optional
@@ -485,6 +492,7 @@ type Resources struct {
 	Memory resource.Quantity `json:"memory,omitempty"`
 }
 
+// +kubebuilder:validation:XValidation:rule="has(self.s3CredentialsSecret) || (has(self.credentialsMode) && self.credentialsMode.fromEnv)",message="s3CredentialsSecret is required unless credentialsMode.fromEnv is true"
 type ExternalStorage struct {
 	// +kubebuilder:validation:Required
 	Host   string `json:"host"`
@@ -494,12 +502,14 @@ type ExternalStorage struct {
 	Region string `json:"region"`
 	// Subpath where objects should be stored for this DSPA
 	// +kubebuilder:validation:Optional
-	BasePath            string `json:"basePath"`
-	*S3CredentialSecret `json:"s3CredentialsSecret"`
+	BasePath string `json:"basePath"`
+	// +kubebuilder:validation:Optional
+	*S3CredentialSecret `json:"s3CredentialsSecret,omitempty"`
 	// +kubebuilder:validation:Optional
 	Secure *bool `json:"secure"`
 	// +kubebuilder:validation:Optional
-	Port string `json:"port"`
+	Port             string `json:"port"`
+	*CredentialsMode `json:"credentialsMode,omitempty"`
 }
 
 type S3CredentialSecret struct {
@@ -533,6 +543,23 @@ type ProxyConfig struct {
 	// If unset, a safe default for in-cluster traffic is set.
 	// +kubebuilder:validation:Optional
 	NoProxy string `json:"noProxy,omitempty"`
+}
+
+type CredentialsMode struct {
+	// FromEnv indicates whether object storage credentials should be obtained from
+	// environment variables (e.g., via IRSA, Workload Identity) rather than from a Kubernetes secret.
+	// When true, credentials are expected to be provided via the environment (projected service account tokens).
+	// When false or omitted, credentials are retrieved from the configured Kubernetes secret.
+	// Default: false
+	// +kubebuilder:default:=false
+	// +kubebuilder:validation:Optional
+	FromEnv bool `json:"fromEnv"`
+}
+
+// IsFromEnv returns true if credentials should be obtained from environment variables.
+// Returns false if CredentialsMode is nil or FromEnv is false.
+func (c *CredentialsMode) IsFromEnv() bool {
+	return c != nil && c.FromEnv
 }
 
 type DSPAStatus struct {
