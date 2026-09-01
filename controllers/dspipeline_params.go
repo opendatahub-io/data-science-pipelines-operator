@@ -92,6 +92,8 @@ type DSPAParams struct {
 	// for CustomCABundleRootMountPath when
 	// verifying certs
 	CustomSSLCertDir *string
+	// SSL_CERT_DIR for workflow pods when CustomCABundle is set (CA at /kfp/certs).
+	WorkflowPodSSLCertDir string
 	// The CA bundle path found in the pipeline pods
 	PiplinesCABundleMountPath string
 	// Collects all certs from user & global certs
@@ -1062,6 +1064,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 			// SSL_CERT_DIR accepts a colon separated list of directories
 			sslCertDir := strings.Join(certDirectories, ":")
 			p.CustomSSLCertDir = &sslCertDir
+			p.WorkflowPodSSLCertDir = config.WorkflowPodSSLCertDir
 		}
 
 		if p.APIServer.ArtifactSignedURLExpirySeconds == nil {
