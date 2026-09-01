@@ -42,6 +42,14 @@ const (
 
 	CustomCABundleRootMountPath = "/dsp-custom-certs"
 
+	// DSPDriverCABundleDir is where the KFP Argo compiler mounts CABUNDLE_CONFIGMAP
+	// onto driver/launcher pods.
+	DSPDriverCABundleDir = "/kfp/certs"
+	// WorkflowPodSSLCertDir is injected into Argo workflow pods via workflowDefaults
+	// so Go's system cert pool includes that compiler-mounted CA. SSL_CERT_DIR
+	// replaces the default directory list, so system CA dirs must be included.
+	WorkflowPodSSLCertDir = DSPDriverCABundleDir + ":/etc/ssl/certs:/etc/pki/tls/certs"
+
 	// GlobalODHCaBundleConfigMapName key and label values  are a contract with
 	// ODH Platform https://github.com/opendatahub-io/architecture-decision-records/pull/28
 	GlobalODHCaBundleConfigMapName = "odh-trusted-ca-bundle"

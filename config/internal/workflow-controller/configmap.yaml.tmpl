@@ -36,3 +36,13 @@ data:
       secretKeySecret:
         name: "{{.ObjectStorageConnection.CredentialsSecret.SecretName}}"
         key: "{{.ObjectStorageConnection.CredentialsSecret.SecretKey}}"
+{{ if .WorkflowPodSSLCertDir }}
+  # SSL_CERT_DIR so workflow pods trust the CA mounted at /kfp/certs.
+  workflowDefaults: |
+    spec:
+      templateDefaults:
+        container:
+          env:
+            - name: SSL_CERT_DIR
+              value: "{{.WorkflowPodSSLCertDir}}"
+{{ end }}
