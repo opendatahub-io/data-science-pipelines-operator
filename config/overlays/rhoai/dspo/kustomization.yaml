@@ -1,8 +1,5 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-- ../../../base
-# OpenShift-only RBAC for reading TLS profile configuration
-- tls_clusterrole.yaml
-- tls_clusterrolebinding.yaml
+- ../../openshift
 namespace: redhat-ods-applications
