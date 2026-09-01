@@ -25,6 +25,7 @@ import (
 
 	"github.com/go-logr/logr"
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/testutil"
 	mlflowv1 "github.com/opendatahub-io/mlflow-operator/api/v1"
 	routev1 "github.com/openshift/api/route/v1"
@@ -641,6 +642,30 @@ func TestBuildMLflowPluginConfigJson_InjectUserEnvVarsTrue(t *testing.T) {
 	var settings map[string]interface{}
 	require.NoError(t, json.Unmarshal(root["settings"], &settings))
 	require.Equal(t, true, settings["injectUserEnvVars"])
+}
+
+func TestExtractParams_WorkflowPodSSLCertDir(t *testing.T) {
+	t.Setenv("SSL_CERT_FILE", "testdata/tls/empty-ca-bundle.crt")
+
+	ctx, params, reconciler := CreateNewTestObjects()
+
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Name: "testcaname", Namespace: "testnamespace"},
+		Data:       map[string]string{"testcakey": "bundle-contents"},
+	}
+	require.NoError(t, reconciler.Client.Create(ctx, cm))
+
+	dspa := testutil.CreateDSPAWithAPIServerCABundle("testcakey", "testcaname")
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	require.NoError(t, err)
+	require.NotNil(t, params.CustomCABundle)
+	require.Equal(t, config.WorkflowPodSSLCertDir, params.WorkflowPodSSLCertDir)
+	require.Contains(t, params.WorkflowPodSSLCertDir, "/kfp/certs")
+
+	empty := testutil.CreateEmptyDSPA()
+	_, emptyParams, emptyReconciler := CreateNewTestObjects()
+	require.NoError(t, emptyParams.ExtractParams(ctx, empty, emptyReconciler.Client, emptyReconciler.Log))
+	require.Empty(t, emptyParams.WorkflowPodSSLCertDir)
 }
 
 func TestValidateMLflowEndpointURL(t *testing.T) {
