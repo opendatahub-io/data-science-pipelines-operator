@@ -18,7 +18,10 @@ on:
       - .github/resources/**
       - .github/actions/**
       - '.github/workflows/kind-integration-byoargo.yml'
+      - '.github/scripts/build_dsp_images.sh'
       - '.github/scripts/tests/tests.sh'
+      - '.github/scripts/tests/collect_logs.sh'
+      - '.github/scripts/tests/deploy_dspa.sh'
       - '.github/scripts/python_package_upload/**'
       - Makefile
     types:
