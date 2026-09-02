@@ -813,6 +813,8 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		}
 
 		setResourcesDefault(config.APIServerResourceRequirements, &p.APIServer.Resources)
+		setResourcesDefault(config.ArgoDriverResourceRequirements, &p.APIServer.ArgoDriverResources)
+		setResourcesDefault(config.ArgoLauncherResourceRequirements, &p.APIServer.ArgoLauncherResources)
 
 		mlflowMode := *p.MLflow.IntegrationMode
 

@@ -127,6 +127,18 @@ type APIServer struct {
 	ArgoLauncherImage string `json:"argoLauncherImage,omitempty"`
 	// Driver image used during pipeline execution.
 	ArgoDriverImage string `json:"argoDriverImage,omitempty"`
+	// Specify custom Pod resource requirements for the KFP driver containers
+	// that are created during pipeline execution. These containers orchestrate
+	// DAG execution and resolve pipeline parameters.
+	// When omitted, the data-science-pipelines backend defaults are used.
+	// +kubebuilder:validation:Optional
+	ArgoDriverResources *ResourceRequirements `json:"argoDriverResources,omitempty"`
+	// Specify custom Pod resource requirements for the KFP launcher init containers
+	// that are created during pipeline execution. These containers copy the launcher
+	// binary into user task pods.
+	// When omitted, the data-science-pipelines backend defaults are used.
+	// +kubebuilder:validation:Optional
+	ArgoLauncherResources *ResourceRequirements `json:"argoLauncherResources,omitempty"`
 	// Configures managed pipelines compiled and uploaded via an init container.
 	ManagedPipelines *ManagedPipelinesSpec `json:"managedPipelines,omitempty"`
 	// Specify custom Pod resource requirements for this component.
