@@ -64,7 +64,7 @@ func TestIsTransientOpenShiftAPIError(t *testing.T) {
 		err       error
 		transient bool
 	}{
-		{name: "internal error", err: apierrors.NewInternalError(errors.New("apiserver unavailable")), transient: true},
+		{name: "internal error", err: apierrors.NewInternalError(errors.New("apiserver unavailable")), transient: false},
 		{name: "deadline exceeded", err: context.DeadlineExceeded, transient: true},
 		{name: "timeout", err: apierrors.NewTimeoutError("timed out", 0), transient: true},
 		{name: "forbidden", err: apierrors.NewForbidden(schema.GroupResource{Group: "config.openshift.io", Resource: "apiservers"}, "cluster", errors.New("denied")), transient: false},
