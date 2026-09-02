@@ -1,0 +1,8 @@
+# Rewrite ClusterRoleBinding subject namespaces when an overlay sets
+# `namespace:`. kustomize v5 builtins already do this; keep it explicit so
+# older kustomize and the ODH operator namespace plugin stay aligned.
+namespace:
+- kind: ClusterRoleBinding
+  group: rbac.authorization.k8s.io
+  path: subjects/namespace
+  create: true

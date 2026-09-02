@@ -21,16 +21,18 @@ const (
 	tlsAdherenceFetchFatal
 )
 
+func isTransientOpenShiftAPIError(err error) bool {
+	return apierrors.IsServiceUnavailable(err) ||
+		apierrors.IsTimeout(err) ||
+		apierrors.IsServerTimeout(err) ||
+		apierrors.IsTooManyRequests(err) ||
+		apierrors.IsInternalError(err) ||
+		errors.Is(err, context.DeadlineExceeded)
+}
+
 func classifyTLSAdherenceFetchError(err error) tlsAdherenceFetchAction {
 	switch {
-	case apierrors.IsNotFound(err), apimeta.IsNoMatchError(err):
-		return tlsAdherenceFetchRetry
-	case apierrors.IsServiceUnavailable(err),
-		apierrors.IsTimeout(err),
-		apierrors.IsServerTimeout(err),
-		apierrors.IsTooManyRequests(err),
-		apierrors.IsInternalError(err),
-		errors.Is(err, context.DeadlineExceeded):
+	case apierrors.IsNotFound(err), apimeta.IsNoMatchError(err), isTransientOpenShiftAPIError(err):
 		return tlsAdherenceFetchRetry
 	default:
 		return tlsAdherenceFetchFatal
@@ -54,10 +56,7 @@ func fetchTLSProfile(ctx context.Context, cli client.Client) (*tlsResult, error)
 			l.Info("config.openshift.io API not available (non-OpenShift cluster), using Intermediate TLS profile as fallback")
 		case apierrors.IsNotFound(err):
 			l.Info("APIServer resource not found, using Intermediate TLS profile as fallback")
-		case apierrors.IsServiceUnavailable(err),
-			apierrors.IsTimeout(err),
-			apierrors.IsServerTimeout(err),
-			apierrors.IsTooManyRequests(err):
+		case isTransientOpenShiftAPIError(err):
 			l.Info("Transient API error reading TLS profile, using Intermediate TLS profile as fallback", "error", err)
 			// Mark OpenShift config as present so SecurityProfileWatcher still registers.
 			// When the API recovers, the watcher will detect the real profile and trigger a restart.
