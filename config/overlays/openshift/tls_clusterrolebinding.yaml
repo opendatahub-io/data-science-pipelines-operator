@@ -9,4 +9,6 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: controller-manager
+  # Placeholder; kustomizeconfig rewrites this to the overlay namespace
+  # (opendatahub / redhat-ods-applications). Same pattern as manager-rolebinding.
   namespace: datasciencepipelinesapplications-controller

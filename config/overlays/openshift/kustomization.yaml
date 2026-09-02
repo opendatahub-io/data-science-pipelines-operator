@@ -5,3 +5,5 @@ resources:
 # OpenShift-only RBAC for reading TLS profile configuration
 - tls_clusterrole.yaml
 - tls_clusterrolebinding.yaml
+configurations:
+- kustomizeconfig.yaml
