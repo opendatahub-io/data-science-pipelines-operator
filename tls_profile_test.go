@@ -35,6 +35,16 @@ func TestClassifyTLSAdherenceFetchError(t *testing.T) {
 			action: tlsAdherenceFetchRetry,
 		},
 		{
+			name:   "deadline exceeded",
+			err:    context.DeadlineExceeded,
+			action: tlsAdherenceFetchRetry,
+		},
+		{
+			name:   "timeout",
+			err:    apierrors.NewTimeoutError("timed out", 0),
+			action: tlsAdherenceFetchRetry,
+		},
+		{
 			name:   "forbidden",
 			err:    apierrors.NewForbidden(schema.GroupResource{Group: "config.openshift.io", Resource: "apiservers"}, "cluster", errors.New("denied")),
 			action: tlsAdherenceFetchFatal,
@@ -44,6 +54,26 @@ func TestClassifyTLSAdherenceFetchError(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.action, classifyTLSAdherenceFetchError(tt.err))
+		})
+	}
+}
+
+func TestIsTransientOpenShiftAPIError(t *testing.T) {
+	tests := []struct {
+		name      string
+		err       error
+		transient bool
+	}{
+		{name: "internal error", err: apierrors.NewInternalError(errors.New("apiserver unavailable")), transient: true},
+		{name: "deadline exceeded", err: context.DeadlineExceeded, transient: true},
+		{name: "timeout", err: apierrors.NewTimeoutError("timed out", 0), transient: true},
+		{name: "forbidden", err: apierrors.NewForbidden(schema.GroupResource{Group: "config.openshift.io", Resource: "apiservers"}, "cluster", errors.New("denied")), transient: false},
+		{name: "not found", err: apierrors.NewNotFound(schema.GroupResource{Group: "config.openshift.io", Resource: "apiservers"}, "cluster"), transient: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.transient, isTransientOpenShiftAPIError(tt.err))
 		})
 	}
 }
