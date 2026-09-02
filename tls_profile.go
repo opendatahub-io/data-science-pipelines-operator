@@ -21,18 +21,25 @@ const (
 	tlsAdherenceFetchFatal
 )
 
+// isTransientOpenShiftAPIError reports API errors that are safe to retry while
+// cluster TLS posture is still unknown. Matches the TLS Error Handling Contract:
+// ServiceUnavailable, Timeout, ServerTimeout, TooManyRequests, DeadlineExceeded.
+// InternalError is intentionally omitted: HTTP 500 on the profile GET means the
+// posture is unknown, so Intermediate fallback would be a guess.
 func isTransientOpenShiftAPIError(err error) bool {
 	return apierrors.IsServiceUnavailable(err) ||
 		apierrors.IsTimeout(err) ||
 		apierrors.IsServerTimeout(err) ||
 		apierrors.IsTooManyRequests(err) ||
-		apierrors.IsInternalError(err) ||
 		errors.Is(err, context.DeadlineExceeded)
 }
 
 func classifyTLSAdherenceFetchError(err error) tlsAdherenceFetchAction {
 	switch {
 	case apierrors.IsNotFound(err), apimeta.IsNoMatchError(err), isTransientOpenShiftAPIError(err):
+		return tlsAdherenceFetchRetry
+	case apierrors.IsInternalError(err):
+		// HTTP 500 after a successful profile read should not crash; the watcher retries.
 		return tlsAdherenceFetchRetry
 	default:
 		return tlsAdherenceFetchFatal
