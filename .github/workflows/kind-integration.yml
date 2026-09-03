@@ -66,7 +66,7 @@ jobs:
         env:
           REGISTRY_ADDRESS: ${{ env.REGISTRY_ADDRESS }}
           PR_HEAD_OWNER: ${{ github.event.pull_request.head.repo.owner.login }}
-          PR_HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+          PR_HEAD_BRANCH: ${{ github.event.pull_request.head.ref || github.ref_name }}
 
       - name: Free up disk space
         uses: kubeflow/pipelines/.github/actions/github-disk-cleanup@master
