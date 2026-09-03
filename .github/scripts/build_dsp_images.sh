@@ -2,18 +2,53 @@
 set -euo pipefail
 
 # Build DSP images from source and push to the local registry.
-# Requires: GIT_WORKSPACE, REGISTRY_ADDRESS, GITHUB_REPOSITORY_OWNER,
-#           GITHUB_HEAD_REF or GITHUB_REF_NAME, GITHUB_SHA
+# Requires: GIT_WORKSPACE, REGISTRY_ADDRESS, GITHUB_REPOSITORY_OWNER, GITHUB_SHA
+# Optional: PR_HEAD_OWNER, PR_HEAD_BRANCH (set by workflow for fork PR detection)
+
+# Clone a repo with 3-tier fallback:
+#   1. <fork_owner>/<repo> @ <head_branch>  (skipped when fork_owner is empty or equals upstream)
+#   2. <upstream_owner>/<repo> @ <head_branch>  (skipped when head_branch is empty)
+#   3. <upstream_owner>/<repo> @ <default_branch>
+clone_with_fallback() {
+  local repo_name="$1"
+  local target_dir="$2"
+  local upstream_owner="$3"
+  local default_branch="$4"
+  local fork_owner="${PR_HEAD_OWNER:-}"
+  local head_branch="${PR_HEAD_BRANCH:-}"
+
+  if [ -n "$fork_owner" ] && [ "$fork_owner" != "$upstream_owner" ] && [ -n "$head_branch" ]; then
+    echo "Trying ${fork_owner}/${repo_name} branch ${head_branch}..."
+    if git clone --depth 1 --branch "$head_branch" "https://github.com/${fork_owner}/${repo_name}.git" "$target_dir" 2>/dev/null; then
+      echo "Cloned from fork: ${fork_owner}/${repo_name}@${head_branch}"
+      return 0
+    fi
+    rm -rf "$target_dir"
+    echo "Fork ${fork_owner}/${repo_name}@${head_branch} not found"
+  fi
+
+  if [ -n "$head_branch" ]; then
+    echo "Trying ${upstream_owner}/${repo_name} branch ${head_branch}..."
+    if git clone --depth 1 --branch "$head_branch" "https://github.com/${upstream_owner}/${repo_name}.git" "$target_dir" 2>/dev/null; then
+      echo "Cloned from upstream: ${upstream_owner}/${repo_name}@${head_branch}"
+      return 0
+    fi
+    rm -rf "$target_dir"
+    echo "Branch ${head_branch} not found in ${upstream_owner}/${repo_name}"
+  fi
+
+  echo "Cloning ${upstream_owner}/${repo_name} branch ${default_branch}..."
+  git clone --depth 1 --branch "$default_branch" "https://github.com/${upstream_owner}/${repo_name}.git" "$target_dir"
+  echo "Cloned from upstream default: ${upstream_owner}/${repo_name}@${default_branch}"
+}
 
 echo "---------------------------------"
 echo "Building DSP images from source"
 echo "---------------------------------"
 
-dsp_repo_owner="${GITHUB_REPOSITORY_OWNER:-opendatahub-io}"
-dsp_repo="${dsp_repo_owner}/data-science-pipelines"
-dsp_branch="${GITHUB_BASE_REF:-${GITHUB_REF_NAME:-master}}"
+upstream_owner="${GITHUB_REPOSITORY_OWNER:-opendatahub-io}"
 dsp_default_branch="master"
-if [ "$dsp_repo_owner" = "red-hat-data-services" ]; then
+if [ "$upstream_owner" = "red-hat-data-services" ]; then
   dsp_default_branch="main"
 fi
 
@@ -25,11 +60,7 @@ fi
 dsp_dir="${GIT_WORKSPACE}/_dsp_source"
 rm -rf "$dsp_dir"
 
-echo "Cloning ${dsp_repo} branch ${dsp_branch}..."
-if ! git clone --depth 1 --branch "$dsp_branch" "https://github.com/${dsp_repo}.git" "$dsp_dir" 2>/dev/null; then
-  echo "Branch ${dsp_branch} not found, falling back to ${dsp_default_branch}"
-  git clone --depth 1 --branch "$dsp_default_branch" "https://github.com/${dsp_repo}.git" "$dsp_dir"
-fi
+clone_with_fallback "data-science-pipelines" "$dsp_dir" "$upstream_owner" "$dsp_default_branch"
 
 registry="${REGISTRY_ADDRESS}"
 bake_file="${GIT_WORKSPACE}/.github/resources/docker-bake.hcl"
@@ -48,19 +79,12 @@ BUILDX_BAKE_ENTITLEMENTS_FS=0 TAG="${tag}" REGISTRY="${registry}" KFP_REPO="${ds
 params_file="${GIT_WORKSPACE}/config/base/params.env"
 
 if grep -q "IMAGES_ARGO_WORKFLOWCONTROLLER" "$params_file"; then
-  argo_repo_owner="${GITHUB_REPOSITORY_OWNER:-opendatahub-io}"
-  argo_repo="${argo_repo_owner}/argo-workflows"
-  argo_branch="${GITHUB_BASE_REF:-${GITHUB_REF_NAME:-main}}"
   argo_default_branch="main"
 
   argo_dir="${GIT_WORKSPACE}/_argo_source"
   rm -rf "$argo_dir"
 
-  echo "Cloning ${argo_repo} branch ${argo_branch}..."
-  if ! git clone --depth 1 --branch "$argo_branch" "https://github.com/${argo_repo}.git" "$argo_dir" 2>/dev/null; then
-    echo "Branch ${argo_branch} not found, falling back to ${argo_default_branch}"
-    git clone --depth 1 --branch "$argo_default_branch" "https://github.com/${argo_repo}.git" "$argo_dir"
-  fi
+  clone_with_fallback "argo-workflows" "$argo_dir" "$upstream_owner" "$argo_default_branch"
 
   echo "Building Argo images in parallel with docker bake..."
   BUILDX_BAKE_ENTITLEMENTS_FS=0 TAG="${tag}" REGISTRY="${registry}" ARGO_REPO="${argo_dir}" \
