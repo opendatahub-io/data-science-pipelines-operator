@@ -65,6 +65,8 @@ jobs:
           .github/scripts/build_dsp_images.sh
         env:
           REGISTRY_ADDRESS: ${{ env.REGISTRY_ADDRESS }}
+          PR_HEAD_OWNER: ${{ github.event.pull_request.head.repo.owner.login }}
+          PR_HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
 
       - name: Free up disk space
         uses: kubeflow/pipelines/.github/actions/github-disk-cleanup@master
