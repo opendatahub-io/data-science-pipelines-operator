@@ -30,6 +30,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/fsnotify/fsnotify"
+	aipipelinesv1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/aipipelines/v1alpha1"
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers"
 	buildv1 "github.com/openshift/api/build/v1"
@@ -114,6 +115,7 @@ func init() {
 	utilruntime.Must(configv1.Install(scheme))
 
 	utilruntime.Must(dspav1.AddToScheme(scheme))
+	utilruntime.Must(aipipelinesv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(mlflowv1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 
@@ -376,6 +378,21 @@ func main() {
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DSPAParams")
 		os.Exit(1)
+	}
+
+	// The DSPA controller remains active in both modes. Register the modular
+	// ownership path only during the coordinated platform handoff.
+	if config.AIPipelinesModuleControllerEnabled() {
+		if err = (&controllers.AIPipelinesReconciler{
+			Client: mgr.GetClient(),
+			Scheme: mgr.GetScheme(),
+			Log:    ctrl.Log.WithName("controllers").WithName("AIPipelines"),
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "AIPipelines")
+			os.Exit(1)
+		}
+	} else {
+		setupLog.Info("AIPipelines module controller disabled; keeping legacy ownership path active")
 	}
 
 	//+kubebuilder:scaffold:builder
