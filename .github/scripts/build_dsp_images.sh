@@ -5,7 +5,7 @@ set -euo pipefail
 # Requires: GIT_WORKSPACE, REGISTRY_ADDRESS, GITHUB_REPOSITORY_OWNER, GITHUB_SHA
 # Optional: PR_HEAD_OWNER, PR_HEAD_BRANCH (set by workflow for fork PR detection)
 
-# Check if a branch exists in a remote repo. Returns 0 if found, 1 otherwise
+# Check if a branch exists in a remote repo. Returns 0 if found, non-zero otherwise
 # (branch missing, repo missing, or unreachable — all fall through to next tier).
 check_remote_ref() {
   local repo_url="$1"
