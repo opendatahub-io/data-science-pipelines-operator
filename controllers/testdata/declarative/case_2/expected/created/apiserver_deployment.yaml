@@ -104,6 +104,22 @@ spec:
               value: "argolauncherimage:test2"
             - name: V2_DRIVER_IMAGE
               value: "argodriverimage:test2"
+            - name: V2_DRIVER_RESOURCE_REQUESTS_CPU
+              value: "100m"
+            - name: V2_DRIVER_RESOURCE_REQUESTS_MEMORY
+              value: "64Mi"
+            - name: V2_DRIVER_RESOURCE_LIMITS_CPU
+              value: "500m"
+            - name: V2_DRIVER_RESOURCE_LIMITS_MEMORY
+              value: "512Mi"
+            - name: V2_LAUNCHER_RESOURCE_REQUESTS_CPU
+              value: "100m"
+            - name: V2_LAUNCHER_RESOURCE_REQUESTS_MEMORY
+              value: "64Mi"
+            - name: V2_LAUNCHER_RESOURCE_LIMITS_CPU
+              value: "500m"
+            - name: V2_LAUNCHER_RESOURCE_LIMITS_MEMORY
+              value: "256Mi"
             - name: METADATA_GRPC_SERVICE_SERVICE_HOST
               value: "ds-pipeline-metadata-grpc-testdsp2.default.svc.cluster.local"
             - name: METADATA_GRPC_SERVICE_SERVICE_PORT

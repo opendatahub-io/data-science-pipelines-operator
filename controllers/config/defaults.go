@@ -210,6 +210,8 @@ var (
 	MlmdEnvoyResourceRequirements            = createResourceRequirement(resource.MustParse("100m"), resource.MustParse("256Mi"), resource.MustParse("100m"), resource.MustParse("256Mi"))
 	MlmdGRPCResourceRequirements             = createResourceRequirement(resource.MustParse("100m"), resource.MustParse("256Mi"), resource.MustParse("100m"), resource.MustParse("256Mi"))
 	ManagedPipelinesInitResourceRequirements = createResourceRequirement(resource.MustParse("250m"), resource.MustParse("500Mi"), resource.MustParse("500m"), resource.MustParse("1Gi"))
+	ArgoDriverResourceRequirements           = createResourceRequirement(resource.MustParse("100m"), resource.MustParse("64Mi"), resource.MustParse("500m"), resource.MustParse("512Mi"))
+	ArgoLauncherResourceRequirements         = createResourceRequirement(resource.MustParse("100m"), resource.MustParse("64Mi"), resource.MustParse("500m"), resource.MustParse("256Mi"))
 )
 
 type DBExtraParams map[string]string
