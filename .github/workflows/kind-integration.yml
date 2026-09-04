@@ -96,6 +96,24 @@ jobs:
         run: |
           kubectl get mlflow mlflow -n opendatahub
 
+      - name: Wait for DSPO to discover MLflow CRD
+        if: ${{ steps.deploy-mlflow.outcome == 'success' }}
+        run: |
+          echo "Waiting for DSPO operator to discover newly installed MLflow CRD..."
+          echo "Giving time for API server discovery cache to update (15s)..."
+          sleep 15
+
+          # Check operator logs for NEW MLflow CRD resolution errors (only logs from last 20s)
+          echo "Checking recent operator logs for MLflow CRD resolution errors..."
+          if kubectl logs -n opendatahub deployment/data-science-pipelines-operator-controller-manager \
+              --since=20s 2>/dev/null | grep -q "failed to retrieve MLflow internal endpoint"; then
+            echo "ERROR: DSPO failed to resolve MLflow CRD after waiting"
+            kubectl logs -n opendatahub deployment/data-science-pipelines-operator-controller-manager --tail=100
+            exit 1
+          fi
+
+          echo "No recent MLflow CRD resolution errors found in operator logs"
+
       - name: Run DSP MLflow tests
         id: test-mlflow
         if: ${{ steps.deploy-mlflow.outcome == 'success' }}
