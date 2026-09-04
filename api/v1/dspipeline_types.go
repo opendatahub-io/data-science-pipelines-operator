@@ -155,6 +155,8 @@ type APIServer struct {
 	// ResourceClaims defines which ResourceClaims must be allocated
 	// and reserved before the Pod is allowed to start.
 	// +kubebuilder:validation:Optional
+	// +listType=map
+	// +listMapKey=name
 	ResourceClaims []PodResourceClaim `json:"resourceClaims,omitempty"`
 
 	// If the Object store/DB is behind a TLS secured connection that is
@@ -267,6 +269,8 @@ type PersistenceAgent struct {
 	// ResourceClaims defines which ResourceClaims must be allocated
 	// and reserved before the Pod is allowed to start.
 	// +kubebuilder:validation:Optional
+	// +listType=map
+	// +listMapKey=name
 	ResourceClaims []PodResourceClaim `json:"resourceClaims,omitempty"`
 }
 
@@ -285,6 +289,8 @@ type ScheduledWorkflow struct {
 	// ResourceClaims defines which ResourceClaims must be allocated
 	// and reserved before the Pod is allowed to start.
 	// +kubebuilder:validation:Optional
+	// +listType=map
+	// +listMapKey=name
 	ResourceClaims []PodResourceClaim `json:"resourceClaims,omitempty"`
 }
 
@@ -337,6 +343,8 @@ type MariaDB struct {
 	// ResourceClaims defines which ResourceClaims must be allocated
 	// and reserved before the Pod is allowed to start.
 	// +kubebuilder:validation:Optional
+	// +listType=map
+	// +listMapKey=name
 	ResourceClaims []PodResourceClaim `json:"resourceClaims,omitempty"`
 }
 
@@ -384,6 +392,8 @@ type Minio struct {
 	// ResourceClaims defines which ResourceClaims must be allocated
 	// and reserved before the Pod is allowed to start.
 	// +kubebuilder:validation:Optional
+	// +listType=map
+	// +listMapKey=name
 	ResourceClaims []PodResourceClaim `json:"resourceClaims,omitempty"`
 	// Specify a custom image for Minio pod.
 	// +kubebuilder:validation:Required
@@ -404,6 +414,8 @@ type Envoy struct {
 	// ResourceClaims defines which ResourceClaims must be allocated
 	// and reserved before the Pod is allowed to start.
 	// +kubebuilder:validation:Optional
+	// +listType=map
+	// +listMapKey=name
 	ResourceClaims []PodResourceClaim `json:"resourceClaims,omitempty"`
 	Image          string             `json:"image,omitempty"`
 	// +kubebuilder:default:=true
@@ -416,6 +428,8 @@ type GRPC struct {
 	// ResourceClaims defines which ResourceClaims must be allocated
 	// and reserved before the Pod is allowed to start.
 	// +kubebuilder:validation:Optional
+	// +listType=map
+	// +listMapKey=name
 	ResourceClaims []PodResourceClaim `json:"resourceClaims,omitempty"`
 	Image          string             `json:"image,omitempty"`
 	// +kubebuilder:validation:Optional
@@ -442,6 +456,8 @@ type WorkflowController struct {
 	// ResourceClaims defines which ResourceClaims must be allocated
 	// and reserved before the Pod is allowed to start.
 	// +kubebuilder:validation:Optional
+	// +listType=map
+	// +listMapKey=name
 	ResourceClaims []PodResourceClaim `json:"resourceClaims,omitempty"`
 }
 

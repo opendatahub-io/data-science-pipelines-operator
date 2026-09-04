@@ -248,6 +248,9 @@ spec:
                           must be set
                         rule: has(self.resourceClaimName) != has(self.resourceClaimTemplateName)
                     type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
                   resourceTTL:
                     description: |-
                       ResourceTTL specifies the duration after a pipeline run completes before its
@@ -633,6 +636,9 @@ spec:
                               must be set
                             rule: has(self.resourceClaimName) != has(self.resourceClaimTemplateName)
                         type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
                       resources:
                         description: Specify custom Pod resource requirements for
                           this component.
@@ -755,6 +761,9 @@ spec:
                               must be set
                             rule: has(self.resourceClaimName) != has(self.resourceClaimTemplateName)
                         type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
                       resources:
                         description: |-
                           ResourceRequirements structures compute resource requirements.
@@ -835,6 +844,9 @@ spec:
                               must be set
                             rule: has(self.resourceClaimName) != has(self.resourceClaimTemplateName)
                         type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
                       resources:
                         description: |-
                           ResourceRequirements structures compute resource requirements.
@@ -997,6 +1009,9 @@ spec:
                               must be set
                             rule: has(self.resourceClaimName) != has(self.resourceClaimTemplateName)
                         type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
                       resources:
                         description: Specify custom Pod resource requirements for
                           this component.
@@ -1116,6 +1131,9 @@ spec:
                           must be set
                         rule: has(self.resourceClaimName) != has(self.resourceClaimTemplateName)
                     type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
                   resources:
                     description: Specify custom Pod resource requirements for this
                       component.
@@ -1236,6 +1254,9 @@ spec:
                           must be set
                         rule: has(self.resourceClaimName) != has(self.resourceClaimTemplateName)
                     type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
                   resources:
                     description: Specify custom Pod resource requirements for this
                       component.
@@ -1325,6 +1346,9 @@ spec:
                           must be set
                         rule: has(self.resourceClaimName) != has(self.resourceClaimTemplateName)
                     type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
                   resources:
                     description: Specify custom Pod resource requirements for this
                       component.

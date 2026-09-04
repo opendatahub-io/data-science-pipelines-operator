@@ -95,6 +95,9 @@ func (s *ControllerSuite) TestResourceClaimCRDValidation() {
 			namespace := fmt.Sprintf("resource-claim-validation-%d", idx)
 			ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
 			require.NoError(t, ctrlclient.IgnoreAlreadyExists(k8sClient.Create(ctx, ns)))
+			t.Cleanup(func() {
+				require.NoError(t, ctrlclient.IgnoreNotFound(k8sClient.Delete(ctx, ns)))
+			})
 
 			dspa := testutil.CreateEmptyDSPA()
 			dspa.Name = fmt.Sprintf("resource-claim-validation-%d", idx)
@@ -114,4 +117,26 @@ func (s *ControllerSuite) TestResourceClaimCRDValidation() {
 			require.NoError(t, err)
 		})
 	}
+}
+
+func (s *ControllerSuite) TestResourceClaimCRDDuplicateNamesValidation() {
+	namespace := "resource-claim-duplicate-validation"
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
+	require.NoError(s.T(), ctrlclient.IgnoreAlreadyExists(k8sClient.Create(ctx, ns)))
+	s.T().Cleanup(func() {
+		require.NoError(s.T(), ctrlclient.IgnoreNotFound(k8sClient.Delete(ctx, ns)))
+	})
+
+	dspa := testutil.CreateEmptyDSPA()
+	dspa.Name = namespace
+	dspa.Namespace = namespace
+	dspa.Spec.MLMD.Deploy = false
+	dspa.Spec.APIServer.ResourceClaims = []dspav1.PodResourceClaim{
+		{Name: "gpu", ResourceClaimName: ptr.To("existing-gpu")},
+		{Name: "gpu", ResourceClaimName: ptr.To("another-gpu")},
+	}
+
+	err := k8sClient.Create(ctx, dspa)
+	require.Error(s.T(), err)
+	require.ErrorContains(s.T(), err, "resourceClaims")
 }
