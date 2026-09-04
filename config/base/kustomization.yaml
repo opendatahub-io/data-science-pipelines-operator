@@ -167,6 +167,13 @@ vars:
       apiVersion: v1
     fieldref:
       fieldpath: data.ARGOWORKFLOWSCONTROLLERS
+  - name: ENABLEAIPIPELINESMODULECONTROLLER
+    objref:
+      kind: ConfigMap
+      name: dspo-parameters
+      apiVersion: v1
+    fieldref:
+      fieldpath: data.ENABLEAIPIPELINESMODULECONTROLLER
   - name: PLATFORMVERSION
     objref:
       kind: ConfigMap

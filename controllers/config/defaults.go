@@ -131,10 +131,11 @@ const (
 	PipelinesComponentsImagePath    = "Images.PipelinesComponents"
 
 	// Other configs
-	ObjStoreConnectionTimeoutConfigName      = "DSPO.HealthCheck.ObjectStore.ConnectionTimeout"
-	DBConnectionTimeoutConfigName            = "DSPO.HealthCheck.Database.ConnectionTimeout"
-	RequeueTimeConfigName                    = "DSPO.RequeueTime"
-	ApiServerIncludeOwnerReferenceConfigName = "DSPO.ApiServer.IncludeOwnerReference"
+	ObjStoreConnectionTimeoutConfigName         = "DSPO.HealthCheck.ObjectStore.ConnectionTimeout"
+	DBConnectionTimeoutConfigName               = "DSPO.HealthCheck.Database.ConnectionTimeout"
+	RequeueTimeConfigName                       = "DSPO.RequeueTime"
+	ApiServerIncludeOwnerReferenceConfigName    = "DSPO.ApiServer.IncludeOwnerReference"
+	EnableAIPipelinesModuleControllerConfigName = "DSPO.EnableAIPipelinesModuleController"
 )
 
 // DSPA Status Condition Types
@@ -189,7 +190,19 @@ const DefaultRequeueTime = time.Second * 20
 
 const DefaultApiServerIncludeOwnerReferenceConfigName = true
 
+const DefaultEnableAIPipelinesModuleController = false
+
 const DefaultPlatformVersion = "v0.0.0"
+
+// AIPipelinesModuleControllerEnabled reports whether the modular AIPipelines
+// ownership path should be registered. It is deliberately disabled by default
+// so standalone and legacy deployments do not require the module CRD or CR.
+func AIPipelinesModuleControllerEnabled() bool {
+	if !viper.IsSet(EnableAIPipelinesModuleControllerConfigName) {
+		return DefaultEnableAIPipelinesModuleController
+	}
+	return viper.GetBool(EnableAIPipelinesModuleControllerConfigName)
+}
 
 const (
 	DefaultArgoWorkflowsControllersManagementState = "Managed"
