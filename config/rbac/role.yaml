@@ -127,6 +127,22 @@ rules:
   - update
   - watch
 - apiGroups:
+  - components.platform.opendatahub.io
+  resources:
+  - aipipelines
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - components.platform.opendatahub.io
+  resources:
+  - aipipelines/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - datasciencepipelinesapplications.opendatahub.io
   resources:
   - datasciencepipelinesapplications
