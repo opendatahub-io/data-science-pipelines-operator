@@ -23,6 +23,18 @@ spec:
         dspa: {{.Name}}
     spec:
       serviceAccountName: ds-pipelines-minio-sa-{{.Name}}
+      {{ if .Minio.ResourceClaims }}
+      resourceClaims:
+      {{ range .Minio.ResourceClaims }}
+        - name: {{ yamlString .Name }}
+          {{ if .ResourceClaimName }}
+          resourceClaimName: {{ yamlString .ResourceClaimName }}
+          {{ end }}
+          {{ if .ResourceClaimTemplateName }}
+          resourceClaimTemplateName: {{ yamlString .ResourceClaimTemplateName }}
+          {{ end }}
+      {{ end }}
+      {{ end }}
       containers:
         - args:
             - server
@@ -59,6 +71,12 @@ spec:
             successThreshold: 1
             failureThreshold: 3
           resources:
+            {{ if .Minio.ResourceClaims }}
+            claims:
+              {{ range .Minio.ResourceClaims }}
+              - name: {{ yamlString .Name }}
+              {{ end }}
+            {{ end }}
             {{ if .Minio.Resources.Requests }}
             requests:
               {{ if .Minio.Resources.Requests.CPU }}

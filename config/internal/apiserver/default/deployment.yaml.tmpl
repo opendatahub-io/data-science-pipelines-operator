@@ -257,6 +257,12 @@ spec:
             periodSeconds: 5
             timeoutSeconds: 2
           resources:
+            {{ if .APIServer.ResourceClaims }}
+            claims:
+              {{ range .APIServer.ResourceClaims }}
+              - name: {{ yamlString .Name }}
+              {{ end }}
+            {{ end }}
             {{ if .APIServer.Resources.Requests }}
             requests:
               {{ if .APIServer.Resources.Requests.CPU }}
@@ -360,6 +366,18 @@ spec:
               name: ca-bundle
             {{ end }}
         {{ end }}
+      {{ if .APIServer.ResourceClaims }}
+      resourceClaims:
+      {{ range .APIServer.ResourceClaims }}
+        - name: {{ yamlString .Name }}
+          {{ if .ResourceClaimName }}
+          resourceClaimName: {{ yamlString .ResourceClaimName }}
+          {{ end }}
+          {{ if .ResourceClaimTemplateName }}
+          resourceClaimTemplateName: {{ yamlString .ResourceClaimTemplateName }}
+          {{ end }}
+      {{ end }}
+      {{ end }}
       serviceAccountName: {{.APIServerDefaultResourceName}}
       volumes:
         - name: proxy-tls

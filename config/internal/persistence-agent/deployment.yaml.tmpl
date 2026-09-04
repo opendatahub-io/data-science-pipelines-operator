@@ -92,6 +92,12 @@ spec:
             periodSeconds: 5
             timeoutSeconds: 2
           resources:
+            {{ if .PersistenceAgent.ResourceClaims }}
+            claims:
+              {{ range .PersistenceAgent.ResourceClaims }}
+              - name: {{ yamlString .Name }}
+              {{ end }}
+            {{ end }}
             {{ if .PersistenceAgent.Resources.Requests }}
             requests:
               {{ if .PersistenceAgent.Resources.Requests.CPU }}
@@ -118,6 +124,18 @@ spec:
             - mountPath: {{ .CustomCABundleRootMountPath  }}
               name: ca-bundle
             {{ end }}
+      {{ if .PersistenceAgent.ResourceClaims }}
+      resourceClaims:
+      {{ range .PersistenceAgent.ResourceClaims }}
+        - name: {{ yamlString .Name }}
+          {{ if .ResourceClaimName }}
+          resourceClaimName: {{ yamlString .ResourceClaimName }}
+          {{ end }}
+          {{ if .ResourceClaimTemplateName }}
+          resourceClaimTemplateName: {{ yamlString .ResourceClaimTemplateName }}
+          {{ end }}
+      {{ end }}
+      {{ end }}
       serviceAccountName: ds-pipeline-persistenceagent-{{.Name}}
       volumes:
         - name: persistenceagent-sa-token

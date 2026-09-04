@@ -74,6 +74,12 @@ spec:
             periodSeconds: 5
             timeoutSeconds: 2
           resources:
+            {{ if .ScheduledWorkflow.ResourceClaims }}
+            claims:
+              {{ range .ScheduledWorkflow.ResourceClaims }}
+              - name: {{ yamlString .Name }}
+              {{ end }}
+            {{ end }}
             {{ if .ScheduledWorkflow.Resources.Requests }}
             requests:
               {{ if .ScheduledWorkflow.Resources.Requests.CPU }}
@@ -97,6 +103,18 @@ spec:
             - mountPath: {{ .CustomCABundleRootMountPath  }}
               name: ca-bundle
             {{ end }}
+      {{ if .ScheduledWorkflow.ResourceClaims }}
+      resourceClaims:
+      {{ range .ScheduledWorkflow.ResourceClaims }}
+        - name: {{ yamlString .Name }}
+          {{ if .ResourceClaimName }}
+          resourceClaimName: {{ yamlString .ResourceClaimName }}
+          {{ end }}
+          {{ if .ResourceClaimTemplateName }}
+          resourceClaimTemplateName: {{ yamlString .ResourceClaimTemplateName }}
+          {{ end }}
+      {{ end }}
+      {{ end }}
       serviceAccountName: {{.ScheduledWorkflowDefaultResourceName}}
       volumes:
         {{ if and .CustomCABundle .PodToPodTLS }}

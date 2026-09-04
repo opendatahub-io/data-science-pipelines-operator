@@ -64,6 +64,12 @@ spec:
               port: md-envoy
             timeoutSeconds: 2
           resources:
+            {{ if .MLMD.Envoy.ResourceClaims }}
+            claims:
+              {{ range .MLMD.Envoy.ResourceClaims }}
+              - name: {{ yamlString .Name }}
+              {{ end }}
+            {{ end }}
             {{ if .MLMD.Envoy.Resources.Requests }}
             requests:
               {{ if .MLMD.Envoy.Resources.Requests.CPU }}
@@ -145,6 +151,18 @@ spec:
               name: ca-bundle
             {{ end }}
         {{ end }}
+      {{ if .MLMD.Envoy.ResourceClaims }}
+      resourceClaims:
+      {{ range .MLMD.Envoy.ResourceClaims }}
+        - name: {{ yamlString .Name }}
+          {{ if .ResourceClaimName }}
+          resourceClaimName: {{ yamlString .ResourceClaimName }}
+          {{ end }}
+          {{ if .ResourceClaimTemplateName }}
+          resourceClaimTemplateName: {{ yamlString .ResourceClaimTemplateName }}
+          {{ end }}
+      {{ end }}
+      {{ end }}
       serviceAccountName: ds-pipeline-metadata-envoy-{{.Name}}
       volumes:
         - name: envoy-config

@@ -27,6 +27,18 @@ spec:
         dspa: {{.Name}}
     spec:
       serviceAccountName: ds-pipelines-mariadb-sa-{{.Name}}
+      {{ if .MariaDB.ResourceClaims }}
+      resourceClaims:
+      {{ range .MariaDB.ResourceClaims }}
+        - name: {{ yamlString .Name }}
+          {{ if .ResourceClaimName }}
+          resourceClaimName: {{ yamlString .ResourceClaimName }}
+          {{ end }}
+          {{ if .ResourceClaimTemplateName }}
+          resourceClaimTemplateName: {{ yamlString .ResourceClaimTemplateName }}
+          {{ end }}
+      {{ end }}
+      {{ end }}
       containers:
         - name: mariadb
           image: {{.MariaDB.Image}}
@@ -67,6 +79,12 @@ spec:
             - name: MYSQL_ALLOW_EMPTY_PASSWORD
               value: "true"
           resources:
+            {{ if .MariaDB.ResourceClaims }}
+            claims:
+              {{ range .MariaDB.ResourceClaims }}
+              - name: {{ yamlString .Name }}
+              {{ end }}
+            {{ end }}
             {{ if .MariaDB.Resources.Requests }}
             requests:
               {{ if .MariaDB.Resources.Requests.CPU }}

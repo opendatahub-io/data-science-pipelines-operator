@@ -71,6 +71,12 @@ spec:
           name: metrics
         - containerPort: 6060
         resources:
+            {{ if .WorkflowController.ResourceClaims }}
+            claims:
+              {{ range .WorkflowController.ResourceClaims }}
+              - name: {{ yamlString .Name }}
+              {{ end }}
+            {{ end }}
             {{ if .WorkflowController.Resources.Requests }}
             requests:
               {{ if .WorkflowController.Resources.Requests.CPU }}
@@ -100,4 +106,16 @@ spec:
         kubernetes.io/os: linux
       securityContext:
         runAsNonRoot: true
+      {{ if .WorkflowController.ResourceClaims }}
+      resourceClaims:
+      {{ range .WorkflowController.ResourceClaims }}
+        - name: {{ yamlString .Name }}
+          {{ if .ResourceClaimName }}
+          resourceClaimName: {{ yamlString .ResourceClaimName }}
+          {{ end }}
+          {{ if .ResourceClaimTemplateName }}
+          resourceClaimTemplateName: {{ yamlString .ResourceClaimTemplateName }}
+          {{ end }}
+      {{ end }}
+      {{ end }}
       serviceAccountName: ds-pipeline-workflow-controller-{{.Name}}

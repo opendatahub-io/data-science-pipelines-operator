@@ -107,6 +107,27 @@ type ManagedPipelinesSpec struct {
 	VolumeSizeLimit string `json:"volumeSizeLimit,omitempty"`
 }
 
+// PodResourceClaim references exactly one ResourceClaim, either directly or
+// through a ResourceClaimTemplate.
+// +kubebuilder:validation:XValidation:rule="has(self.resourceClaimName) != has(self.resourceClaimTemplateName)",message="exactly one of resourceClaimName and resourceClaimTemplateName must be set"
+type PodResourceClaim struct {
+	// Name uniquely identifies this resource claim inside the pod.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=63
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
+	Name string `json:"name"`
+
+	// ResourceClaimName names an existing ResourceClaim in the pod namespace.
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	ResourceClaimName *string `json:"resourceClaimName,omitempty"`
+
+	// ResourceClaimTemplateName names a ResourceClaimTemplate in the pod namespace.
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	ResourceClaimTemplateName *string `json:"resourceClaimTemplateName,omitempty"`
+}
+
 type APIServer struct {
 	// Enable DS Pipelines Operator management of DSP API Server. Setting Deploy to false disables operator reconciliation. Default: true
 	// +kubebuilder:default:=true
@@ -131,6 +152,12 @@ type APIServer struct {
 	ManagedPipelines *ManagedPipelinesSpec `json:"managedPipelines,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
+	// ResourceClaims defines which ResourceClaims must be allocated
+	// and reserved before the Pod is allowed to start.
+	// +kubebuilder:validation:Optional
+	// +listType=map
+	// +listMapKey=name
+	ResourceClaims []PodResourceClaim `json:"resourceClaims,omitempty"`
 
 	// If the Object store/DB is behind a TLS secured connection that is
 	// unrecognized by the host OpenShift/K8s cluster, then you can
@@ -239,6 +266,12 @@ type PersistenceAgent struct {
 	NumWorkers int `json:"numWorkers,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
+	// ResourceClaims defines which ResourceClaims must be allocated
+	// and reserved before the Pod is allowed to start.
+	// +kubebuilder:validation:Optional
+	// +listType=map
+	// +listMapKey=name
+	ResourceClaims []PodResourceClaim `json:"resourceClaims,omitempty"`
 }
 
 type ScheduledWorkflow struct {
@@ -253,6 +286,12 @@ type ScheduledWorkflow struct {
 	CronScheduleTimezone string `json:"cronScheduleTimezone,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
+	// ResourceClaims defines which ResourceClaims must be allocated
+	// and reserved before the Pod is allowed to start.
+	// +kubebuilder:validation:Optional
+	// +listType=map
+	// +listMapKey=name
+	ResourceClaims []PodResourceClaim `json:"resourceClaims,omitempty"`
 }
 
 type Database struct {
@@ -301,6 +340,12 @@ type MariaDB struct {
 	StorageClassName string `json:"storageClassName,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
+	// ResourceClaims defines which ResourceClaims must be allocated
+	// and reserved before the Pod is allowed to start.
+	// +kubebuilder:validation:Optional
+	// +listType=map
+	// +listMapKey=name
+	ResourceClaims []PodResourceClaim `json:"resourceClaims,omitempty"`
 }
 
 type ExternalDB struct {
@@ -344,6 +389,12 @@ type Minio struct {
 	StorageClassName string `json:"storageClassName,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
+	// ResourceClaims defines which ResourceClaims must be allocated
+	// and reserved before the Pod is allowed to start.
+	// +kubebuilder:validation:Optional
+	// +listType=map
+	// +listMapKey=name
+	ResourceClaims []PodResourceClaim `json:"resourceClaims,omitempty"`
 	// Specify a custom image for Minio pod.
 	// +kubebuilder:validation:Required
 	Image string `json:"image"`
@@ -360,7 +411,13 @@ type MLMD struct {
 
 type Envoy struct {
 	Resources *ResourceRequirements `json:"resources,omitempty"`
-	Image     string                `json:"image,omitempty"`
+	// ResourceClaims defines which ResourceClaims must be allocated
+	// and reserved before the Pod is allowed to start.
+	// +kubebuilder:validation:Optional
+	// +listType=map
+	// +listMapKey=name
+	ResourceClaims []PodResourceClaim `json:"resourceClaims,omitempty"`
+	Image          string             `json:"image,omitempty"`
 	// +kubebuilder:default:=true
 	// +kubebuilder:validation:Optional
 	DeployRoute bool `json:"deployRoute"`
@@ -368,7 +425,13 @@ type Envoy struct {
 
 type GRPC struct {
 	Resources *ResourceRequirements `json:"resources,omitempty"`
-	Image     string                `json:"image,omitempty"`
+	// ResourceClaims defines which ResourceClaims must be allocated
+	// and reserved before the Pod is allowed to start.
+	// +kubebuilder:validation:Optional
+	// +listType=map
+	// +listMapKey=name
+	ResourceClaims []PodResourceClaim `json:"resourceClaims,omitempty"`
+	Image          string             `json:"image,omitempty"`
 	// +kubebuilder:validation:Optional
 	Port string `json:"port"`
 }
@@ -390,6 +453,12 @@ type WorkflowController struct {
 	CustomConfig  string `json:"customConfig,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
+	// ResourceClaims defines which ResourceClaims must be allocated
+	// and reserved before the Pod is allowed to start.
+	// +kubebuilder:validation:Optional
+	// +listType=map
+	// +listMapKey=name
+	ResourceClaims []PodResourceClaim `json:"resourceClaims,omitempty"`
 }
 
 // ResourceRequirements structures compute resource requirements.

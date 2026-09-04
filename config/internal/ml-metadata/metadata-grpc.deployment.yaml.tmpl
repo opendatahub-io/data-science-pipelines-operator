@@ -84,6 +84,12 @@ spec:
               port: grpc-api
             timeoutSeconds: 2
           resources:
+            {{ if .MLMD.GRPC.ResourceClaims }}
+            claims:
+              {{ range .MLMD.GRPC.ResourceClaims }}
+              - name: {{ yamlString .Name }}
+              {{ end }}
+            {{ end }}
             {{ if .MLMD.GRPC.Resources.Requests }}
             requests:
               {{ if .MLMD.GRPC.Resources.Requests.CPU }}
@@ -113,6 +119,18 @@ spec:
             - name: ds-pipeline-metadata-grpc-tls-certs-{{.Name}}
               mountPath: "/etc/tls"
             {{ end }}
+      {{ if .MLMD.GRPC.ResourceClaims }}
+      resourceClaims:
+      {{ range .MLMD.GRPC.ResourceClaims }}
+        - name: {{ yamlString .Name }}
+          {{ if .ResourceClaimName }}
+          resourceClaimName: {{ yamlString .ResourceClaimName }}
+          {{ end }}
+          {{ if .ResourceClaimTemplateName }}
+          resourceClaimTemplateName: {{ yamlString .ResourceClaimTemplateName }}
+          {{ end }}
+      {{ end }}
+      {{ end }}
       serviceAccountName: ds-pipeline-metadata-grpc-{{.Name}}
       volumes:
         {{ if .CustomCABundle }}
