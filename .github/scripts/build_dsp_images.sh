@@ -5,29 +5,19 @@ set -euo pipefail
 # Requires: GIT_WORKSPACE, REGISTRY_ADDRESS, GITHUB_REPOSITORY_OWNER, GITHUB_SHA
 # Optional: PR_HEAD_OWNER, PR_HEAD_BRANCH (set by workflow for fork PR detection)
 
-# Check if a branch exists in a remote repo. Returns:
-#   0 — branch exists
-#   2 — branch or repo not found (safe to fall through)
-#   1 — transport/auth/service error (should fail hard)
+# Check if a branch exists in a remote repo. Returns 0 if found, 1 otherwise
+# (branch missing, repo missing, or unreachable — all fall through to next tier).
 check_remote_ref() {
   local repo_url="$1"
   local branch="$2"
-  local rc=0
-  git ls-remote --exit-code --heads "$repo_url" "refs/heads/${branch}" >/dev/null 2>&1 || rc=$?
-  if [ "$rc" -eq 0 ]; then
-    return 0
-  elif [ "$rc" -eq 2 ]; then
-    return 2
-  else
-    return 1
-  fi
+  git ls-remote --exit-code --heads "$repo_url" "refs/heads/${branch}" >/dev/null 2>&1
 }
 
 # Clone a repo with 3-tier fallback:
 #   1. <fork_owner>/<repo> @ <head_branch>  (skipped when fork_owner is empty or equals upstream)
 #   2. <upstream_owner>/<repo> @ <head_branch>  (skipped when head_branch is empty)
 #   3. <upstream_owner>/<repo> @ <default_branch>
-# Uses ls-remote to distinguish missing refs (fall through) from transport errors (fail hard).
+# Tiers 1-2 use ls-remote and fall through on any failure; tier 3 fails hard if clone fails.
 clone_with_fallback() {
   local repo_name="$1"
   local target_dir="$2"
@@ -39,16 +29,11 @@ clone_with_fallback() {
   if [ -n "$fork_owner" ] && [ "$fork_owner" != "$upstream_owner" ] && [ -n "$head_branch" ]; then
     local fork_url="https://github.com/${fork_owner}/${repo_name}.git"
     echo "Checking ${fork_owner}/${repo_name} for branch ${head_branch}..."
-    local ref_rc=0
-    check_remote_ref "$fork_url" "$head_branch" || ref_rc=$?
-    if [ "$ref_rc" -eq 0 ]; then
+    if check_remote_ref "$fork_url" "$head_branch"; then
       echo "Branch found, cloning ${fork_owner}/${repo_name}@${head_branch}..."
       git clone --depth 1 --branch "$head_branch" "$fork_url" "$target_dir" 2>&1
       echo "Cloned from fork: ${fork_owner}/${repo_name}@${head_branch}"
       return 0
-    elif [ "$ref_rc" -eq 1 ]; then
-      echo "ERROR: transport/auth failure reaching ${fork_url}" >&2
-      return 1
     fi
     echo "Fork ${fork_owner}/${repo_name}@${head_branch} not found, trying next tier"
   fi
@@ -56,16 +41,11 @@ clone_with_fallback() {
   if [ -n "$head_branch" ]; then
     local upstream_url="https://github.com/${upstream_owner}/${repo_name}.git"
     echo "Checking ${upstream_owner}/${repo_name} for branch ${head_branch}..."
-    local ref_rc=0
-    check_remote_ref "$upstream_url" "$head_branch" || ref_rc=$?
-    if [ "$ref_rc" -eq 0 ]; then
+    if check_remote_ref "$upstream_url" "$head_branch"; then
       echo "Branch found, cloning ${upstream_owner}/${repo_name}@${head_branch}..."
       git clone --depth 1 --branch "$head_branch" "$upstream_url" "$target_dir" 2>&1
       echo "Cloned from upstream: ${upstream_owner}/${repo_name}@${head_branch}"
       return 0
-    elif [ "$ref_rc" -eq 1 ]; then
-      echo "ERROR: transport/auth failure reaching ${upstream_url}" >&2
-      return 1
     fi
     echo "Branch ${head_branch} not found in ${upstream_owner}/${repo_name}, trying next tier"
   fi
