@@ -79,6 +79,124 @@ func baseDSPA() *dspav1.DataSciencePipelinesApplication {
 	return dspa
 }
 
+func componentContainerReferencesAllPodClaims(podSpec corev1.PodSpec, containerName string) bool {
+	for i := range podSpec.Containers {
+		container := &podSpec.Containers[i]
+		if container.Name != containerName {
+			continue
+		}
+
+		referencedClaims := make(map[string]struct{}, len(container.Resources.Claims))
+		for _, claim := range container.Resources.Claims {
+			referencedClaims[claim.Name] = struct{}{}
+		}
+		for _, claim := range podSpec.ResourceClaims {
+			if _, found := referencedClaims[claim.Name]; !found {
+				return false
+			}
+		}
+		return true
+	}
+
+	return false
+}
+
+func requireComponentContainerClaims(t *testing.T, deployment *appsv1.Deployment, containerName string) *corev1.Container {
+	t.Helper()
+
+	podSpec := deployment.Spec.Template.Spec
+	require.True(t, componentContainerReferencesAllPodClaims(podSpec, containerName))
+
+	var componentContainer *corev1.Container
+	for i := range podSpec.Containers {
+		container := &podSpec.Containers[i]
+		if container.Name == containerName {
+			componentContainer = container
+			continue
+		}
+		assert.Empty(t, container.Resources.Claims, "claims must not be attached to container %q", container.Name)
+	}
+	require.NotNil(t, componentContainer)
+
+	expected := make([]corev1.ResourceClaim, 0, len(podSpec.ResourceClaims))
+	for _, claim := range podSpec.ResourceClaims {
+		expected = append(expected, corev1.ResourceClaim{Name: claim.Name})
+	}
+	assert.ElementsMatch(t, expected, componentContainer.Resources.Claims)
+
+	return componentContainer
+}
+
+func TestComponentContainerReferencesAllPodClaims(t *testing.T) {
+	tests := []struct {
+		name          string
+		podSpec       corev1.PodSpec
+		containerName string
+		want          bool
+	}{
+		{
+			name: "all claims referenced by intended container",
+			podSpec: corev1.PodSpec{
+				ResourceClaims: []corev1.PodResourceClaim{{Name: "gpu"}, {Name: "fpga"}},
+				Containers: []corev1.Container{{
+					Name: "component",
+					Resources: corev1.ResourceRequirements{Claims: []corev1.ResourceClaim{
+						{Name: "gpu"}, {Name: "fpga"},
+					}},
+				}},
+			},
+			containerName: "component",
+			want:          true,
+		},
+		{
+			name: "no pod claims",
+			podSpec: corev1.PodSpec{
+				Containers: []corev1.Container{{Name: "component"}},
+			},
+			containerName: "component",
+			want:          true,
+		},
+		{
+			name: "claim attached only to wrong container",
+			podSpec: corev1.PodSpec{
+				ResourceClaims: []corev1.PodResourceClaim{{Name: "gpu"}},
+				Containers: []corev1.Container{
+					{Name: "component"},
+					{Name: "sidecar", Resources: corev1.ResourceRequirements{Claims: []corev1.ResourceClaim{{Name: "gpu"}}}},
+				},
+			},
+			containerName: "component",
+			want:          false,
+		},
+		{
+			name: "one pod claim reference missing",
+			podSpec: corev1.PodSpec{
+				ResourceClaims: []corev1.PodResourceClaim{{Name: "gpu"}, {Name: "fpga"}},
+				Containers: []corev1.Container{{
+					Name:      "component",
+					Resources: corev1.ResourceRequirements{Claims: []corev1.ResourceClaim{{Name: "gpu"}}},
+				}},
+			},
+			containerName: "component",
+			want:          false,
+		},
+		{
+			name: "intended container missing",
+			podSpec: corev1.PodSpec{
+				Containers: []corev1.Container{{Name: "sidecar"}},
+			},
+			containerName: "component",
+			want:          false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, componentContainerReferencesAllPodClaims(tt.podSpec, tt.containerName))
+		})
+	}
+}
+
 // APIServer — thorough tests covering all template branches
 
 func TestAPIServerResourceClaims_NoClaims(t *testing.T) {
@@ -97,6 +215,7 @@ func TestAPIServerResourceClaims_NoClaims(t *testing.T) {
 	require.True(t, created)
 
 	assert.Empty(t, deployment.Spec.Template.Spec.ResourceClaims)
+	requireComponentContainerClaims(t, deployment, "ds-pipeline-api-server")
 }
 
 func TestAPIServerResourceClaims_WithTemplateName(t *testing.T) {
@@ -125,6 +244,7 @@ func TestAPIServerResourceClaims_WithTemplateName(t *testing.T) {
 	assert.Equal(t, "gpu-claim", claims[0].Name)
 	assert.Equal(t, ptr.To("gpu-claim-template"), claims[0].ResourceClaimTemplateName)
 	assert.Nil(t, claims[0].ResourceClaimName)
+	requireComponentContainerClaims(t, deployment, "ds-pipeline-api-server")
 }
 
 func TestAPIServerResourceClaims_WithClaimName(t *testing.T) {
@@ -153,6 +273,7 @@ func TestAPIServerResourceClaims_WithClaimName(t *testing.T) {
 	assert.Equal(t, "existing-claim", claims[0].Name)
 	assert.Equal(t, ptr.To("my-pre-existing-claim"), claims[0].ResourceClaimName)
 	assert.Nil(t, claims[0].ResourceClaimTemplateName)
+	requireComponentContainerClaims(t, deployment, "ds-pipeline-api-server")
 }
 
 func TestAPIServerResourceClaims_MultipleClaims(t *testing.T) {
@@ -186,6 +307,7 @@ func TestAPIServerResourceClaims_MultipleClaims(t *testing.T) {
 	assert.Equal(t, ptr.To("gpu-template"), claims[0].ResourceClaimTemplateName)
 	assert.Equal(t, "fpga-claim", claims[1].Name)
 	assert.Equal(t, ptr.To("shared-fpga"), claims[1].ResourceClaimName)
+	requireComponentContainerClaims(t, deployment, "ds-pipeline-api-server")
 }
 
 // Other components — smoke tests
@@ -215,6 +337,7 @@ func TestPersistenceAgentResourceClaims(t *testing.T) {
 	require.Len(t, claims, 1)
 	assert.Equal(t, "gpu-claim", claims[0].Name)
 	assert.Equal(t, ptr.To("gpu-template"), claims[0].ResourceClaimTemplateName)
+	requireComponentContainerClaims(t, deployment, "ds-pipeline-persistenceagent")
 }
 
 func TestScheduledWorkflowResourceClaims(t *testing.T) {
@@ -242,6 +365,7 @@ func TestScheduledWorkflowResourceClaims(t *testing.T) {
 	require.Len(t, claims, 1)
 	assert.Equal(t, "gpu-claim", claims[0].Name)
 	assert.Equal(t, ptr.To("gpu-template"), claims[0].ResourceClaimTemplateName)
+	requireComponentContainerClaims(t, deployment, "ds-pipeline-scheduledworkflow")
 }
 
 func TestWorkflowControllerResourceClaims(t *testing.T) {
@@ -269,6 +393,7 @@ func TestWorkflowControllerResourceClaims(t *testing.T) {
 	require.Len(t, claims, 1)
 	assert.Equal(t, "gpu-claim", claims[0].Name)
 	assert.Equal(t, ptr.To("gpu-template"), claims[0].ResourceClaimTemplateName)
+	requireComponentContainerClaims(t, deployment, "ds-pipeline-workflow-controller")
 }
 
 func TestMariaDBResourceClaims(t *testing.T) {
@@ -296,6 +421,7 @@ func TestMariaDBResourceClaims(t *testing.T) {
 	require.Len(t, claims, 1)
 	assert.Equal(t, "gpu-claim", claims[0].Name)
 	assert.Equal(t, ptr.To("gpu-template"), claims[0].ResourceClaimTemplateName)
+	requireComponentContainerClaims(t, deployment, "mariadb")
 }
 
 func TestMinioResourceClaims(t *testing.T) {
@@ -323,6 +449,9 @@ func TestMinioResourceClaims(t *testing.T) {
 	require.Len(t, claims, 1)
 	assert.Equal(t, "gpu-claim", claims[0].Name)
 	assert.Equal(t, ptr.To("gpu-template"), claims[0].ResourceClaimTemplateName)
+	container := requireComponentContainerClaims(t, deployment, "minio")
+	assert.Equal(t, resource.MustParse("250m"), container.Resources.Requests.Cpu().DeepCopy())
+	assert.Equal(t, resource.MustParse("1Gi"), container.Resources.Limits.Memory().DeepCopy())
 }
 
 func TestMLMDEnvoyResourceClaims(t *testing.T) {
@@ -352,6 +481,7 @@ func TestMLMDEnvoyResourceClaims(t *testing.T) {
 	require.Len(t, claims, 1)
 	assert.Equal(t, "gpu-claim", claims[0].Name)
 	assert.Equal(t, ptr.To("gpu-template"), claims[0].ResourceClaimTemplateName)
+	requireComponentContainerClaims(t, deployment, "container")
 }
 
 func TestMLMDGRPCResourceClaims(t *testing.T) {
@@ -381,6 +511,7 @@ func TestMLMDGRPCResourceClaims(t *testing.T) {
 	require.Len(t, claims, 1)
 	assert.Equal(t, "gpu-claim", claims[0].Name)
 	assert.Equal(t, ptr.To("gpu-template"), claims[0].ResourceClaimTemplateName)
+	requireComponentContainerClaims(t, deployment, "container")
 }
 
 // Params extraction test

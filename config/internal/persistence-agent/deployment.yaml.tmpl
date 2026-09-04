@@ -92,6 +92,12 @@ spec:
             periodSeconds: 5
             timeoutSeconds: 2
           resources:
+            {{ if .PersistenceAgent.ResourceClaims }}
+            claims:
+              {{ range .PersistenceAgent.ResourceClaims }}
+              - name: "{{ .Name }}"
+              {{ end }}
+            {{ end }}
             {{ if .PersistenceAgent.Resources.Requests }}
             requests:
               {{ if .PersistenceAgent.Resources.Requests.CPU }}

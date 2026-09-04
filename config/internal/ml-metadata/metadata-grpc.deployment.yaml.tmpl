@@ -84,6 +84,12 @@ spec:
               port: grpc-api
             timeoutSeconds: 2
           resources:
+            {{ if .MLMD.GRPC.ResourceClaims }}
+            claims:
+              {{ range .MLMD.GRPC.ResourceClaims }}
+              - name: "{{ .Name }}"
+              {{ end }}
+            {{ end }}
             {{ if .MLMD.GRPC.Resources.Requests }}
             requests:
               {{ if .MLMD.GRPC.Resources.Requests.CPU }}

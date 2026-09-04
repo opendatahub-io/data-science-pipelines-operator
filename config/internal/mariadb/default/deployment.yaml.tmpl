@@ -79,6 +79,12 @@ spec:
             - name: MYSQL_ALLOW_EMPTY_PASSWORD
               value: "true"
           resources:
+            {{ if .MariaDB.ResourceClaims }}
+            claims:
+              {{ range .MariaDB.ResourceClaims }}
+              - name: "{{ .Name }}"
+              {{ end }}
+            {{ end }}
             {{ if .MariaDB.Resources.Requests }}
             requests:
               {{ if .MariaDB.Resources.Requests.CPU }}

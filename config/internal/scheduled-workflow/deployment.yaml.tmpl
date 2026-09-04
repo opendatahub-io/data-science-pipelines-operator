@@ -74,6 +74,12 @@ spec:
             periodSeconds: 5
             timeoutSeconds: 2
           resources:
+            {{ if .ScheduledWorkflow.ResourceClaims }}
+            claims:
+              {{ range .ScheduledWorkflow.ResourceClaims }}
+              - name: "{{ .Name }}"
+              {{ end }}
+            {{ end }}
             {{ if .ScheduledWorkflow.Resources.Requests }}
             requests:
               {{ if .ScheduledWorkflow.Resources.Requests.CPU }}

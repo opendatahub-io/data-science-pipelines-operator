@@ -64,6 +64,12 @@ spec:
               port: md-envoy
             timeoutSeconds: 2
           resources:
+            {{ if .MLMD.Envoy.ResourceClaims }}
+            claims:
+              {{ range .MLMD.Envoy.ResourceClaims }}
+              - name: "{{ .Name }}"
+              {{ end }}
+            {{ end }}
             {{ if .MLMD.Envoy.Resources.Requests }}
             requests:
               {{ if .MLMD.Envoy.Resources.Requests.CPU }}

@@ -71,6 +71,12 @@ spec:
             successThreshold: 1
             failureThreshold: 3
           resources:
+            {{ if .Minio.ResourceClaims }}
+            claims:
+              {{ range .Minio.ResourceClaims }}
+              - name: "{{ .Name }}"
+              {{ end }}
+            {{ end }}
             {{ if .Minio.Resources.Requests }}
             requests:
               {{ if .Minio.Resources.Requests.CPU }}

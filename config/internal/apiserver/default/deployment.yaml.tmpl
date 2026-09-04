@@ -257,6 +257,12 @@ spec:
             periodSeconds: 5
             timeoutSeconds: 2
           resources:
+            {{ if .APIServer.ResourceClaims }}
+            claims:
+              {{ range .APIServer.ResourceClaims }}
+              - name: "{{ .Name }}"
+              {{ end }}
+            {{ end }}
             {{ if .APIServer.Resources.Requests }}
             requests:
               {{ if .APIServer.Resources.Requests.CPU }}

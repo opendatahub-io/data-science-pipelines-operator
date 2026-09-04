@@ -71,6 +71,12 @@ spec:
           name: metrics
         - containerPort: 6060
         resources:
+            {{ if .WorkflowController.ResourceClaims }}
+            claims:
+              {{ range .WorkflowController.ResourceClaims }}
+              - name: "{{ .Name }}"
+              {{ end }}
+            {{ end }}
             {{ if .WorkflowController.Resources.Requests }}
             requests:
               {{ if .WorkflowController.Resources.Requests.CPU }}
