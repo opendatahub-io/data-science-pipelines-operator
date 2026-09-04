@@ -95,7 +95,7 @@ spec:
             {{ if .PersistenceAgent.ResourceClaims }}
             claims:
               {{ range .PersistenceAgent.ResourceClaims }}
-              - name: "{{ .Name }}"
+              - name: {{ yamlString .Name }}
               {{ end }}
             {{ end }}
             {{ if .PersistenceAgent.Resources.Requests }}
@@ -127,12 +127,12 @@ spec:
       {{ if .PersistenceAgent.ResourceClaims }}
       resourceClaims:
       {{ range .PersistenceAgent.ResourceClaims }}
-        - name: "{{ .Name }}"
+        - name: {{ yamlString .Name }}
           {{ if .ResourceClaimName }}
-          resourceClaimName: "{{ .ResourceClaimName }}"
+          resourceClaimName: {{ yamlString .ResourceClaimName }}
           {{ end }}
           {{ if .ResourceClaimTemplateName }}
-          resourceClaimTemplateName: "{{ .ResourceClaimTemplateName }}"
+          resourceClaimTemplateName: {{ yamlString .ResourceClaimTemplateName }}
           {{ end }}
       {{ end }}
       {{ end }}

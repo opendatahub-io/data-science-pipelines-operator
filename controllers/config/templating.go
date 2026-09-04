@@ -18,12 +18,14 @@ package config
 
 import (
 	"bytes"
+	"fmt"
 	"io"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"os"
+	"strconv"
 	"text/template"
 
 	mf "github.com/manifestival/manifestival"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // PathPrefix is the file system path which template paths will be prefixed with.
@@ -58,7 +60,9 @@ func templateSource(r io.Reader, context interface{}) (mf.Source, error) {
 	if err != nil {
 		return mf.Slice([]unstructured.Unstructured{}), err
 	}
-	t, err := template.New("manifestTemplateDSP").Parse(string(b))
+	t, err := template.New("manifestTemplateDSP").Funcs(template.FuncMap{
+		"yamlString": yamlString,
+	}).Parse(string(b))
 	if err != nil {
 		return mf.Slice([]unstructured.Unstructured{}), err
 	}
@@ -68,4 +72,18 @@ func templateSource(r io.Reader, context interface{}) (mf.Source, error) {
 		return mf.Slice([]unstructured.Unstructured{}), err
 	}
 	return mf.Reader(&b2), nil
+}
+
+func yamlString(value interface{}) (string, error) {
+	switch value := value.(type) {
+	case string:
+		return strconv.Quote(value), nil
+	case *string:
+		if value == nil {
+			return "", fmt.Errorf("cannot encode a nil string pointer")
+		}
+		return strconv.Quote(*value), nil
+	default:
+		return "", fmt.Errorf("cannot encode %T as a YAML string", value)
+	}
 }

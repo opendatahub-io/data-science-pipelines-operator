@@ -77,7 +77,7 @@ spec:
             {{ if .ScheduledWorkflow.ResourceClaims }}
             claims:
               {{ range .ScheduledWorkflow.ResourceClaims }}
-              - name: "{{ .Name }}"
+              - name: {{ yamlString .Name }}
               {{ end }}
             {{ end }}
             {{ if .ScheduledWorkflow.Resources.Requests }}
@@ -106,12 +106,12 @@ spec:
       {{ if .ScheduledWorkflow.ResourceClaims }}
       resourceClaims:
       {{ range .ScheduledWorkflow.ResourceClaims }}
-        - name: "{{ .Name }}"
+        - name: {{ yamlString .Name }}
           {{ if .ResourceClaimName }}
-          resourceClaimName: "{{ .ResourceClaimName }}"
+          resourceClaimName: {{ yamlString .ResourceClaimName }}
           {{ end }}
           {{ if .ResourceClaimTemplateName }}
-          resourceClaimTemplateName: "{{ .ResourceClaimTemplateName }}"
+          resourceClaimTemplateName: {{ yamlString .ResourceClaimTemplateName }}
           {{ end }}
       {{ end }}
       {{ end }}

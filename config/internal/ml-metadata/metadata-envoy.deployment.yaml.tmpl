@@ -67,7 +67,7 @@ spec:
             {{ if .MLMD.Envoy.ResourceClaims }}
             claims:
               {{ range .MLMD.Envoy.ResourceClaims }}
-              - name: "{{ .Name }}"
+              - name: {{ yamlString .Name }}
               {{ end }}
             {{ end }}
             {{ if .MLMD.Envoy.Resources.Requests }}
@@ -154,12 +154,12 @@ spec:
       {{ if .MLMD.Envoy.ResourceClaims }}
       resourceClaims:
       {{ range .MLMD.Envoy.ResourceClaims }}
-        - name: "{{ .Name }}"
+        - name: {{ yamlString .Name }}
           {{ if .ResourceClaimName }}
-          resourceClaimName: "{{ .ResourceClaimName }}"
+          resourceClaimName: {{ yamlString .ResourceClaimName }}
           {{ end }}
           {{ if .ResourceClaimTemplateName }}
-          resourceClaimTemplateName: "{{ .ResourceClaimTemplateName }}"
+          resourceClaimTemplateName: {{ yamlString .ResourceClaimTemplateName }}
           {{ end }}
       {{ end }}
       {{ end }}

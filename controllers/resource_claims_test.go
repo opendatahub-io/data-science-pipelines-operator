@@ -220,7 +220,7 @@ func TestAPIServerResourceClaims_NoClaims(t *testing.T) {
 
 func TestAPIServerResourceClaims_WithTemplateName(t *testing.T) {
 	dspa := baseDSPA()
-	dspa.Spec.APIServer.ResourceClaims = []corev1.PodResourceClaim{
+	dspa.Spec.APIServer.ResourceClaims = []dspav1.PodResourceClaim{
 		{
 			Name:                      "gpu-claim",
 			ResourceClaimTemplateName: ptr.To("gpu-claim-template"),
@@ -249,7 +249,7 @@ func TestAPIServerResourceClaims_WithTemplateName(t *testing.T) {
 
 func TestAPIServerResourceClaims_WithClaimName(t *testing.T) {
 	dspa := baseDSPA()
-	dspa.Spec.APIServer.ResourceClaims = []corev1.PodResourceClaim{
+	dspa.Spec.APIServer.ResourceClaims = []dspav1.PodResourceClaim{
 		{
 			Name:              "existing-claim",
 			ResourceClaimName: ptr.To("my-pre-existing-claim"),
@@ -278,7 +278,7 @@ func TestAPIServerResourceClaims_WithClaimName(t *testing.T) {
 
 func TestAPIServerResourceClaims_MultipleClaims(t *testing.T) {
 	dspa := baseDSPA()
-	dspa.Spec.APIServer.ResourceClaims = []corev1.PodResourceClaim{
+	dspa.Spec.APIServer.ResourceClaims = []dspav1.PodResourceClaim{
 		{
 			Name:                      "gpu-claim",
 			ResourceClaimTemplateName: ptr.To("gpu-template"),
@@ -310,11 +310,42 @@ func TestAPIServerResourceClaims_MultipleClaims(t *testing.T) {
 	requireComponentContainerClaims(t, deployment, "ds-pipeline-api-server")
 }
 
+func TestAPIServerResourceClaims_QuoteAndNewlineAreSafelyEncoded(t *testing.T) {
+	dspa := baseDSPA()
+	claimName := "gpu\"\nhostNetwork: true"
+	resourceClaimName := "existing\"\nhostPID: true"
+	dspa.Spec.APIServer.ResourceClaims = []dspav1.PodResourceClaim{
+		{
+			Name:              claimName,
+			ResourceClaimName: ptr.To(resourceClaimName),
+		},
+	}
+
+	ctx, params, reconciler := CreateNewTestObjects()
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	require.NoError(t, err)
+
+	err = reconciler.ReconcileAPIServer(ctx, dspa, params)
+	require.NoError(t, err)
+
+	deployment := &appsv1.Deployment{}
+	created, err := reconciler.IsResourceCreated(ctx, deployment, apiServerDefaultResourceNamePrefix+dspa.Name, dspa.Namespace)
+	require.NoError(t, err)
+	require.True(t, created)
+
+	require.Len(t, deployment.Spec.Template.Spec.ResourceClaims, 1)
+	assert.Equal(t, claimName, deployment.Spec.Template.Spec.ResourceClaims[0].Name)
+	assert.Equal(t, ptr.To(resourceClaimName), deployment.Spec.Template.Spec.ResourceClaims[0].ResourceClaimName)
+	assert.False(t, deployment.Spec.Template.Spec.HostNetwork)
+	assert.False(t, deployment.Spec.Template.Spec.HostPID)
+	requireComponentContainerClaims(t, deployment, "ds-pipeline-api-server")
+}
+
 // Other components — smoke tests
 
 func TestPersistenceAgentResourceClaims(t *testing.T) {
 	dspa := baseDSPA()
-	dspa.Spec.PersistenceAgent.ResourceClaims = []corev1.PodResourceClaim{
+	dspa.Spec.PersistenceAgent.ResourceClaims = []dspav1.PodResourceClaim{
 		{
 			Name:                      "gpu-claim",
 			ResourceClaimTemplateName: ptr.To("gpu-template"),
@@ -342,7 +373,7 @@ func TestPersistenceAgentResourceClaims(t *testing.T) {
 
 func TestScheduledWorkflowResourceClaims(t *testing.T) {
 	dspa := baseDSPA()
-	dspa.Spec.ScheduledWorkflow.ResourceClaims = []corev1.PodResourceClaim{
+	dspa.Spec.ScheduledWorkflow.ResourceClaims = []dspav1.PodResourceClaim{
 		{
 			Name:                      "gpu-claim",
 			ResourceClaimTemplateName: ptr.To("gpu-template"),
@@ -370,7 +401,7 @@ func TestScheduledWorkflowResourceClaims(t *testing.T) {
 
 func TestWorkflowControllerResourceClaims(t *testing.T) {
 	dspa := baseDSPA()
-	dspa.Spec.WorkflowController.ResourceClaims = []corev1.PodResourceClaim{
+	dspa.Spec.WorkflowController.ResourceClaims = []dspav1.PodResourceClaim{
 		{
 			Name:                      "gpu-claim",
 			ResourceClaimTemplateName: ptr.To("gpu-template"),
@@ -398,7 +429,7 @@ func TestWorkflowControllerResourceClaims(t *testing.T) {
 
 func TestMariaDBResourceClaims(t *testing.T) {
 	dspa := baseDSPA()
-	dspa.Spec.Database.MariaDB.ResourceClaims = []corev1.PodResourceClaim{
+	dspa.Spec.Database.MariaDB.ResourceClaims = []dspav1.PodResourceClaim{
 		{
 			Name:                      "gpu-claim",
 			ResourceClaimTemplateName: ptr.To("gpu-template"),
@@ -426,7 +457,7 @@ func TestMariaDBResourceClaims(t *testing.T) {
 
 func TestMinioResourceClaims(t *testing.T) {
 	dspa := baseDSPA()
-	dspa.Spec.ObjectStorage.Minio.ResourceClaims = []corev1.PodResourceClaim{
+	dspa.Spec.ObjectStorage.Minio.ResourceClaims = []dspav1.PodResourceClaim{
 		{
 			Name:                      "gpu-claim",
 			ResourceClaimTemplateName: ptr.To("gpu-template"),
@@ -457,7 +488,7 @@ func TestMinioResourceClaims(t *testing.T) {
 func TestMLMDEnvoyResourceClaims(t *testing.T) {
 	dspa := baseDSPA()
 	dspa.Spec.MLMD.Envoy = &dspav1.Envoy{
-		ResourceClaims: []corev1.PodResourceClaim{
+		ResourceClaims: []dspav1.PodResourceClaim{
 			{
 				Name:                      "gpu-claim",
 				ResourceClaimTemplateName: ptr.To("gpu-template"),
@@ -487,7 +518,7 @@ func TestMLMDEnvoyResourceClaims(t *testing.T) {
 func TestMLMDGRPCResourceClaims(t *testing.T) {
 	dspa := baseDSPA()
 	dspa.Spec.MLMD.GRPC = &dspav1.GRPC{
-		ResourceClaims: []corev1.PodResourceClaim{
+		ResourceClaims: []dspav1.PodResourceClaim{
 			{
 				Name:                      "gpu-claim",
 				ResourceClaimTemplateName: ptr.To("gpu-template"),
@@ -519,7 +550,7 @@ func TestMLMDGRPCResourceClaims(t *testing.T) {
 func TestExtractParams_ResourceClaimsPreserved(t *testing.T) {
 	dspa := baseDSPA()
 
-	expectedClaims := []corev1.PodResourceClaim{
+	expectedClaims := []dspav1.PodResourceClaim{
 		{
 			Name:                      "gpu-claim",
 			ResourceClaimTemplateName: ptr.To("gpu-template"),

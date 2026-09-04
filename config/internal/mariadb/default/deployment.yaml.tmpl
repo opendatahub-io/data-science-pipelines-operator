@@ -30,12 +30,12 @@ spec:
       {{ if .MariaDB.ResourceClaims }}
       resourceClaims:
       {{ range .MariaDB.ResourceClaims }}
-        - name: "{{ .Name }}"
+        - name: {{ yamlString .Name }}
           {{ if .ResourceClaimName }}
-          resourceClaimName: "{{ .ResourceClaimName }}"
+          resourceClaimName: {{ yamlString .ResourceClaimName }}
           {{ end }}
           {{ if .ResourceClaimTemplateName }}
-          resourceClaimTemplateName: "{{ .ResourceClaimTemplateName }}"
+          resourceClaimTemplateName: {{ yamlString .ResourceClaimTemplateName }}
           {{ end }}
       {{ end }}
       {{ end }}
@@ -82,7 +82,7 @@ spec:
             {{ if .MariaDB.ResourceClaims }}
             claims:
               {{ range .MariaDB.ResourceClaims }}
-              - name: "{{ .Name }}"
+              - name: {{ yamlString .Name }}
               {{ end }}
             {{ end }}
             {{ if .MariaDB.Resources.Requests }}
