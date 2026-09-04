@@ -89,6 +89,7 @@ spec:
     image: quay.io/opendatahub/ds-pipelines-argo-workflowcontroller:3.3.10-upstream
     argoExecImage: quay.io/opendatahub/ds-pipelines-argo-argoexec:3.3.10-upstream
     customConfig: some-custom-workflowcontroller-configmap  # see ../custom-workflow-controller-config for example
+    replicas: 1  # set >1 for HA (Argo leader election; standby replicas)
     resources:
       requests:
         cpu: 120m

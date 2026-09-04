@@ -1112,6 +1112,10 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		setStringDefault(argoWorkflowImageFromConfig, &p.WorkflowController.Image)
 		setStringDefault(argoExecImageFromConfig, &p.WorkflowController.ArgoExecImage)
 		setResourcesDefault(config.WorkflowControllerResourceRequirements, &p.WorkflowController.Resources)
+		if p.WorkflowController.Replicas == nil {
+			replicas := int32(1)
+			p.WorkflowController.Replicas = &replicas
+		}
 	}
 
 	err := p.SetupMLMD(dsp, log)
