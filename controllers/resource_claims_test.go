@@ -18,6 +18,7 @@ limitations under the License.
 package controllers
 
 import (
+	"encoding/json"
 	"testing"
 
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
@@ -582,4 +583,42 @@ func TestExtractParams_ResourceClaimsPreserved(t *testing.T) {
 	assert.Equal(t, expectedClaims, params.Minio.ResourceClaims)
 	assert.Equal(t, expectedClaims, params.MLMD.Envoy.ResourceClaims)
 	assert.Equal(t, expectedClaims, params.MLMD.GRPC.ResourceClaims)
+}
+
+func TestDSPAResourceClaimsJSONRoundTrip(t *testing.T) {
+	dspa := baseDSPA()
+	expectedClaims := []dspav1.PodResourceClaim{
+		{
+			Name:              "existing-claim",
+			ResourceClaimName: ptr.To("shared-gpu"),
+		},
+		{
+			Name:                      "generated-claim",
+			ResourceClaimTemplateName: ptr.To("gpu-template"),
+		},
+	}
+
+	dspa.Spec.APIServer.ResourceClaims = expectedClaims
+	dspa.Spec.PersistenceAgent.ResourceClaims = expectedClaims
+	dspa.Spec.ScheduledWorkflow.ResourceClaims = expectedClaims
+	dspa.Spec.WorkflowController.ResourceClaims = expectedClaims
+	dspa.Spec.Database.MariaDB.ResourceClaims = expectedClaims
+	dspa.Spec.ObjectStorage.Minio.ResourceClaims = expectedClaims
+	dspa.Spec.MLMD.Envoy = &dspav1.Envoy{ResourceClaims: expectedClaims}
+	dspa.Spec.MLMD.GRPC = &dspav1.GRPC{ResourceClaims: expectedClaims}
+
+	serialized, err := json.Marshal(dspa)
+	require.NoError(t, err)
+
+	decoded := &dspav1.DataSciencePipelinesApplication{}
+	require.NoError(t, json.Unmarshal(serialized, decoded))
+
+	assert.Equal(t, expectedClaims, decoded.Spec.APIServer.ResourceClaims)
+	assert.Equal(t, expectedClaims, decoded.Spec.PersistenceAgent.ResourceClaims)
+	assert.Equal(t, expectedClaims, decoded.Spec.ScheduledWorkflow.ResourceClaims)
+	assert.Equal(t, expectedClaims, decoded.Spec.WorkflowController.ResourceClaims)
+	assert.Equal(t, expectedClaims, decoded.Spec.Database.MariaDB.ResourceClaims)
+	assert.Equal(t, expectedClaims, decoded.Spec.ObjectStorage.Minio.ResourceClaims)
+	assert.Equal(t, expectedClaims, decoded.Spec.MLMD.Envoy.ResourceClaims)
+	assert.Equal(t, expectedClaims, decoded.Spec.MLMD.GRPC.ResourceClaims)
 }
