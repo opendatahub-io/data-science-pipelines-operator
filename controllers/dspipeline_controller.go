@@ -271,21 +271,18 @@ func (r *DSPAReconciler) DeleteResourceIfItExists(ctx context.Context, obj clien
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list
-//+kubebuilder:rbac:groups=*,resources=deployments;services,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=secrets;configmaps;services;serviceaccounts;persistentvolumes;persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=core,resources=persistentvolumes;persistentvolumeclaims,verbs=*
 //+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles;clusterrolebindings,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=snapshot.storage.k8s.io,resources=volumesnapshots,verbs=create;delete;get
-//+kubebuilder:rbac:groups=argoproj.io,resources=workflows,verbs=*
+//+kubebuilder:rbac:groups=argoproj.io,resources=workflows,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=argoproj.io,resources=workflowtaskresults,verbs=create;patch
-//+kubebuilder:rbac:groups=argoproj.io,resources=workflowartifactgctasks;workflowartifactgctasks/finalizers,verbs=*
-//+kubebuilder:rbac:groups=core,resources=pods;pods/exec;pods/log;services,verbs=*
-//+kubebuilder:rbac:groups=core;apps;extensions,resources=deployments;deployments/finalizers;replicasets,verbs=*
-//+kubebuilder:rbac:groups=kubeflow.org,resources=*,verbs=*
-//+kubebuilder:rbac:groups=batch,resources=jobs,verbs=*
-//+kubebuilder:rbac:groups=machinelearning.seldon.io,resources=seldondeployments,verbs=*
+//+kubebuilder:rbac:groups=argoproj.io,resources=workflowartifactgctasks;workflowartifactgctasks/finalizers,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core,resources=pods;pods/exec;pods/log,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core;apps;extensions,resources=deployments;deployments/finalizers;replicasets,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=kubeflow.org,resources=scheduledworkflows;scheduledworkflows/finalizers,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=ray.io,resources=rayclusters;rayjobs;rayservices,verbs=create;get;list;patch;delete
 //+kubebuilder:rbac:groups=serving.kserve.io,resources=inferenceservices,verbs=create;get;list;patch;delete
 //+kubebuilder:rbac:groups=authorization.k8s.io,resources=subjectaccessreviews,verbs=create
@@ -293,6 +290,9 @@ func (r *DSPAReconciler) DeleteResourceIfItExists(ctx context.Context, obj clien
 //+kubebuilder:rbac:groups=image.openshift.io,resources=imagestreamtags,verbs=get
 //+kubebuilder:rbac:groups=core,resources=events,verbs=create;patch;list
 //+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;list;watch;create;update;patch;delete
+// Pipeline tasks can create AppWrappers to submit distributed training jobs
+// (e.g. RayCluster via Kueue). The operator needs these permissions for RBAC
+// escalation prevention when creating the pipeline-runner namespace-scoped Role.
 //+kubebuilder:rbac:groups=workload.codeflare.dev,resources=appwrappers;appwrappers/finalizers;appwrappers/status,verbs=create;delete;deletecollection;get;list;patch;update;watch
 //+kubebuilder:rbac:groups=pipelines.kubeflow.org,resources=pipelines;pipelines/finalizers,verbs=create;get;list;watch;update;patch;delete
 //+kubebuilder:rbac:groups=pipelines.kubeflow.org,resources=pipelineversions;pipelineversions/status;pipelineversions/finalizers,verbs=create;get;list;watch;update;patch;delete
