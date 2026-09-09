@@ -1037,6 +1037,17 @@ spec:
                     type: boolean
                   image:
                     type: string
+                  replicas:
+                    default: 1
+                    description: |-
+                      Number of replicas for the Argo Workflow Controller Deployment.
+                      Values greater than 1 enable high availability using Argo leader election:
+                      only one replica actively reconciles Workflows while others remain on hot-standby.
+                      See https://argo-workflows.readthedocs.io/en/latest/high-availability/
+                      Default: 1
+                    format: int32
+                    minimum: 1
+                    type: integer
                   resources:
                     description: Specify custom Pod resource requirements for this
                       component.

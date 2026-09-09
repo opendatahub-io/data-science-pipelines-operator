@@ -11,6 +11,7 @@ metadata:
   name: ds-pipeline-workflow-controller-{{.Name}}
   namespace: {{.Namespace}}
 spec:
+  replicas: {{.WorkflowController.Replicas}}
   selector:
     matchLabels:
       app: ds-pipeline-workflow-controller-{{.Name}}
