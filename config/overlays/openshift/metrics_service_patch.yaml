@@ -1,0 +1,13 @@
+- op: add
+  path: /metadata/annotations
+  value:
+    service.beta.openshift.io/serving-cert-secret-name: data-science-pipelines-operator-metrics-tls
+- op: replace
+  path: /spec/ports/0/name
+  value: https
+- op: replace
+  path: /spec/ports/0/port
+  value: 8443
+- op: add
+  path: /spec/ports/0/targetPort
+  value: 8443
