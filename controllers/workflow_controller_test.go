@@ -20,9 +20,11 @@ package controllers
 import (
 	"testing"
 
+	aipipelinesv1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/aipipelines/v1alpha1"
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/testutil"
+	"github.com/opendatahub-io/odh-platform-utilities/api/common"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -31,6 +33,41 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
+
+func TestAIPipelinesConfigOverridesLegacyArgoConfigInModularMode(t *testing.T) {
+	t.Cleanup(viper.Reset)
+	viper.Set(config.EnableAIPipelinesModuleControllerConfigName, true)
+	viper.Set("DSPO.ArgoWorkflowsControllers", `{"managementState":"Managed"}`)
+
+	ctx, _, reconciler := CreateNewTestObjects()
+	require.NoError(t, aipipelinesv1alpha1.AddToScheme(reconciler.Scheme))
+	require.NoError(t, reconciler.Create(ctx, &aipipelinesv1alpha1.AIPipelines{
+		ObjectMeta: metav1.ObjectMeta{Name: aipipelinesv1alpha1.AIPipelinesInstanceName},
+		Spec: aipipelinesv1alpha1.AIPipelinesSpec{ArgoWorkflowsControllers: &aipipelinesv1alpha1.ArgoWorkflowsControllersSpec{
+			ManagementState: common.Removed,
+		}},
+	}))
+
+	argoConfig, err := reconciler.argoWorkflowsControllersConfig(ctx)
+	require.NoError(t, err)
+	require.Equal(t, "Removed", argoConfig.GetManagementState())
+}
+
+func TestAIPipelinesChangeEnqueuesSupportedDSPAs(t *testing.T) {
+	ctx, _, reconciler := CreateNewTestObjects()
+	require.NoError(t, reconciler.Create(ctx, &dspav1.DataSciencePipelinesApplication{
+		ObjectMeta: metav1.ObjectMeta{Name: "supported", Namespace: "team-a"},
+		Spec:       dspav1.DSPASpec{DSPVersion: config.DSPV2VersionString},
+	}))
+	require.NoError(t, reconciler.Create(ctx, &dspav1.DataSciencePipelinesApplication{
+		ObjectMeta: metav1.ObjectMeta{Name: "unsupported", Namespace: "team-b"},
+		Spec:       dspav1.DSPASpec{DSPVersion: "v1"},
+	}))
+
+	requests := reconciler.enqueueAllSupportedDSPAs(ctx, nil)
+	require.Len(t, requests, 1)
+	require.Equal(t, types.NamespacedName{Name: "supported", Namespace: "team-a"}, requests[0].NamespacedName)
+}
 
 func TestDeployWorkflowController(t *testing.T) {
 	testNamespace := "testnamespace"
@@ -78,7 +115,7 @@ func TestDeployWorkflowController(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Run test reconciliation
-	workflowControllerEnabled, err := reconciler.ReconcileWorkflowController(dspa, params)
+	workflowControllerEnabled, err := reconciler.ReconcileWorkflowController(ctx, dspa, params)
 	assert.Nil(t, err)
 	assert.True(t, workflowControllerEnabled)
 
@@ -123,7 +160,7 @@ func TestDontDeployWorkflowController(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Run test reconciliation
-	workflowControllerEnabled, err := reconciler.ReconcileWorkflowController(dspa, params)
+	workflowControllerEnabled, err := reconciler.ReconcileWorkflowController(ctx, dspa, params)
 	assert.Nil(t, err)
 	assert.False(t, workflowControllerEnabled)
 
@@ -182,7 +219,7 @@ func TestChangeManagementStateWorkflowController(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Run test reconciliation using default global managementState for WorkflowController
-	workflowControllerEnabled, err := reconciler.ReconcileWorkflowController(dspa, params)
+	workflowControllerEnabled, err := reconciler.ReconcileWorkflowController(ctx, dspa, params)
 	assert.Nil(t, err)
 	assert.True(t, workflowControllerEnabled)
 
@@ -196,7 +233,7 @@ func TestChangeManagementStateWorkflowController(t *testing.T) {
 	viper.Set("DSPO.ArgoWorkflowsControllers", "{\"managementState\":\"Removed\"}")
 
 	// Run test reconciliation
-	workflowControllerEnabled, err = reconciler.ReconcileWorkflowController(dspa, params)
+	workflowControllerEnabled, err = reconciler.ReconcileWorkflowController(ctx, dspa, params)
 	assert.Nil(t, err)
 	assert.False(t, workflowControllerEnabled)
 
@@ -210,7 +247,7 @@ func TestChangeManagementStateWorkflowController(t *testing.T) {
 	viper.Set("DSPO.ArgoWorkflowsControllers", "{\"managementState\":\"Managed\"}")
 
 	// Run test reconciliation
-	workflowControllerEnabled, err = reconciler.ReconcileWorkflowController(dspa, params)
+	workflowControllerEnabled, err = reconciler.ReconcileWorkflowController(ctx, dspa, params)
 	assert.Nil(t, err)
 	assert.True(t, workflowControllerEnabled)
 
@@ -272,7 +309,7 @@ func TestBadManagementStateWorkflowController(t *testing.T) {
 	viper.Set("DSPO.ArgoWorkflowsControllers", "{\"managementState\":\"InvalidState\"}")
 
 	// Run test reconciliation
-	workflowControllerEnabled, err := reconciler.ReconcileWorkflowController(dspa, params)
+	workflowControllerEnabled, err := reconciler.ReconcileWorkflowController(ctx, dspa, params)
 	assert.NotNil(t, err)
 	assert.False(t, workflowControllerEnabled)
 }
@@ -328,7 +365,7 @@ func TestManagementStateWorkflowControllerInvalidJSONRecovery(t *testing.T) {
 	viper.Set("DSPO.ArgoWorkflowsControllers", "{invalidJSON: 'foo")
 
 	// Run test reconciliation
-	workflowControllerEnabled, err := reconciler.ReconcileWorkflowController(dspa, params)
+	workflowControllerEnabled, err := reconciler.ReconcileWorkflowController(ctx, dspa, params)
 	assert.Nil(t, err)
 	assert.True(t, workflowControllerEnabled)
 
@@ -386,7 +423,7 @@ func TestWorkflowControllerConfigMapInjectsSSLCertDirWhenCABundlePresent(t *test
 	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
 	require.Equal(t, config.WorkflowPodSSLCertDir, params.WorkflowPodSSLCertDir)
 
-	enabled, err := reconciler.ReconcileWorkflowController(dspa, params)
+	enabled, err := reconciler.ReconcileWorkflowController(ctx, dspa, params)
 	require.NoError(t, err)
 	require.True(t, enabled)
 
