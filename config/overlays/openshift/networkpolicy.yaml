@@ -1,0 +1,37 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: controller-manager
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: data-science-pipelines-operator
+  policyTypes:
+    - Ingress
+  ingress:
+    # The API server must reach the admission webhook. Keep this port-scoped
+    # because API server source identity varies across Kubernetes platforms.
+    - ports:
+        - protocol: TCP
+          port: 9443
+    # Kubelet health probes may originate from the node network rather than a pod.
+    - ports:
+        - protocol: TCP
+          port: 8081
+    # Permit metrics scraping only from the platform monitoring namespaces.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-monitoring
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-user-workload-monitoring
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: redhat-ods-monitoring
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: opendatahub-monitoring
+      ports:
+        - protocol: TCP
+          port: 8443
