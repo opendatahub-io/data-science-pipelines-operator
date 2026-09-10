@@ -24,12 +24,13 @@ import (
 	"time"
 
 	aipipelinesv1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/aipipelines/v1alpha1"
-	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	argoassets "github.com/opendatahub-io/data-science-pipelines-operator/config/argo"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/odh-platform-utilities/api/common"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -39,81 +40,43 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-func TestBuildAIPipelinesStatusReadyWithoutDSPAs(t *testing.T) {
+func TestBuildAIPipelinesStatusReady(t *testing.T) {
 	viper.Set("DSPO.PlatformVersion", "v3.6.0")
 	t.Cleanup(viper.Reset)
 
 	module := newTestAIPipelines(common.Managed)
 	module.Generation = 4
 
-	status := buildAIPipelinesStatus(module, nil, readyArgoObservation())
+	status := buildAIPipelinesStatus(module, readyDSPOObservation(), readyArgoObservation())
 
 	require.Equal(t, common.PhaseReady, status.Phase)
 	require.EqualValues(t, 4, status.ObservedGeneration)
 	require.Equal(t, metav1.ConditionTrue, requireModuleCondition(t, status.Conditions, string(common.ConditionTypeReady)).Status)
 	require.Equal(t, metav1.ConditionTrue, requireModuleCondition(t, status.Conditions, conditionTypeDSPOReady).Status)
-	argo := requireModuleCondition(t, status.Conditions, conditionTypeArgoReady)
-	require.Equal(t, metav1.ConditionTrue, argo.Status)
-	require.Equal(t, "No DSPA instances are present", argo.Message)
+	require.Equal(t, metav1.ConditionTrue, requireModuleCondition(t, status.Conditions, conditionTypeArgoReady).Status)
 	require.Equal(t, "v3.6.0", status.GetPlatformRelease())
 }
 
-func TestBuildAIPipelinesStatusCountsOnlyApplicableArgoInstances(t *testing.T) {
+func TestBuildAIPipelinesStatusReportsDSPODeploymentReadiness(t *testing.T) {
 	t.Cleanup(viper.Reset)
 
 	module := newTestAIPipelines(common.Managed)
-	ready := readyTestDSPA("team-a", "ready")
-	ready.Status.Conditions = append(ready.Status.Conditions, metav1.Condition{
-		Type:   config.WorkflowControllerReady,
-		Status: metav1.ConditionTrue,
-	})
-	notApplicable := readyTestDSPA("team-b", "external-argo")
-	notApplicable.Status.Conditions = append(notApplicable.Status.Conditions, metav1.Condition{
-		Type:   config.WorkflowControllerReady,
-		Status: metav1.ConditionFalse,
-		Reason: "NotApplicable",
-	})
+	dspo := dspoDeploymentObservation{Status: metav1.ConditionFalse, Reason: "DSPOUnavailable", Message: "waiting"}
 
-	status := buildAIPipelinesStatus(module, []dspav1.DataSciencePipelinesApplication{ready, notApplicable})
-
-	argo := requireModuleCondition(t, status.Conditions, conditionTypeArgoReady)
-	require.Equal(t, metav1.ConditionTrue, argo.Status)
-	require.Equal(t, "All 1 applicable DSPA instance(s) report ready", argo.Message)
-}
-
-func TestBuildAIPipelinesStatusAggregatesDSPAAndArgoReadiness(t *testing.T) {
-	t.Cleanup(viper.Reset)
-
-	module := newTestAIPipelines(common.Managed)
-	dspa := readyTestDSPA("team-a", "pipelines")
-	dspa.Status.Conditions = append(dspa.Status.Conditions, metav1.Condition{
-		Type:   config.WorkflowControllerReady,
-		Status: metav1.ConditionFalse,
-		Reason: "DeploymentUnavailable",
-	})
-
-	status := buildAIPipelinesStatus(module, []dspav1.DataSciencePipelinesApplication{dspa}, readyArgoObservation())
+	status := buildAIPipelinesStatus(module, dspo, readyArgoObservation())
 
 	require.Equal(t, common.PhaseNotReady, status.Phase)
 	require.Equal(t, metav1.ConditionFalse, requireModuleCondition(t, status.Conditions, string(common.ConditionTypeReady)).Status)
-	require.Equal(t, metav1.ConditionTrue, requireModuleCondition(t, status.Conditions, conditionTypeDSPOReady).Status)
-	argo := requireModuleCondition(t, status.Conditions, conditionTypeArgoReady)
-	require.Equal(t, metav1.ConditionFalse, argo.Status)
-	require.Contains(t, argo.Message, "team-a/pipelines")
+	require.Equal(t, metav1.ConditionFalse, requireModuleCondition(t, status.Conditions, conditionTypeDSPOReady).Status)
+	require.Equal(t, metav1.ConditionTrue, requireModuleCondition(t, status.Conditions, conditionTypeArgoReady).Status)
 }
 
 func TestBuildAIPipelinesStatusRemovedArgoDoesNotBlockReadiness(t *testing.T) {
 	t.Cleanup(viper.Reset)
 
 	module := newTestAIPipelines(common.Removed)
-	dspa := readyTestDSPA("team-a", "pipelines")
-	dspa.Status.Conditions = append(dspa.Status.Conditions, metav1.Condition{
-		Type:   config.WorkflowControllerReady,
-		Status: metav1.ConditionFalse,
-		Reason: "DeploymentUnavailable",
-	})
 
-	status := buildAIPipelinesStatus(module, []dspav1.DataSciencePipelinesApplication{dspa}, argoLifecycleObservation{Status: metav1.ConditionTrue, Reason: "Removed", Message: "removed"})
+	status := buildAIPipelinesStatus(module, readyDSPOObservation(), argoLifecycleObservation{Status: metav1.ConditionTrue, Reason: "Removed", Message: "removed"})
 
 	require.Equal(t, common.PhaseReady, status.Phase)
 	require.Equal(t, metav1.ConditionTrue, requireModuleCondition(t, status.Conditions, conditionTypeArgoReady).Status)
@@ -123,7 +86,7 @@ func TestBuildAIPipelinesStatusRejectsInvalidManagementState(t *testing.T) {
 	t.Cleanup(viper.Reset)
 
 	module := newTestAIPipelines(common.ManagementState("Invalid"))
-	status := buildAIPipelinesStatus(module, nil, readyArgoObservation())
+	status := buildAIPipelinesStatus(module, readyDSPOObservation(), readyArgoObservation())
 
 	require.Equal(t, common.PhaseNotReady, status.Phase)
 	require.Equal(t, metav1.ConditionFalse, requireModuleCondition(t, status.Conditions, conditionTypeConfigurationValid).Status)
@@ -141,7 +104,7 @@ func TestBuildAIPipelinesStatusPreservesTransitionTime(t *testing.T) {
 		LastTransitionTime: transitionTime,
 	}}
 
-	status := buildAIPipelinesStatus(module, nil, readyArgoObservation())
+	status := buildAIPipelinesStatus(module, readyDSPOObservation(), readyArgoObservation())
 	require.Equal(t, transitionTime, requireModuleCondition(t, status.Conditions, string(common.ConditionTypeReady)).LastTransitionTime)
 }
 
@@ -153,12 +116,18 @@ func TestAIPipelinesReconcileUpdatesStatus(t *testing.T) {
 	require.NoError(t, clientgoscheme.AddToScheme(scheme))
 	require.NoError(t, apiextensionsv1.AddToScheme(scheme))
 	require.NoError(t, aipipelinesv1alpha1.AddToScheme(scheme))
-	require.NoError(t, dspav1.AddToScheme(scheme))
 	module := newTestAIPipelines(common.Managed)
+	dspoDeployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Name: dspoDeploymentName, Namespace: "opendatahub", Generation: 1},
+		Status: appsv1.DeploymentStatus{
+			ObservedGeneration: 1,
+			Conditions:         []appsv1.DeploymentCondition{{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionTrue}},
+		},
+	}
 	client := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithStatusSubresource(&aipipelinesv1alpha1.AIPipelines{}).
-		WithObjects(module).
+		WithObjects(module, dspoDeployment).
 		Build()
 	assets, err := argoassets.Objects("opendatahub")
 	require.NoError(t, err)
@@ -219,22 +188,16 @@ func readyArgoObservation() argoLifecycleObservation {
 	return argoLifecycleObservation{Status: metav1.ConditionTrue, Reason: "ArgoResourcesReady", Message: "ready"}
 }
 
+func readyDSPOObservation() dspoDeploymentObservation {
+	return dspoDeploymentObservation{Status: metav1.ConditionTrue, Reason: "DSPOAvailable", Message: "ready"}
+}
+
 func newTestAIPipelines(state common.ManagementState) *aipipelinesv1alpha1.AIPipelines {
 	return &aipipelinesv1alpha1.AIPipelines{
 		ObjectMeta: metav1.ObjectMeta{Name: aipipelinesv1alpha1.AIPipelinesInstanceName},
 		Spec: aipipelinesv1alpha1.AIPipelinesSpec{
 			ArgoWorkflowsControllers: &aipipelinesv1alpha1.ArgoWorkflowsControllersSpec{ManagementState: state},
 		},
-	}
-}
-
-func readyTestDSPA(namespace, name string) dspav1.DataSciencePipelinesApplication {
-	return dspav1.DataSciencePipelinesApplication{
-		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name},
-		Status: dspav1.DSPAStatus{Conditions: []metav1.Condition{{
-			Type:   config.CrReady,
-			Status: metav1.ConditionTrue,
-		}}},
 	}
 }
 
