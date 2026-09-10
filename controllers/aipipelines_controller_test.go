@@ -25,13 +25,16 @@ import (
 
 	aipipelinesv1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/aipipelines/v1alpha1"
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
+	argoassets "github.com/opendatahub-io/data-science-pipelines-operator/config/argo"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/odh-platform-utilities/api/common"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -43,7 +46,7 @@ func TestBuildAIPipelinesStatusReadyWithoutDSPAs(t *testing.T) {
 	module := newTestAIPipelines(common.Managed)
 	module.Generation = 4
 
-	status := buildAIPipelinesStatus(module, nil)
+	status := buildAIPipelinesStatus(module, nil, readyArgoObservation())
 
 	require.Equal(t, common.PhaseReady, status.Phase)
 	require.EqualValues(t, 4, status.ObservedGeneration)
@@ -89,7 +92,7 @@ func TestBuildAIPipelinesStatusAggregatesDSPAAndArgoReadiness(t *testing.T) {
 		Reason: "DeploymentUnavailable",
 	})
 
-	status := buildAIPipelinesStatus(module, []dspav1.DataSciencePipelinesApplication{dspa})
+	status := buildAIPipelinesStatus(module, []dspav1.DataSciencePipelinesApplication{dspa}, readyArgoObservation())
 
 	require.Equal(t, common.PhaseNotReady, status.Phase)
 	require.Equal(t, metav1.ConditionFalse, requireModuleCondition(t, status.Conditions, string(common.ConditionTypeReady)).Status)
@@ -110,7 +113,7 @@ func TestBuildAIPipelinesStatusRemovedArgoDoesNotBlockReadiness(t *testing.T) {
 		Reason: "DeploymentUnavailable",
 	})
 
-	status := buildAIPipelinesStatus(module, []dspav1.DataSciencePipelinesApplication{dspa})
+	status := buildAIPipelinesStatus(module, []dspav1.DataSciencePipelinesApplication{dspa}, argoLifecycleObservation{Status: metav1.ConditionTrue, Reason: "Removed", Message: "removed"})
 
 	require.Equal(t, common.PhaseReady, status.Phase)
 	require.Equal(t, metav1.ConditionTrue, requireModuleCondition(t, status.Conditions, conditionTypeArgoReady).Status)
@@ -120,7 +123,7 @@ func TestBuildAIPipelinesStatusRejectsInvalidManagementState(t *testing.T) {
 	t.Cleanup(viper.Reset)
 
 	module := newTestAIPipelines(common.ManagementState("Invalid"))
-	status := buildAIPipelinesStatus(module, nil)
+	status := buildAIPipelinesStatus(module, nil, readyArgoObservation())
 
 	require.Equal(t, common.PhaseNotReady, status.Phase)
 	require.Equal(t, metav1.ConditionFalse, requireModuleCondition(t, status.Conditions, conditionTypeConfigurationValid).Status)
@@ -138,7 +141,7 @@ func TestBuildAIPipelinesStatusPreservesTransitionTime(t *testing.T) {
 		LastTransitionTime: transitionTime,
 	}}
 
-	status := buildAIPipelinesStatus(module, nil)
+	status := buildAIPipelinesStatus(module, nil, readyArgoObservation())
 	require.Equal(t, transitionTime, requireModuleCondition(t, status.Conditions, string(common.ConditionTypeReady)).LastTransitionTime)
 }
 
@@ -147,6 +150,8 @@ func TestAIPipelinesReconcileUpdatesStatus(t *testing.T) {
 	t.Cleanup(viper.Reset)
 
 	scheme := runtime.NewScheme()
+	require.NoError(t, clientgoscheme.AddToScheme(scheme))
+	require.NoError(t, apiextensionsv1.AddToScheme(scheme))
 	require.NoError(t, aipipelinesv1alpha1.AddToScheme(scheme))
 	require.NoError(t, dspav1.AddToScheme(scheme))
 	module := newTestAIPipelines(common.Managed)
@@ -155,9 +160,27 @@ func TestAIPipelinesReconcileUpdatesStatus(t *testing.T) {
 		WithStatusSubresource(&aipipelinesv1alpha1.AIPipelines{}).
 		WithObjects(module).
 		Build()
-	reconciler := &AIPipelinesReconciler{Client: client, Scheme: scheme}
+	assets, err := argoassets.Objects("opendatahub")
+	require.NoError(t, err)
+	for _, asset := range assets {
+		annotations := asset.GetAnnotations()
+		if annotations == nil {
+			annotations = map[string]string{}
+		}
+		annotations[argoManagedAnnotation] = "true"
+		asset.SetAnnotations(annotations)
+		labels := asset.GetLabels()
+		if labels == nil {
+			labels = map[string]string{}
+		}
+		labels[legacyPipelinesComponentLabel] = "true"
+		labels[config.DSPVersionk8sLabel] = config.DSPV2VersionString
+		asset.SetLabels(labels)
+		require.NoError(t, client.Create(context.Background(), asset))
+	}
+	reconciler := &AIPipelinesReconciler{Client: client, APIReader: client, Scheme: scheme, Namespace: "opendatahub"}
 
-	_, err := reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{
+	_, err = reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{
 		Name: aipipelinesv1alpha1.AIPipelinesInstanceName,
 	}})
 	require.NoError(t, err)
@@ -173,7 +196,6 @@ func TestAIPipelinesReconcileIgnoresNonSingleton(t *testing.T) {
 
 	scheme := runtime.NewScheme()
 	require.NoError(t, aipipelinesv1alpha1.AddToScheme(scheme))
-	require.NoError(t, dspav1.AddToScheme(scheme))
 	module := newTestAIPipelines(common.Managed)
 	module.Name = "legacy-aipipelines"
 	client := fake.NewClientBuilder().
@@ -191,6 +213,10 @@ func TestAIPipelinesReconcileIgnoresNonSingleton(t *testing.T) {
 	updated := &aipipelinesv1alpha1.AIPipelines{}
 	require.NoError(t, client.Get(context.Background(), types.NamespacedName{Name: module.Name}, updated))
 	require.Empty(t, updated.Status)
+}
+
+func readyArgoObservation() argoLifecycleObservation {
+	return argoLifecycleObservation{Status: metav1.ConditionTrue, Reason: "ArgoResourcesReady", Message: "ready"}
 }
 
 func newTestAIPipelines(state common.ManagementState) *aipipelinesv1alpha1.AIPipelines {
