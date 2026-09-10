@@ -54,6 +54,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	//+kubebuilder:scaffold:imports
@@ -162,11 +163,16 @@ func initConfig(configPath string) error {
 
 func main() {
 	var metricsAddr string
+	var metricsCertPath string
+	var metricsSecure bool
 	var enableLeaderElection bool
 	var probeAddr string
 	var configPath string
 	var maxConcurrentReconciles int
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
+	flag.StringVar(&metricsCertPath, "metrics-cert-path", "", "The directory that contains the metrics endpoint certificate.")
+	flag.BoolVar(&metricsSecure, "metrics-secure", false,
+		"If set, the metrics endpoint is served securely via HTTPS.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.StringVar(&configPath, "config", "", "Path to JSON file containing config")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -261,8 +267,10 @@ func main() {
 	mgrOpts := ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
-			BindAddress: metricsAddr,
-			TLSOpts:     tlsOpts,
+			BindAddress:   metricsAddr,
+			SecureServing: metricsSecure,
+			CertDir:       metricsCertPath,
+			TLSOpts:       tlsOpts,
 		},
 		WebhookServer: webhook.NewServer(webhook.Options{
 			Port:    9443,
@@ -318,6 +326,9 @@ func main() {
 				},
 			},
 		},
+	}
+	if metricsSecure {
+		mgrOpts.Metrics.FilterProvider = filters.WithAuthenticationAndAuthorization
 	}
 
 	// MLflow CRs are read during reconcile; always bypass the client cache so

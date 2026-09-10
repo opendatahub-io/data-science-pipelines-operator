@@ -1,6 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-- ../openshift
+- dspo/applications
 - ../../argo
-namespace: redhat-ods-applications
+- dspo/rhoai_metrics_reader_role_binding.yaml
+- dspo/rhoai_metrics_service_monitor.yaml

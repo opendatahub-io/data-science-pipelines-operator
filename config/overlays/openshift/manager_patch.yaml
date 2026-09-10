@@ -1,0 +1,24 @@
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --metrics-bind-address=:8443
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --metrics-secure=true
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --metrics-cert-path=/etc/metrics-certs
+- op: add
+  path: /spec/template/spec/containers/0/volumeMounts/-
+  value:
+    name: metrics-cert
+    mountPath: /etc/metrics-certs
+    readOnly: true
+- op: add
+  path: /spec/template/spec/containers/0/securityContext/readOnlyRootFilesystem
+  value: true
+- op: add
+  path: /spec/template/spec/volumes/-
+  value:
+    name: metrics-cert
+    secret:
+      secretName: data-science-pipelines-operator-metrics-tls

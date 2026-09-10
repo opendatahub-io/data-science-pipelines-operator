@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: data-science-pipelines-operator-rhoai-prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: data-science-pipelines-operator-metrics-reader
+subjects:
+  - kind: ServiceAccount
+    name: data-science-monitoringstack-prometheus
+    namespace: redhat-ods-monitoring

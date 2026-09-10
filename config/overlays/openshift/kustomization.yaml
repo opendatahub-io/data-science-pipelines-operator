@@ -5,5 +5,52 @@ resources:
 # OpenShift-only RBAC for reading TLS profile configuration
 - tls_clusterrole.yaml
 - tls_clusterrolebinding.yaml
+- networkpolicy.yaml
+- metrics_reader_role.yaml
+- metrics_reader_role_binding.yaml
+
+# OpenShift service-ca certificate and HTTPS metrics endpoint.
+patches:
+- path: manager_patch.yaml
+  target:
+    kind: Deployment
+    name: controller-manager
+- path: metrics_service_patch.yaml
+  target:
+    kind: Service
+    name: service
+- path: servicemonitor_patch.yaml
+  target:
+    kind: ServiceMonitor
+    name: service-monitor
+
+replacements:
+- source:
+    kind: Service
+    name: service
+    fieldPath: metadata.name
+  targets:
+  - select:
+      kind: ServiceMonitor
+      name: service-monitor
+    fieldPaths:
+    - spec.endpoints.0.tlsConfig.serverName
+    options:
+      delimiter: "."
+      index: 0
+- source:
+    kind: Service
+    name: service
+    fieldPath: metadata.namespace
+  targets:
+  - select:
+      kind: ServiceMonitor
+      name: service-monitor
+    fieldPaths:
+    - spec.endpoints.0.tlsConfig.serverName
+    options:
+      delimiter: "."
+      index: 1
+
 configurations:
 - kustomizeconfig.yaml
