@@ -19,15 +19,15 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"sort"
-	"strings"
 
 	"github.com/go-logr/logr"
 	aipipelinesv1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/aipipelines/v1alpha1"
-	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/odh-platform-utilities/api/common"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -41,7 +41,14 @@ const (
 	conditionTypeDSPOReady          = "DSPOReady"
 	conditionTypeArgoReady          = "ArgoWorkflowsControllersReady"
 	conditionTypeConfigurationValid = "ConfigurationValid"
+	dspoDeploymentName              = "data-science-pipelines-operator-controller-manager"
 )
+
+type dspoDeploymentObservation struct {
+	Status  metav1.ConditionStatus
+	Reason  string
+	Message string
+}
 
 // AIPipelinesReconciler reconciles the singleton AIPipelines module CR. It is
 // the only controller that writes AIPipelines.status; subordinate controllers
@@ -56,7 +63,7 @@ type AIPipelinesReconciler struct {
 
 // +kubebuilder:rbac:groups=components.platform.opendatahub.io,resources=aipipelines,verbs=get;list;watch
 // +kubebuilder:rbac:groups=components.platform.opendatahub.io,resources=aipipelines/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=datasciencepipelinesapplications.opendatahub.io,resources=datasciencepipelinesapplications,verbs=get;list;watch
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch
 
 func (r *AIPipelinesReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	if req.Name != aipipelinesv1alpha1.AIPipelinesInstanceName {
@@ -68,17 +75,13 @@ func (r *AIPipelinesReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	dspaList := &dspav1.DataSciencePipelinesApplicationList{}
-	if err := r.List(ctx, dspaList); err != nil {
-		return ctrl.Result{}, fmt.Errorf("list DSPA instances: %w", err)
-	}
-
 	reader := r.APIReader
 	if reader == nil {
 		reader = r.Client
 	}
+	dspo := observeDSPODeployment(ctx, reader, r.Namespace)
 	argo := observeArgoLifecycle(ctx, reader, r.Namespace, module.Spec.ArgoWorkflowsControllersManagementState())
-	desired := buildAIPipelinesStatus(module, dspaList.Items, argo)
+	desired := buildAIPipelinesStatus(module, dspo, argo)
 	if apiequality.Semantic.DeepEqual(module.Status, desired) {
 		return ctrl.Result{}, nil
 	}
@@ -96,8 +99,11 @@ func (r *AIPipelinesReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	b := ctrl.NewControllerManagedBy(mgr).
 		For(&aipipelinesv1alpha1.AIPipelines{}).
 		Watches(
-			&dspav1.DataSciencePipelinesApplication{},
-			handler.EnqueueRequestsFromMapFunc(func(context.Context, client.Object) []reconcile.Request {
+			&appsv1.Deployment{},
+			handler.EnqueueRequestsFromMapFunc(func(_ context.Context, object client.Object) []reconcile.Request {
+				if object.GetNamespace() != r.Namespace || object.GetName() != dspoDeploymentName {
+					return nil
+				}
 				return []reconcile.Request{{NamespacedName: types.NamespacedName{
 					Name: aipipelinesv1alpha1.AIPipelinesInstanceName,
 				}}}
@@ -111,20 +117,12 @@ func (r *AIPipelinesReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 func buildAIPipelinesStatus(
 	module *aipipelinesv1alpha1.AIPipelines,
-	dspas []dspav1.DataSciencePipelinesApplication,
+	dspoObservation dspoDeploymentObservation,
 	argoObservation argoLifecycleObservation,
 ) aipipelinesv1alpha1.AIPipelinesStatus {
 	configurationStatus, configurationReason, configurationMessage := validateAIPipelinesConfiguration(module)
-	dspoStatus, dspoReason, dspoMessage := aggregateDSPACondition(dspas, config.CrReady, false)
-
+	dspoStatus, dspoReason, dspoMessage := dspoObservation.Status, dspoObservation.Reason, dspoObservation.Message
 	argoStatus, argoReason, argoMessage := argoObservation.Status, argoObservation.Reason, argoObservation.Message
-	if module.Spec.ArgoWorkflowsControllersManagementState() == common.Managed {
-		dspaArgoStatus, dspaArgoReason, dspaArgoMessage := aggregateDSPACondition(dspas, config.WorkflowControllerReady, true)
-		argoStatus = aggregateConditionStatuses(argoStatus, dspaArgoStatus)
-		if argoObservation.Status == metav1.ConditionTrue && dspaArgoStatus != metav1.ConditionTrue {
-			argoReason, argoMessage = dspaArgoReason, dspaArgoMessage
-		}
-	}
 
 	readyStatus := aggregateConditionStatuses(configurationStatus, dspoStatus, argoStatus)
 	readyReason := "Ready"
@@ -172,53 +170,25 @@ func validateAIPipelinesConfiguration(module *aipipelinesv1alpha1.AIPipelines) (
 	}
 }
 
-func aggregateDSPACondition(
-	dspas []dspav1.DataSciencePipelinesApplication,
-	conditionType string,
-	ignoreNotApplicable bool,
-) (metav1.ConditionStatus, string, string) {
-	if len(dspas) == 0 {
-		return metav1.ConditionTrue, "NoDSPAInstances", "No DSPA instances are present"
+func observeDSPODeployment(ctx context.Context, reader client.Reader, namespace string) dspoDeploymentObservation {
+	deployment := &appsv1.Deployment{}
+	err := reader.Get(ctx, types.NamespacedName{Name: dspoDeploymentName, Namespace: namespace}, deployment)
+	if apierrors.IsNotFound(err) {
+		return dspoDeploymentObservation{Status: metav1.ConditionFalse, Reason: "DSPONotFound", Message: "Waiting for the DSPO deployment"}
 	}
-
-	var failed, pending []string
-	applicable := len(dspas)
-	for i := range dspas {
-		condition := findDSPACondition(dspas[i].Status.Conditions, conditionType)
-		name := dspas[i].Namespace + "/" + dspas[i].Name
-		switch {
-		case condition == nil || condition.Status == metav1.ConditionUnknown:
-			pending = append(pending, name)
-		case condition.Status == metav1.ConditionFalse && ignoreNotApplicable && condition.Reason == "NotApplicable":
-			applicable--
-			continue
-		case condition.Status != metav1.ConditionTrue:
-			failed = append(failed, name)
+	if err != nil {
+		return dspoDeploymentObservation{Status: metav1.ConditionUnknown, Reason: "DSPOObservationFailed", Message: fmt.Sprintf("Unable to observe the DSPO deployment: %v", err)}
+	}
+	if deployment.Status.ObservedGeneration < deployment.Generation {
+		return dspoDeploymentObservation{Status: metav1.ConditionUnknown, Reason: "DSPOStatusPending", Message: "Waiting for the DSPO deployment to observe its latest generation"}
+	}
+	for i := range deployment.Status.Conditions {
+		condition := deployment.Status.Conditions[i]
+		if condition.Type == appsv1.DeploymentAvailable && condition.Status == corev1.ConditionTrue {
+			return dspoDeploymentObservation{Status: metav1.ConditionTrue, Reason: "DSPOAvailable", Message: "The DSPO deployment is available"}
 		}
 	}
-
-	sort.Strings(failed)
-	sort.Strings(pending)
-	if len(failed) > 0 {
-		return metav1.ConditionFalse, "DSPAInstancesNotReady", "Not ready: " + strings.Join(failed, ", ")
-	}
-	if len(pending) > 0 {
-		return metav1.ConditionUnknown, "DSPAStatusPending", "Waiting for status: " + strings.Join(pending, ", ")
-	}
-	if ignoreNotApplicable {
-		return metav1.ConditionTrue, "AllDSPAInstancesReady",
-			fmt.Sprintf("All %d applicable DSPA instance(s) report ready", applicable)
-	}
-	return metav1.ConditionTrue, "AllDSPAInstancesReady", fmt.Sprintf("All %d DSPA instance(s) report ready", len(dspas))
-}
-
-func findDSPACondition(conditions []metav1.Condition, conditionType string) *metav1.Condition {
-	for i := range conditions {
-		if conditions[i].Type == conditionType {
-			return &conditions[i]
-		}
-	}
-	return nil
+	return dspoDeploymentObservation{Status: metav1.ConditionFalse, Reason: "DSPOUnavailable", Message: "Waiting for the DSPO deployment to become available"}
 }
 
 func aggregateConditionStatuses(statuses ...metav1.ConditionStatus) metav1.ConditionStatus {
