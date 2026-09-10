@@ -48,8 +48,10 @@ const (
 // expose readiness through the resources this reconciler observes.
 type AIPipelinesReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	Log    logr.Logger
+	APIReader client.Reader
+	Scheme    *runtime.Scheme
+	Log       logr.Logger
+	Namespace string
 }
 
 // +kubebuilder:rbac:groups=components.platform.opendatahub.io,resources=aipipelines,verbs=get;list;watch
@@ -71,7 +73,12 @@ func (r *AIPipelinesReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, fmt.Errorf("list DSPA instances: %w", err)
 	}
 
-	desired := buildAIPipelinesStatus(module, dspaList.Items)
+	reader := r.APIReader
+	if reader == nil {
+		reader = r.Client
+	}
+	argo := observeArgoLifecycle(ctx, reader, r.Namespace, module.Spec.ArgoWorkflowsControllersManagementState())
+	desired := buildAIPipelinesStatus(module, dspaList.Items, argo)
 	if apiequality.Semantic.DeepEqual(module.Status, desired) {
 		return ctrl.Result{}, nil
 	}
@@ -86,7 +93,7 @@ func (r *AIPipelinesReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 }
 
 func (r *AIPipelinesReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
+	b := ctrl.NewControllerManagedBy(mgr).
 		For(&aipipelinesv1alpha1.AIPipelines{}).
 		Watches(
 			&dspav1.DataSciencePipelinesApplication{},
@@ -95,20 +102,28 @@ func (r *AIPipelinesReconciler) SetupWithManager(mgr ctrl.Manager) error {
 					Name: aipipelinesv1alpha1.AIPipelinesInstanceName,
 				}}}
 			}),
-		).
-		Complete(r)
+		)
+	if err := watchArgoAssets(b, r.Namespace); err != nil {
+		return err
+	}
+	return b.Complete(r)
 }
 
 func buildAIPipelinesStatus(
 	module *aipipelinesv1alpha1.AIPipelines,
 	dspas []dspav1.DataSciencePipelinesApplication,
+	argoObservation argoLifecycleObservation,
 ) aipipelinesv1alpha1.AIPipelinesStatus {
 	configurationStatus, configurationReason, configurationMessage := validateAIPipelinesConfiguration(module)
 	dspoStatus, dspoReason, dspoMessage := aggregateDSPACondition(dspas, config.CrReady, false)
 
-	argoStatus, argoReason, argoMessage := metav1.ConditionTrue, "Removed", "Argo Workflows controllers are not managed"
+	argoStatus, argoReason, argoMessage := argoObservation.Status, argoObservation.Reason, argoObservation.Message
 	if module.Spec.ArgoWorkflowsControllersManagementState() == common.Managed {
-		argoStatus, argoReason, argoMessage = aggregateDSPACondition(dspas, config.WorkflowControllerReady, true)
+		dspaArgoStatus, dspaArgoReason, dspaArgoMessage := aggregateDSPACondition(dspas, config.WorkflowControllerReady, true)
+		argoStatus = aggregateConditionStatuses(argoStatus, dspaArgoStatus)
+		if argoObservation.Status == metav1.ConditionTrue && dspaArgoStatus != metav1.ConditionTrue {
+			argoReason, argoMessage = dspaArgoReason, dspaArgoMessage
+		}
 	}
 
 	readyStatus := aggregateConditionStatuses(configurationStatus, dspoStatus, argoStatus)
