@@ -31,6 +31,7 @@ import (
 
 	"github.com/go-logr/logr"
 	mf "github.com/manifestival/manifestival"
+	aipipelinesv1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/aipipelines/v1alpha1"
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/util"
@@ -509,7 +510,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 				dspaStatus.SetScheduledWorkflowStatus, log)
 		}
 
-		workflowControllerEnabled, err := r.ReconcileWorkflowController(dspa, params)
+		workflowControllerEnabled, err := r.ReconcileWorkflowController(ctx, dspa, params)
 		if err != nil {
 			dspaStatus.SetWorkflowControllerNotReady(err, config.FailingToDeploy)
 			return ctrl.Result{}, err
@@ -888,7 +889,7 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if r.ManifestFetcher == nil {
 		r.ManifestFetcher = NewOCIManifestFetcher(r.Log, r.AllowedRegistries)
 	}
-	return ctrl.NewControllerManagedBy(mgr).
+	b := ctrl.NewControllerManagedBy(mgr).
 		For(&dspav1.DataSciencePipelinesApplication{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Secret{}).
@@ -1009,11 +1010,38 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				log.V(1).Info(fmt.Sprintf("Reconcile event triggered by change on Secret: %s owned by service-ca: %s", secret.Name, serviceName))
 				return []reconcile.Request{{NamespacedName: namespacedDspaName}}
 			}),
-		)).
-		WithOptions(controller.Options{
-			MaxConcurrentReconciles: r.MaxConcurrentReconciles,
-		}).
+		))
+	if config.AIPipelinesModuleControllerEnabled() {
+		b = b.Watches(
+			&aipipelinesv1alpha1.AIPipelines{},
+			handler.EnqueueRequestsFromMapFunc(r.enqueueAllSupportedDSPAs),
+		)
+	}
+	return b.WithOptions(controller.Options{
+		MaxConcurrentReconciles: r.MaxConcurrentReconciles,
+	}).
 		Complete(r)
+}
+
+func (r *DSPAReconciler) enqueueAllSupportedDSPAs(ctx context.Context, _ client.Object) []reconcile.Request {
+	var dspaList dspav1.DataSciencePipelinesApplicationList
+	if err := r.List(ctx, &dspaList); err != nil {
+		r.Log.Error(err, "Unable to list DSPAs after an AIPipelines configuration change")
+		return nil
+	}
+
+	requests := make([]reconcile.Request, 0, len(dspaList.Items))
+	for i := range dspaList.Items {
+		dspa := &dspaList.Items[i]
+		if !util.DSPAWithSupportedDSPVersion(dspa) {
+			continue
+		}
+		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{
+			Name:      dspa.Name,
+			Namespace: dspa.Namespace,
+		}})
+	}
+	return requests
 }
 
 // cleanUpResources cleans up any resources not handled by garbage collection, like Cluster ResourceRequirements.

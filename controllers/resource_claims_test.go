@@ -382,7 +382,7 @@ func TestWorkflowControllerResourceClaims(t *testing.T) {
 	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
 	require.NoError(t, err)
 
-	_, err = reconciler.ReconcileWorkflowController(dspa, params)
+	_, err = reconciler.ReconcileWorkflowController(ctx, dspa, params)
 	require.NoError(t, err)
 
 	deployment := &appsv1.Deployment{}
