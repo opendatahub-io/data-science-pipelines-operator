@@ -233,4 +233,3 @@ tests:
             exp_annotations:
               message: "Data Science Pipelines ScheduledWorkflows component is down!"
               summary: A Data Science Pipelines ScheduledWorkflow controller pod owned by DSPA "dspa_instance_1" in namespace "dspa_namespace_a" has been NotReady for more than 5 minutes
-
