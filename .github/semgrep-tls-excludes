@@ -1,0 +1,2 @@
+# Compatibility modes are intentionally supported; see the approved TLS exception process.
+go-tls-bypass:controllers/database.go

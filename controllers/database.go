@@ -141,7 +141,7 @@ var ConnectAndQueryDatabase = func(
 	var tlsConfig *cryptoTls.Config
 	switch tls {
 	case "false", "":
-		// don't set anything
+		log.Info("WARNING: database TLS is disabled; the database connection is not encrypted")
 	case "true":
 		var err error
 		tlsConfig, err = tLSClientConfig(pemCerts)
@@ -150,12 +150,13 @@ var ConnectAndQueryDatabase = func(
 			return false, err
 		}
 	case "skip-verify", "preferred":
+		log.Info("WARNING: database TLS mode does not provide reliable security; use tls=true with a trusted CA bundle")
 		tlsConfig = &cryptoTls.Config{InsecureSkipVerify: true}
 	default:
-		// Unknown config, default to don't set anything
+		log.Info("WARNING: database TLS mode is not recognized; the database connection may not be encrypted")
 	}
 
-	// Only register tls config in the case of: "true", "skip-verify", "preferred"
+	// Only register a custom TLS config for the verified "true" mode.
 	if tlsConfig != nil {
 		err := mysql.RegisterTLSConfig("custom", tlsConfig)
 		if err != nil {
@@ -225,7 +226,7 @@ func (r *DSPAReconciler) isDatabaseAccessible(dsp *dspav1.DataSciencePipelinesAp
 		return false, err
 	}
 
-	// tls can be true, false, skip-verify, preferred
+	// tls can be true, false, skip-verify, or preferred.
 	// we default to true if it's an externalDB, false otherwise
 	// (if not specified via CustomExtraParams)
 	tls := "false"
