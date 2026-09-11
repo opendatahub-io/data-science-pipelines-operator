@@ -14,18 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package argo
+package argo_test
 
 import (
 	"testing"
 
+	"github.com/opendatahub-io/data-science-pipelines-operator/config/argo"
 	"github.com/stretchr/testify/require"
 )
 
 func TestObjects(t *testing.T) {
-	objects, err := Objects("opendatahub")
+	objects, err := argo.Objects("opendatahub")
 	require.NoError(t, err)
-	require.Len(t, objects, len(assetNames))
+	require.Len(t, objects, 19)
 
 	foundWorkflowCRD := false
 	foundArgoRole := false
