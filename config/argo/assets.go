@@ -22,6 +22,7 @@ package argo
 import (
 	"bytes"
 	"embed"
+	"errors"
 	"fmt"
 	"io"
 
@@ -67,7 +68,7 @@ func Objects(namespace string) ([]*unstructured.Unstructured, error) {
 		for {
 			object := &unstructured.Unstructured{}
 			if err := decoder.Decode(&object.Object); err != nil {
-				if err == io.EOF {
+				if errors.Is(err, io.EOF) {
 					break
 				}
 				return nil, fmt.Errorf("decode embedded Argo asset %s: %w", name, err)
@@ -85,7 +86,7 @@ func Objects(namespace string) ([]*unstructured.Unstructured, error) {
 				}
 				if found {
 					for i := range subjects {
-						subject, ok := subjects[i].(map[string]interface{})
+						subject, ok := subjects[i].(map[string]any)
 						if ok && subject["kind"] == "ServiceAccount" {
 							subject["namespace"] = namespace
 						}
