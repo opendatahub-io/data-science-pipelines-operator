@@ -18,8 +18,11 @@ limitations under the License.
 package controllers
 
 import (
+	"fmt"
 	"testing"
+	"time"
 
+	"github.com/go-logr/logr"
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/stretchr/testify/assert"
@@ -47,6 +50,30 @@ func TestValidateDBExtraParams_AllowedKeys(t *testing.T) {
 			params, err := config.ValidateDBExtraParams(tt.input)
 			assert.NoError(t, err)
 			assert.NotNil(t, params)
+		})
+	}
+}
+
+func TestValidateDBExtraParams_RejectsTLSVerificationBypass(t *testing.T) {
+	for _, mode := range []string{"skip-verify", "preferred", "SKIP-VERIFY", "PREFERRED"} {
+		t.Run(mode, func(t *testing.T) {
+			params, err := config.ValidateDBExtraParams(fmt.Sprintf(`{"tls":%q}`, mode))
+			assert.Error(t, err)
+			assert.Nil(t, params)
+			assert.Contains(t, err.Error(), "disables certificate verification")
+		})
+	}
+}
+
+func TestConnectAndQueryDatabase_RejectsTLSVerificationBypass(t *testing.T) {
+	for _, mode := range []string{"skip-verify", "preferred", "SKIP-VERIFY", "PREFERRED"} {
+		t.Run(mode, func(t *testing.T) {
+			connected, err := ConnectAndQueryDatabase(
+				"unused", logr.Discard(), "3306", "user", "password", "database", mode,
+				time.Second, nil, map[string]string{"tls": mode},
+			)
+			assert.False(t, connected)
+			assert.ErrorContains(t, err, "disables certificate verification")
 		})
 	}
 }
@@ -79,7 +106,7 @@ func TestValidateDBExtraParams_DisallowedKeys(t *testing.T) {
 	}
 }
 
-// TestValidateDBExtraParams_InvalidJSON verifies that malformed JSON is rejected.
+// TestValidateDBExtraParams_InvalidJSON verifies that malformed JSON and non-string values are rejected.
 func TestValidateDBExtraParams_InvalidJSON(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -88,6 +115,8 @@ func TestValidateDBExtraParams_InvalidJSON(t *testing.T) {
 		{"not json", `not-json`},
 		{"array instead of object", `["tls"]`},
 		{"unclosed brace", `{"tls":"true"`},
+		{"boolean tls value", `{"tls":true}`},
+		{"null", `null`},
 	}
 
 	for _, tt := range tests {
@@ -95,7 +124,7 @@ func TestValidateDBExtraParams_InvalidJSON(t *testing.T) {
 			params, err := config.ValidateDBExtraParams(tt.input)
 			assert.Error(t, err)
 			assert.Nil(t, params)
-			assert.Contains(t, err.Error(), "not valid JSON")
+			assert.Contains(t, err.Error(), "JSON object with string values")
 		})
 	}
 }
@@ -120,12 +149,12 @@ func TestCreateMySQLConfig_DangerousFlagsExplicitlyDisabled(t *testing.T) {
 // params override defaults and are placed in the Params map.
 func TestCreateMySQLConfig_ExtraParamsMerged(t *testing.T) {
 	extra := map[string]string{
-		"tls":     "skip-verify",
+		"tls":     "true",
 		"charset": "utf8mb4",
 	}
 	cfg := createMySQLConfig("user", "pass", "host", "3306", "db", extra)
 
-	assert.Equal(t, "skip-verify", cfg.Params["tls"])
+	assert.Equal(t, "true", cfg.Params["tls"])
 	assert.Equal(t, "utf8mb4", cfg.Params["charset"])
 	assert.Equal(t, "True", cfg.Params["parseTime"])
 }

@@ -304,8 +304,11 @@ type Database struct {
 	// when opening a connection with the Database.
 	// ref: https://github.com/go-sql-driver/mysql?tab=readme-ov-file#dsn-data-source-name
 	//
-	// Value must be a JSON string. For example, to disable tls for Pipeline Server DB connection
-	// the user can provide a string: {"tls":"true"}
+	// Value must be a JSON string. For example, to enable TLS for the Pipeline Server DB connection,
+	// the user can provide a string: {"tls":"true"}. The insecure "skip-verify" and "preferred"
+	// TLS modes are rejected. Existing configurations using those modes must migrate to "true" and
+	// provide a trusted CA through spec.apiServer.cABundle when the database certificate is not
+	// signed by a system-trusted CA.
 	//
 	// Only the following parameter keys are accepted: tls, charset, loc, timeout,
 	// readTimeout, writeTimeout, parseTime, collation, sql_mode, checkConnLiveness,
