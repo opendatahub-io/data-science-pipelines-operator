@@ -310,6 +310,13 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		WebhookAnnotations: r.WebhookAnnotations,
 	}
 	params.ResolveMLflowEndpoint = r.retrieveMLflowEndpointCached
+	reader := r.APIReader
+	if reader == nil {
+		reader = r.Client
+	}
+	params.ResolvePlatformVersion = func(ctx context.Context) (string, error) {
+		return resolvePlatformVersion(ctx, reader)
+	}
 
 	dspa := &dspav1.DataSciencePipelinesApplication{}
 	err := r.Get(ctx, req.NamespacedName, dspa)
@@ -937,6 +944,27 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				}
 
 				return reconcileRequests
+			}),
+		)).
+		WatchesRawSource(source.Kind[client.Object](mgr.GetCache(), &corev1.ConfigMap{},
+			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
+				if !isPlatformConfigMap(object) {
+					return nil
+				}
+
+				var dspaList dspav1.DataSciencePipelinesApplicationList
+				if err := r.List(ctx, &dspaList); err != nil {
+					r.Log.Error(err, "unable to list DSPAs after platform configuration change")
+					return nil
+				}
+
+				requests := make([]reconcile.Request, 0, len(dspaList.Items))
+				for i := range dspaList.Items {
+					if util.DSPAWithSupportedDSPVersion(&dspaList.Items[i]) {
+						requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(&dspaList.Items[i])})
+					}
+				}
+				return requests
 			}),
 		)).
 		WatchesRawSource(source.Kind[client.Object](mgr.GetCache(), &corev1.Pod{},

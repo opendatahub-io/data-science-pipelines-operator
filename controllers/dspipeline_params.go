@@ -122,6 +122,9 @@ type DSPAParams struct {
 
 	// PlatformVersion is DSPO.PlatformVersion from operator config (default + quote-trimmed). Used for sample_config and managed pipeline upload tags.
 	PlatformVersion string
+	// ResolvePlatformVersion reads the live platform release handshake when
+	// modular mode is enabled. Nil preserves the standalone Viper fallback.
+	ResolvePlatformVersion func(context.Context) (string, error)
 	// ManagedPipelinesUploadTags is set when managedPipelines is enabled; injected as MANAGED_PIPELINES_UPLOAD_TAGS for the
 	// pipelines-components init (comma-separated key=value). Init applies to Pipeline and PipelineVersion per API contract.
 	ManagedPipelinesUploadTags string
@@ -582,12 +585,12 @@ func (p *DSPAParams) SetupMLMD(dsp *dspa.DataSciencePipelinesApplication, log lo
 		}
 		if p.MLMD.GRPC == nil {
 			p.MLMD.GRPC = &dspa.GRPC{
-				Image: config.GetStringConfigWithDefault(config.MlmdGRPCImagePath, config.DefaultImageValue),
+				Image: config.ResolveImage(config.MlmdGRPCImagePath),
 			}
 		}
 
 		mlmdEnvoyImageFromConfig := config.GetStringConfigWithDefault(config.MlmdEnvoyImagePath, config.DefaultImageValue)
-		mlmdGRPCImageFromConfig := config.GetStringConfigWithDefault(config.MlmdGRPCImagePath, config.DefaultImageValue)
+		mlmdGRPCImageFromConfig := config.ResolveImage(config.MlmdGRPCImagePath)
 
 		setStringDefault(mlmdEnvoyImageFromConfig, &p.MLMD.Envoy.Image)
 		setStringDefault(mlmdGRPCImageFromConfig, &p.MLMD.GRPC.Image)
@@ -736,6 +739,13 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.Owner = dsp
 	p.APIServer = dsp.Spec.APIServer.DeepCopy()
 	p.PlatformVersion = config.ResolvedPlatformVersion()
+	if p.ResolvePlatformVersion != nil {
+		platformVersion, err := p.ResolvePlatformVersion(ctx)
+		if err != nil {
+			return fmt.Errorf("resolve platform version: %w", err)
+		}
+		p.PlatformVersion = platformVersion
+	}
 	p.APIServerDefaultResourceName = apiServerDefaultResourceNamePrefix + dsp.Name
 	p.APIServerServiceName = fmt.Sprintf("%s-%s", config.DSPServicePrefix, p.Name)
 	p.APIServerServiceDNSName = fmt.Sprintf("%s.%s.svc.cluster.local", p.APIServerServiceName, p.Namespace)
@@ -747,7 +757,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.PersistentAgentDefaultResourceName = persistenceAgentDefaultResourceNamePrefix + dsp.Name
 	p.MariaDB = dsp.Spec.Database.MariaDB.DeepCopy()
 	p.Minio = dsp.Spec.ObjectStorage.Minio.DeepCopy()
-	p.KubeRBACProxy = config.GetStringConfigWithDefault(config.KubeRBACProxyImagePath, config.DefaultImageValue)
+	p.KubeRBACProxy = config.ResolveImage(config.KubeRBACProxyImagePath)
 	p.MLMD = dsp.Spec.MLMD.DeepCopy()
 	p.MlmdProxyDefaultResourceName = mlmdProxyDefaultResourceNamePrefix + dsp.Name
 	p.CustomCABundleRootMountPath = config.CustomCABundleRootMountPath
@@ -786,9 +796,9 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.SetupCompiledPipelineSpecPatch(log)
 
 	if p.APIServer != nil {
-		serverImageFromConfig := config.GetStringConfigWithDefault(config.APIServerImagePath, config.DefaultImageValue)
-		argoLauncherImageFromConfig := config.GetStringConfigWithDefault(config.LauncherImagePath, config.DefaultImageValue)
-		argoDriverImageFromConfig := config.GetStringConfigWithDefault(config.DriverImagePath, config.DefaultImageValue)
+		serverImageFromConfig := config.ResolveImage(config.APIServerImagePath)
+		argoLauncherImageFromConfig := config.ResolveImage(config.LauncherImagePath)
+		argoDriverImageFromConfig := config.ResolveImage(config.DriverImagePath)
 
 		setStringDefault(serverImageFromConfig, &p.APIServer.Image)
 		setStringDefault(argoLauncherImageFromConfig, &p.APIServer.ArgoLauncherImage)
@@ -797,7 +807,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		if p.APIServer.ManagedPipelines != nil {
 			// Whitespace-only overrides are treated as omitted so operator defaulting applies (CRD allows arbitrary strings).
 			p.APIServer.ManagedPipelines.Image = strings.TrimSpace(p.APIServer.ManagedPipelines.Image)
-			pipelinesComponentsImageFromConfig := config.GetStringConfigWithDefault(config.PipelinesComponentsImagePath, config.DefaultImageValue)
+			pipelinesComponentsImageFromConfig := config.ResolveImage(config.PipelinesComponentsImagePath)
 			setStringDefault(pipelinesComponentsImageFromConfig, &p.APIServer.ManagedPipelines.Image)
 			// setStringDefault only overwrites when the image is "". Missing operator config: GetStringConfigWithDefault
 			// returns DefaultImageValue ("MustSetInConfig"), which is assigned. With AllowEmptyEnv, an empty
@@ -1092,12 +1102,12 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	}
 
 	if p.PersistenceAgent != nil {
-		persistenceAgentImageFromConfig := config.GetStringConfigWithDefault(config.PersistenceAgentImagePath, config.DefaultImageValue)
+		persistenceAgentImageFromConfig := config.ResolveImage(config.PersistenceAgentImagePath)
 		setStringDefault(persistenceAgentImageFromConfig, &p.PersistenceAgent.Image)
 		setResourcesDefault(config.PersistenceAgentResourceRequirements, &p.PersistenceAgent.Resources)
 	}
 	if p.ScheduledWorkflow != nil {
-		scheduledWorkflowImageFromConfig := config.GetStringConfigWithDefault(config.ScheduledWorkflowImagePath, config.DefaultImageValue)
+		scheduledWorkflowImageFromConfig := config.ResolveImage(config.ScheduledWorkflowImagePath)
 		setStringDefault(scheduledWorkflowImageFromConfig, &p.ScheduledWorkflow.Image)
 		setResourcesDefault(config.ScheduledWorkflowResourceRequirements, &p.ScheduledWorkflow.Resources)
 	}
@@ -1110,8 +1120,8 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.WorkflowController = dsp.Spec.WorkflowController.DeepCopy()
 
 	if p.WorkflowController != nil {
-		argoWorkflowImageFromConfig := config.GetStringConfigWithDefault(config.ArgoWorkflowControllerImagePath, config.DefaultImageValue)
-		argoExecImageFromConfig := config.GetStringConfigWithDefault(config.ArgoExecImagePath, config.DefaultImageValue)
+		argoWorkflowImageFromConfig := config.ResolveImage(config.ArgoWorkflowControllerImagePath)
+		argoExecImageFromConfig := config.ResolveImage(config.ArgoExecImagePath)
 		setStringDefault(argoWorkflowImageFromConfig, &p.WorkflowController.Image)
 		setStringDefault(argoExecImageFromConfig, &p.WorkflowController.ArgoExecImage)
 		setResourcesDefault(config.WorkflowControllerResourceRequirements, &p.WorkflowController.Resources)
