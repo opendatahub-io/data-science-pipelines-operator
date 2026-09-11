@@ -222,4 +222,3 @@ spec:
           labels:
             component: dsp
           record: haproxy_backend_http_responses_total:burnrate6h
-
