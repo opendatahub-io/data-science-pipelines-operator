@@ -4,3 +4,15 @@ resources:
 - ../openshift
 - ../../argo
 namespace: opendatahub
+
+replacements:
+- source:
+    kind: ConfigMap
+    name: dspo-parameters
+    fieldPath: metadata.namespace
+  targets:
+  - select:
+      kind: PrometheusRule
+      name: datasciencepipelines-prometheusrules
+    fieldPaths:
+    - spec.groups.*.rules.*.labels.namespace
