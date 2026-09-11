@@ -1,0 +1,2 @@
+# Compatibility modes are intentionally supported; see the approved TLS exception process.
+tmp.argus-observe-rules.rules.languages.go.runtime-security.go-tls-bypass:controllers/database.go
