@@ -297,7 +297,10 @@ var allowedDBExtraParams = map[string]struct{}{
 func ValidateDBExtraParams(raw string) (map[string]string, error) {
 	var params map[string]string
 	if err := json.Unmarshal([]byte(raw), &params); err != nil {
-		return nil, fmt.Errorf("customExtraParams is not valid JSON: %w", err)
+		return nil, fmt.Errorf("customExtraParams must be a JSON object with string values: %w", err)
+	}
+	if params == nil {
+		return nil, fmt.Errorf("customExtraParams must be a JSON object with string values")
 	}
 	for key := range params {
 		if _, ok := allowedDBExtraParams[key]; !ok {
