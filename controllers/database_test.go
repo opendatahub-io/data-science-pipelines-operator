@@ -33,6 +33,8 @@ func TestValidateDBExtraParams_AllowedKeys(t *testing.T) {
 		input string
 	}{
 		{"tls only", `{"tls":"true"}`},
+		{"TLS compatibility modes", `{"tls":"skip-verify"}`},
+		{"TLS preferred mode", `{"tls":"preferred"}`},
 		{"charset only", `{"charset":"utf8mb4"}`},
 		{"multiple allowed keys", `{"tls":"true","charset":"utf8","parseTime":"True","loc":"Local"}`},
 		{"timeout keys", `{"timeout":"30s","readTimeout":"10s","writeTimeout":"10s"}`},
@@ -79,7 +81,7 @@ func TestValidateDBExtraParams_DisallowedKeys(t *testing.T) {
 	}
 }
 
-// TestValidateDBExtraParams_InvalidJSON verifies that malformed JSON is rejected.
+// TestValidateDBExtraParams_InvalidJSON verifies that malformed JSON and non-string values are rejected.
 func TestValidateDBExtraParams_InvalidJSON(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -88,6 +90,8 @@ func TestValidateDBExtraParams_InvalidJSON(t *testing.T) {
 		{"not json", `not-json`},
 		{"array instead of object", `["tls"]`},
 		{"unclosed brace", `{"tls":"true"`},
+		{"boolean tls value", `{"tls":true}`},
+		{"null", `null`},
 	}
 
 	for _, tt := range tests {
@@ -95,7 +99,7 @@ func TestValidateDBExtraParams_InvalidJSON(t *testing.T) {
 			params, err := config.ValidateDBExtraParams(tt.input)
 			assert.Error(t, err)
 			assert.Nil(t, params)
-			assert.Contains(t, err.Error(), "not valid JSON")
+			assert.Contains(t, err.Error(), "JSON object with string values")
 		})
 	}
 }
