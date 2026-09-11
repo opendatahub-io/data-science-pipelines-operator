@@ -19,6 +19,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -109,6 +110,17 @@ func ResolvedPlatformVersion() string {
 	return strings.Trim(GetStringConfigWithDefault("DSPO.PlatformVersion", DefaultPlatformVersion), "\"")
 }
 
+// ResolveImage returns a non-empty platform-provided related image when one
+// exists, otherwise it preserves the operator's standalone image setting.
+func ResolveImage(configName string) string {
+	if relatedImageName, ok := platformRelatedImages[configName]; ok {
+		if value := strings.TrimSpace(os.Getenv(relatedImageName)); value != "" {
+			return value
+		}
+	}
+	return GetStringConfigWithDefault(configName, DefaultImageValue)
+}
+
 // BuildManagedPipelinesUploadTags returns MANAGED_PIPELINES_UPLOAD_TAGS: managed=true plus rhoai-version for the given resolved version string.
 func BuildManagedPipelinesUploadTags(platformVersion string) string {
 	return fmt.Sprintf("%s,rhoai-version=%s", ManagedPipelinesUploadTagManaged, platformVersion)
@@ -137,6 +149,19 @@ const (
 	ApiServerIncludeOwnerReferenceConfigName    = "DSPO.ApiServer.IncludeOwnerReference"
 	EnableAIPipelinesModuleControllerConfigName = "DSPO.EnableAIPipelinesModuleController"
 )
+
+var platformRelatedImages = map[string]string{
+	APIServerImagePath:              "RELATED_IMAGE_ODH_ML_PIPELINES_API_SERVER_V2_IMAGE",
+	PersistenceAgentImagePath:       "RELATED_IMAGE_ODH_ML_PIPELINES_PERSISTENCEAGENT_V2_IMAGE",
+	ScheduledWorkflowImagePath:      "RELATED_IMAGE_ODH_ML_PIPELINES_SCHEDULEDWORKFLOW_V2_IMAGE",
+	ArgoExecImagePath:               "RELATED_IMAGE_ODH_DATA_SCIENCE_PIPELINES_ARGO_ARGOEXEC_IMAGE",
+	ArgoWorkflowControllerImagePath: "RELATED_IMAGE_ODH_DATA_SCIENCE_PIPELINES_ARGO_WORKFLOWCONTROLLER_IMAGE",
+	DriverImagePath:                 "RELATED_IMAGE_ODH_ML_PIPELINES_DRIVER_IMAGE",
+	LauncherImagePath:               "RELATED_IMAGE_ODH_ML_PIPELINES_LAUNCHER_IMAGE",
+	MlmdGRPCImagePath:               "RELATED_IMAGE_ODH_MLMD_GRPC_SERVER_IMAGE",
+	KubeRBACProxyImagePath:          "RELATED_IMAGE_ODH_KUBE_RBAC_PROXY_IMAGE",
+	PipelinesComponentsImagePath:    "RELATED_IMAGE_ODH_PIPELINES_COMPONENTS_IMAGE",
+}
 
 // DSPA Status Condition Types
 const (
