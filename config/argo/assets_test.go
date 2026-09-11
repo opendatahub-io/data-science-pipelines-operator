@@ -14,19 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package argo_test
+package argo //nolint:testpackage // asset count intentionally validates the private embedded manifest list
 
 import (
 	"testing"
 
-	"github.com/opendatahub-io/data-science-pipelines-operator/config/argo"
 	"github.com/stretchr/testify/require"
 )
 
 func TestObjects(t *testing.T) {
-	objects, err := argo.Objects("opendatahub")
+	objects, err := Objects("opendatahub")
 	require.NoError(t, err)
-	require.Len(t, objects, 19)
+	require.Len(t, objects, len(assetNames))
 
 	foundWorkflowCRD := false
 	foundArgoRole := false
