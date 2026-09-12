@@ -30,3 +30,17 @@ rules:
   - patch
   - update
   - watch
+# Application CRD deployed by older versions persists after upgrade. Permissions needed for upgraded installations.
+- apiGroups:
+  - app.k8s.io
+  resources:
+  - applications
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
