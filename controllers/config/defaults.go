@@ -252,15 +252,36 @@ var allowedDBExtraParams = map[string]struct{}{
 func ValidateDBExtraParams(raw string) (map[string]string, error) {
 	var params map[string]string
 	if err := json.Unmarshal([]byte(raw), &params); err != nil {
-		return nil, fmt.Errorf("customExtraParams is not valid JSON: %w", err)
+		return nil, fmt.Errorf("customExtraParams must be a JSON object with string values: %w", err)
+	}
+	if params == nil {
+		return nil, fmt.Errorf("customExtraParams must be a JSON object with string values")
 	}
 	for key := range params {
 		if _, ok := allowedDBExtraParams[key]; !ok {
 			return nil, fmt.Errorf("customExtraParams contains disallowed key %q; allowed keys: %v",
 				key, allowedKeysList())
 		}
+		if key == "tls" {
+			if err := ValidateDBTLSMode(params[key]); err != nil {
+				return nil, err
+			}
+		}
 	}
 	return params, nil
+}
+
+// ValidateDBTLSMode rejects MySQL TLS modes that bypass certificate verification.
+func ValidateDBTLSMode(mode string) error {
+	if strings.EqualFold(mode, "skip-verify") || strings.EqualFold(mode, "preferred") {
+		return fmt.Errorf(
+			"database TLS mode %q disables certificate verification and is rejected for security compliance; "+
+				"use tls=true and configure spec.apiServer.cABundle for self-signed or internal CA certificates; "+
+				"see https://github.com/opendatahub-io/data-science-pipelines-operator/blob/main/docs/database-tls.md",
+			mode,
+		)
+	}
+	return nil
 }
 
 // allowedKeysList returns a sorted slice of allowed parameter key names for
