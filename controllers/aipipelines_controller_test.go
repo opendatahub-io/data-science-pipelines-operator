@@ -93,6 +93,43 @@ func TestBuildAIPipelinesStatusRejectsInvalidManagementState(t *testing.T) {
 	require.Equal(t, metav1.ConditionFalse, requireModuleCondition(t, status.Conditions, string(common.ConditionTypeProvisioningSucceeded)).Status)
 }
 
+func TestBuildAIPipelinesStatusReportsManifestApplicationFailure(t *testing.T) {
+	t.Cleanup(viper.Reset)
+
+	module := newTestAIPipelines(common.Managed)
+	argo := argoLifecycleObservation{
+		Status:  metav1.ConditionFalse,
+		Reason:  "ArgoResourcesProgressing",
+		Message: "Waiting for shared Argo resources: ConfigMap/workflow-controller-configmap",
+	}
+
+	status := buildAIPipelinesStatus(module, readyDSPOObservation(), argo)
+	provisioning := requireModuleCondition(t, status.Conditions, string(common.ConditionTypeProvisioningSucceeded))
+	require.Equal(t, metav1.ConditionFalse, provisioning.Status)
+	require.Equal(t, argo.Reason, provisioning.Reason)
+	require.Equal(t, argo.Message, provisioning.Message)
+}
+
+func TestBuildAIPipelinesStatusPreservesPlatformReleaseUntilManifestsApply(t *testing.T) {
+	viper.Set("DSPO.PlatformVersion", "3.6.0")
+	t.Cleanup(viper.Reset)
+
+	module := newTestAIPipelines(common.Managed)
+	module.Status.SetPlatformRelease("3.5.0")
+	argo := argoLifecycleObservation{
+		Status:  metav1.ConditionFalse,
+		Reason:  "ArgoResourcesProgressing",
+		Message: "Waiting for shared Argo resources: ConfigMap/workflow-controller-configmap",
+	}
+
+	failedStatus := buildAIPipelinesStatus(module, readyDSPOObservation(), argo)
+	require.Equal(t, "3.5.0", failedStatus.GetPlatformRelease())
+
+	module.Status = failedStatus
+	successfulStatus := buildAIPipelinesStatus(module, readyDSPOObservation(), readyArgoObservation())
+	require.Equal(t, "3.6.0", successfulStatus.GetPlatformRelease())
+}
+
 func TestBuildAIPipelinesStatusPreservesTransitionTime(t *testing.T) {
 	t.Cleanup(viper.Reset)
 

@@ -132,12 +132,16 @@ func buildAIPipelinesStatus(
 		readyMessage = "AIPipelines is waiting for configuration, DSPO, or Argo readiness"
 	}
 
-	provisioningStatus := configurationStatus
-	provisioningReason := "ConfigurationAccepted"
-	provisioningMessage := "AIPipelines configuration was accepted"
-	if provisioningStatus != metav1.ConditionTrue {
+	provisioningStatus := aggregateConditionStatuses(configurationStatus, argoStatus)
+	provisioningReason := "ManifestApplicationSucceeded"
+	provisioningMessage := "All AIPipelines manifests were applied successfully"
+	switch {
+	case configurationStatus != metav1.ConditionTrue:
 		provisioningReason = "InvalidConfiguration"
 		provisioningMessage = configurationMessage
+	case argoStatus != metav1.ConditionTrue:
+		provisioningReason = argoReason
+		provisioningMessage = argoMessage
 	}
 
 	status := aipipelinesv1alpha1.AIPipelinesStatus{}
@@ -154,8 +158,10 @@ func buildAIPipelinesStatus(
 		moduleCondition(module, common.ConditionType(conditionTypeArgoReady), argoStatus, argoReason, argoMessage),
 	}
 
-	if platformVersion := config.ResolvedPlatformVersion(); platformVersion != "" {
+	if platformVersion := config.ResolvedPlatformVersion(); provisioningStatus == metav1.ConditionTrue && platformVersion != "" {
 		status.SetPlatformRelease(platformVersion)
+	} else if previousRelease := module.Status.GetPlatformRelease(); previousRelease != "" {
+		status.SetPlatformRelease(previousRelease)
 	}
 
 	return status
