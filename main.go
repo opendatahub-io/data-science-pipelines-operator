@@ -384,11 +384,23 @@ func main() {
 	// ownership path only during the coordinated platform handoff.
 	if config.AIPipelinesModuleControllerEnabled() {
 		if err = (&controllers.AIPipelinesReconciler{
-			Client: mgr.GetClient(),
-			Scheme: mgr.GetScheme(),
-			Log:    ctrl.Log.WithName("controllers").WithName("AIPipelines"),
+			Client:    mgr.GetClient(),
+			APIReader: mgr.GetAPIReader(),
+			Scheme:    mgr.GetScheme(),
+			Log:       ctrl.Log.WithName("controllers").WithName("AIPipelines"),
+			Namespace: dspoNamespace,
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AIPipelines")
+			os.Exit(1)
+		}
+		if err = (&controllers.AIPipelinesArgoReconciler{
+			Client:    mgr.GetClient(),
+			APIReader: mgr.GetAPIReader(),
+			Scheme:    mgr.GetScheme(),
+			Log:       ctrl.Log.WithName("controllers").WithName("AIPipelinesArgo"),
+			Namespace: dspoNamespace,
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "AIPipelinesArgo")
 			os.Exit(1)
 		}
 	} else {
