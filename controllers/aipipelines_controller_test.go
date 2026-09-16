@@ -38,6 +38,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 func TestBuildAIPipelinesStatusReady(t *testing.T) {
@@ -182,6 +183,9 @@ func TestAIPipelinesReconcileUpdatesStatus(t *testing.T) {
 		labels[legacyPipelinesComponentLabel] = "true"
 		labels[config.DSPVersionk8sLabel] = config.DSPV2VersionString
 		asset.SetLabels(labels)
+		if asset.GetKind() != "CustomResourceDefinition" {
+			require.NoError(t, controllerutil.SetControllerReference(module, asset, scheme))
+		}
 		require.NoError(t, client.Create(context.Background(), asset))
 	}
 	setArgoCRDsEstablished(t, context.Background(), client, "opendatahub", metav1.ConditionTrue)
