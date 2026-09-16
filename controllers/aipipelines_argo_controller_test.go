@@ -188,6 +188,10 @@ func TestAIPipelinesArgoReconcileIgnoresNonSingleton(t *testing.T) {
 func TestAIPipelinesArgoReconcileFinalizesNonSingleton(t *testing.T) {
 	ctx := context.Background()
 	reconciler, k8sClient, module := newArgoTestReconciler(t, common.Managed)
+	managedConfigMap := argoTestObject("v1", "ConfigMap", "opendatahub", "workflow-controller-configmap")
+	managedConfigMap.SetAnnotations(map[string]string{argoManagedAnnotation: "true"})
+	require.NoError(t, k8sClient.Create(ctx, managedConfigMap))
+
 	module.Name = "legacy-aipipelines"
 	module.ResourceVersion = ""
 	module.Finalizers = []string{argoLifecycleFinalizer}
@@ -199,6 +203,7 @@ func TestAIPipelinesArgoReconcileFinalizesNonSingleton(t *testing.T) {
 
 	updated := &aipipelinesv1alpha1.AIPipelines{}
 	require.True(t, apierrors.IsNotFound(k8sClient.Get(ctx, client.ObjectKeyFromObject(module), updated)))
+	require.NoError(t, k8sClient.Get(ctx, client.ObjectKeyFromObject(managedConfigMap), managedConfigMap))
 }
 
 func newArgoTestReconciler(t *testing.T, state common.ManagementState) (*AIPipelinesArgoReconciler, client.Client, *aipipelinesv1alpha1.AIPipelines) {

@@ -92,6 +92,17 @@ func (r *AIPipelinesArgoReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	if req.Name != aipipelinesv1alpha1.AIPipelinesInstanceName {
+		if !module.DeletionTimestamp.IsZero() && controllerutil.ContainsFinalizer(module, argoLifecycleFinalizer) {
+			updated := module.DeepCopy()
+			controllerutil.RemoveFinalizer(updated, argoLifecycleFinalizer)
+			if err := r.Update(ctx, updated); err != nil {
+				return ctrl.Result{}, fmt.Errorf("remove Argo finalizer from non-singleton AIPipelines: %w", err)
+			}
+		}
+		return ctrl.Result{}, nil
+	}
+
 	assets, err := r.desiredAssets(module)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -115,10 +126,6 @@ func (r *AIPipelinesArgoReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 		return ctrl.Result{}, nil
 	}
-	if req.Name != aipipelinesv1alpha1.AIPipelinesInstanceName {
-		return ctrl.Result{}, nil
-	}
-
 	if !controllerutil.ContainsFinalizer(module, argoLifecycleFinalizer) {
 		updated := module.DeepCopy()
 		controllerutil.AddFinalizer(updated, argoLifecycleFinalizer)
