@@ -85,6 +85,8 @@ type AIPipelinesArgoReconciler struct {
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings;clusterroles;clusterrolebindings,verbs=create;list;watch
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings;clusterroles;clusterrolebindings,resourceNames=argo-aggregate-to-admin;argo-aggregate-to-edit;argo-aggregate-to-view;argo-binding;argo-cluster-role;argo-role;ds-pipeline-argo-binding,verbs=get;update;delete
 // +kubebuilder:rbac:groups="",resources=configmaps;serviceaccounts,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch
+// +kubebuilder:rbac:groups=argoproj.io,resources=workflows;workflows/finalizers;workfloweventbindings;workfloweventbindings/finalizers;workflowtemplates;workflowtemplates/finalizers;cronworkflows;cronworkflows/finalizers;clusterworkflowtemplates;clusterworkflowtemplates/finalizers;workflowtasksets;workflowtasksets/finalizers;workflowtaskresults;workflowtaskresults/finalizers,verbs=create;delete;deletecollection;get;list;patch;update;watch
 
 func (r *AIPipelinesArgoReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	module := &aipipelinesv1alpha1.AIPipelines{}

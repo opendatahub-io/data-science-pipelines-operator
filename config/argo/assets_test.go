@@ -28,17 +28,23 @@ func TestObjects(t *testing.T) {
 	require.Len(t, objects, len(assetNames))
 
 	foundWorkflowCRD := false
+	foundArgoRole := false
 	for _, object := range objects {
 		require.NotEmpty(t, object.GetAPIVersion())
 		require.NotEmpty(t, object.GetKind())
 		require.NotEmpty(t, object.GetName())
+		if isNamespacedAsset(object.GetKind()) {
+			require.Equal(t, "opendatahub", object.GetNamespace(), "%s/%s", object.GetKind(), object.GetName())
+		} else {
+			require.Empty(t, object.GetNamespace(), "%s/%s", object.GetKind(), object.GetName())
+		}
 		if object.GetName() == "workflows.argoproj.io" {
 			foundWorkflowCRD = true
-			require.Empty(t, object.GetNamespace())
 		}
-		if object.GetName() == "workflow-controller-configmap" {
-			require.Equal(t, "opendatahub", object.GetNamespace())
+		if object.GetName() == "argo-role" {
+			foundArgoRole = true
 		}
 	}
 	require.True(t, foundWorkflowCRD)
+	require.True(t, foundArgoRole)
 }
