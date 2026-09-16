@@ -39,6 +39,7 @@ func TestAIPipelinesModuleControllerEnabled(t *testing.T) {
 
 func TestResolveImagePrefersNonEmptyPlatformValue(t *testing.T) {
 	t.Cleanup(viper.Reset)
+	viper.Set(EnableAIPipelinesModuleControllerConfigName, true)
 
 	for configName, envName := range platformRelatedImages {
 		t.Run(configName, func(t *testing.T) {
@@ -49,8 +50,22 @@ func TestResolveImagePrefersNonEmptyPlatformValue(t *testing.T) {
 	}
 }
 
+func TestResolveImageRetainsStandaloneFallbackWhenModuleControllerDisabled(t *testing.T) {
+	t.Cleanup(viper.Reset)
+	viper.Set(EnableAIPipelinesModuleControllerConfigName, false)
+
+	for configName, envName := range platformRelatedImages {
+		t.Run(configName, func(t *testing.T) {
+			viper.Set(configName, "standalone.example/image:latest")
+			t.Setenv(envName, "platform.example/image@sha256:abc")
+			require.Equal(t, "standalone.example/image:latest", ResolveImage(configName))
+		})
+	}
+}
+
 func TestResolveImageRetainsStandaloneFallbackForEmptyPlatformValue(t *testing.T) {
 	t.Cleanup(viper.Reset)
+	viper.Set(EnableAIPipelinesModuleControllerConfigName, true)
 
 	for configName, envName := range platformRelatedImages {
 		t.Run(configName, func(t *testing.T) {
