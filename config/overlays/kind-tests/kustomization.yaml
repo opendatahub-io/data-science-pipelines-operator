@@ -8,6 +8,7 @@ patchesStrategicMerge:
   - res_patch.yaml
   - user_patch.yaml
   - env_patch.yaml
+  - prometheusrule_patch.yaml
 images:
   - name: controller
     newName: quay.io/opendatahub/data-science-pipelines-operator
