@@ -29,6 +29,7 @@ import (
 	"github.com/opendatahub-io/odh-platform-utilities/api/common"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -79,8 +80,10 @@ type AIPipelinesArgoReconciler struct {
 
 // +kubebuilder:rbac:groups=components.platform.opendatahub.io,resources=aipipelines,verbs=get;list;watch;patch;update
 // +kubebuilder:rbac:groups=components.platform.opendatahub.io,resources=aipipelines/finalizers,verbs=update
-// +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=get;list;watch;create;update;patch
-// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings;clusterroles;clusterrolebindings,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=create;list;watch
+// +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,resourceNames=applications.app.k8s.io;clusterworkflowtemplates.argoproj.io;cronworkflows.argoproj.io;viewers.kubeflow.org;workflowartifactgctasks.argoproj.io;workfloweventbindings.argoproj.io;workflows.argoproj.io;workflowtaskresults.argoproj.io;workflowtasksets.argoproj.io;workflowtemplates.argoproj.io,verbs=get;update;patch
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings;clusterroles;clusterrolebindings,verbs=create;list;watch
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings;clusterroles;clusterrolebindings,resourceNames=argo;argo-aggregate-to-admin;argo-aggregate-to-edit;argo-aggregate-to-view;argo-binding;argo-cluster-role;ds-pipeline-argo-binding,verbs=get;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=configmaps;serviceaccounts,verbs=get;list;watch;create;update;patch;delete
 
 func (r *AIPipelinesArgoReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -127,7 +130,7 @@ func (r *AIPipelinesArgoReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	switch module.Spec.ArgoWorkflowsControllersManagementState() {
 	case common.Managed:
-		if err := r.checkWorkflowCRDOwnership(ctx); err != nil {
+		if err := r.validateExistingAssetOwnership(ctx, assets); err != nil {
 			return ctrl.Result{}, err
 		}
 		for _, asset := range assets {
@@ -151,6 +154,24 @@ func (r *AIPipelinesArgoReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *AIPipelinesArgoReconciler) validateExistingAssetOwnership(ctx context.Context, assets []*unstructured.Unstructured) error {
+	for _, desired := range assets {
+		current := &unstructured.Unstructured{}
+		current.SetGroupVersionKind(desired.GroupVersionKind())
+		err := r.reader().Get(ctx, client.ObjectKeyFromObject(desired), current)
+		if apierrors.IsNotFound(err) {
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("check existing shared Argo %s %s: %w", desired.GetKind(), desired.GetName(), err)
+		}
+		if !isArgoManaged(current) {
+			return fmt.Errorf("shared Argo %s %s already exists and is not owned by AI Pipelines", desired.GetKind(), desired.GetName())
+		}
+	}
+	return nil
 }
 
 func (r *AIPipelinesArgoReconciler) desiredAssets(module *aipipelinesv1alpha1.AIPipelines) ([]*unstructured.Unstructured, error) {
@@ -248,7 +269,7 @@ func (r *AIPipelinesArgoReconciler) removeControllerAssets(ctx context.Context, 
 			failures = append(failures, fmt.Sprintf("get %s %s: %v", asset.GetKind(), asset.GetName(), err))
 			continue
 		}
-		if current.GetAnnotations()[argoManagedAnnotation] != "true" && current.GetLabels()[legacyPipelinesComponentLabel] != "true" {
+		if !isArgoManaged(current) {
 			continue
 		}
 		if err := r.Delete(ctx, current); err != nil && !apierrors.IsNotFound(err) {
@@ -264,18 +285,8 @@ func (r *AIPipelinesArgoReconciler) removeControllerAssets(ctx context.Context, 
 	return pending, nil
 }
 
-func (r *AIPipelinesArgoReconciler) checkWorkflowCRDOwnership(ctx context.Context) error {
-	crd, err := r.getWorkflowCRD(ctx)
-	if apierrors.IsNotFound(err) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("check existing Argo Workflow CRD: %w", err)
-	}
-	if crd.GetLabels()[legacyPipelinesComponentLabel] == "true" || crd.GetAnnotations()[argoManagedAnnotation] == "true" {
-		return nil
-	}
-	return fmt.Errorf("Argo Workflow CRD %s already exists and is not owned by AI Pipelines", argoWorkflowCRDName)
+func isArgoManaged(object client.Object) bool {
+	return object.GetLabels()[legacyPipelinesComponentLabel] == "true" || object.GetAnnotations()[argoManagedAnnotation] == "true"
 }
 
 func (r *AIPipelinesArgoReconciler) requireWorkflowCRD(ctx context.Context) error {
@@ -379,8 +390,18 @@ func observeArgoLifecycle(ctx context.Context, reader client.Reader, namespace s
 			}
 			continue
 		}
-		if desired.GetName() == argoWorkflowCRDName && current.GetLabels()[legacyPipelinesComponentLabel] != "true" && current.GetAnnotations()[argoManagedAnnotation] != "true" {
-			return argoLifecycleObservation{Status: metav1.ConditionFalse, Reason: "ArgoResourcesNotOwned", Message: "Argo Workflow CRD exists but is not owned by AI Pipelines"}
+		if !isArgoManaged(current) {
+			return argoLifecycleObservation{Status: metav1.ConditionFalse, Reason: "ArgoResourcesNotOwned", Message: fmt.Sprintf("Shared Argo %s %s exists but is not owned by AI Pipelines", desired.GetKind(), desired.GetName())}
+		}
+		if desired.GetKind() == "CustomResourceDefinition" {
+			established, err := argoCRDEstablished(current)
+			if err != nil {
+				return argoLifecycleObservation{Status: metav1.ConditionUnknown, Reason: "ArgoObservationFailed", Message: err.Error()}
+			}
+			if !established {
+				drifted = append(drifted, desired.GetKind()+"/"+desired.GetName())
+				continue
+			}
 		}
 		if current.GetAnnotations()[argoManagedAnnotation] != "true" ||
 			current.GetLabels()[legacyPipelinesComponentLabel] != "true" ||
@@ -399,6 +420,27 @@ func observeArgoLifecycle(ctx context.Context, reader client.Reader, namespace s
 		return argoLifecycleObservation{Status: metav1.ConditionTrue, Reason: "Removed", Message: "Shared Argo controller resources are removed; CRDs are preserved"}
 	}
 	return argoLifecycleObservation{Status: metav1.ConditionTrue, Reason: "ArgoResourcesReady", Message: "Shared Argo resources are ready"}
+}
+
+func argoCRDEstablished(crd *unstructured.Unstructured) (bool, error) {
+	value, found, err := unstructured.NestedFieldNoCopy(crd.Object, "status", "conditions")
+	if err != nil {
+		return false, fmt.Errorf("read Established condition for CRD %s: %w", crd.GetName(), err)
+	}
+	if !found || value == nil {
+		return false, nil
+	}
+	conditions, ok := value.([]interface{})
+	if !ok {
+		return false, fmt.Errorf("read Established condition for CRD %s: expected a condition list", crd.GetName())
+	}
+	for _, item := range conditions {
+		condition, ok := item.(map[string]interface{})
+		if ok && condition["type"] == string(apiextensionsv1.Established) && condition["status"] == string(metav1.ConditionTrue) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func argoManagedFieldsMatch(current, desired *unstructured.Unstructured) bool {
