@@ -64,23 +64,35 @@ func TestAIPipelinesArgoReconcileManagedCreatesAssets(t *testing.T) {
 	require.Equal(t, "opendatahub", subjectNamespace)
 
 	setArgoCRDsEstablished(t, ctx, k8sClient, "opendatahub", metav1.ConditionFalse)
-	observation := observeArgoLifecycle(ctx, k8sClient, "opendatahub", common.Managed)
+	observation := observeArgoLifecycle(ctx, k8sClient, "opendatahub", common.Managed, module)
 	require.Equal(t, metav1.ConditionFalse, observation.Status, observation.Message)
 	require.Equal(t, "ArgoResourcesProgressing", observation.Reason)
 
 	setArgoCRDsEstablished(t, ctx, k8sClient, "opendatahub", metav1.ConditionTrue)
-	observation = observeArgoLifecycle(ctx, k8sClient, "opendatahub", common.Managed)
+	observation = observeArgoLifecycle(ctx, k8sClient, "opendatahub", common.Managed, module)
 	require.Equal(t, metav1.ConditionTrue, observation.Status)
 
-	require.NoError(t, unstructured.SetNestedField(configMap.Object, map[string]interface{}{"unexpected": "drift"}, "data"))
+	configMap.SetOwnerReferences(nil)
 	require.NoError(t, k8sClient.Update(ctx, configMap))
-	observation = observeArgoLifecycle(ctx, k8sClient, "opendatahub", common.Managed)
+	observation = observeArgoLifecycle(ctx, k8sClient, "opendatahub", common.Managed, module)
 	require.Equal(t, metav1.ConditionFalse, observation.Status)
 	require.Equal(t, "ArgoResourcesProgressing", observation.Reason)
 
 	_, err = reconciler.Reconcile(ctx, moduleRequest())
 	require.NoError(t, err)
-	observation = observeArgoLifecycle(ctx, k8sClient, "opendatahub", common.Managed)
+	require.NoError(t, k8sClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap))
+	observation = observeArgoLifecycle(ctx, k8sClient, "opendatahub", common.Managed, module)
+	require.Equal(t, metav1.ConditionTrue, observation.Status)
+
+	require.NoError(t, unstructured.SetNestedField(configMap.Object, map[string]interface{}{"unexpected": "drift"}, "data"))
+	require.NoError(t, k8sClient.Update(ctx, configMap))
+	observation = observeArgoLifecycle(ctx, k8sClient, "opendatahub", common.Managed, module)
+	require.Equal(t, metav1.ConditionFalse, observation.Status)
+	require.Equal(t, "ArgoResourcesProgressing", observation.Reason)
+
+	_, err = reconciler.Reconcile(ctx, moduleRequest())
+	require.NoError(t, err)
+	observation = observeArgoLifecycle(ctx, k8sClient, "opendatahub", common.Managed, module)
 	require.Equal(t, metav1.ConditionTrue, observation.Status)
 }
 
@@ -110,7 +122,7 @@ func TestAIPipelinesArgoReconcileRemovedPreservesCRDs(t *testing.T) {
 	workflowCRD := argoTestObject("apiextensions.k8s.io/v1", "CustomResourceDefinition", "", argoWorkflowCRDName)
 	require.NoError(t, k8sClient.Get(ctx, client.ObjectKeyFromObject(workflowCRD), workflowCRD))
 
-	observation := observeArgoLifecycle(ctx, k8sClient, "opendatahub", common.Removed)
+	observation := observeArgoLifecycle(ctx, k8sClient, "opendatahub", common.Removed, module)
 	require.Equal(t, metav1.ConditionTrue, observation.Status)
 }
 
