@@ -110,12 +110,15 @@ func ResolvedPlatformVersion() string {
 	return strings.Trim(GetStringConfigWithDefault("DSPO.PlatformVersion", DefaultPlatformVersion), "\"")
 }
 
-// ResolveImage returns a non-empty platform-provided related image when one
-// exists, otherwise it preserves the operator's standalone image setting.
+// ResolveImage returns a non-empty platform-provided related image when the
+// modular controller is enabled and one exists. Otherwise it preserves the
+// operator's standalone image setting.
 func ResolveImage(configName string) string {
-	if relatedImageName, ok := platformRelatedImages[configName]; ok {
-		if value := strings.TrimSpace(os.Getenv(relatedImageName)); value != "" {
-			return value
+	if AIPipelinesModuleControllerEnabled() {
+		if relatedImageName, ok := platformRelatedImages[configName]; ok {
+			if value := strings.TrimSpace(os.Getenv(relatedImageName)); value != "" {
+				return value
+			}
 		}
 	}
 	return GetStringConfigWithDefault(configName, DefaultImageValue)
@@ -158,6 +161,8 @@ var platformRelatedImages = map[string]string{
 	ArgoWorkflowControllerImagePath: "RELATED_IMAGE_ODH_DATA_SCIENCE_PIPELINES_ARGO_WORKFLOWCONTROLLER_IMAGE",
 	DriverImagePath:                 "RELATED_IMAGE_ODH_ML_PIPELINES_DRIVER_IMAGE",
 	LauncherImagePath:               "RELATED_IMAGE_ODH_ML_PIPELINES_LAUNCHER_IMAGE",
+	MariaDBImagePath:                "RELATED_IMAGE_DSP_MARIADB_IMAGE",
+	MlmdEnvoyImagePath:              "RELATED_IMAGE_DSP_PROXYV2_IMAGE",
 	MlmdGRPCImagePath:               "RELATED_IMAGE_ODH_MLMD_GRPC_SERVER_IMAGE",
 	KubeRBACProxyImagePath:          "RELATED_IMAGE_ODH_KUBE_RBAC_PROXY_IMAGE",
 	PipelinesComponentsImagePath:    "RELATED_IMAGE_ODH_PIPELINES_COMPONENTS_IMAGE",
