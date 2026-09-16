@@ -75,7 +75,7 @@ func Objects(namespace string) ([]*unstructured.Unstructured, error) {
 			if len(object.Object) == 0 {
 				continue
 			}
-			if object.GetNamespace() != "" {
+			if isNamespacedAsset(object.GetKind()) {
 				object.SetNamespace(namespace)
 			}
 			if object.GetKind() == "RoleBinding" || object.GetKind() == "ClusterRoleBinding" {
@@ -100,4 +100,13 @@ func Objects(namespace string) ([]*unstructured.Unstructured, error) {
 	}
 
 	return objects, nil
+}
+
+func isNamespacedAsset(kind string) bool {
+	switch kind {
+	case "ConfigMap", "Role", "RoleBinding", "ServiceAccount":
+		return true
+	default:
+		return false
+	}
 }
