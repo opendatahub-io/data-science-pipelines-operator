@@ -356,7 +356,7 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 		if p.MariaDB == nil {
 			p.MariaDB = &dspa.MariaDB{
 				Deploy:    true,
-				Image:     config.GetStringConfigWithDefault(config.MariaDBImagePath, config.DefaultImageValue),
+				Image:     config.ResolveImage(config.MariaDBImagePath),
 				Resources: config.MariaDBResourceRequirements.DeepCopy(),
 				Username:  config.MariaDBUser,
 				DBName:    config.MariaDBName,
@@ -367,7 +367,7 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 		// If MariaDB was specified, ensure missing fields are
 		// populated with defaults.
 		if p.MariaDB.Image == "" {
-			p.MariaDB.Image = config.GetStringConfigWithDefault(config.MariaDBImagePath, config.DefaultImageValue)
+			p.MariaDB.Image = config.ResolveImage(config.MariaDBImagePath)
 		}
 		setStringDefault(config.MariaDBUser, &p.MariaDB.Username)
 		setStringDefault(config.MariaDBName, &p.MariaDB.DBName)
@@ -579,7 +579,7 @@ func (p *DSPAParams) SetupMLMD(dsp *dspa.DataSciencePipelinesApplication, log lo
 	if p.MLMD != nil {
 		if p.MLMD.Envoy == nil {
 			p.MLMD.Envoy = &dspa.Envoy{
-				Image:       config.GetStringConfigWithDefault(config.MlmdEnvoyImagePath, config.DefaultImageValue),
+				Image:       config.ResolveImage(config.MlmdEnvoyImagePath),
 				DeployRoute: true,
 			}
 		}
@@ -589,7 +589,7 @@ func (p *DSPAParams) SetupMLMD(dsp *dspa.DataSciencePipelinesApplication, log lo
 			}
 		}
 
-		mlmdEnvoyImageFromConfig := config.GetStringConfigWithDefault(config.MlmdEnvoyImagePath, config.DefaultImageValue)
+		mlmdEnvoyImageFromConfig := config.ResolveImage(config.MlmdEnvoyImagePath)
 		mlmdGRPCImageFromConfig := config.ResolveImage(config.MlmdGRPCImagePath)
 
 		setStringDefault(mlmdEnvoyImageFromConfig, &p.MLMD.Envoy.Image)
