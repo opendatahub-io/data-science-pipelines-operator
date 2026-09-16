@@ -268,6 +268,24 @@ func parseRoleTemplate(t *testing.T, path string) []rbacv1.PolicyRule {
 	return role.Rules
 }
 
+func parseRole(t *testing.T, path string) []rbacv1.PolicyRule {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	assert.NoError(t, err)
+
+	var role rbacv1.ClusterRole
+	assert.NoError(t, yaml.Unmarshal(data, &role))
+	return role.Rules
+}
+
+func assertPermissionsCovered(t *testing.T, operatorPerms map[string]bool, rules []rbacv1.PolicyRule) {
+	t.Helper()
+	for perm := range collectPermissions(rules) {
+		assert.True(t, operatorPerms[perm],
+			"created Role requires permission %q which is missing from the operator service account's ClusterRoles", perm)
+	}
+}
+
 // TestOperatorRolesAreSupersetOfRoleTemplates verifies that the union of the
 // operator's ClusterRoles covers every permission in the namespace-scoped Role
 // templates the operator creates. Required by Kubernetes RBAC escalation prevention.
@@ -285,11 +303,29 @@ func TestOperatorRolesAreSupersetOfRoleTemplates(t *testing.T) {
 			if rules == nil {
 				t.Skip("could not parse template")
 			}
-			templatePerms := collectPermissions(rules)
-			for perm := range templatePerms {
-				assert.True(t, operatorPerms[perm],
-					"%s Role template requires permission %q which is missing from the operator's ClusterRoles", name, perm)
-			}
+			assertPermissionsCovered(t, operatorPerms, rules)
+		})
+	}
+}
+
+// TestOperatorRolesAreSupersetOfEmbeddedArgoRoles verifies that the ClusterRoles
+// bound to the controller-manager service account cover every permission in the
+// embedded Argo Roles it creates. Kubernetes rejects privilege escalation when
+// a service account creates a Role containing permissions it does not hold.
+func TestOperatorRolesAreSupersetOfEmbeddedArgoRoles(t *testing.T) {
+	operatorPerms := loadOperatorPermissions(t)
+
+	roles := map[string]string{
+		"aggregate-to-admin": "../config/argo/clusterrole.argo-aggregate-to-admin.yaml",
+		"aggregate-to-edit":  "../config/argo/clusterrole.argo-aggregate-to-edit.yaml",
+		"aggregate-to-view":  "../config/argo/clusterrole.argo-aggregate-to-view.yaml",
+		"argo-cluster-role":  "../config/argo/clusterrole.argo-cluster-role.yaml",
+		"argo-role":          "../config/argo/role.argo.yaml",
+	}
+
+	for name, path := range roles {
+		t.Run(name, func(t *testing.T) {
+			assertPermissionsCovered(t, operatorPerms, parseRole(t, path))
 		})
 	}
 }
