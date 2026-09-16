@@ -63,7 +63,13 @@ func TestAIPipelinesArgoReconcileManagedCreatesAssets(t *testing.T) {
 	subjectNamespace := subjects[0].(map[string]interface{})["namespace"].(string)
 	require.Equal(t, "opendatahub", subjectNamespace)
 
+	setArgoCRDsEstablished(t, ctx, k8sClient, "opendatahub", metav1.ConditionFalse)
 	observation := observeArgoLifecycle(ctx, k8sClient, "opendatahub", common.Managed)
+	require.Equal(t, metav1.ConditionFalse, observation.Status, observation.Message)
+	require.Equal(t, "ArgoResourcesProgressing", observation.Reason)
+
+	setArgoCRDsEstablished(t, ctx, k8sClient, "opendatahub", metav1.ConditionTrue)
+	observation = observeArgoLifecycle(ctx, k8sClient, "opendatahub", common.Managed)
 	require.Equal(t, metav1.ConditionTrue, observation.Status)
 
 	require.NoError(t, unstructured.SetNestedField(configMap.Object, map[string]interface{}{"unexpected": "drift"}, "data"))
@@ -108,7 +114,40 @@ func TestAIPipelinesArgoReconcileRemovedPreservesCRDs(t *testing.T) {
 	require.Equal(t, metav1.ConditionTrue, observation.Status)
 }
 
-func TestAIPipelinesArgoReconcileDoesNotAdoptForeignWorkflowCRD(t *testing.T) {
+func TestAIPipelinesArgoReconcileDoesNotAdoptForeignAssets(t *testing.T) {
+	testCases := []struct {
+		name      string
+		assetName string
+	}{
+		{name: "sibling CRD", assetName: "applications.app.k8s.io"},
+		{name: "RBAC object", assetName: "argo-cluster-role"},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			ctx := context.Background()
+			reconciler, k8sClient, module := newArgoTestReconciler(t, common.Managed)
+			module.Finalizers = []string{argoLifecycleFinalizer}
+			require.NoError(t, k8sClient.Update(ctx, module))
+
+			assets, err := argoassets.Objects("opendatahub")
+			require.NoError(t, err)
+			for _, asset := range assets {
+				if asset.GetName() == testCase.assetName {
+					require.NoError(t, k8sClient.Create(ctx, asset))
+					break
+				}
+			}
+
+			_, err = reconciler.Reconcile(ctx, moduleRequest())
+			require.ErrorContains(t, err, "not owned by AI Pipelines")
+			firstAsset := argoTestObject("rbac.authorization.k8s.io/v1", "ClusterRole", "", "argo-aggregate-to-admin")
+			require.True(t, apierrors.IsNotFound(k8sClient.Get(ctx, client.ObjectKeyFromObject(firstAsset), firstAsset)))
+		})
+	}
+}
+
+func TestAIPipelinesArgoReconcileAdoptsLegacyOwnedAssets(t *testing.T) {
 	ctx := context.Background()
 	reconciler, k8sClient, module := newArgoTestReconciler(t, common.Managed)
 	module.Finalizers = []string{argoLifecycleFinalizer}
@@ -117,16 +156,17 @@ func TestAIPipelinesArgoReconcileDoesNotAdoptForeignWorkflowCRD(t *testing.T) {
 	assets, err := argoassets.Objects("opendatahub")
 	require.NoError(t, err)
 	for _, asset := range assets {
-		if asset.GetName() == argoWorkflowCRDName {
-			require.NoError(t, k8sClient.Create(ctx, asset))
-			break
-		}
+		asset.SetLabels(map[string]string{legacyPipelinesComponentLabel: "true"})
+		require.NoError(t, k8sClient.Create(ctx, asset))
 	}
 
 	_, err = reconciler.Reconcile(ctx, moduleRequest())
-	require.ErrorContains(t, err, "not owned by AI Pipelines")
+	require.NoError(t, err)
+
 	configMap := argoTestObject("v1", "ConfigMap", "opendatahub", "workflow-controller-configmap")
-	require.True(t, apierrors.IsNotFound(k8sClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)))
+	require.NoError(t, k8sClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap))
+	require.Equal(t, "true", configMap.GetAnnotations()[argoManagedAnnotation])
+	require.Len(t, configMap.GetOwnerReferences(), 1)
 }
 
 func TestAIPipelinesArgoReconcileIgnoresNonSingleton(t *testing.T) {
@@ -188,4 +228,25 @@ func argoTestObject(apiVersion, kind, namespace, name string) *unstructured.Unst
 	object.SetNamespace(namespace)
 	object.SetName(name)
 	return object
+}
+
+func setArgoCRDsEstablished(t *testing.T, ctx context.Context, k8sClient client.Client, namespace string, status metav1.ConditionStatus) {
+	t.Helper()
+	assets, err := argoassets.Objects(namespace)
+	require.NoError(t, err)
+	for _, asset := range assets {
+		if asset.GetKind() != "CustomResourceDefinition" {
+			continue
+		}
+		current := &unstructured.Unstructured{}
+		current.SetGroupVersionKind(asset.GroupVersionKind())
+		require.NoError(t, k8sClient.Get(ctx, client.ObjectKeyFromObject(asset), current))
+		require.NoError(t, unstructured.SetNestedSlice(current.Object, []interface{}{
+			map[string]interface{}{
+				"type":   string(apiextensionsv1.Established),
+				"status": string(status),
+			},
+		}, "status", "conditions"))
+		require.NoError(t, k8sClient.Status().Update(ctx, current))
+	}
 }
