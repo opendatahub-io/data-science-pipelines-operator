@@ -19,6 +19,7 @@ COPY main.go main.go
 COPY tls_profile.go tls_profile.go
 COPY api/ api/
 COPY controllers/ controllers/
+COPY config/argo/ config/argo/
 
 # Build
 USER root
