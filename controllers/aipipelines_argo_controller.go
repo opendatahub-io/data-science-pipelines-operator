@@ -83,7 +83,7 @@ type AIPipelinesArgoReconciler struct {
 // +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=create;list;watch
 // +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,resourceNames=applications.app.k8s.io;clusterworkflowtemplates.argoproj.io;cronworkflows.argoproj.io;viewers.kubeflow.org;workflowartifactgctasks.argoproj.io;workfloweventbindings.argoproj.io;workflows.argoproj.io;workflowtaskresults.argoproj.io;workflowtasksets.argoproj.io;workflowtemplates.argoproj.io,verbs=get;update;patch
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings;clusterroles;clusterrolebindings,verbs=create;list;watch
-// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings;clusterroles;clusterrolebindings,resourceNames=argo;argo-aggregate-to-admin;argo-aggregate-to-edit;argo-aggregate-to-view;argo-binding;argo-cluster-role;ds-pipeline-argo-binding,verbs=get;update;patch;delete
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings;clusterroles;clusterrolebindings,resourceNames=argo-aggregate-to-admin;argo-aggregate-to-edit;argo-aggregate-to-view;argo-binding;argo-cluster-role;argo-role;ds-pipeline-argo-binding,verbs=get;update;delete
 // +kubebuilder:rbac:groups="",resources=configmaps;serviceaccounts,verbs=get;list;watch;create;update;patch;delete
 
 func (r *AIPipelinesArgoReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -367,7 +367,7 @@ func argoAssetKey(object client.Object) string {
 	return object.GetNamespace() + "/" + object.GetName()
 }
 
-func observeArgoLifecycle(ctx context.Context, reader client.Reader, namespace string, state common.ManagementState) argoLifecycleObservation {
+func observeArgoLifecycle(ctx context.Context, reader client.Reader, namespace string, state common.ManagementState, module *aipipelinesv1alpha1.AIPipelines) argoLifecycleObservation {
 	assets, err := argoassets.Objects(namespace)
 	if err != nil {
 		return argoLifecycleObservation{Status: metav1.ConditionFalse, Reason: "ArgoAssetsInvalid", Message: err.Error()}
@@ -413,6 +413,7 @@ func observeArgoLifecycle(ctx context.Context, reader client.Reader, namespace s
 		if current.GetAnnotations()[argoManagedAnnotation] != "true" ||
 			current.GetLabels()[legacyPipelinesComponentLabel] != "true" ||
 			current.GetLabels()[config.DSPVersionk8sLabel] != config.DSPV2VersionString ||
+			(desired.GetKind() != "CustomResourceDefinition" && !metav1.IsControlledBy(current, module)) ||
 			!argoManagedFieldsMatch(current, desired) {
 			drifted = append(drifted, desired.GetKind()+"/"+desired.GetName())
 		}

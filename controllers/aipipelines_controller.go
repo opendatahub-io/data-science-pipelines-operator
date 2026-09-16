@@ -80,7 +80,7 @@ func (r *AIPipelinesReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		reader = r.Client
 	}
 	dspo := observeDSPODeployment(ctx, reader, r.Namespace)
-	argo := observeArgoLifecycle(ctx, reader, r.Namespace, module.Spec.ArgoWorkflowsControllersManagementState())
+	argo := observeArgoLifecycle(ctx, reader, r.Namespace, module.Spec.ArgoWorkflowsControllersManagementState(), module)
 	desired := buildAIPipelinesStatus(module, dspo, argo)
 	if apiequality.Semantic.DeepEqual(module.Status, desired) {
 		return ctrl.Result{}, nil

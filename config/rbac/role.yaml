@@ -315,12 +315,12 @@ rules:
 - apiGroups:
   - rbac.authorization.k8s.io
   resourceNames:
-  - argo
   - argo-aggregate-to-admin
   - argo-aggregate-to-edit
   - argo-aggregate-to-view
   - argo-binding
   - argo-cluster-role
+  - argo-role
   - ds-pipeline-argo-binding
   resources:
   - clusterrolebindings
@@ -330,7 +330,6 @@ rules:
   verbs:
   - delete
   - get
-  - patch
   - update
 - apiGroups:
   - rbac.authorization.k8s.io
