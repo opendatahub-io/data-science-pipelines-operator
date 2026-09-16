@@ -5,8 +5,8 @@ metadata:
   namespace: data-science-pipelines-operator
 spec:
   groups:
-      - name: SLOs-haproxy_backend_http_responses_dsp
-        rules:
+    - name: SLOs-haproxy_backend_http_responses_dsp
+      rules:
         - alert: Data Science Pipelines Application Route Error Burn Rate
           annotations:
             message: 'High error budget burn for {{$labels.route}} (current value: {{$value}} ).'
@@ -55,8 +55,8 @@ spec:
           labels:
             severity: info
             namespace: data-science-pipelines-operator
-      - name: SLOs-probe_success_dsp
-        rules:
+    - name: SLOs-probe_success_dsp
+      rules:
         - alert: Data Science Pipelines Operator Probe Success Burn Rate
           annotations:
             message: 'High error budget burn for {{$labels.instance}} (current value: {{$value}} ).'
@@ -93,8 +93,8 @@ spec:
           labels:
             severity: warning
             namespace: data-science-pipelines-operator
-      - name: RHODS Data Science Pipelines
-        rules:
+    - name: RHODS Data Science Pipelines
+      rules:
         - alert: Data Science Pipeline Application Unavailable
           annotations:
             message: 'Data Science Pipelines Application is down!'
@@ -133,8 +133,8 @@ spec:
             namespace: data-science-pipelines-operator
 
       # RecordingRules for Data Science Pipelines Operator
-      - name: SLOs - Data Science Pipelines Operator
-        rules:
+    - name: SLOs - Data Science Pipelines Operator
+      rules:
         - expr: |
             1 - avg_over_time(probe_success{instance=~"data-science-pipelines-operator-.*", job="user_facing_endpoints_status_dsp"}[1d])
           labels:
@@ -171,8 +171,8 @@ spec:
             instance: data-science-pipelines-operator
           record: probe_success:burnrate6h
 
-      - name: SLOs - Data Science Pipelines Application
-        rules:
+    - name: SLOs - Data Science Pipelines Application
+      rules:
         - expr: |
             sum(rate(haproxy_backend_http_responses_total{route=~"ds-pipeline-.*",code=~"5.."}[1d])) by (exported_namespace)
             /
