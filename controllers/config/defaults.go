@@ -153,6 +153,8 @@ const (
 	EnableAIPipelinesModuleControllerConfigName = "DSPO.EnableAIPipelinesModuleController"
 )
 
+// platformRelatedImages contains only images resolved directly by DSPO. Other
+// RELATED_IMAGE_* values are forwarded unchanged to managed pipelines.
 var platformRelatedImages = map[string]string{
 	APIServerImagePath:              "RELATED_IMAGE_ODH_ML_PIPELINES_API_SERVER_V2_IMAGE",
 	PersistenceAgentImagePath:       "RELATED_IMAGE_ODH_ML_PIPELINES_PERSISTENCEAGENT_V2_IMAGE",
