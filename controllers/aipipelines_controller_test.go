@@ -184,6 +184,7 @@ func TestAIPipelinesReconcileUpdatesStatus(t *testing.T) {
 		asset.SetLabels(labels)
 		require.NoError(t, client.Create(context.Background(), asset))
 	}
+	setArgoCRDsEstablished(t, context.Background(), client, "opendatahub", metav1.ConditionTrue)
 	reconciler := &AIPipelinesReconciler{Client: client, APIReader: client, Scheme: scheme, Namespace: "opendatahub"}
 
 	_, err = reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{
