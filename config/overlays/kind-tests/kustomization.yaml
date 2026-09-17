@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: opendatahub
 resources:
   - ../../base
+  - ../../prometheus
 patchesStrategicMerge:
   - img_patch.yaml
   - res_patch.yaml
