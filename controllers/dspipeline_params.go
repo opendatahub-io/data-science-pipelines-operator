@@ -851,6 +851,8 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 					mlflowEndpoint, err = p.ResolveMLflowEndpoint(ctx, p.DSPONamespace, log)
 					if err != nil {
 						log.Error(err, "failed to retrieve MLflow internal endpoint. MLflow API server plugin will not be enabled.")
+					} else if mlflowEndpoint == "" {
+						log.V(1).Info("MLflow integration is unavailable. Skipping MLflow API server plugin config generation.")
 					} else {
 						apiServerExternalURL, routeErr := util.GetRouteHostname(ctx, p.APIServerServiceName, p.Namespace, client)
 						if routeErr != nil {

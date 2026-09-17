@@ -42,6 +42,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -103,6 +104,10 @@ func lookupMLflowEndpoint(ctx context.Context, reader client.Reader, namespace s
 	mlflowObj := &mlflowv1.MLflow{}
 	namespacedName := types.NamespacedName{Name: mlflowCRName, Namespace: namespace}
 	if err := reader.Get(ctx, namespacedName, mlflowObj); err != nil {
+		if apimeta.IsNoMatchError(err) {
+			log.V(1).Info("MLflow CRD is not installed; MLflow integration is unavailable")
+			return "", nil
+		}
 		log.V(1).Info("Unable to retrieve MLflow resource", "name", mlflowCRName, "namespace", namespace)
 		return "", err
 	}
@@ -143,6 +148,9 @@ func (r *DSPAReconciler) retrieveMLflowEndpointCached(ctx context.Context, names
 	endpoint, err := lookupMLflowEndpoint(ctx, reader, namespace, log)
 	if err != nil {
 		return "", err
+	}
+	if endpoint == "" {
+		return "", nil
 	}
 
 	r.mlflowEndpointCacheMu.Lock()
