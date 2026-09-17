@@ -21,6 +21,7 @@ package integration
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"flag"
 	"fmt"
 	"log"
@@ -42,6 +43,8 @@ import (
 	testUtil "github.com/opendatahub-io/data-science-pipelines-operator/tests/util"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap/zapcore"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -120,6 +123,26 @@ type testLogWriter struct {
 type customTransport struct {
 	Transport http.RoundTripper
 	Token     string
+}
+
+func serviceTLSConfig(ctx context.Context, k8sClient client.Client, namespace, dspaName string) (*tls.Config, error) {
+	serviceCA := &corev1.ConfigMap{}
+	if err := k8sClient.Get(ctx, types.NamespacedName{
+		Name:      "openshift-service-ca.crt",
+		Namespace: namespace,
+	}, serviceCA); err != nil {
+		return nil, fmt.Errorf("get service CA ConfigMap: %w", err)
+	}
+
+	pool := x509.NewCertPool()
+	if !pool.AppendCertsFromPEM([]byte(serviceCA.Data["service-ca.crt"])) {
+		return nil, fmt.Errorf("service CA ConfigMap %s/openshift-service-ca.crt has no valid certificate", namespace)
+	}
+
+	return &tls.Config{
+		RootCAs:    pool,
+		ServerName: fmt.Sprintf("ds-pipeline-%s.%s.svc.cluster.local", dspaName, namespace),
+	}, nil
 }
 
 func (w *testLogWriter) Write(p []byte) (n int, err error) {
@@ -223,7 +246,14 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 		_, err = forwarderResult.Ready()
 		suite.Require().NoError(err)
 
-		APIServerURL = fmt.Sprintf("http://127.0.0.1:%d", PortforwardLocalPort)
+		if suite.DSPA.Spec.PodToPodTLS != nil && *suite.DSPA.Spec.PodToPodTLS {
+			tlsConfig, err := serviceTLSConfig(ctx, clientmgr.k8sClient, DSPANamespace, DSPA.Name)
+			suite.Require().NoError(err)
+			suite.Clientmgr.httpClient.Transport = &http.Transport{TLSClientConfig: tlsConfig}
+			APIServerURL = fmt.Sprintf("https://127.0.0.1:%d", PortforwardLocalPort)
+		} else {
+			APIServerURL = fmt.Sprintf("http://127.0.0.1:%d", PortforwardLocalPort)
+		}
 
 		loggr.Info(fmt.Sprintf("Port forwarding service Successfully set up: %s", APIServerURL))
 
