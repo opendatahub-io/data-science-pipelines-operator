@@ -218,16 +218,41 @@ func TestAIPipelinesReconcileUpdatesStatus(t *testing.T) {
 	setArgoCRDsEstablished(t, context.Background(), client, "opendatahub", metav1.ConditionTrue)
 	reconciler := &AIPipelinesReconciler{Client: client, APIReader: client, Scheme: scheme, Namespace: "opendatahub"}
 
-	_, err = reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{
+	result, err := reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{
 		Name: aipipelinesv1alpha1.AIPipelinesInstanceName,
 	}})
 	require.NoError(t, err)
+	require.Zero(t, result.RequeueAfter)
 
 	updated := &aipipelinesv1alpha1.AIPipelines{}
 	require.NoError(t, client.Get(context.Background(), types.NamespacedName{Name: module.Name}, updated))
 	require.Equal(t, common.PhaseReady, updated.Status.Phase)
 	require.Equal(t, "3.6.0", updated.Status.GetPlatformRelease())
 	require.Equal(t, metav1.ConditionTrue, requireModuleCondition(t, updated.Status.Conditions, "PlatformConfigurationValid").Status)
+}
+
+func TestAIPipelinesReconcileRequeuesWhileNotReady(t *testing.T) {
+	viper.Set(config.EnableAIPipelinesModuleControllerConfigName, true)
+	t.Cleanup(viper.Reset)
+	t.Setenv(applicationsNamespaceEnv, "opendatahub")
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aipipelinesv1alpha1.AddToScheme(scheme))
+	module := newTestAIPipelines(common.Managed)
+	k8sClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithStatusSubresource(&aipipelinesv1alpha1.AIPipelines{}).
+		WithObjects(module).
+		Build()
+	reconciler := &AIPipelinesReconciler{
+		Client: k8sClient, APIReader: k8sClient, Scheme: scheme, Namespace: "opendatahub",
+	}
+
+	result, err := reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{
+		Name: aipipelinesv1alpha1.AIPipelinesInstanceName,
+	}})
+	require.NoError(t, err)
+	require.Equal(t, config.DefaultRequeueTime, result.RequeueAfter)
 }
 
 func TestAIPipelinesReconcileIgnoresNonSingleton(t *testing.T) {

@@ -5,15 +5,3 @@ resources:
 - rhoai_metrics_reader_role_binding.yaml
 - rhoai_metrics_service_monitor.yaml
 namespace: redhat-ods-applications
-
-replacements:
-- source:
-    kind: ConfigMap
-    name: dspo-parameters
-    fieldPath: metadata.namespace
-  targets:
-  - select:
-      kind: PrometheusRule
-      name: datasciencepipelines-prometheusrules
-    fieldPaths:
-    - spec.groups.*.rules.*.labels.namespace
