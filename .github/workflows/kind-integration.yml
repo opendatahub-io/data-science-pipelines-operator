@@ -2,6 +2,16 @@ name: KinD DSPO/DSP Integration Tests
 
 on:
   workflow_dispatch:
+    inputs:
+      baseline-image:
+        description: 'Optional earlier modular DSPO image for upgrade/downgrade testing'
+        type: string
+      baseline-version:
+        description: 'Platform version of the baseline (required with baseline-image)'
+        type: string
+      candidate-version:
+        description: 'Newer platform version of this checkout (required with baseline-image)'
+        type: string
   push:
     branches:
       - main
@@ -43,11 +53,16 @@ permissions:
 
 jobs:
   dspo-tests:
+    name: DSPO integration (${{ matrix.mode }})
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [standalone, modular]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -74,8 +89,26 @@ jobs:
       - name: Run test
         id: test
         working-directory: ${{ github.workspace }}/.github/scripts/tests
+        env:
+          TEST_MODE: ${{ matrix.mode }}
         run: |
-          sh tests.sh --kind
+          if [ "$TEST_MODE" = modular ]; then
+            bash tests.sh --kind --modular
+          else
+            bash tests.sh --kind
+          fi
+        continue-on-error: true
+
+      - name: Test modular upgrade and downgrade
+        id: test-upgrade
+        if: matrix.mode == 'modular' && inputs.baseline-image != '' && steps.test.outcome == 'success'
+        env:
+          AIPIPELINES_BASELINE_IMAGE: ${{ inputs.baseline-image }}
+          AIPIPELINES_BASELINE_VERSION: ${{ inputs.baseline-version }}
+          AIPIPELINES_CANDIDATE_VERSION: ${{ inputs.candidate-version }}
+        run: |
+          export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/config}"
+          make aipipelines-upgrade-test
         continue-on-error: true
 
       - name: Deploy MLflow
@@ -109,7 +142,7 @@ jobs:
         continue-on-error: true
 
       - name: Collect events and logs
-        if: steps.test.outcome != 'success' || steps.deploy-mlflow.outcome != 'success' || steps.test-mlflow.outcome != 'success'
+        if: always() && (steps.test.outcome != 'success' || steps.test-upgrade.outcome == 'failure' || steps.deploy-mlflow.outcome != 'success' || steps.test-mlflow.outcome != 'success')
         working-directory: ${{ github.workspace }}/.github/scripts/tests
         run: |
           ./collect_logs.sh --dspa-ns test-dspa --dspo-ns opendatahub
@@ -117,3 +150,13 @@ jobs:
           ./collect_logs.sh --dspa-ns test-k8s-dspa --dspo-ns opendatahub
           ./collect_logs.sh --dspa-ns test-dspa-mlflow --dspo-ns opendatahub
           exit 1
+
+      - name: Export cluster diagnostics
+        if: failure()
+        run: kind export logs /tmp/dspo-kind-logs --name cluster
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: dspo-kind-${{ matrix.mode }}-logs
+          path: /tmp/dspo-kind-logs
