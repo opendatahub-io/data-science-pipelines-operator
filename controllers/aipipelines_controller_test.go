@@ -131,6 +131,27 @@ func TestBuildAIPipelinesStatusPreservesPlatformReleaseUntilManifestsApply(t *te
 	require.Equal(t, "3.6.0", successfulStatus.GetPlatformRelease())
 }
 
+func TestBuildAIPipelinesStatusPreservesPlatformReleaseUntilRunningVersionMatches(t *testing.T) {
+	viper.Set("DSPO.PlatformVersion", "3.5.0")
+	t.Cleanup(viper.Reset)
+
+	module := newTestAIPipelines(common.Managed)
+	module.Status.SetPlatformRelease("3.5.0")
+	platformConfig := platformConfigObservation{
+		Status:  metav1.ConditionTrue,
+		Reason:  "PlatformConfigurationAvailable",
+		Message: "Platform configuration is available",
+		Version: "3.6.0",
+	}
+
+	status := buildAIPipelinesStatus(module, readyDSPOObservation(), readyArgoObservation(), platformConfig)
+	require.Equal(t, "3.5.0", status.GetPlatformRelease())
+
+	viper.Set("DSPO.PlatformVersion", "3.6.0")
+	status = buildAIPipelinesStatus(module, readyDSPOObservation(), readyArgoObservation(), platformConfig)
+	require.Equal(t, "3.6.0", status.GetPlatformRelease())
+}
+
 func TestBuildAIPipelinesStatusPreservesTransitionTime(t *testing.T) {
 	t.Cleanup(viper.Reset)
 
@@ -148,6 +169,7 @@ func TestBuildAIPipelinesStatusPreservesTransitionTime(t *testing.T) {
 
 func TestAIPipelinesReconcileUpdatesStatus(t *testing.T) {
 	viper.Set(config.EnableAIPipelinesModuleControllerConfigName, true)
+	viper.Set("DSPO.PlatformVersion", "3.6.0")
 	t.Cleanup(viper.Reset)
 	t.Setenv(applicationsNamespaceEnv, "opendatahub")
 
