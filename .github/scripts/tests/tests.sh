@@ -132,6 +132,21 @@ executor = json.dumps({
 print(json.dumps({"data": {"executor": executor}}))
 ')
   kubectl patch configmap workflow-controller-configmap -n "$ARGO_NAMESPACE" --type=merge -p "$PATCH_JSON"
+  # Temporary workaround: KFP opens its artifact-store client before applying the
+  # mounted custom CA bundle. Make it discoverable at process startup for BYO Argo
+  # workflow pods. Remove this after KFP fixes that initialization ordering.
+  WORKFLOW_DEFAULTS_PATCH=$(python3 -c '
+import json
+workflow_defaults = """spec:
+  templateDefaults:
+    container:
+      env:
+        - name: SSL_CERT_DIR
+          value: /kfp/certs:/etc/ssl/certs:/etc/pki/tls/certs
+"""
+print(json.dumps({"data": {"workflowDefaults": workflow_defaults}}))
+')
+  kubectl patch configmap workflow-controller-configmap -n "$ARGO_NAMESPACE" --type=merge -p "$WORKFLOW_DEFAULTS_PATCH"
   kubectl rollout restart deployment/workflow-controller -n "$ARGO_NAMESPACE"
   kubectl rollout status deployment/workflow-controller -n "$ARGO_NAMESPACE" --timeout=120s
 }
@@ -190,11 +205,49 @@ deploy_cert_manager() {
   echo "---------------------------------"
   echo "Create Cert Manager Namespace"
   echo "---------------------------------"
+  kubectl get namespace $CERT_MANAGER_NAMESPACE >/dev/null 2>&1 || \
   kubectl create namespace $CERT_MANAGER_NAMESPACE
   echo "---------------------------------"
   echo "Deploy Cert Manager"
   echo "---------------------------------"
   ( kubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.yaml )
+  kubectl wait -n "$CERT_MANAGER_NAMESPACE" --timeout=180s \
+    --for=condition=Available deployments --all
+}
+
+configure_kind_service_ca() {
+  local namespace="$1"
+  local dspa_name="$2"
+  local resources_dir="${GIT_WORKSPACE}/.github/resources/cert-manager"
+  local ca_secret="dspa-service-ca-${dspa_name}"
+
+  echo "---------------------------------"
+  echo "Configure cert-manager service CA for DSPA ${namespace}/${dspa_name}"
+  echo "---------------------------------"
+  export DSPA_SERVICE_CA_NAMESPACE="$namespace"
+  export DSPA_SERVICE_CA_NAME="$dspa_name"
+  envsubst < "${resources_dir}/service-ca.yaml.tmpl" | kubectl apply -f -
+  kubectl wait -n "$namespace" --for=condition=Ready \
+    "certificate/dspa-service-ca-${dspa_name}" --timeout=90s
+
+  local service_ca
+  service_ca="$(kubectl get secret "$ca_secret" -n "$namespace" \
+    -o jsonpath='{.data.tls\.crt}' | base64 -d)"
+  if [ -z "$service_ca" ]; then
+    echo "Service CA certificate was empty in secret ${namespace}/${ca_secret}" >&2
+    return 1
+  fi
+  kubectl create configmap openshift-service-ca.crt -n "$namespace" \
+    --from-literal="service-ca.crt=${service_ca}" \
+    --dry-run=client -o yaml | kubectl apply -f -
+
+  envsubst < "${resources_dir}/service-certificates.yaml.tmpl" | kubectl apply -f -
+  for cert in \
+    "ds-pipelines-proxy-tls-${dspa_name}" \
+    "ds-pipelines-envoy-proxy-tls-${dspa_name}" \
+    "ds-pipeline-metadata-grpc-tls-certs-${dspa_name}"; do
+    kubectl wait -n "$namespace" --for=condition=Ready "certificate/${cert}" --timeout=90s
+  done
 }
 
 wait_for_dspo_dependencies() {
@@ -235,6 +288,24 @@ wait_for_dependencies() {
   kubectl wait -n $MARIADB_NAMESPACE --timeout=60s --for=condition=Available=true deployment mariadb
   kubectl wait -n $MINIO_NAMESPACE --timeout=60s --for=condition=Available=true deployment minio
   kubectl wait -n $PYPISERVER_NAMESPACE --timeout=60s --for=condition=Available=true deployment pypi-server
+}
+
+verify_mariadb_requires_tls() {
+  echo "---------------------------------"
+  echo "Verify MariaDB rejects plaintext connections"
+  echo "---------------------------------"
+  if kubectl exec -n "$MARIADB_NAMESPACE" deployment/mariadb -- /bin/sh -c \
+    'MYSQL_PWD="$MYSQL_PASSWORD" mysql --protocol=TCP --skip-ssl \
+    -h 127.0.0.1 -u "$MYSQL_USER" -e "SELECT 1"' >/dev/null 2>&1; then
+    echo "MariaDB accepted a plaintext TCP connection" >&2
+    return 1
+  fi
+
+  kubectl exec -n "$MARIADB_NAMESPACE" deployment/mariadb -- /bin/sh -c \
+    'MYSQL_PWD="$MYSQL_PASSWORD" mysql --protocol=TCP \
+    --ssl-ca=/.mariadb/certs/CAs/public.crt -h 127.0.0.1 \
+    -u "$MYSQL_USER" -Nse "SHOW STATUS LIKE '\''Ssl_cipher'\''"' | \
+    grep -Eq '^Ssl_cipher[[:space:]]+.+$'
 }
 
 upload_python_packages_to_pypi_server() {
@@ -486,14 +557,17 @@ setup_kind_requirements() {
   deploy_minio
   deploy_mariadb
   deploy_pypi_server
+  deploy_cert_manager
   wait_for_dspo_dependencies
   wait_for_dependencies
+  verify_mariadb_requires_tls
   upload_python_packages_to_pypi_server
   create_dspa_namespace
   create_namespace_dspa_external_connections
   create_dspa_k8s_namespace
   create_dspa_mlflow_namespace
   apply_mariadb_minio_secrets_configmaps_external_namespace
+  configure_kind_service_ca "$DSPA_EXTERNAL_NAMESPACE" "dspa-ext"
   apply_pip_server_configmap
 }
 
@@ -507,6 +581,7 @@ setup_openshift_ci_requirements() {
   deploy_pypi_server
   wait_for_dspo_dependencies
   wait_for_dependencies
+  verify_mariadb_requires_tls
   upload_python_packages_to_pypi_server
   create_dspa_namespace
   create_namespace_dspa_external_connections
@@ -521,6 +596,7 @@ setup_rhoai_requirements() {
   deploy_mariadb
   deploy_pypi_server
   wait_for_dependencies
+  verify_mariadb_requires_tls
   upload_python_packages_to_pypi_server
   create_dspa_namespace
   create_namespace_dspa_external_connections
