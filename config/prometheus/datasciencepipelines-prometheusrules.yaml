@@ -9,7 +9,7 @@ spec:
       rules:
         - alert: Data Science Pipelines Application Route Error Burn Rate
           annotations:
-            message: 'High error budget burn for {{$labels.route}} (current value: {{$value}} ).'
+            message: 'High error budget burn for {{$labels.exported_namespace}} (current value: {{$value}} ).'
             summary: Data Science Pipelines Application Route Error Burn Rate
           expr: |
             sum(haproxy_backend_http_responses_total:burnrate5m{component="dsp"}) by (exported_namespace) > (14.40 * (1-0.99950))
@@ -21,7 +21,7 @@ spec:
             namespace: data-science-pipelines-operator
         - alert: Data Science Pipelines Application Route Error Burn Rate
           annotations:
-            message: 'High error budget burn for {{$labels.route}} (current value: {{$value}} ).'
+            message: 'High error budget burn for {{$labels.exported_namespace}} (current value: {{$value}} ).'
             summary: Data Science Pipelines Application Route Error Burn Rate
           expr: |
             sum(haproxy_backend_http_responses_total:burnrate30m{component="dsp"}) by (exported_namespace) > (6.00 * (1-0.99950))
@@ -33,7 +33,7 @@ spec:
             namespace: data-science-pipelines-operator
         - alert: Data Science Pipelines Application Route Error Burn Rate
           annotations:
-            message: 'High error budget burn for {{$labels.route}} (current value: {{$value}} ).'
+            message: 'High error budget burn for {{$labels.exported_namespace}} (current value: {{$value}} ).'
             summary: Data Science Pipelines Application Route Error Burn Rate
           expr: |
             sum(haproxy_backend_http_responses_total:burnrate2h{component="dsp"}) by (exported_namespace) > (3.00 * (1-0.99950))
@@ -45,7 +45,7 @@ spec:
             namespace: data-science-pipelines-operator
         - alert: Data Science Pipelines Application Route Error Burn Rate
           annotations:
-            message: 'High error budget burn for {{$labels.route}} (current value: {{$value}} ).'
+            message: 'High error budget burn for {{$labels.exported_namespace}} (current value: {{$value}} ).'
             summary: Data Science Pipelines Application Route Error Burn Rate
           expr: |
             sum(haproxy_backend_http_responses_total:burnrate6h{component="dsp"}) by (exported_namespace) > (1.00 * (1-0.99950))

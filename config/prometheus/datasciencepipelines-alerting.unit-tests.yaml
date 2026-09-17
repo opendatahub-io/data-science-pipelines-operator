@@ -25,9 +25,9 @@ tests:
 
   - interval: 1m
     input_series:
-      - series: haproxy_backend_http_responses_total:burnrate5m{component="dsp"}
+      - series: haproxy_backend_http_responses_total:burnrate5m{component="dsp", exported_namespace="redhat-ods-applications"}
         values: "1+1x60"
-      - series: haproxy_backend_http_responses_total:burnrate1h{component="dsp"}
+      - series: haproxy_backend_http_responses_total:burnrate1h{component="dsp", exported_namespace="redhat-ods-applications"}
         values: "1+1x60"
     alert_rule_test:
       - eval_time: 2m
@@ -35,17 +35,18 @@ tests:
         exp_alerts:
           - exp_labels:
               alertname: Data Science Pipelines Application Route Error Burn Rate
+              exported_namespace: "redhat-ods-applications"
               namespace: "redhat-ods-applications"
               severity: info
             exp_annotations:
               summary: "Data Science Pipelines Application Route Error Burn Rate"
-              message: "High error budget burn for  (current value: 3 )."
+              message: "High error budget burn for redhat-ods-applications (current value: 3 )."
 
   - interval: 1m
     input_series:
-      - series: haproxy_backend_http_responses_total:burnrate30m{component="dsp"}
+      - series: haproxy_backend_http_responses_total:burnrate30m{component="dsp", exported_namespace="redhat-ods-applications"}
         values: "1+1x60"
-      - series: haproxy_backend_http_responses_total:burnrate6h{component="dsp"}
+      - series: haproxy_backend_http_responses_total:burnrate6h{component="dsp", exported_namespace="redhat-ods-applications"}
         values: "1+1x60"
     alert_rule_test:
       - eval_time: 15m
@@ -53,17 +54,18 @@ tests:
         exp_alerts:
           - exp_labels:
               alertname: Data Science Pipelines Application Route Error Burn Rate
+              exported_namespace: "redhat-ods-applications"
               namespace: "redhat-ods-applications"
               severity: info
             exp_annotations:
               summary: "Data Science Pipelines Application Route Error Burn Rate"
-              message: "High error budget burn for  (current value: 16 )."
+              message: "High error budget burn for redhat-ods-applications (current value: 16 )."
 
   - interval: 1m
     input_series:
-      - series: haproxy_backend_http_responses_total:burnrate2h{component="dsp"}
+      - series: haproxy_backend_http_responses_total:burnrate2h{component="dsp", exported_namespace="redhat-ods-applications"}
         values: "1+1x60"
-      - series: haproxy_backend_http_responses_total:burnrate1d{component="dsp"}
+      - series: haproxy_backend_http_responses_total:burnrate1d{component="dsp", exported_namespace="redhat-ods-applications"}
         values: "1+1x60"
     alert_rule_test:
       - eval_time: 1h
@@ -71,17 +73,18 @@ tests:
         exp_alerts:
           - exp_labels:
               alertname: Data Science Pipelines Application Route Error Burn Rate
+              exported_namespace: "redhat-ods-applications"
               namespace: "redhat-ods-applications"
               severity: info
             exp_annotations:
               summary: "Data Science Pipelines Application Route Error Burn Rate"
-              message: "High error budget burn for  (current value: 61 )."
+              message: "High error budget burn for redhat-ods-applications (current value: 61 )."
 
   - interval: 1m
     input_series:
-      - series: haproxy_backend_http_responses_total:burnrate6h{component="dsp"}
+      - series: haproxy_backend_http_responses_total:burnrate6h{component="dsp", exported_namespace="redhat-ods-applications"}
         values: "1+1x200"
-      - series: haproxy_backend_http_responses_total:burnrate3d{component="dsp"}
+      - series: haproxy_backend_http_responses_total:burnrate3d{component="dsp", exported_namespace="redhat-ods-applications"}
         values: "1+1x200"
     alert_rule_test:
       - eval_time: 3h
@@ -89,11 +92,12 @@ tests:
         exp_alerts:
           - exp_labels:
               alertname: Data Science Pipelines Application Route Error Burn Rate
+              exported_namespace: "redhat-ods-applications"
               namespace: "redhat-ods-applications"
               severity: info
             exp_annotations:
               summary: "Data Science Pipelines Application Route Error Burn Rate"
-              message: "High error budget burn for  (current value: 181 )."
+              message: "High error budget burn for redhat-ods-applications (current value: 181 )."
 
   # Probe success
   - interval: 1m
