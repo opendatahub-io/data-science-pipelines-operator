@@ -1,0 +1,35 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../../../openshift
+namespace: redhat-ods-applications
+
+# The shared OpenShift overlay resolves its ServiceMonitor server name before
+# this overlay applies the RHOAI namespace. Re-resolve it after that transform.
+replacements:
+- source:
+    kind: Service
+    name: data-science-pipelines-operator-service
+    fieldPath: metadata.name
+  targets:
+  - select:
+      kind: ServiceMonitor
+      name: data-science-pipelines-operator-service-monitor
+    fieldPaths:
+    - spec.endpoints.0.tlsConfig.serverName
+    options:
+      delimiter: "."
+      index: 0
+- source:
+    kind: Service
+    name: data-science-pipelines-operator-service
+    fieldPath: metadata.namespace
+  targets:
+  - select:
+      kind: ServiceMonitor
+      name: data-science-pipelines-operator-service-monitor
+    fieldPaths:
+    - spec.endpoints.0.tlsConfig.serverName
+    options:
+      delimiter: "."
+      index: 1

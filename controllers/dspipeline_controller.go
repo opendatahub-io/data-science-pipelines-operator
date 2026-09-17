@@ -31,6 +31,7 @@ import (
 
 	"github.com/go-logr/logr"
 	mf "github.com/manifestival/manifestival"
+	aipipelinesv1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/aipipelines/v1alpha1"
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/util"
@@ -271,29 +272,28 @@ func (r *DSPAReconciler) DeleteResourceIfItExists(ctx context.Context, obj clien
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list
-//+kubebuilder:rbac:groups=*,resources=deployments;services,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=secrets;configmaps;services;serviceaccounts;persistentvolumes;persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=core,resources=persistentvolumes;persistentvolumeclaims,verbs=*
 //+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles;clusterrolebindings,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=snapshot.storage.k8s.io,resources=volumesnapshots,verbs=create;delete;get
-//+kubebuilder:rbac:groups=argoproj.io,resources=workflows,verbs=*
+//+kubebuilder:rbac:groups=argoproj.io,resources=workflows,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=argoproj.io,resources=workflowtaskresults,verbs=create;patch
-//+kubebuilder:rbac:groups=argoproj.io,resources=workflowartifactgctasks;workflowartifactgctasks/finalizers,verbs=*
-//+kubebuilder:rbac:groups=core,resources=pods;pods/exec;pods/log;services,verbs=*
-//+kubebuilder:rbac:groups=core;apps;extensions,resources=deployments;deployments/finalizers;replicasets,verbs=*
-//+kubebuilder:rbac:groups=kubeflow.org,resources=*,verbs=*
-//+kubebuilder:rbac:groups=batch,resources=jobs,verbs=*
-//+kubebuilder:rbac:groups=machinelearning.seldon.io,resources=seldondeployments,verbs=*
+//+kubebuilder:rbac:groups=argoproj.io,resources=workflowartifactgctasks;workflowartifactgctasks/finalizers,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core,resources=pods;pods/exec;pods/log,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core;apps;extensions,resources=deployments;deployments/finalizers;replicasets,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=kubeflow.org,resources=scheduledworkflows;scheduledworkflows/finalizers,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=ray.io,resources=rayclusters;rayjobs;rayservices,verbs=create;get;list;patch;delete
-//+kubebuilder:rbac:groups=config.openshift.io,resources=apiservers,verbs=get;list;watch
 //+kubebuilder:rbac:groups=serving.kserve.io,resources=inferenceservices,verbs=create;get;list;patch;delete
 //+kubebuilder:rbac:groups=authorization.k8s.io,resources=subjectaccessreviews,verbs=create
 //+kubebuilder:rbac:groups=authentication.k8s.io,resources=tokenreviews,verbs=create
 //+kubebuilder:rbac:groups=image.openshift.io,resources=imagestreamtags,verbs=get
 //+kubebuilder:rbac:groups=core,resources=events,verbs=create;patch;list
 //+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;list;watch;create;update;patch;delete
+// Pipeline tasks can create AppWrappers to submit distributed training jobs
+// (e.g. RayCluster via Kueue). The operator needs these permissions for RBAC
+// escalation prevention when creating the pipeline-runner namespace-scoped Role.
 //+kubebuilder:rbac:groups=workload.codeflare.dev,resources=appwrappers;appwrappers/finalizers;appwrappers/status,verbs=create;delete;deletecollection;get;list;patch;update;watch
 //+kubebuilder:rbac:groups=pipelines.kubeflow.org,resources=pipelines;pipelines/finalizers,verbs=create;get;list;watch;update;patch;delete
 //+kubebuilder:rbac:groups=pipelines.kubeflow.org,resources=pipelineversions;pipelineversions/status;pipelineversions/finalizers,verbs=create;get;list;watch;update;patch;delete
@@ -310,6 +310,13 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		WebhookAnnotations: r.WebhookAnnotations,
 	}
 	params.ResolveMLflowEndpoint = r.retrieveMLflowEndpointCached
+	reader := r.APIReader
+	if reader == nil {
+		reader = r.Client
+	}
+	params.ResolvePlatformVersion = func(ctx context.Context) (string, error) {
+		return resolvePlatformVersion(ctx, reader)
+	}
 
 	dspa := &dspav1.DataSciencePipelinesApplication{}
 	err := r.Get(ctx, req.NamespacedName, dspa)
@@ -510,7 +517,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 				dspaStatus.SetScheduledWorkflowStatus, log)
 		}
 
-		workflowControllerEnabled, err := r.ReconcileWorkflowController(dspa, params)
+		workflowControllerEnabled, err := r.ReconcileWorkflowController(ctx, dspa, params)
 		if err != nil {
 			dspaStatus.SetWorkflowControllerNotReady(err, config.FailingToDeploy)
 			return ctrl.Result{}, err
@@ -889,7 +896,7 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if r.ManifestFetcher == nil {
 		r.ManifestFetcher = NewOCIManifestFetcher(r.Log, r.AllowedRegistries)
 	}
-	return ctrl.NewControllerManagedBy(mgr).
+	b := ctrl.NewControllerManagedBy(mgr).
 		For(&dspav1.DataSciencePipelinesApplication{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Secret{}).
@@ -937,6 +944,27 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				}
 
 				return reconcileRequests
+			}),
+		)).
+		WatchesRawSource(source.Kind[client.Object](mgr.GetCache(), &corev1.ConfigMap{},
+			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
+				if !isPlatformConfigMap(object) {
+					return nil
+				}
+
+				var dspaList dspav1.DataSciencePipelinesApplicationList
+				if err := r.List(ctx, &dspaList); err != nil {
+					r.Log.Error(err, "unable to list DSPAs after platform configuration change")
+					return nil
+				}
+
+				requests := make([]reconcile.Request, 0, len(dspaList.Items))
+				for i := range dspaList.Items {
+					if util.DSPAWithSupportedDSPVersion(&dspaList.Items[i]) {
+						requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(&dspaList.Items[i])})
+					}
+				}
+				return requests
 			}),
 		)).
 		WatchesRawSource(source.Kind[client.Object](mgr.GetCache(), &corev1.Pod{},
@@ -1010,11 +1038,38 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				log.V(1).Info(fmt.Sprintf("Reconcile event triggered by change on Secret: %s owned by service-ca: %s", secret.Name, serviceName))
 				return []reconcile.Request{{NamespacedName: namespacedDspaName}}
 			}),
-		)).
-		WithOptions(controller.Options{
-			MaxConcurrentReconciles: r.MaxConcurrentReconciles,
-		}).
+		))
+	if config.AIPipelinesModuleControllerEnabled() {
+		b = b.Watches(
+			&aipipelinesv1alpha1.AIPipelines{},
+			handler.EnqueueRequestsFromMapFunc(r.enqueueAllSupportedDSPAs),
+		)
+	}
+	return b.WithOptions(controller.Options{
+		MaxConcurrentReconciles: r.MaxConcurrentReconciles,
+	}).
 		Complete(r)
+}
+
+func (r *DSPAReconciler) enqueueAllSupportedDSPAs(ctx context.Context, _ client.Object) []reconcile.Request {
+	var dspaList dspav1.DataSciencePipelinesApplicationList
+	if err := r.List(ctx, &dspaList); err != nil {
+		r.Log.Error(err, "Unable to list DSPAs after an AIPipelines configuration change")
+		return nil
+	}
+
+	requests := make([]reconcile.Request, 0, len(dspaList.Items))
+	for i := range dspaList.Items {
+		dspa := &dspaList.Items[i]
+		if !util.DSPAWithSupportedDSPVersion(dspa) {
+			continue
+		}
+		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{
+			Name:      dspa.Name,
+			Namespace: dspa.Namespace,
+		}})
+	}
+	return requests
 }
 
 // cleanUpResources cleans up any resources not handled by garbage collection, like Cluster ResourceRequirements.

@@ -30,6 +30,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/fsnotify/fsnotify"
+	aipipelinesv1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/aipipelines/v1alpha1"
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers"
 	buildv1 "github.com/openshift/api/build/v1"
@@ -40,8 +41,6 @@ import (
 	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -56,6 +55,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	//+kubebuilder:scaffold:imports
@@ -115,6 +115,7 @@ func init() {
 	utilruntime.Must(configv1.Install(scheme))
 
 	utilruntime.Must(dspav1.AddToScheme(scheme))
+	utilruntime.Must(aipipelinesv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(mlflowv1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 
@@ -164,11 +165,16 @@ func initConfig(configPath string) error {
 
 func main() {
 	var metricsAddr string
+	var metricsCertPath string
+	var metricsSecure bool
 	var enableLeaderElection bool
 	var probeAddr string
 	var configPath string
 	var maxConcurrentReconciles int
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
+	flag.StringVar(&metricsCertPath, "metrics-cert-path", "", "The directory that contains the metrics endpoint certificate.")
+	flag.BoolVar(&metricsSecure, "metrics-secure", false,
+		"If set, the metrics endpoint is served securely via HTTPS.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.StringVar(&configPath, "config", "", "Path to JSON file containing config")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -245,16 +251,14 @@ func main() {
 		var adherenceErr error
 		tlsAdherence, adherenceErr = tlspkg.FetchAPIServerTLSAdherencePolicy(bootstrapCtx, bootstrapClient)
 		if adherenceErr != nil {
-			switch {
-			case apierrors.IsNotFound(adherenceErr), apimeta.IsNoMatchError(adherenceErr):
-				setupLog.Info("APIServer TLS adherence policy unavailable")
-			case apierrors.IsServiceUnavailable(adherenceErr),
-				apierrors.IsTimeout(adherenceErr),
-				apierrors.IsTooManyRequests(adherenceErr):
-				setupLog.Info("Transient error reading TLS adherence policy", "error", adherenceErr)
-				tlsAdherenceFetched = true // watcher self-heals when the API recovers
-			default:
-				setupLog.Error(adherenceErr, "failed to fetch TLS adherence policy")
+			switch classifyTLSAdherenceFetchError(adherenceErr) {
+			case tlsAdherenceFetchRetry:
+				// On a confirmed OpenShift cluster (hasOpenShiftConfigAPI=true) NotFound/NoMatch is a
+				// transient race between the two reads; transient API errors self-heal via the watcher.
+				setupLog.Info("TLS adherence policy lookup unavailable, watcher will retry", "error", adherenceErr)
+				tlsAdherenceFetched = true
+			case tlsAdherenceFetchFatal:
+				setupLog.Error(adherenceErr, "unable to fetch TLS adherence policy")
 				os.Exit(1)
 			}
 		} else {
@@ -265,8 +269,10 @@ func main() {
 	mgrOpts := ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
-			BindAddress: metricsAddr,
-			TLSOpts:     tlsOpts,
+			BindAddress:   metricsAddr,
+			SecureServing: metricsSecure,
+			CertDir:       metricsCertPath,
+			TLSOpts:       tlsOpts,
 		},
 		WebhookServer: webhook.NewServer(webhook.Options{
 			Port:    9443,
@@ -323,6 +329,9 @@ func main() {
 			},
 		},
 	}
+	if metricsSecure {
+		mgrOpts.Metrics.FilterProvider = filters.WithAuthenticationAndAuthorization
+	}
 
 	// MLflow CRs are read during reconcile; always bypass the client cache so
 	// behavior does not depend on whether the CRD existed at operator startup.
@@ -369,6 +378,33 @@ func main() {
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DSPAParams")
 		os.Exit(1)
+	}
+
+	// The DSPA controller remains active in both modes. Register the modular
+	// ownership path only during the coordinated platform handoff.
+	if config.AIPipelinesModuleControllerEnabled() {
+		if err = (&controllers.AIPipelinesReconciler{
+			Client:    mgr.GetClient(),
+			APIReader: mgr.GetAPIReader(),
+			Scheme:    mgr.GetScheme(),
+			Log:       ctrl.Log.WithName("controllers").WithName("AIPipelines"),
+			Namespace: dspoNamespace,
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "AIPipelines")
+			os.Exit(1)
+		}
+		if err = (&controllers.AIPipelinesArgoReconciler{
+			Client:    mgr.GetClient(),
+			APIReader: mgr.GetAPIReader(),
+			Scheme:    mgr.GetScheme(),
+			Log:       ctrl.Log.WithName("controllers").WithName("AIPipelinesArgo"),
+			Namespace: dspoNamespace,
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "AIPipelinesArgo")
+			os.Exit(1)
+		}
+	} else {
+		setupLog.Info("AIPipelines module controller disabled; keeping legacy ownership path active")
 	}
 
 	//+kubebuilder:scaffold:builder

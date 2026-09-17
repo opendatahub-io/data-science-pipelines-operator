@@ -4,6 +4,7 @@ on:
     workflows: ["Trigger build images for PRs"]
     types:
       - completed
+permissions: {}
 env:
   IMAGE_REPO_DSPO: data-science-pipelines-operator
   QUAY_ORG: opendatahub
@@ -59,6 +60,9 @@ jobs:
 
   build-pr-image:
     if: needs.fetch-data.outputs.pr_state == 'open'
+    permissions:
+      contents: read
+      pull-requests: write
     runs-on: ubuntu-latest
     needs: fetch-data
     concurrency:
@@ -79,21 +83,23 @@ jobs:
       - name: Echo PR metadata
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-          IMG: quay.io/${{ env.QUAY_ORG }}/${{ env.IMAGE_REPO_DSPO }}:${{ env.TARGET_IMAGE_TAG }}
+          HEAD_SHA: ${{ needs.fetch-data.outputs.head_sha }}
+          PR_NUMBER: ${{ needs.fetch-data.outputs.pr_number }}
+          PR_STATE: ${{ needs.fetch-data.outputs.pr_state }}
+          EVENT_ACTION: ${{ needs.fetch-data.outputs.event_action }}
         run: |
-          echo ${{ needs.fetch-data.outputs.head_sha }}
-          echo ${{ needs.fetch-data.outputs.pr_number }}
-          echo ${{ needs.fetch-data.outputs.pr_state }}
-          echo ${{ needs.fetch-data.outputs.event_action }}
+          echo "$HEAD_SHA"
+          echo "$PR_NUMBER"
+          echo "$PR_STATE"
+          echo "$EVENT_ACTION"
       - name: Send comment
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.ACCESS_TOKEN }}
           IMG: quay.io/${{ env.QUAY_ORG }}/${{ env.IMAGE_REPO_DSPO }}:${{ env.TARGET_IMAGE_TAG }}
         run: |
-          git config user.email "${{ env.GH_USER_EMAIL }}"
-          git config user.name "${{ env.GH_USER_NAME }}"
+          git config user.email "${GH_USER_EMAIL}"
+          git config user.name "${GH_USER_NAME}"
 
           action=${{ needs.fetch-data.outputs.event_action }}
 
@@ -145,9 +151,9 @@ jobs:
       - name: Delete PR image
         shell: bash
         run: |
-          tag=$(curl --request GET 'https://quay.io/api/v1/repository/${{ env.QUAY_ORG }}/${{ env.IMAGE_REPO_DSPO }}/tag/?specificTag=${{ env.TARGET_IMAGE_TAG }}')
+          tag=$(curl --request GET "https://quay.io/api/v1/repository/${QUAY_ORG}/${IMAGE_REPO_DSPO}/tag/?specificTag=${TARGET_IMAGE_TAG}")
           exists=$(echo ${tag} | yq .tags - | yq any)
-          IMAGE=quay.io/${{ env.QUAY_ORG }}/${{ env.IMAGE_REPO_DSPO }}:${{ env.TARGET_IMAGE_TAG }}
+          IMAGE="quay.io/${QUAY_ORG}/${IMAGE_REPO_DSPO}:${TARGET_IMAGE_TAG}"
           if [[ "$exists" == "true" ]]; then
             echo "PR Closed deleting image...${{ env.IMAGE }}."
             skopeo delete --creds ${{ env.QUAY_ID }}:${{ env.QUAY_TOKEN }} docker://${IMAGE}

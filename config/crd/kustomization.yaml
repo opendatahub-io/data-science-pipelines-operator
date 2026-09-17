@@ -1,4 +1,5 @@
 resources:
+- bases/components.platform.opendatahub.io_aipipelines.yaml
 - bases/datasciencepipelinesapplications.opendatahub.io_datasciencepipelinesapplications.yaml
 - bases/pipelines.kubeflow.org_pipelines.yaml
 - bases/pipelines.kubeflow.org_pipelineversions.yaml

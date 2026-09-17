@@ -18,6 +18,7 @@ ManagedPipelinesMetadata:
     Filepath: /samples/iris-pipeline-compiled.yaml
     VersionName: "[Demo] iris-training"
 DSPO:
+  EnableAIPipelinesModuleController: $(ENABLEAIPIPELINESMODULECONTROLLER)
   ArgoWorkflowsControllers: $(ARGOWORKFLOWSCONTROLLERS)
   HealthCheck:
     Database:

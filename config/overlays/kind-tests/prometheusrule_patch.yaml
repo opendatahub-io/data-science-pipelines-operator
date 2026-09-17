@@ -1,0 +1,6 @@
+apiVersion: monitoring.rhobs/v1
+kind: PrometheusRule
+metadata:
+  name: datasciencepipelines-prometheusrules
+  namespace: data-science-pipelines-operator
+$patch: delete

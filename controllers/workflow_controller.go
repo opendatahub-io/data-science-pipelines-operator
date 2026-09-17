@@ -17,12 +17,15 @@ limitations under the License.
 package controllers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
 
+	aipipelinesv1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/aipipelines/v1alpha1"
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 var workflowControllerTemplatesDir = "workflow-controller"
@@ -40,28 +43,16 @@ func (c *ArgoWorkflowsControllersConfig) GetManagementState() string {
 	return c.ManagementState
 }
 
-func (r *DSPAReconciler) ReconcileWorkflowController(dsp *dspav1.DataSciencePipelinesApplication,
+func (r *DSPAReconciler) ReconcileWorkflowController(ctx context.Context, dsp *dspav1.DataSciencePipelinesApplication,
 	params *DSPAParams) (bool, error) {
 
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
-
-	// Get the management state for the WorkflowController subcomponent from the config
-	// Expected format example: {"managementState":"Managed"}
-	dspoArgoWorkflowsControllersJSON := strings.Trim(
-		config.GetStringConfigWithDefault("DSPO.ArgoWorkflowsControllers", config.DefaultArgoWorkflowsControllers),
-		"\"",
-	)
-
-	var argoWorkflowsControllersConfig ArgoWorkflowsControllersConfig
-	if err := json.Unmarshal([]byte(dspoArgoWorkflowsControllersJSON), &argoWorkflowsControllersConfig); err != nil {
-		log.Info(fmt.Sprintf("Unable to parse Argo Workflows Controller management state, using default value: %s", config.DefaultArgoWorkflowsControllersManagementState))
-		log.Info(fmt.Sprintf("Error: %s", err))
-		argoWorkflowsControllersConfig = ArgoWorkflowsControllersConfig{
-			ManagementState: config.DefaultArgoWorkflowsControllersManagementState,
-		}
+	argoWorkflowsControllersConfig, err := r.argoWorkflowsControllersConfig(ctx)
+	if err != nil {
+		return false, err
 	}
 
-	// Conditionally deploy the WorkflowController resource depending on the speciified management state
+	// Conditionally deploy the WorkflowController resource depending on the specified management state
 	// Managed (or blank) - deploy the WorkflowController subcomponent
 	// Removed - skip deploying, and remove if already present, the WorkflowController subcomponent
 	// All other values - Invalid configuration, return an error
@@ -94,4 +85,37 @@ func (r *DSPAReconciler) ReconcileWorkflowController(dsp *dspav1.DataSciencePipe
 
 	log.Info("Finished applying WorkflowController Resources")
 	return workflowControllerEnabled, nil
+}
+
+func (r *DSPAReconciler) argoWorkflowsControllersConfig(ctx context.Context) (ArgoWorkflowsControllersConfig, error) {
+	if config.AIPipelinesModuleControllerEnabled() {
+		reader := r.APIReader
+		if reader == nil {
+			reader = r.Client
+		}
+		module := &aipipelinesv1alpha1.AIPipelines{}
+		if err := reader.Get(ctx, types.NamespacedName{Name: aipipelinesv1alpha1.AIPipelinesInstanceName}, module); err != nil {
+			return ArgoWorkflowsControllersConfig{}, fmt.Errorf("read AIPipelines module configuration: %w", err)
+		}
+		return ArgoWorkflowsControllersConfig{
+			ManagementState: string(module.Spec.ArgoWorkflowsControllersManagementState()),
+		}, nil
+	}
+
+	// Get the management state for the WorkflowController subcomponent from the config
+	// Expected format example: {"managementState":"Managed"}
+	dspoArgoWorkflowsControllersJSON := strings.Trim(
+		config.GetStringConfigWithDefault("DSPO.ArgoWorkflowsControllers", config.DefaultArgoWorkflowsControllers),
+		"\"",
+	)
+
+	var argoWorkflowsControllersConfig ArgoWorkflowsControllersConfig
+	if err := json.Unmarshal([]byte(dspoArgoWorkflowsControllersJSON), &argoWorkflowsControllersConfig); err != nil {
+		r.Log.Info(fmt.Sprintf("Unable to parse Argo Workflows Controller management state, using default value: %s", config.DefaultArgoWorkflowsControllersManagementState))
+		r.Log.Info(fmt.Sprintf("Error: %s", err))
+		argoWorkflowsControllersConfig = ArgoWorkflowsControllersConfig{
+			ManagementState: config.DefaultArgoWorkflowsControllersManagementState,
+		}
+	}
+	return argoWorkflowsControllersConfig, nil
 }

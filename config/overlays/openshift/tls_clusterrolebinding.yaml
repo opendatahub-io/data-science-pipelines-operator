@@ -1,0 +1,14 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dspo-openshift-tls-profile-reader-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: dspo-openshift-tls-profile-reader
+subjects:
+- kind: ServiceAccount
+  name: controller-manager
+  # Placeholder; kustomizeconfig rewrites this to the overlay namespace
+  # (opendatahub / redhat-ods-applications). Same pattern as manager-rolebinding.
+  namespace: datasciencepipelinesapplications-controller

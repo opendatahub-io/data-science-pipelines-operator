@@ -19,15 +19,15 @@ package controllers
 import (
 	"bytes"
 	"context"
+	crand "crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"net/url"
 	"os"
 	"strings"
-	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -92,6 +92,8 @@ type DSPAParams struct {
 	// for CustomCABundleRootMountPath when
 	// verifying certs
 	CustomSSLCertDir *string
+	// SSL_CERT_DIR for workflow pods when CustomCABundle is set (CA at /kfp/certs).
+	WorkflowPodSSLCertDir string
 	// The CA bundle path found in the pipeline pods
 	PiplinesCABundleMountPath string
 	// Collects all certs from user & global certs
@@ -120,6 +122,9 @@ type DSPAParams struct {
 
 	// PlatformVersion is DSPO.PlatformVersion from operator config (default + quote-trimmed). Used for sample_config and managed pipeline upload tags.
 	PlatformVersion string
+	// ResolvePlatformVersion reads the live platform release handshake when
+	// modular mode is enabled. Nil preserves the standalone Viper fallback.
+	ResolvePlatformVersion func(context.Context) (string, error)
 	// ManagedPipelinesUploadTags is set when managedPipelines is enabled; injected as MANAGED_PIPELINES_UPLOAD_TAGS for the
 	// pipelines-components init (comma-separated key=value). Init applies to Pipeline and PipelineVersion per API contract.
 	ManagedPipelinesUploadTags string
@@ -233,11 +238,14 @@ func (p *DSPAParams) RetrieveAndSetExternalRoute(ctx context.Context, client cli
 }
 
 func passwordGen(n int) string {
-	rand.Seed(time.Now().UnixNano())
-	var chars = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890")
-	b := make([]rune, n)
+	const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
+	b := make([]byte, n)
 	for i := range b {
-		b[i] = chars[rand.Intn(len(chars))]
+		idx, err := crand.Int(crand.Reader, big.NewInt(int64(len(chars))))
+		if err != nil {
+			panic(fmt.Sprintf("crypto/rand failure: %v", err))
+		}
+		b[i] = chars[idx.Int64()]
 	}
 	return string(b)
 }
@@ -348,7 +356,7 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 		if p.MariaDB == nil {
 			p.MariaDB = &dspa.MariaDB{
 				Deploy:    true,
-				Image:     config.GetStringConfigWithDefault(config.MariaDBImagePath, config.DefaultImageValue),
+				Image:     config.ResolveImage(config.MariaDBImagePath),
 				Resources: config.MariaDBResourceRequirements.DeepCopy(),
 				Username:  config.MariaDBUser,
 				DBName:    config.MariaDBName,
@@ -359,7 +367,7 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 		// If MariaDB was specified, ensure missing fields are
 		// populated with defaults.
 		if p.MariaDB.Image == "" {
-			p.MariaDB.Image = config.GetStringConfigWithDefault(config.MariaDBImagePath, config.DefaultImageValue)
+			p.MariaDB.Image = config.ResolveImage(config.MariaDBImagePath)
 		}
 		setStringDefault(config.MariaDBUser, &p.MariaDB.Username)
 		setStringDefault(config.MariaDBName, &p.MariaDB.DBName)
@@ -405,13 +413,13 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 		p.DBConnection.DecodedPassword = string(decodedPasswordBytes)
 	}
 
-	// User specified custom Extra parameters will always take precedence
+	// User specified custom Extra parameters will always take precedence.
+	// Parameters are validated against an allow-list to prevent injection
+	// of dangerous driver-level flags (e.g. allowAllFiles).
 	if dsp.Spec.Database.CustomExtraParams != nil {
-		// Validate CustomExtraParams is a valid params json
-		var validParamsJson map[string]string
-		err := json.Unmarshal([]byte(*dsp.Spec.Database.CustomExtraParams), &validParamsJson)
+		_, err := config.ValidateDBExtraParams(*dsp.Spec.Database.CustomExtraParams)
 		if err != nil {
-			log.Info(fmt.Sprintf("Encountered error when validating CustomExtraParams field in DSPA, please ensure the params are well-formed: Error: %v", err))
+			log.Info(fmt.Sprintf("Rejected CustomExtraParams in DSPA: %v", err))
 			return err
 		}
 		p.DBConnection.ExtraParams = *dsp.Spec.Database.CustomExtraParams
@@ -571,18 +579,18 @@ func (p *DSPAParams) SetupMLMD(dsp *dspa.DataSciencePipelinesApplication, log lo
 	if p.MLMD != nil {
 		if p.MLMD.Envoy == nil {
 			p.MLMD.Envoy = &dspa.Envoy{
-				Image:       config.GetStringConfigWithDefault(config.MlmdEnvoyImagePath, config.DefaultImageValue),
+				Image:       config.ResolveImage(config.MlmdEnvoyImagePath),
 				DeployRoute: true,
 			}
 		}
 		if p.MLMD.GRPC == nil {
 			p.MLMD.GRPC = &dspa.GRPC{
-				Image: config.GetStringConfigWithDefault(config.MlmdGRPCImagePath, config.DefaultImageValue),
+				Image: config.ResolveImage(config.MlmdGRPCImagePath),
 			}
 		}
 
-		mlmdEnvoyImageFromConfig := config.GetStringConfigWithDefault(config.MlmdEnvoyImagePath, config.DefaultImageValue)
-		mlmdGRPCImageFromConfig := config.GetStringConfigWithDefault(config.MlmdGRPCImagePath, config.DefaultImageValue)
+		mlmdEnvoyImageFromConfig := config.ResolveImage(config.MlmdEnvoyImagePath)
+		mlmdGRPCImageFromConfig := config.ResolveImage(config.MlmdGRPCImagePath)
 
 		setStringDefault(mlmdEnvoyImageFromConfig, &p.MLMD.Envoy.Image)
 		setStringDefault(mlmdGRPCImageFromConfig, &p.MLMD.GRPC.Image)
@@ -731,6 +739,13 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.Owner = dsp
 	p.APIServer = dsp.Spec.APIServer.DeepCopy()
 	p.PlatformVersion = config.ResolvedPlatformVersion()
+	if p.ResolvePlatformVersion != nil {
+		platformVersion, err := p.ResolvePlatformVersion(ctx)
+		if err != nil {
+			return fmt.Errorf("resolve platform version: %w", err)
+		}
+		p.PlatformVersion = platformVersion
+	}
 	p.APIServerDefaultResourceName = apiServerDefaultResourceNamePrefix + dsp.Name
 	p.APIServerServiceName = fmt.Sprintf("%s-%s", config.DSPServicePrefix, p.Name)
 	p.APIServerServiceDNSName = fmt.Sprintf("%s.%s.svc.cluster.local", p.APIServerServiceName, p.Namespace)
@@ -742,7 +757,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.PersistentAgentDefaultResourceName = persistenceAgentDefaultResourceNamePrefix + dsp.Name
 	p.MariaDB = dsp.Spec.Database.MariaDB.DeepCopy()
 	p.Minio = dsp.Spec.ObjectStorage.Minio.DeepCopy()
-	p.KubeRBACProxy = config.GetStringConfigWithDefault(config.KubeRBACProxyImagePath, config.DefaultImageValue)
+	p.KubeRBACProxy = config.ResolveImage(config.KubeRBACProxyImagePath)
 	p.MLMD = dsp.Spec.MLMD.DeepCopy()
 	p.MlmdProxyDefaultResourceName = mlmdProxyDefaultResourceNamePrefix + dsp.Name
 	p.CustomCABundleRootMountPath = config.CustomCABundleRootMountPath
@@ -781,9 +796,9 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.SetupCompiledPipelineSpecPatch(log)
 
 	if p.APIServer != nil {
-		serverImageFromConfig := config.GetStringConfigWithDefault(config.APIServerImagePath, config.DefaultImageValue)
-		argoLauncherImageFromConfig := config.GetStringConfigWithDefault(config.LauncherImagePath, config.DefaultImageValue)
-		argoDriverImageFromConfig := config.GetStringConfigWithDefault(config.DriverImagePath, config.DefaultImageValue)
+		serverImageFromConfig := config.ResolveImage(config.APIServerImagePath)
+		argoLauncherImageFromConfig := config.ResolveImage(config.LauncherImagePath)
+		argoDriverImageFromConfig := config.ResolveImage(config.DriverImagePath)
 
 		setStringDefault(serverImageFromConfig, &p.APIServer.Image)
 		setStringDefault(argoLauncherImageFromConfig, &p.APIServer.ArgoLauncherImage)
@@ -792,7 +807,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		if p.APIServer.ManagedPipelines != nil {
 			// Whitespace-only overrides are treated as omitted so operator defaulting applies (CRD allows arbitrary strings).
 			p.APIServer.ManagedPipelines.Image = strings.TrimSpace(p.APIServer.ManagedPipelines.Image)
-			pipelinesComponentsImageFromConfig := config.GetStringConfigWithDefault(config.PipelinesComponentsImagePath, config.DefaultImageValue)
+			pipelinesComponentsImageFromConfig := config.ResolveImage(config.PipelinesComponentsImagePath)
 			setStringDefault(pipelinesComponentsImageFromConfig, &p.APIServer.ManagedPipelines.Image)
 			// setStringDefault only overwrites when the image is "". Missing operator config: GetStringConfigWithDefault
 			// returns DefaultImageValue ("MustSetInConfig"), which is assigned. With AllowEmptyEnv, an empty
@@ -830,17 +845,28 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 				)
 				if p.ResolveMLflowEndpoint == nil {
 					log.Info("ResolveMLflowEndpoint is not configured. Deferring MLflow API server plugin config generation.")
+				} else if p.DSPONamespace == "" {
+					log.V(1).Info("DSPO_NAMESPACE is not set. Deferring MLflow API server plugin config generation.")
 				} else {
-					mlflowEndpoint, err = p.ResolveMLflowEndpoint(ctx, p.Namespace, log)
+					mlflowEndpoint, err = p.ResolveMLflowEndpoint(ctx, p.DSPONamespace, log)
 					if err != nil {
 						log.Error(err, "failed to retrieve MLflow internal endpoint. MLflow API server plugin will not be enabled.")
 					} else {
 						apiServerExternalURL, routeErr := util.GetRouteHostname(ctx, p.APIServerServiceName, p.Namespace, client)
 						if routeErr != nil {
 							log.Info("Unable to retrieve API server route for KFP base URL", "error", routeErr)
-						} else if apiServerExternalURL == "" {
-							log.V(1).Info("APIServer route is not available yet. Deferring MLflow API server plugin config generation.")
-						} else {
+						}
+						if apiServerExternalURL == "" {
+							var svcErr error
+							apiServerExternalURL, svcErr = util.GetServiceHostname(ctx, p.APIServerServiceName, p.Namespace, client)
+							if svcErr != nil {
+								log.Info("Unable to retrieve API server service for KFP base URL", "error", svcErr)
+							}
+							if apiServerExternalURL == "" {
+								log.V(1).Info("APIServer external URL is not available yet. Deferring MLflow API server plugin config generation.")
+							}
+						}
+						if apiServerExternalURL != "" {
 							// Resolve effective CA bundle file path before building plugin config so
 							// APIServer override values are reflected even though global path fields
 							// are updated later in ExtractParams.
@@ -853,7 +879,12 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 								effectiveCABundleFileName = p.APIServer.CABundleFileName
 							}
 							effectiveCABundleFilePath := fmt.Sprintf("%s/%s", effectiveCABundleRootMountPath, effectiveCABundleFileName)
-							pluginCfg, err := BuildMLflowPluginConfigJson(mlflowEndpoint, effectiveCABundleFilePath, *p.MLflow.InjectUserEnvVars, apiServerExternalURL)
+							pluginCfg, err := BuildMLflowPluginConfigJson(
+								mlflowEndpoint,
+								effectiveCABundleFilePath,
+								*p.MLflow.InjectUserEnvVars,
+								apiServerExternalURL,
+							)
 							if err != nil {
 								log.Info("Failed to build MLflow plugin config. MLflow API server plugin will not be enabled.", "error", err)
 							} else {
@@ -1046,6 +1077,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 			// SSL_CERT_DIR accepts a colon separated list of directories
 			sslCertDir := strings.Join(certDirectories, ":")
 			p.CustomSSLCertDir = &sslCertDir
+			p.WorkflowPodSSLCertDir = config.WorkflowPodSSLCertDir
 		}
 
 		if p.APIServer.ArtifactSignedURLExpirySeconds == nil {
@@ -1070,12 +1102,12 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	}
 
 	if p.PersistenceAgent != nil {
-		persistenceAgentImageFromConfig := config.GetStringConfigWithDefault(config.PersistenceAgentImagePath, config.DefaultImageValue)
+		persistenceAgentImageFromConfig := config.ResolveImage(config.PersistenceAgentImagePath)
 		setStringDefault(persistenceAgentImageFromConfig, &p.PersistenceAgent.Image)
 		setResourcesDefault(config.PersistenceAgentResourceRequirements, &p.PersistenceAgent.Resources)
 	}
 	if p.ScheduledWorkflow != nil {
-		scheduledWorkflowImageFromConfig := config.GetStringConfigWithDefault(config.ScheduledWorkflowImagePath, config.DefaultImageValue)
+		scheduledWorkflowImageFromConfig := config.ResolveImage(config.ScheduledWorkflowImagePath)
 		setStringDefault(scheduledWorkflowImageFromConfig, &p.ScheduledWorkflow.Image)
 		setResourcesDefault(config.ScheduledWorkflowResourceRequirements, &p.ScheduledWorkflow.Resources)
 	}
@@ -1088,8 +1120,8 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.WorkflowController = dsp.Spec.WorkflowController.DeepCopy()
 
 	if p.WorkflowController != nil {
-		argoWorkflowImageFromConfig := config.GetStringConfigWithDefault(config.ArgoWorkflowControllerImagePath, config.DefaultImageValue)
-		argoExecImageFromConfig := config.GetStringConfigWithDefault(config.ArgoExecImagePath, config.DefaultImageValue)
+		argoWorkflowImageFromConfig := config.ResolveImage(config.ArgoWorkflowControllerImagePath)
+		argoExecImageFromConfig := config.ResolveImage(config.ArgoExecImagePath)
 		setStringDefault(argoWorkflowImageFromConfig, &p.WorkflowController.Image)
 		setStringDefault(argoExecImageFromConfig, &p.WorkflowController.ArgoExecImage)
 		setResourcesDefault(config.WorkflowControllerResourceRequirements, &p.WorkflowController.Resources)
@@ -1123,7 +1155,12 @@ func validateMLflowEndpointURL(raw string) error {
 	return nil
 }
 
-func BuildMLflowPluginConfigJson(mlflowEndpoint string, caBundlePath string, injectUserEnvVars bool, kfpBaseURL string) (string, error) {
+func BuildMLflowPluginConfigJson(
+	mlflowEndpoint string,
+	caBundlePath string,
+	injectUserEnvVars bool,
+	kfpBaseURL string,
+) (string, error) {
 	settings := MLflowPluginSettings{
 		WorkspacesEnabled:     true,
 		ExperimentDescription: "Created by AI Pipelines.",

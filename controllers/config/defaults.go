@@ -19,6 +19,8 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -41,6 +43,14 @@ const (
 	DefaultImageValue = "MustSetInConfig"
 
 	CustomCABundleRootMountPath = "/dsp-custom-certs"
+
+	// DSPDriverCABundleDir is where the KFP Argo compiler mounts CABUNDLE_CONFIGMAP
+	// onto driver/launcher pods.
+	DSPDriverCABundleDir = "/kfp/certs"
+	// WorkflowPodSSLCertDir is injected into Argo workflow pods via workflowDefaults
+	// so Go's system cert pool includes that compiler-mounted CA. SSL_CERT_DIR
+	// replaces the default directory list, so system CA dirs must be included.
+	WorkflowPodSSLCertDir = DSPDriverCABundleDir + ":/etc/ssl/certs:/etc/pki/tls/certs"
 
 	// GlobalODHCaBundleConfigMapName key and label values  are a contract with
 	// ODH Platform https://github.com/opendatahub-io/architecture-decision-records/pull/28
@@ -100,6 +110,20 @@ func ResolvedPlatformVersion() string {
 	return strings.Trim(GetStringConfigWithDefault("DSPO.PlatformVersion", DefaultPlatformVersion), "\"")
 }
 
+// ResolveImage returns a non-empty platform-provided related image when the
+// modular controller is enabled and one exists. Otherwise it preserves the
+// operator's standalone image setting.
+func ResolveImage(configName string) string {
+	if AIPipelinesModuleControllerEnabled() {
+		if relatedImageName, ok := platformRelatedImages[configName]; ok {
+			if value := strings.TrimSpace(os.Getenv(relatedImageName)); value != "" {
+				return value
+			}
+		}
+	}
+	return GetStringConfigWithDefault(configName, DefaultImageValue)
+}
+
 // BuildManagedPipelinesUploadTags returns MANAGED_PIPELINES_UPLOAD_TAGS: managed=true plus rhoai-version for the given resolved version string.
 func BuildManagedPipelinesUploadTags(platformVersion string) string {
 	return fmt.Sprintf("%s,rhoai-version=%s", ManagedPipelinesUploadTagManaged, platformVersion)
@@ -122,11 +146,29 @@ const (
 	PipelinesComponentsImagePath    = "Images.PipelinesComponents"
 
 	// Other configs
-	ObjStoreConnectionTimeoutConfigName      = "DSPO.HealthCheck.ObjectStore.ConnectionTimeout"
-	DBConnectionTimeoutConfigName            = "DSPO.HealthCheck.Database.ConnectionTimeout"
-	RequeueTimeConfigName                    = "DSPO.RequeueTime"
-	ApiServerIncludeOwnerReferenceConfigName = "DSPO.ApiServer.IncludeOwnerReference"
+	ObjStoreConnectionTimeoutConfigName         = "DSPO.HealthCheck.ObjectStore.ConnectionTimeout"
+	DBConnectionTimeoutConfigName               = "DSPO.HealthCheck.Database.ConnectionTimeout"
+	RequeueTimeConfigName                       = "DSPO.RequeueTime"
+	ApiServerIncludeOwnerReferenceConfigName    = "DSPO.ApiServer.IncludeOwnerReference"
+	EnableAIPipelinesModuleControllerConfigName = "DSPO.EnableAIPipelinesModuleController"
 )
+
+// platformRelatedImages contains only images resolved directly by DSPO. Other
+// RELATED_IMAGE_* values are forwarded unchanged to managed pipelines.
+var platformRelatedImages = map[string]string{
+	APIServerImagePath:              "RELATED_IMAGE_ODH_ML_PIPELINES_API_SERVER_V2_IMAGE",
+	PersistenceAgentImagePath:       "RELATED_IMAGE_ODH_ML_PIPELINES_PERSISTENCEAGENT_V2_IMAGE",
+	ScheduledWorkflowImagePath:      "RELATED_IMAGE_ODH_ML_PIPELINES_SCHEDULEDWORKFLOW_V2_IMAGE",
+	ArgoExecImagePath:               "RELATED_IMAGE_ODH_DATA_SCIENCE_PIPELINES_ARGO_ARGOEXEC_IMAGE",
+	ArgoWorkflowControllerImagePath: "RELATED_IMAGE_ODH_DATA_SCIENCE_PIPELINES_ARGO_WORKFLOWCONTROLLER_IMAGE",
+	DriverImagePath:                 "RELATED_IMAGE_ODH_ML_PIPELINES_DRIVER_IMAGE",
+	LauncherImagePath:               "RELATED_IMAGE_ODH_ML_PIPELINES_LAUNCHER_IMAGE",
+	MariaDBImagePath:                "RELATED_IMAGE_DSP_MARIADB_IMAGE",
+	MlmdEnvoyImagePath:              "RELATED_IMAGE_DSP_PROXYV2_IMAGE",
+	MlmdGRPCImagePath:               "RELATED_IMAGE_ODH_MLMD_GRPC_SERVER_IMAGE",
+	KubeRBACProxyImagePath:          "RELATED_IMAGE_ODH_KUBE_RBAC_PROXY_IMAGE",
+	PipelinesComponentsImagePath:    "RELATED_IMAGE_ODH_PIPELINES_COMPONENTS_IMAGE",
+}
 
 // DSPA Status Condition Types
 const (
@@ -180,7 +222,19 @@ const DefaultRequeueTime = time.Second * 20
 
 const DefaultApiServerIncludeOwnerReferenceConfigName = true
 
+const DefaultEnableAIPipelinesModuleController = false
+
 const DefaultPlatformVersion = "v0.0.0"
+
+// AIPipelinesModuleControllerEnabled reports whether the modular AIPipelines
+// ownership path should be registered. It is deliberately disabled by default
+// so standalone and legacy deployments do not require the module CRD or CR.
+func AIPipelinesModuleControllerEnabled() bool {
+	if !viper.IsSet(EnableAIPipelinesModuleControllerConfigName) {
+		return DefaultEnableAIPipelinesModuleController
+	}
+	return viper.GetBool(EnableAIPipelinesModuleControllerConfigName)
+}
 
 const (
 	DefaultArgoWorkflowsControllersManagementState = "Managed"
@@ -205,6 +259,65 @@ var (
 )
 
 type DBExtraParams map[string]string
+
+// allowedDBExtraParams defines the set of database connection parameter keys
+// that may be specified via spec.database.customExtraParams. Keys not in this
+// map are rejected to prevent injection of driver-level flags (e.g.
+// allowAllFiles, allowCleartextPasswords) that could be exploited for
+// file-exfiltration or credential-theft attacks.
+// Uses map[string]struct{} instead of map[string]bool so a key cannot be
+// accidentally added with value false, which would silently disable it.
+var allowedDBExtraParams = map[string]struct{}{
+	// MySQL / MariaDB safe parameters
+	"tls":                  {},
+	"charset":              {},
+	"loc":                  {},
+	"timeout":              {},
+	"readTimeout":          {},
+	"writeTimeout":         {},
+	"parseTime":            {},
+	"collation":            {},
+	"sql_mode":             {},
+	"checkConnLiveness":    {},
+	"clientFoundRows":      {},
+	"columnsWithAlias":     {},
+	"maxAllowedPacket":     {},
+	"rejectReadOnly":       {},
+	"timeTruncate":         {},
+	"connectionAttributes": {},
+	// PostgreSQL equivalents for future support
+	"sslmode":          {},
+	"connect_timeout":  {},
+	"application_name": {},
+}
+
+// ValidateDBExtraParams unmarshals a JSON string of database extra parameters
+// and validates that every key is present in the allow-list. Returns the
+// parsed map on success or an error listing the first disallowed key found.
+func ValidateDBExtraParams(raw string) (map[string]string, error) {
+	var params map[string]string
+	if err := json.Unmarshal([]byte(raw), &params); err != nil {
+		return nil, fmt.Errorf("customExtraParams is not valid JSON: %w", err)
+	}
+	for key := range params {
+		if _, ok := allowedDBExtraParams[key]; !ok {
+			return nil, fmt.Errorf("customExtraParams contains disallowed key %q; allowed keys: %v",
+				key, allowedKeysList())
+		}
+	}
+	return params, nil
+}
+
+// allowedKeysList returns a sorted slice of allowed parameter key names for
+// use in error messages.
+func allowedKeysList() []string {
+	keys := make([]string, 0, len(allowedDBExtraParams))
+	for k := range allowedDBExtraParams {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
 
 func createResourceRequirement(RequestsCPU resource.Quantity, RequestsMemory resource.Quantity, LimitsCPU resource.Quantity, LimitsMemory resource.Quantity) dspav1.ResourceRequirements {
 	return dspav1.ResourceRequirements{

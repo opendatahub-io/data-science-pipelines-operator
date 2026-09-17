@@ -121,6 +121,8 @@ spec:
               value: "{{.ObjectStorageConnection.CredentialsSecret.SecretKey}}"
             - name: DEFAULTPIPELINERUNNERSERVICEACCOUNT
               value: "pipeline-runner-{{.Name}}"
+            - name: ALLOWEDSERVICEACCOUNTS
+              value: "pipeline-runner-{{.Name}}"
             - name: OBJECTSTORECONFIG_BUCKETNAME
               value: "{{.ObjectStorageConnection.Bucket}}"
             - name: OBJECTSTORECONFIG_ACCESSKEY
@@ -257,6 +259,12 @@ spec:
             periodSeconds: 5
             timeoutSeconds: 2
           resources:
+            {{ if .APIServer.ResourceClaims }}
+            claims:
+              {{ range .APIServer.ResourceClaims }}
+              - name: "{{ .Name }}"
+              {{ end }}
+            {{ end }}
             {{ if .APIServer.Resources.Requests }}
             requests:
               {{ if .APIServer.Resources.Requests.CPU }}
@@ -360,6 +368,18 @@ spec:
               name: ca-bundle
             {{ end }}
         {{ end }}
+      {{ if .APIServer.ResourceClaims }}
+      resourceClaims:
+      {{ range .APIServer.ResourceClaims }}
+        - name: "{{ .Name }}"
+          {{ if .ResourceClaimName }}
+          resourceClaimName: "{{ .ResourceClaimName }}"
+          {{ end }}
+          {{ if .ResourceClaimTemplateName }}
+          resourceClaimTemplateName: "{{ .ResourceClaimTemplateName }}"
+          {{ end }}
+      {{ end }}
+      {{ end }}
       serviceAccountName: {{.APIServerDefaultResourceName}}
       volumes:
         - name: proxy-tls
