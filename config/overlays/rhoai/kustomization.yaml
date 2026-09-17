@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
 - dspo/applications
 - ../../argo
+- ../../prometheus
 - dspo/rhoai_metrics_reader_role_binding.yaml
 - dspo/rhoai_metrics_service_monitor.yaml
 namespace: redhat-ods-applications

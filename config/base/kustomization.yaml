@@ -6,7 +6,7 @@ resources:
   - ../crd
   - ../rbac
   - ../manager
-  - ../prometheus
+  - ../prometheus/monitor
   - ../configmaps
 
 generatorOptions:

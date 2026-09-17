@@ -29,11 +29,14 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -82,6 +85,11 @@ func (r *AIPipelinesReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if err := r.Get(ctx, req.NamespacedName, module); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+	if module.DeletionTimestamp.IsZero() {
+		if err := r.reconcilePrometheusRule(ctx, module); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
 
 	reader := r.APIReader
 	if reader == nil {
@@ -91,8 +99,12 @@ func (r *AIPipelinesReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	argo := observeArgoLifecycle(ctx, reader, r.Namespace, module.Spec.ArgoWorkflowsControllersManagementState(), module)
 	platformConfig := observePlatformConfig(ctx, reader)
 	desired := buildAIPipelinesStatus(module, dspo, argo, platformConfig)
+	result := ctrl.Result{}
+	if desired.Phase != common.PhaseReady {
+		result.RequeueAfter = config.GetDurationConfigWithDefault(config.RequeueTimeConfigName, config.DefaultRequeueTime)
+	}
 	if apiequality.Semantic.DeepEqual(module.Status, desired) {
-		return ctrl.Result{}, nil
+		return result, nil
 	}
 
 	updated := module.DeepCopy()
@@ -101,12 +113,25 @@ func (r *AIPipelinesReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, fmt.Errorf("update AIPipelines status: %w", err)
 	}
 
-	return ctrl.Result{}, nil
+	return result, nil
 }
 
 func (r *AIPipelinesReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	prometheusRuleCRD := &unstructured.Unstructured{}
+	prometheusRuleCRD.SetAPIVersion("apiextensions.k8s.io/v1")
+	prometheusRuleCRD.SetKind("CustomResourceDefinition")
+	prometheusRuleCRDFilter := predicate.NewPredicateFuncs(func(object client.Object) bool {
+		return object.GetName() == prometheusRuleCRDName
+	})
+	enqueueModule := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, _ client.Object) []reconcile.Request {
+		return []reconcile.Request{{NamespacedName: types.NamespacedName{
+			Name: aipipelinesv1alpha1.AIPipelinesInstanceName,
+		}}}
+	})
+
 	b := ctrl.NewControllerManagedBy(mgr).
 		For(&aipipelinesv1alpha1.AIPipelines{}).
+		Watches(prometheusRuleCRD, enqueueModule, builder.WithPredicates(prometheusRuleCRDFilter)).
 		Watches(
 			&appsv1.Deployment{},
 			handler.EnqueueRequestsFromMapFunc(func(_ context.Context, object client.Object) []reconcile.Request {
