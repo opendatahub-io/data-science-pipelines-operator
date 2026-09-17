@@ -1,0 +1,30 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: dspa-service-ca-selfsigned-${DSPA_SERVICE_CA_NAME}
+  namespace: ${DSPA_SERVICE_CA_NAMESPACE}
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: dspa-service-ca-${DSPA_SERVICE_CA_NAME}
+  namespace: ${DSPA_SERVICE_CA_NAMESPACE}
+spec:
+  isCA: true
+  commonName: dspa-service-ca-${DSPA_SERVICE_CA_NAME}
+  secretName: dspa-service-ca-${DSPA_SERVICE_CA_NAME}
+  issuerRef:
+    name: dspa-service-ca-selfsigned-${DSPA_SERVICE_CA_NAME}
+    kind: Issuer
+    group: cert-manager.io
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: dspa-service-ca-${DSPA_SERVICE_CA_NAME}
+  namespace: ${DSPA_SERVICE_CA_NAMESPACE}
+spec:
+  ca:
+    secretName: dspa-service-ca-${DSPA_SERVICE_CA_NAME}
