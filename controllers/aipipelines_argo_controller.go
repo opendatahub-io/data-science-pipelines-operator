@@ -59,7 +59,7 @@ var argoManagedPaths = map[string][][]string{
 	"ClusterRoleBinding":       {{"roleRef"}, {"subjects"}},
 	"RoleBinding":              {{"roleRef"}, {"subjects"}},
 	"ConfigMap":                {{"data"}, {"binaryData"}, {"immutable"}},
-	"ServiceAccount":           {{"automountServiceAccountToken"}, {"imagePullSecrets"}},
+	"ServiceAccount":           {{"automountServiceAccountToken"}},
 }
 
 type argoLifecycleObservation struct {

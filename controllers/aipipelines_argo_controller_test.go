@@ -96,6 +96,34 @@ func TestAIPipelinesArgoReconcileManagedCreatesAssets(t *testing.T) {
 	require.Equal(t, metav1.ConditionTrue, observation.Status)
 }
 
+func TestAIPipelinesArgoReconcilePreservesServiceAccountImagePullSecrets(t *testing.T) {
+	ctx := context.Background()
+	reconciler, k8sClient, module := newArgoTestReconciler(t, common.Managed)
+
+	_, err := reconciler.Reconcile(ctx, moduleRequest())
+	require.NoError(t, err)
+	_, err = reconciler.Reconcile(ctx, moduleRequest())
+	require.NoError(t, err)
+
+	serviceAccount := argoTestObject("v1", "ServiceAccount", "opendatahub", "argo")
+	require.NoError(t, k8sClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount))
+	imagePullSecrets := []interface{}{map[string]interface{}{"name": "argo-dockercfg-test"}}
+	require.NoError(t, unstructured.SetNestedSlice(serviceAccount.Object, imagePullSecrets, "imagePullSecrets"))
+	require.NoError(t, k8sClient.Update(ctx, serviceAccount))
+
+	setArgoCRDsEstablished(t, ctx, k8sClient, "opendatahub", metav1.ConditionTrue)
+	observation := observeArgoLifecycle(ctx, k8sClient, "opendatahub", common.Managed, module)
+	require.Equal(t, metav1.ConditionTrue, observation.Status, observation.Message)
+
+	_, err = reconciler.Reconcile(ctx, moduleRequest())
+	require.NoError(t, err)
+	require.NoError(t, k8sClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount))
+	actualImagePullSecrets, found, err := unstructured.NestedSlice(serviceAccount.Object, "imagePullSecrets")
+	require.NoError(t, err)
+	require.True(t, found)
+	require.Equal(t, imagePullSecrets, actualImagePullSecrets)
+}
+
 func TestAIPipelinesArgoReconcileRemovedPreservesCRDs(t *testing.T) {
 	ctx := context.Background()
 	reconciler, k8sClient, module := newArgoTestReconciler(t, common.Removed)
