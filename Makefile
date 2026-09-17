@@ -159,7 +159,19 @@ functest: manifests generate fmt vet envtest ## Run tests.
 .PHONY: integrationtest
 integrationtest: ## Run integration tests
 	cd tests && \
-	go test ./... --tags=test_integration -v -kubeconfig=${KUBECONFIGPATH} -k8sApiServerHost=${K8SAPISERVERHOST} -DSPANamespace=${DSPANAMESPACE} -DSPAPath=${DSPAPATH} -endpointType=${ENDPOINT_TYPE} -MinioNamespace=${MINIONAMESPACE} -ArgoWorkflowsControllersManagementState=$(INTTEST_AWF_MANAGEMENT_STATE) -skipDeploy=$(INTTEST_SKIP_DEPLOY) -skipCleanup=$(INTTEST_SKIP_CLEANUP)
+	go test . --tags=test_integration -v -kubeconfig=${KUBECONFIGPATH} -k8sApiServerHost=${K8SAPISERVERHOST} -DSPANamespace=${DSPANAMESPACE} -DSPAPath=${DSPAPATH} -endpointType=${ENDPOINT_TYPE} -MinioNamespace=${MINIONAMESPACE} -ArgoWorkflowsControllersManagementState=$(INTTEST_AWF_MANAGEMENT_STATE) -skipDeploy=$(INTTEST_SKIP_DEPLOY) -skipCleanup=$(INTTEST_SKIP_CLEANUP)
+
+.PHONY: aipipelines-functional-test
+aipipelines-functional-test: envtest ## Test running module controllers with envtest and shipped RBAC.
+	KUBEBUILDER_ASSETS="$$($(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./controllers ./api/aipipelines/v1alpha1 -tags=test_functional -run 'TestAIPipelinesControllerLifecycle|TestCRDValidationAndDefaulting' -count=1 -timeout=5m
+
+.PHONY: aipipelines-e2e-test
+aipipelines-e2e-test: ## Test module/operand lifecycle on a dedicated cluster with a test-labeled module fixture.
+	go test ./tests/aipipelines -tags=test_integration -run '^TestAIPipelinesLifecycle$$' -count=1 -v -timeout=45m
+
+.PHONY: aipipelines-upgrade-test
+aipipelines-upgrade-test: ## Roll baseline -> candidate -> baseline; requires AIPIPELINES_BASELINE_IMAGE and both *_VERSION env vars.
+	go test ./tests/aipipelines -tags=test_integration -run '^TestAIPipelinesUpgradeDowngrade$$' -count=1 -v -timeout=60m
 
 ##@ Chaos Testing
 

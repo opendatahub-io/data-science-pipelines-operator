@@ -28,6 +28,7 @@ CERT_MANAGER_NAMESPACE="cert-manager"
 ARGO_NAMESPACE="argo"
 ARGO_VERSION="v3.6.7"
 DEPLOY_EXTERNAL_ARGO=false
+MODULAR=false
 AWF_MANAGEMENT_STATE="Managed"
 DSPA_DEPLOY_WAIT_TIMEOUT="300"
 INTEGRATION_TESTS_DIR="${GIT_WORKSPACE}/tests"
@@ -103,10 +104,30 @@ create_argo_namespace() {
 }
 
 deploy_argo_lite() {
+  if [ "$MODULAR" = true ]; then
+    return
+  fi
   echo "---------------------------------"
   echo "Deploy Argo Lite"
   echo "---------------------------------"
   ( cd "${GIT_WORKSPACE}/.github/resources/argo-lite" && kubectl -n $OPENDATAHUB_NAMESPACE apply -k . )
+}
+
+enable_aipipelines_module() {
+  if [ "$MODULAR" != true ]; then
+    return
+  fi
+  # Fail on an existing singleton/handshake: these tests own their fixtures.
+  kubectl wait crd/aipipelines.components.platform.opendatahub.io --for=condition=Established --timeout=60s
+  kubectl create -f "${GIT_WORKSPACE}/.github/resources/aipipelines/module.yaml"
+  kubectl set env -n "$OPENDATAHUB_NAMESPACE" deployment/data-science-pipelines-operator-controller-manager \
+    DSPO_ENABLEAIPIPELINESMODULECONTROLLER=true \
+    APPLICATIONS_NAMESPACE="$OPENDATAHUB_NAMESPACE" \
+    DSPO_ARGOWORKFLOWSCONTROLLERS='{"managementState":"Removed"}'
+  # The conflicting legacy setting proves that the module spec takes priority.
+  kubectl rollout status -n "$OPENDATAHUB_NAMESPACE" deployment/data-science-pipelines-operator-controller-manager --timeout=300s
+  kubectl wait aipipelines/default-aipipelines --for=condition=Ready=true --timeout=300s
+  kubectl wait aipipelines/default-aipipelines --for=condition=ProvisioningSucceeded=true --timeout=300s
 }
 
 deploy_argo_external() {
@@ -554,6 +575,7 @@ setup_kind_requirements() {
   create_opendatahub_namespace
   deploy_argo_lite
   deploy_dspo_kind
+  enable_aipipelines_module
   deploy_minio
   deploy_mariadb
   deploy_pypi_server
@@ -576,6 +598,7 @@ setup_openshift_ci_requirements() {
   create_opendatahub_namespace
   deploy_argo_lite
   deploy_dspo
+  enable_aipipelines_module
   deploy_minio
   deploy_mariadb
   deploy_pypi_server
@@ -630,6 +653,10 @@ while [ "$#" -gt 0 ]; do
       ;;
     --kind)
       TARGET="kind"
+      shift
+      ;;
+    --modular)
+      MODULAR=true
       shift
       ;;
     --openshift-ci)
@@ -763,6 +790,11 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
+if [ "$MODULAR" = true ] && { [ "$DEPLOY_EXTERNAL_ARGO" = true ] || [ "$TARGET" = "rhoai" ]; }; then
+  echo "--modular requires a dedicated Kind or --openshift-ci cluster without --deploy-external-argo" >&2
+  exit 1
+fi
+
 if [ "$K8SAPISERVERHOST" = "" ]; then
   echo "K8SAPISERVERHOST is empty. It will use suite_test.go::Defaultk8sApiServerHost"
   echo "If the TARGET is OpenShift or RHOAI. You can use: oc whoami --show-server"
@@ -804,3 +836,8 @@ fi
 run_tests
 run_tests_dspa_k8s
 run_tests_dspa_external_connections
+
+if [ "$MODULAR" = true ]; then
+  export KUBECONFIG="${KUBECONFIGPATH:-${KUBECONFIG:-$HOME/.kube/config}}"
+  ( cd "$GIT_WORKSPACE" && make aipipelines-e2e-test )
+fi
