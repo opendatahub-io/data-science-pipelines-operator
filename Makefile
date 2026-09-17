@@ -144,6 +144,14 @@ test: manifests generate fmt vet envtest ## Run tests.
 unittest: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -v --tags=test_unit -coverprofile cover.out
 
+.PHONY: prometheus-rules-test
+prometheus-rules-test: kustomize ## Generate and test RHOAI Prometheus alert rules (requires yq and promtool).
+	@trap 'rm -f config/prometheus/datasciencepipelines-alerting.rules.yaml' EXIT; \
+		$(KUSTOMIZE) build config/overlays/rhoai | \
+		yq 'select(.kind == "PrometheusRule") | .spec' \
+			> config/prometheus/datasciencepipelines-alerting.rules.yaml; \
+		cd config/prometheus && promtool test rules datasciencepipelines-alerting.unit-tests.yaml
+
 .PHONY: functest
 functest: manifests generate fmt vet envtest ## Run tests.
 	export SSL_CERT_FILE=${ROOT_DIR}/controllers/testdata/tls/ca-bundle.crt && export DSPO_NAMESPACE=$(DSPO_NAMESPACE) && KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... --tags=test_functional -coverprofile cover.out
