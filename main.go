@@ -383,22 +383,29 @@ func main() {
 	// The DSPA controller remains active in both modes. Register the modular
 	// ownership path only during the coordinated platform handoff.
 	if config.AIPipelinesModuleControllerEnabled() {
+		crdWatchCaches, err := controllers.SetupAIPipelinesCRDWatchCaches(mgr, dspoNamespace)
+		if err != nil {
+			setupLog.Error(err, "unable to configure exact-name CRD watch caches")
+			os.Exit(1)
+		}
 		if err = (&controllers.AIPipelinesReconciler{
-			Client:    mgr.GetClient(),
-			APIReader: mgr.GetAPIReader(),
-			Scheme:    mgr.GetScheme(),
-			Log:       ctrl.Log.WithName("controllers").WithName("AIPipelines"),
-			Namespace: dspoNamespace,
+			Client:         mgr.GetClient(),
+			APIReader:      mgr.GetAPIReader(),
+			Scheme:         mgr.GetScheme(),
+			Log:            ctrl.Log.WithName("controllers").WithName("AIPipelines"),
+			Namespace:      dspoNamespace,
+			CRDWatchCaches: crdWatchCaches,
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AIPipelines")
 			os.Exit(1)
 		}
 		if err = (&controllers.AIPipelinesArgoReconciler{
-			Client:    mgr.GetClient(),
-			APIReader: mgr.GetAPIReader(),
-			Scheme:    mgr.GetScheme(),
-			Log:       ctrl.Log.WithName("controllers").WithName("AIPipelinesArgo"),
-			Namespace: dspoNamespace,
+			Client:         mgr.GetClient(),
+			APIReader:      mgr.GetAPIReader(),
+			Scheme:         mgr.GetScheme(),
+			Log:            ctrl.Log.WithName("controllers").WithName("AIPipelinesArgo"),
+			Namespace:      dspoNamespace,
+			CRDWatchCaches: crdWatchCaches,
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AIPipelinesArgo")
 			os.Exit(1)

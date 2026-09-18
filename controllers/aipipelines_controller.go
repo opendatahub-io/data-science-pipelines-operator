@@ -29,15 +29,13 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const (
@@ -65,10 +63,11 @@ type platformConfigObservation struct {
 // expose readiness through the resources this reconciler observes.
 type AIPipelinesReconciler struct {
 	client.Client
-	APIReader client.Reader
-	Scheme    *runtime.Scheme
-	Log       logr.Logger
-	Namespace string
+	APIReader      client.Reader
+	Scheme         *runtime.Scheme
+	Log            logr.Logger
+	Namespace      string
+	CRDWatchCaches CRDWatchCaches
 }
 
 // +kubebuilder:rbac:groups=components.platform.opendatahub.io,resources=aipipelines,verbs=get;list;watch
@@ -117,21 +116,23 @@ func (r *AIPipelinesReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 }
 
 func (r *AIPipelinesReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	prometheusRuleCRD := &unstructured.Unstructured{}
-	prometheusRuleCRD.SetAPIVersion("apiextensions.k8s.io/v1")
-	prometheusRuleCRD.SetKind("CustomResourceDefinition")
-	prometheusRuleCRDFilter := predicate.NewPredicateFuncs(func(object client.Object) bool {
-		return object.GetName() == prometheusRuleCRDName
-	})
 	enqueueModule := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, _ client.Object) []reconcile.Request {
 		return []reconcile.Request{{NamespacedName: types.NamespacedName{
 			Name: aipipelinesv1alpha1.AIPipelinesInstanceName,
 		}}}
 	})
+	prometheusRuleCRDCache, ok := r.CRDWatchCaches[prometheusRuleCRDName]
+	if !ok {
+		return fmt.Errorf("CRD watch cache for %s is not configured", prometheusRuleCRDName)
+	}
 
 	b := ctrl.NewControllerManagedBy(mgr).
 		For(&aipipelinesv1alpha1.AIPipelines{}).
-		Watches(prometheusRuleCRD, enqueueModule, builder.WithPredicates(prometheusRuleCRDFilter)).
+		WatchesRawSource(source.Kind[client.Object](
+			prometheusRuleCRDCache,
+			customResourceDefinition(),
+			enqueueModule,
+		)).
 		Watches(
 			&appsv1.Deployment{},
 			handler.EnqueueRequestsFromMapFunc(func(_ context.Context, object client.Object) []reconcile.Request {
@@ -154,7 +155,7 @@ func (r *AIPipelinesReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				}}}
 			}),
 		)
-	if err := watchArgoAssets(b, r.Namespace); err != nil {
+	if err := watchArgoAssets(b, r.Namespace, r.CRDWatchCaches); err != nil {
 		return err
 	}
 	return b.Complete(r)
