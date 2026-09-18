@@ -170,7 +170,7 @@ aipipelines-e2e-test: ## Test module/operand lifecycle on a dedicated cluster wi
 	go test ./tests/aipipelines -tags=test_integration -run '^TestAIPipelinesLifecycle$$' -count=1 -v -timeout=45m
 
 .PHONY: aipipelines-upgrade-test
-aipipelines-upgrade-test: ## Roll baseline -> candidate -> baseline; requires AIPIPELINES_BASELINE_IMAGE and both *_VERSION env vars.
+aipipelines-upgrade-test: ## Roll baseline -> candidate -> baseline; requires baseline operator/related images and both *_VERSION env vars.
 	go test ./tests/aipipelines -tags=test_integration -run '^TestAIPipelinesUpgradeDowngrade$$' -count=1 -v -timeout=60m
 
 ##@ Chaos Testing
