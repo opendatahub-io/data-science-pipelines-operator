@@ -43,6 +43,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const (
@@ -72,16 +73,17 @@ type argoLifecycleObservation struct {
 // DSPAs and their namespace-scoped operands remain owned by DSPAReconciler.
 type AIPipelinesArgoReconciler struct {
 	client.Client
-	APIReader client.Reader
-	Scheme    *runtime.Scheme
-	Log       logr.Logger
-	Namespace string
+	APIReader      client.Reader
+	Scheme         *runtime.Scheme
+	Log            logr.Logger
+	Namespace      string
+	CRDWatchCaches CRDWatchCaches
 }
 
 // +kubebuilder:rbac:groups=components.platform.opendatahub.io,resources=aipipelines,verbs=get;list;watch;patch;update
 // +kubebuilder:rbac:groups=components.platform.opendatahub.io,resources=aipipelines/finalizers,verbs=update
-// +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=create;list;watch
-// +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,resourceNames=applications.app.k8s.io;clusterworkflowtemplates.argoproj.io;cronworkflows.argoproj.io;viewers.kubeflow.org;workflowartifactgctasks.argoproj.io;workfloweventbindings.argoproj.io;workflows.argoproj.io;workflowtaskresults.argoproj.io;workflowtasksets.argoproj.io;workflowtemplates.argoproj.io,verbs=get;update;patch
+// +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=create
+// +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,resourceNames=applications.app.k8s.io;clusterworkflowtemplates.argoproj.io;cronworkflows.argoproj.io;viewers.kubeflow.org;workflowartifactgctasks.argoproj.io;workfloweventbindings.argoproj.io;workflows.argoproj.io;workflowtaskresults.argoproj.io;workflowtasksets.argoproj.io;workflowtemplates.argoproj.io,verbs=get;list;watch;update;patch
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings;clusterroles;clusterrolebindings,verbs=create;list;watch
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings;clusterroles;clusterrolebindings,resourceNames=argo-aggregate-to-admin;argo-aggregate-to-edit;argo-aggregate-to-view;argo-binding;argo-cluster-role;argo-role;ds-pipeline-argo-binding,verbs=get;update;delete
 // +kubebuilder:rbac:groups="",resources=configmaps;serviceaccounts,verbs=get;list;watch;create;update;patch;delete
@@ -325,19 +327,24 @@ func (r *AIPipelinesArgoReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	b := ctrl.NewControllerManagedBy(mgr).
 		Named("aipipelines-argo-lifecycle").
 		For(&aipipelinesv1alpha1.AIPipelines{})
-	if err := watchArgoAssets(b, r.Namespace); err != nil {
+	if err := watchArgoAssets(b, r.Namespace, r.CRDWatchCaches); err != nil {
 		return err
 	}
 	return b.Complete(r)
 }
 
-func watchArgoAssets(b *builder.Builder, namespace string) error {
+func watchArgoAssets(b *builder.Builder, namespace string, crdWatchCaches CRDWatchCaches) error {
 	assets, err := argoassets.Objects(namespace)
 	if err != nil {
 		return fmt.Errorf("load shared Argo assets for watches: %w", err)
 	}
 	keys := map[string]struct{}{}
+	var crdNames []string
 	for _, asset := range assets {
+		if asset.GetKind() == "CustomResourceDefinition" {
+			crdNames = append(crdNames, asset.GetName())
+			continue
+		}
 		keys[argoAssetKey(asset)] = struct{}{}
 	}
 	filter := predicate.NewPredicateFuncs(func(object client.Object) bool {
@@ -354,12 +361,17 @@ func watchArgoAssets(b *builder.Builder, namespace string) error {
 		Watches(&rbacv1.RoleBinding{}, enqueueModule, builder.WithPredicates(filter)).
 		Watches(&rbacv1.ClusterRole{}, enqueueModule, builder.WithPredicates(filter)).
 		Watches(&rbacv1.ClusterRoleBinding{}, enqueueModule, builder.WithPredicates(filter))
-	// CRDs are watched as unstructured resources so the main scheme does not
-	// need to own the Argo API types themselves.
-	crd := &unstructured.Unstructured{}
-	crd.SetAPIVersion("apiextensions.k8s.io/v1")
-	crd.SetKind("CustomResourceDefinition")
-	b.Watches(crd, enqueueModule, builder.WithPredicates(filter))
+	for _, name := range crdNames {
+		watchCache, ok := crdWatchCaches[name]
+		if !ok {
+			return fmt.Errorf("CRD watch cache for %s is not configured", name)
+		}
+		b.WatchesRawSource(source.Kind[client.Object](
+			watchCache,
+			customResourceDefinition(),
+			enqueueModule,
+		))
+	}
 	return nil
 }
 
