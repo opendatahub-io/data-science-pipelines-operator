@@ -98,7 +98,7 @@ spec:
         memory: 1Gi
   database:
     disableHealthCheck: false
-    # possible values for tls: true, false, skip-verify
+    # possible values for tls: true, false
     # this field can also be used to add other dsn parameters:
     # https://github.com/go-sql-driver/mysql?tab=readme-ov-file#dsn-data-source-name
     customExtraParams: |
