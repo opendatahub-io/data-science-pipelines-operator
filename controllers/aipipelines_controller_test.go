@@ -136,7 +136,7 @@ func TestBuildAIPipelinesStatusPreservesPlatformReleaseUntilManifestsApply(t *te
 	require.Equal(t, "3.6.0", successfulStatus.GetPlatformRelease())
 }
 
-func TestBuildAIPipelinesStatusPreservesPlatformReleaseUntilRunningVersionMatches(t *testing.T) {
+func TestBuildAIPipelinesStatusAcknowledgesLivePlatformVersion(t *testing.T) {
 	viper.Set("DSPO.PlatformVersion", "3.5.0")
 	t.Cleanup(viper.Reset)
 
@@ -150,10 +150,6 @@ func TestBuildAIPipelinesStatusPreservesPlatformReleaseUntilRunningVersionMatche
 	}
 
 	status := buildAIPipelinesStatus(module, readyDSPOObservation(), readyArgoObservation(), platformConfig)
-	require.Equal(t, "3.5.0", status.GetPlatformRelease())
-
-	viper.Set("DSPO.PlatformVersion", "3.6.0")
-	status = buildAIPipelinesStatus(module, readyDSPOObservation(), readyArgoObservation(), platformConfig)
 	require.Equal(t, "3.6.0", status.GetPlatformRelease())
 }
 
@@ -242,6 +238,18 @@ func TestAIPipelinesReconcileUpdatesStatus(t *testing.T) {
 	require.Equal(t, "3.6.0", updated.Status.GetPlatformRelease())
 	require.Equal(t, metav1.ConditionTrue, requireModuleCondition(t, updated.Status.Conditions, "PlatformConfigurationValid").Status)
 	require.True(t, apierrors.IsNotFound(k8sClient.Get(context.Background(), client.ObjectKeyFromObject(legacy), newLegacyDataSciencePipelines())))
+
+	require.NoError(t, k8sClient.Get(context.Background(), client.ObjectKeyFromObject(platformConfig), platformConfig))
+	platformConfig.Data[platformVersionKey] = "3.7.0"
+	require.NoError(t, k8sClient.Update(context.Background(), platformConfig))
+
+	result, err = reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{
+		Name: aipipelinesv1alpha1.AIPipelinesInstanceName,
+	}})
+	require.NoError(t, err)
+	require.Equal(t, config.DefaultRequeueTime, result.RequeueAfter)
+	require.NoError(t, k8sClient.Get(context.Background(), types.NamespacedName{Name: module.Name}, updated))
+	require.Equal(t, "3.7.0", updated.Status.GetPlatformRelease())
 
 	rule, err := monitoringassets.Rule("opendatahub")
 	require.NoError(t, err)

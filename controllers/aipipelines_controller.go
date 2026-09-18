@@ -225,11 +225,11 @@ func buildAIPipelinesStatus(
 		moduleCondition(module, common.ConditionType(conditionTypeArgoReady), argoStatus, argoReason, argoMessage),
 	}
 
-	// Do not acknowledge a newly written platform ConfigMap until the replacement
-	// DSPO process is running with the same injected platform version.
+	// Acknowledge the live platform version after all module manifests have been
+	// applied successfully. The ConfigMap is watched, so platform upgrades do not
+	// require restarting DSPO with a newly injected version.
 	if provisioningStatus == metav1.ConditionTrue &&
-		platformConfig.Version != "" &&
-		platformConfig.Version == config.ResolvedPlatformVersion() {
+		platformConfig.Version != "" {
 		status.SetPlatformRelease(platformConfig.Version)
 	} else if previousRelease := module.Status.GetPlatformRelease(); previousRelease != "" {
 		status.SetPlatformRelease(previousRelease)
