@@ -24,6 +24,7 @@ import (
 
 	aipipelinesv1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/aipipelines/v1alpha1"
 	argoassets "github.com/opendatahub-io/data-science-pipelines-operator/config/argo"
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/odh-platform-utilities/api/common"
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -96,6 +97,19 @@ func TestAIPipelinesArgoReconcileManagedCreatesAssets(t *testing.T) {
 	require.Equal(t, metav1.ConditionTrue, observation.Status)
 }
 
+func TestAIPipelinesArgoReconcileRequiresPreinstalledCRDs(t *testing.T) {
+	ctx := context.Background()
+	reconciler, k8sClient, module := newArgoTestReconciler(t, common.Managed)
+	module.Finalizers = []string{argoLifecycleFinalizer}
+	require.NoError(t, k8sClient.Update(ctx, module))
+
+	workflowCRD := argoTestObject("apiextensions.k8s.io/v1", "CustomResourceDefinition", "", argoWorkflowCRDName)
+	require.NoError(t, k8sClient.Delete(ctx, workflowCRD))
+
+	_, err := reconciler.Reconcile(ctx, moduleRequest())
+	require.ErrorContains(t, err, "required pre-installed Argo CRD workflows.argoproj.io is missing")
+}
+
 func TestAIPipelinesArgoReconcilePreservesServiceAccountImagePullSecrets(t *testing.T) {
 	ctx := context.Background()
 	reconciler, k8sClient, module := newArgoTestReconciler(t, common.Managed)
@@ -133,6 +147,9 @@ func TestAIPipelinesArgoReconcileRemovedPreservesCRDs(t *testing.T) {
 	assets, err := argoassets.Objects("opendatahub")
 	require.NoError(t, err)
 	for _, asset := range assets {
+		if asset.GetKind() == "CustomResourceDefinition" {
+			continue
+		}
 		annotations := asset.GetAnnotations()
 		if annotations == nil {
 			annotations = map[string]string{}
@@ -174,7 +191,15 @@ func TestAIPipelinesArgoReconcileDoesNotAdoptForeignAssets(t *testing.T) {
 			require.NoError(t, err)
 			for _, asset := range assets {
 				if asset.GetName() == testCase.assetName {
-					require.NoError(t, k8sClient.Create(ctx, asset))
+					if asset.GetKind() == "CustomResourceDefinition" {
+						current := argoTestObject(asset.GetAPIVersion(), asset.GetKind(), asset.GetNamespace(), asset.GetName())
+						require.NoError(t, k8sClient.Get(ctx, client.ObjectKeyFromObject(current), current))
+						current.SetAnnotations(nil)
+						current.SetLabels(nil)
+						require.NoError(t, k8sClient.Update(ctx, current))
+					} else {
+						require.NoError(t, k8sClient.Create(ctx, asset))
+					}
 					break
 				}
 			}
@@ -197,7 +222,15 @@ func TestAIPipelinesArgoReconcileAdoptsLegacyOwnedAssets(t *testing.T) {
 	require.NoError(t, err)
 	for _, asset := range assets {
 		asset.SetLabels(map[string]string{legacyPipelinesComponentLabel: "true"})
-		require.NoError(t, k8sClient.Create(ctx, asset))
+		if asset.GetKind() == "CustomResourceDefinition" {
+			current := argoTestObject(asset.GetAPIVersion(), asset.GetKind(), asset.GetNamespace(), asset.GetName())
+			require.NoError(t, k8sClient.Get(ctx, client.ObjectKeyFromObject(current), current))
+			current.SetLabels(asset.GetLabels())
+			current.SetAnnotations(nil)
+			require.NoError(t, k8sClient.Update(ctx, current))
+		} else {
+			require.NoError(t, k8sClient.Create(ctx, asset))
+		}
 	}
 
 	_, err = reconciler.Reconcile(ctx, moduleRequest())
@@ -253,7 +286,21 @@ func newArgoTestReconciler(t *testing.T, state common.ManagementState) (*AIPipel
 	require.NoError(t, apiextensionsv1.AddToScheme(scheme))
 	require.NoError(t, aipipelinesv1alpha1.AddToScheme(scheme))
 	module := newTestAIPipelines(state)
-	k8sClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(module).Build()
+	objects := []client.Object{module}
+	assets, err := argoassets.Objects("opendatahub")
+	require.NoError(t, err)
+	for _, asset := range assets {
+		if asset.GetKind() != "CustomResourceDefinition" {
+			continue
+		}
+		asset.SetAnnotations(map[string]string{argoManagedAnnotation: "true"})
+		asset.SetLabels(map[string]string{
+			legacyPipelinesComponentLabel: "true",
+			config.DSPVersionk8sLabel:     config.DSPV2VersionString,
+		})
+		objects = append(objects, asset)
+	}
+	k8sClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 	return &AIPipelinesArgoReconciler{
 		Client:    k8sClient,
 		APIReader: k8sClient,

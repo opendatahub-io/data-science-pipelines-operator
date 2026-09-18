@@ -98,9 +98,10 @@ func (r *AIPipelinesReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	argo := observeArgoLifecycle(ctx, reader, r.Namespace, module.Spec.ArgoWorkflowsControllersManagementState(), module)
 	platformConfig := observePlatformConfig(ctx, reader)
 	desired := buildAIPipelinesStatus(module, dspo, argo, platformConfig)
-	result := ctrl.Result{}
-	if desired.Phase != common.PhaseReady {
-		result.RequeueAfter = config.GetDurationConfigWithDefault(config.RequeueTimeConfigName, config.DefaultRequeueTime)
+	// Keep reconciling after readiness so deletion or drift of optional managed
+	// resources is repaired even when their APIs cannot be watched directly.
+	result := ctrl.Result{
+		RequeueAfter: config.GetDurationConfigWithDefault(config.RequeueTimeConfigName, config.DefaultRequeueTime),
 	}
 	if apiequality.Semantic.DeepEqual(module.Status, desired) {
 		return result, nil
