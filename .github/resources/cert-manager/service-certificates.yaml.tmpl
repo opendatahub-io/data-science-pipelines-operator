@@ -1,0 +1,50 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ds-pipelines-proxy-tls-${DSPA_SERVICE_CA_NAME}
+  namespace: ${DSPA_SERVICE_CA_NAMESPACE}
+spec:
+  secretName: ds-pipelines-proxy-tls-${DSPA_SERVICE_CA_NAME}
+  issuerRef:
+    name: dspa-service-ca-${DSPA_SERVICE_CA_NAME}
+    kind: Issuer
+    group: cert-manager.io
+  dnsNames:
+    - ds-pipeline-${DSPA_SERVICE_CA_NAME}
+    - ds-pipeline-${DSPA_SERVICE_CA_NAME}.${DSPA_SERVICE_CA_NAMESPACE}
+    - ds-pipeline-${DSPA_SERVICE_CA_NAME}.${DSPA_SERVICE_CA_NAMESPACE}.svc
+    - ds-pipeline-${DSPA_SERVICE_CA_NAME}.${DSPA_SERVICE_CA_NAMESPACE}.svc.cluster.local
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ds-pipelines-envoy-proxy-tls-${DSPA_SERVICE_CA_NAME}
+  namespace: ${DSPA_SERVICE_CA_NAMESPACE}
+spec:
+  secretName: ds-pipelines-envoy-proxy-tls-${DSPA_SERVICE_CA_NAME}
+  issuerRef:
+    name: dspa-service-ca-${DSPA_SERVICE_CA_NAME}
+    kind: Issuer
+    group: cert-manager.io
+  dnsNames:
+    - ds-pipeline-md-${DSPA_SERVICE_CA_NAME}
+    - ds-pipeline-md-${DSPA_SERVICE_CA_NAME}.${DSPA_SERVICE_CA_NAMESPACE}
+    - ds-pipeline-md-${DSPA_SERVICE_CA_NAME}.${DSPA_SERVICE_CA_NAMESPACE}.svc
+    - ds-pipeline-md-${DSPA_SERVICE_CA_NAME}.${DSPA_SERVICE_CA_NAMESPACE}.svc.cluster.local
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ds-pipeline-metadata-grpc-tls-certs-${DSPA_SERVICE_CA_NAME}
+  namespace: ${DSPA_SERVICE_CA_NAMESPACE}
+spec:
+  secretName: ds-pipeline-metadata-grpc-tls-certs-${DSPA_SERVICE_CA_NAME}
+  issuerRef:
+    name: dspa-service-ca-${DSPA_SERVICE_CA_NAME}
+    kind: Issuer
+    group: cert-manager.io
+  dnsNames:
+    - ds-pipeline-metadata-grpc-${DSPA_SERVICE_CA_NAME}
+    - ds-pipeline-metadata-grpc-${DSPA_SERVICE_CA_NAME}.${DSPA_SERVICE_CA_NAMESPACE}
+    - ds-pipeline-metadata-grpc-${DSPA_SERVICE_CA_NAME}.${DSPA_SERVICE_CA_NAMESPACE}.svc
+    - ds-pipeline-metadata-grpc-${DSPA_SERVICE_CA_NAME}.${DSPA_SERVICE_CA_NAMESPACE}.svc.cluster.local

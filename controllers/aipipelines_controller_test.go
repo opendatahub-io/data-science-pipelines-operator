@@ -25,6 +25,7 @@ import (
 
 	aipipelinesv1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/aipipelines/v1alpha1"
 	argoassets "github.com/opendatahub-io/data-science-pipelines-operator/config/argo"
+	monitoringassets "github.com/opendatahub-io/data-science-pipelines-operator/config/prometheus"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/odh-platform-utilities/api/common"
 	"github.com/spf13/viper"
@@ -32,11 +33,14 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -218,16 +222,84 @@ func TestAIPipelinesReconcileUpdatesStatus(t *testing.T) {
 	setArgoCRDsEstablished(t, context.Background(), client, "opendatahub", metav1.ConditionTrue)
 	reconciler := &AIPipelinesReconciler{Client: client, APIReader: client, Scheme: scheme, Namespace: "opendatahub"}
 
-	_, err = reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{
+	result, err := reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{
 		Name: aipipelinesv1alpha1.AIPipelinesInstanceName,
 	}})
 	require.NoError(t, err)
+	require.Equal(t, config.DefaultRequeueTime, result.RequeueAfter)
 
 	updated := &aipipelinesv1alpha1.AIPipelines{}
 	require.NoError(t, client.Get(context.Background(), types.NamespacedName{Name: module.Name}, updated))
 	require.Equal(t, common.PhaseReady, updated.Status.Phase)
 	require.Equal(t, "3.6.0", updated.Status.GetPlatformRelease())
 	require.Equal(t, metav1.ConditionTrue, requireModuleCondition(t, updated.Status.Conditions, "PlatformConfigurationValid").Status)
+
+	rule, err := monitoringassets.Rule("opendatahub")
+	require.NoError(t, err)
+	ruleKey := types.NamespacedName{Name: rule.GetName(), Namespace: rule.GetNamespace()}
+	require.NoError(t, client.Get(context.Background(), ruleKey, rule))
+	require.NoError(t, client.Delete(context.Background(), rule))
+
+	result, err = reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{
+		Name: aipipelinesv1alpha1.AIPipelinesInstanceName,
+	}})
+	require.NoError(t, err)
+	require.Equal(t, config.DefaultRequeueTime, result.RequeueAfter)
+	require.NoError(t, client.Get(context.Background(), ruleKey, rule))
+}
+
+func TestAIPipelinesReconcileRequeuesWhileNotReady(t *testing.T) {
+	viper.Set(config.EnableAIPipelinesModuleControllerConfigName, true)
+	t.Cleanup(viper.Reset)
+	t.Setenv(applicationsNamespaceEnv, "opendatahub")
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aipipelinesv1alpha1.AddToScheme(scheme))
+	module := newTestAIPipelines(common.Managed)
+	k8sClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithStatusSubresource(&aipipelinesv1alpha1.AIPipelines{}).
+		WithObjects(module).
+		Build()
+	reconciler := &AIPipelinesReconciler{
+		Client: k8sClient, APIReader: k8sClient, Scheme: scheme, Namespace: "opendatahub",
+	}
+
+	result, err := reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{
+		Name: aipipelinesv1alpha1.AIPipelinesInstanceName,
+	}})
+	require.NoError(t, err)
+	require.Equal(t, config.DefaultRequeueTime, result.RequeueAfter)
+}
+
+func TestAIPipelinesReconcileUpdatesStatusWhenPrometheusRuleCRDWasRemoved(t *testing.T) {
+	viper.Set(config.EnableAIPipelinesModuleControllerConfigName, true)
+	t.Cleanup(viper.Reset)
+	t.Setenv(applicationsNamespaceEnv, "opendatahub")
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aipipelinesv1alpha1.AddToScheme(scheme))
+	module := newTestAIPipelines(common.Managed)
+	baseClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithStatusSubresource(&aipipelinesv1alpha1.AIPipelines{}).
+		WithObjects(module).
+		Build()
+	k8sClient := &prometheusRuleCreateNotFoundClient{Client: baseClient}
+	reconciler := &AIPipelinesReconciler{
+		Client: k8sClient, APIReader: baseClient, Scheme: scheme, Namespace: "opendatahub",
+	}
+
+	result, err := reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{
+		Name: aipipelinesv1alpha1.AIPipelinesInstanceName,
+	}})
+	require.NoError(t, err)
+	require.Equal(t, config.DefaultRequeueTime, result.RequeueAfter)
+
+	updated := &aipipelinesv1alpha1.AIPipelines{}
+	require.NoError(t, baseClient.Get(context.Background(), client.ObjectKeyFromObject(module), updated))
+	require.Equal(t, common.PhaseNotReady, updated.Status.Phase)
+	require.NotEmpty(t, updated.Status.Conditions)
 }
 
 func TestAIPipelinesReconcileIgnoresNonSingleton(t *testing.T) {
@@ -280,4 +352,22 @@ func requireModuleCondition(t *testing.T, conditions []common.Condition, conditi
 	}
 	t.Fatalf("condition %q not found", conditionType)
 	return common.Condition{}
+}
+
+type prometheusRuleCreateNotFoundClient struct {
+	client.Client
+}
+
+func (c *prometheusRuleCreateNotFoundClient) Create(
+	ctx context.Context,
+	object client.Object,
+	opts ...client.CreateOption,
+) error {
+	if object.GetObjectKind().GroupVersionKind().Group == "monitoring.rhobs" &&
+		object.GetObjectKind().GroupVersionKind().Kind == "PrometheusRule" {
+		return apierrors.NewNotFound(schema.GroupResource{
+			Group: "monitoring.rhobs", Resource: "prometheusrules",
+		}, object.GetName())
+	}
+	return c.Client.Create(ctx, object, opts...)
 }

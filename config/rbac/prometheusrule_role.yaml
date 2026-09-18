@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: prometheusrule-manager-role
+  namespace: datasciencepipelinesapplications-controller
+rules:
+- apiGroups:
+  - monitoring.rhobs
+  resources:
+  - prometheusrules
+  verbs:
+  - create

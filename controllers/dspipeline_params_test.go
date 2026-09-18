@@ -35,15 +35,40 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 type Client struct {
 	Clientset kubernetes.Interface
+}
+
+type noKindMatchReader struct{}
+
+func (noKindMatchReader) Get(
+	context.Context,
+	client.ObjectKey,
+	client.Object,
+	...client.GetOption,
+) error {
+	return &apimeta.NoKindMatchError{
+		GroupKind:        schema.GroupKind{Group: "mlflow.opendatahub.io", Kind: "MLflow"},
+		SearchedVersions: []string{"v1"},
+	}
+}
+
+func (noKindMatchReader) List(
+	context.Context,
+	client.ObjectList,
+	...client.ListOption,
+) error {
+	return nil
 }
 
 func TestExtractParams_WithEmptyDSPA(t *testing.T) {
@@ -709,6 +734,19 @@ func TestLookupMLflowEndpoint_NotFound(t *testing.T) {
 	_, err := lookupMLflowEndpoint(context.Background(), kc, "dsp-test", logr.Discard())
 	require.Error(t, err)
 	require.True(t, apierrs.IsNotFound(err))
+}
+
+func TestLookupMLflowEndpoint_CRDNotInstalled(t *testing.T) {
+	t.Parallel()
+
+	endpoint, err := lookupMLflowEndpoint(
+		context.Background(),
+		noKindMatchReader{},
+		"dsp-test",
+		logr.Discard(),
+	)
+	require.NoError(t, err)
+	require.Empty(t, endpoint)
 }
 
 func TestLookupMLflowEndpoint_MissingURL(t *testing.T) {

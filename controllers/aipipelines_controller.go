@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const (
@@ -62,10 +63,11 @@ type platformConfigObservation struct {
 // expose readiness through the resources this reconciler observes.
 type AIPipelinesReconciler struct {
 	client.Client
-	APIReader client.Reader
-	Scheme    *runtime.Scheme
-	Log       logr.Logger
-	Namespace string
+	APIReader      client.Reader
+	Scheme         *runtime.Scheme
+	Log            logr.Logger
+	Namespace      string
+	CRDWatchCaches CRDWatchCaches
 }
 
 // +kubebuilder:rbac:groups=components.platform.opendatahub.io,resources=aipipelines,verbs=get;list;watch
@@ -82,6 +84,11 @@ func (r *AIPipelinesReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if err := r.Get(ctx, req.NamespacedName, module); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+	if module.DeletionTimestamp.IsZero() {
+		if err := r.reconcilePrometheusRule(ctx, module); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
 
 	reader := r.APIReader
 	if reader == nil {
@@ -91,8 +98,13 @@ func (r *AIPipelinesReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	argo := observeArgoLifecycle(ctx, reader, r.Namespace, module.Spec.ArgoWorkflowsControllersManagementState(), module)
 	platformConfig := observePlatformConfig(ctx, reader)
 	desired := buildAIPipelinesStatus(module, dspo, argo, platformConfig)
+	// Keep reconciling after readiness so deletion or drift of optional managed
+	// resources is repaired even when their APIs cannot be watched directly.
+	result := ctrl.Result{
+		RequeueAfter: config.GetDurationConfigWithDefault(config.RequeueTimeConfigName, config.DefaultRequeueTime),
+	}
 	if apiequality.Semantic.DeepEqual(module.Status, desired) {
-		return ctrl.Result{}, nil
+		return result, nil
 	}
 
 	updated := module.DeepCopy()
@@ -101,12 +113,27 @@ func (r *AIPipelinesReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, fmt.Errorf("update AIPipelines status: %w", err)
 	}
 
-	return ctrl.Result{}, nil
+	return result, nil
 }
 
 func (r *AIPipelinesReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	enqueueModule := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, _ client.Object) []reconcile.Request {
+		return []reconcile.Request{{NamespacedName: types.NamespacedName{
+			Name: aipipelinesv1alpha1.AIPipelinesInstanceName,
+		}}}
+	})
+	prometheusRuleCRDCache, ok := r.CRDWatchCaches[prometheusRuleCRDName]
+	if !ok {
+		return fmt.Errorf("CRD watch cache for %s is not configured", prometheusRuleCRDName)
+	}
+
 	b := ctrl.NewControllerManagedBy(mgr).
 		For(&aipipelinesv1alpha1.AIPipelines{}).
+		WatchesRawSource(source.Kind[client.Object](
+			prometheusRuleCRDCache,
+			customResourceDefinition(),
+			enqueueModule,
+		)).
 		Watches(
 			&appsv1.Deployment{},
 			handler.EnqueueRequestsFromMapFunc(func(_ context.Context, object client.Object) []reconcile.Request {
@@ -129,7 +156,7 @@ func (r *AIPipelinesReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				}}}
 			}),
 		)
-	if err := watchArgoAssets(b, r.Namespace); err != nil {
+	if err := watchArgoAssets(b, r.Namespace, r.CRDWatchCaches); err != nil {
 		return err
 	}
 	return b.Complete(r)

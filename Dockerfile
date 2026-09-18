@@ -20,6 +20,7 @@ COPY tls_profile.go tls_profile.go
 COPY api/ api/
 COPY controllers/ controllers/
 COPY config/argo/ config/argo/
+COPY config/prometheus/ config/prometheus/
 
 # Build
 USER root
