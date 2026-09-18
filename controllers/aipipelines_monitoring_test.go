@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 func TestReconcilePrometheusRuleCreatesModuleOwnedRule(t *testing.T) {
@@ -81,4 +82,65 @@ func TestReconcilePrometheusRuleAdoptsAndRepairsExistingRule(t *testing.T) {
 	require.True(t, found)
 	require.NotEmpty(t, groups)
 	require.Len(t, updated.GetOwnerReferences(), 1)
+	require.Equal(t, module.UID, updated.GetOwnerReferences()[0].UID)
+}
+
+func TestReconcilePrometheusRuleRepairsRuleAlreadyOwnedByModule(t *testing.T) {
+	ctx := context.Background()
+	scheme := runtime.NewScheme()
+	require.NoError(t, aipipelinesv1alpha1.AddToScheme(scheme))
+	module := &aipipelinesv1alpha1.AIPipelines{
+		ObjectMeta: metav1.ObjectMeta{Name: aipipelinesv1alpha1.AIPipelinesInstanceName, UID: "module-uid"},
+	}
+	existing, err := monitoringassets.Rule("opendatahub")
+	require.NoError(t, err)
+	require.NoError(t, controllerutil.SetControllerReference(module, existing, scheme))
+	require.NoError(t, unstructured.SetNestedSlice(existing.Object, []interface{}{}, "spec", "groups"))
+	k8sClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(module, existing).Build()
+	reconciler := &AIPipelinesReconciler{Client: k8sClient, Scheme: scheme, Namespace: "opendatahub"}
+
+	require.NoError(t, reconciler.reconcilePrometheusRule(ctx, module))
+
+	updated := &unstructured.Unstructured{}
+	updated.SetGroupVersionKind(existing.GroupVersionKind())
+	require.NoError(t, k8sClient.Get(ctx, client.ObjectKeyFromObject(existing), updated))
+	groups, found, err := unstructured.NestedSlice(updated.Object, "spec", "groups")
+	require.NoError(t, err)
+	require.True(t, found)
+	require.NotEmpty(t, groups)
+	require.True(t, metav1.IsControlledBy(updated, module))
+}
+
+func TestReconcilePrometheusRuleRefusesForeignControllerOwner(t *testing.T) {
+	ctx := context.Background()
+	scheme := runtime.NewScheme()
+	require.NoError(t, aipipelinesv1alpha1.AddToScheme(scheme))
+	module := &aipipelinesv1alpha1.AIPipelines{
+		ObjectMeta: metav1.ObjectMeta{Name: aipipelinesv1alpha1.AIPipelinesInstanceName, UID: "module-uid"},
+	}
+	existing, err := monitoringassets.Rule("opendatahub")
+	require.NoError(t, err)
+	require.NoError(t, unstructured.SetNestedSlice(existing.Object, []interface{}{}, "spec", "groups"))
+	isController := true
+	existing.SetOwnerReferences([]metav1.OwnerReference{{
+		APIVersion: "example.io/v1",
+		Kind:       "ForeignController",
+		Name:       "foreign-owner",
+		UID:        "foreign-uid",
+		Controller: &isController,
+	}})
+	k8sClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(module, existing).Build()
+	reconciler := &AIPipelinesReconciler{Client: k8sClient, Scheme: scheme, Namespace: "opendatahub"}
+
+	err = reconciler.reconcilePrometheusRule(ctx, module)
+	require.ErrorContains(t, err, "foreign-owner")
+
+	unchanged := &unstructured.Unstructured{}
+	unchanged.SetGroupVersionKind(existing.GroupVersionKind())
+	require.NoError(t, k8sClient.Get(ctx, client.ObjectKeyFromObject(existing), unchanged))
+	require.EqualValues(t, "foreign-uid", metav1.GetControllerOf(unchanged).UID)
+	groups, found, err := unstructured.NestedSlice(unchanged.Object, "spec", "groups")
+	require.NoError(t, err)
+	require.True(t, found)
+	require.Empty(t, groups)
 }

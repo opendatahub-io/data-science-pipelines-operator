@@ -25,6 +25,7 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -33,7 +34,9 @@ import (
 
 const prometheusRuleCRDName = "prometheusrules.monitoring.rhobs"
 
-// +kubebuilder:rbac:groups=monitoring.rhobs,resources=prometheusrules,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,resourceNames=prometheusrules.monitoring.rhobs,verbs=list;watch
+// +kubebuilder:rbac:groups=monitoring.rhobs,resources=prometheusrules,verbs=create
+// +kubebuilder:rbac:groups=monitoring.rhobs,resources=prometheusrules,resourceNames=data-science-pipelines-operator-datasciencepipelines-prometheusrules,verbs=get;update;patch
 
 // reconcilePrometheusRule keeps monitoring ownership inside DSPO. The rule is
 // optional when the monitoring.rhobs API is not installed and does not gate
@@ -58,7 +61,8 @@ func (r *AIPipelinesReconciler) reconcilePrometheusRule(
 	}
 	err = reader.Get(ctx, client.ObjectKeyFromObject(desired), current)
 	if apierrors.IsNotFound(err) {
-		if err := r.Create(ctx, desired); err != nil && !meta.IsNoMatchError(err) {
+		if err := r.Create(ctx, desired); err != nil &&
+			!meta.IsNoMatchError(err) && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("create AIPipelines PrometheusRule: %w", err)
 		}
 		return nil
@@ -68,6 +72,14 @@ func (r *AIPipelinesReconciler) reconcilePrometheusRule(
 	}
 	if err != nil {
 		return fmt.Errorf("get AIPipelines PrometheusRule: %w", err)
+	}
+
+	controller := metav1.GetControllerOf(current)
+	if controller != nil && controller.UID != module.UID {
+		return fmt.Errorf(
+			"PrometheusRule %q is controlled by %s %q with UID %q",
+			current.GetName(), controller.Kind, controller.Name, controller.UID,
+		)
 	}
 
 	updated := current.DeepCopy()
