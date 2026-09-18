@@ -40,19 +40,19 @@ var assetNames = []string{
 	"role.argo.yaml",
 	"rolebinding.argo-binding.yaml",
 	"serviceaccount.argo.yaml",
-	"crd.applications.yaml",
-	"crd.clusterworkflowtemplates.yaml",
-	"crd.cronworkflows.yaml",
-	"crd.viewers.yaml",
-	"crd.workflowartifactgctasks.yaml",
-	"crd.workfloweventbinding.yaml",
-	"crd.workflows.yaml",
-	"crd.workflowtaskresult.yaml",
-	"crd.workflowtaskset.yaml",
-	"crd.workflowtemplate.yaml",
+	"crds/crd.applications.yaml",
+	"crds/crd.clusterworkflowtemplates.yaml",
+	"crds/crd.cronworkflows.yaml",
+	"crds/crd.viewers.yaml",
+	"crds/crd.workflowartifactgctasks.yaml",
+	"crds/crd.workfloweventbinding.yaml",
+	"crds/crd.workflows.yaml",
+	"crds/crd.workflowtaskresult.yaml",
+	"crds/crd.workflowtaskset.yaml",
+	"crds/crd.workflowtemplate.yaml",
 }
 
-//go:embed *.yaml
+//go:embed *.yaml crds/*.yaml
 var assets embed.FS
 
 // Objects returns a fresh copy of every shared Argo manifest.
