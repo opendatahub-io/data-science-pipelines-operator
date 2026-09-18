@@ -17,6 +17,8 @@ limitations under the License.
 package argo //nolint:testpackage // asset count intentionally validates the private embedded manifest list
 
 import (
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -47,4 +49,14 @@ func TestObjects(t *testing.T) {
 	}
 	require.True(t, foundWorkflowCRD)
 	require.True(t, foundArgoRole)
+}
+
+func TestModuleOverlaysInstallArgoCRDs(t *testing.T) {
+	for _, overlay := range []string{"odh", "rhoai"} {
+		t.Run(overlay, func(t *testing.T) {
+			data, err := os.ReadFile("../overlays/" + overlay + "/dspo/kustomization.yaml")
+			require.NoError(t, err)
+			require.Contains(t, strings.Split(string(data), "\n"), "- ../../../argo/crds")
+		})
+	}
 }

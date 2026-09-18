@@ -207,6 +207,15 @@ rules:
   - patch
   - update
 - apiGroups:
+  - components.platform.opendatahub.io
+  resourceNames:
+  - default-datasciencepipelines
+  resources:
+  - datasciencepipelines
+  verbs:
+  - delete
+  - get
+- apiGroups:
   - datasciencepipelinesapplications.opendatahub.io
   resources:
   - datasciencepipelinesapplications

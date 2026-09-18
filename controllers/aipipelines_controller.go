@@ -72,6 +72,7 @@ type AIPipelinesReconciler struct {
 
 // +kubebuilder:rbac:groups=components.platform.opendatahub.io,resources=aipipelines,verbs=get;list;watch
 // +kubebuilder:rbac:groups=components.platform.opendatahub.io,resources=aipipelines/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=components.platform.opendatahub.io,resources=datasciencepipelines,resourceNames=default-datasciencepipelines,verbs=get;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch
 
@@ -98,6 +99,11 @@ func (r *AIPipelinesReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	argo := observeArgoLifecycle(ctx, reader, r.Namespace, module.Spec.ArgoWorkflowsControllersManagementState(), module)
 	platformConfig := observePlatformConfig(ctx, reader)
 	desired := buildAIPipelinesStatus(module, dspo, argo, platformConfig)
+	if desired.Phase == common.PhaseReady {
+		if err := cleanupLegacyDataSciencePipelines(ctx, r.Client); err != nil {
+			return ctrl.Result{}, fmt.Errorf("clean up legacy DataSciencePipelines after module handoff: %w", err)
+		}
+	}
 	// Keep reconciling after readiness so deletion or drift of optional managed
 	// resources is repaired even when their APIs cannot be watched directly.
 	result := ctrl.Result{
@@ -219,11 +225,11 @@ func buildAIPipelinesStatus(
 		moduleCondition(module, common.ConditionType(conditionTypeArgoReady), argoStatus, argoReason, argoMessage),
 	}
 
-	// Do not acknowledge a newly written platform ConfigMap until the replacement
-	// DSPO process is running with the same injected platform version.
+	// Acknowledge the live platform version after all module manifests have been
+	// applied successfully. The ConfigMap is watched, so platform upgrades do not
+	// require restarting DSPO with a newly injected version.
 	if provisioningStatus == metav1.ConditionTrue &&
-		platformConfig.Version != "" &&
-		platformConfig.Version == config.ResolvedPlatformVersion() {
+		platformConfig.Version != "" {
 		status.SetPlatformRelease(platformConfig.Version)
 	} else if previousRelease := module.Status.GetPlatformRelease(); previousRelease != "" {
 		status.SetPlatformRelease(previousRelease)
