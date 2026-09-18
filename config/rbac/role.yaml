@@ -207,6 +207,13 @@ rules:
   - patch
   - update
 - apiGroups:
+  - components.platform.opendatahub.io
+  resources:
+  - datasciencepipelines
+  verbs:
+  - delete
+  - get
+- apiGroups:
   - datasciencepipelinesapplications.opendatahub.io
   resources:
   - datasciencepipelinesapplications

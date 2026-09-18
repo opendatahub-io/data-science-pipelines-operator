@@ -279,12 +279,34 @@ func TestAIPipelinesArgoReconcileFinalizesNonSingleton(t *testing.T) {
 	require.NoError(t, k8sClient.Get(ctx, client.ObjectKeyFromObject(managedConfigMap), managedConfigMap))
 }
 
+func TestAIPipelinesArgoReconcileFinalizationCleansLegacyDataSciencePipelines(t *testing.T) {
+	ctx := context.Background()
+	reconciler, k8sClient, module := newArgoTestReconciler(t, common.Managed)
+	module.Finalizers = []string{argoLifecycleFinalizer}
+	require.NoError(t, k8sClient.Update(ctx, module))
+
+	legacy := newLegacyDataSciencePipelines()
+	legacy.SetOwnerReferences([]metav1.OwnerReference{{
+		APIVersion: "datasciencecluster.opendatahub.io/v2",
+		Kind:       "DataScienceCluster",
+		Name:       "default-dsc",
+	}})
+	require.NoError(t, k8sClient.Create(ctx, legacy))
+	require.NoError(t, k8sClient.Delete(ctx, module))
+
+	_, err := reconciler.Reconcile(ctx, moduleRequest())
+	require.NoError(t, err)
+	require.True(t, apierrors.IsNotFound(k8sClient.Get(ctx, client.ObjectKeyFromObject(legacy), newLegacyDataSciencePipelines())))
+	require.True(t, apierrors.IsNotFound(k8sClient.Get(ctx, client.ObjectKeyFromObject(module), &aipipelinesv1alpha1.AIPipelines{})))
+}
+
 func newArgoTestReconciler(t *testing.T, state common.ManagementState) (*AIPipelinesArgoReconciler, client.Client, *aipipelinesv1alpha1.AIPipelines) {
 	t.Helper()
 	scheme := runtime.NewScheme()
 	require.NoError(t, clientgoscheme.AddToScheme(scheme))
 	require.NoError(t, apiextensionsv1.AddToScheme(scheme))
 	require.NoError(t, aipipelinesv1alpha1.AddToScheme(scheme))
+	scheme.AddKnownTypeWithName(legacyDataSciencePipelinesGVK, &unstructured.Unstructured{})
 	module := newTestAIPipelines(state)
 	objects := []client.Object{module}
 	assets, err := argoassets.Objects("opendatahub")

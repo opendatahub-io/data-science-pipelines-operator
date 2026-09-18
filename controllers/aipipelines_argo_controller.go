@@ -115,6 +115,9 @@ func (r *AIPipelinesArgoReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		if !controllerutil.ContainsFinalizer(module, argoLifecycleFinalizer) {
 			return ctrl.Result{}, nil
 		}
+		if err := cleanupLegacyDataSciencePipelines(ctx, r.Client); err != nil {
+			return ctrl.Result{}, fmt.Errorf("clean up legacy DataSciencePipelines during AIPipelines finalization: %w", err)
+		}
 		pending, err := r.removeControllerAssets(ctx, assets)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("clean shared Argo assets during AIPipelines finalization: %w", err)
