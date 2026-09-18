@@ -90,10 +90,11 @@ legacy Argo environment setting to `Removed` while the module requests `Managed`
 This verifies that the module spec is authoritative. Shared Argo resources are
 installed by DSPO, not preinstalled by the setup script.
 
-The Kind workflow now has standalone and modular jobs. Failures propagate to
-the job result and export Kind diagnostics. Use `--openshift-ci --modular` with
-the existing `--endpoint-type route` option for OpenShift endpoint validation;
-the module-specific fixture itself uses internal Services.
+The modular Kind workflow mirrors the existing standalone and BYO Argo workflow
+layout without changing their jobs. Failures propagate to the modular job result
+and export Kind diagnostics. Use `--openshift-ci --modular` with the existing
+`--endpoint-type route` option for OpenShift endpoint validation; the
+module-specific fixture itself uses internal Services.
 
 ## Upgrade and downgrade
 
@@ -113,11 +114,11 @@ make aipipelines-upgrade-test
 ```
 
 Inputs are mandatory for this target; missing inputs fail rather than skip.
-For CI, dispatch the Kind workflow with `baseline-image`, `baseline-version`,
-and `candidate-version`. Its modular job runs the same test after the lifecycle
-suite. Routine PR jobs run the lifecycle suite; they do not claim to verify an
-upgrade without a selected baseline. The original candidate pod template is
-restored even on failure.
+For CI, dispatch `kind-integration-modular.yml` with `baseline-image`,
+`baseline-version`, and `candidate-version`. It runs the same test after the
+lifecycle suite. Routine PR jobs run the lifecycle suite; they do not claim to
+verify an upgrade without a selected baseline. The original candidate pod
+template is restored even on failure.
 
 ## Sign-off evidence
 
