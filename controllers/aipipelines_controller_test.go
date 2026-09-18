@@ -25,6 +25,7 @@ import (
 
 	aipipelinesv1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/aipipelines/v1alpha1"
 	argoassets "github.com/opendatahub-io/data-science-pipelines-operator/config/argo"
+	monitoringassets "github.com/opendatahub-io/data-science-pipelines-operator/config/prometheus"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/odh-platform-utilities/api/common"
 	"github.com/spf13/viper"
@@ -225,13 +226,26 @@ func TestAIPipelinesReconcileUpdatesStatus(t *testing.T) {
 		Name: aipipelinesv1alpha1.AIPipelinesInstanceName,
 	}})
 	require.NoError(t, err)
-	require.Zero(t, result.RequeueAfter)
+	require.Equal(t, config.DefaultRequeueTime, result.RequeueAfter)
 
 	updated := &aipipelinesv1alpha1.AIPipelines{}
 	require.NoError(t, client.Get(context.Background(), types.NamespacedName{Name: module.Name}, updated))
 	require.Equal(t, common.PhaseReady, updated.Status.Phase)
 	require.Equal(t, "3.6.0", updated.Status.GetPlatformRelease())
 	require.Equal(t, metav1.ConditionTrue, requireModuleCondition(t, updated.Status.Conditions, "PlatformConfigurationValid").Status)
+
+	rule, err := monitoringassets.Rule("opendatahub")
+	require.NoError(t, err)
+	ruleKey := types.NamespacedName{Name: rule.GetName(), Namespace: rule.GetNamespace()}
+	require.NoError(t, client.Get(context.Background(), ruleKey, rule))
+	require.NoError(t, client.Delete(context.Background(), rule))
+
+	result, err = reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{
+		Name: aipipelinesv1alpha1.AIPipelinesInstanceName,
+	}})
+	require.NoError(t, err)
+	require.Equal(t, config.DefaultRequeueTime, result.RequeueAfter)
+	require.NoError(t, client.Get(context.Background(), ruleKey, rule))
 }
 
 func TestAIPipelinesReconcileRequeuesWhileNotReady(t *testing.T) {

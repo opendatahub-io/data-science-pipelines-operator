@@ -35,7 +35,6 @@ import (
 const prometheusRuleCRDName = "prometheusrules.monitoring.rhobs"
 
 // +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,resourceNames=prometheusrules.monitoring.rhobs,verbs=list;watch
-// +kubebuilder:rbac:groups=monitoring.rhobs,resources=prometheusrules,verbs=create
 // +kubebuilder:rbac:groups=monitoring.rhobs,resources=prometheusrules,resourceNames=data-science-pipelines-operator-datasciencepipelines-prometheusrules,verbs=get;update;patch
 
 // reconcilePrometheusRule keeps monitoring ownership inside DSPO. The rule is
