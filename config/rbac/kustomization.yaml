@@ -8,6 +8,8 @@ resources:
 - leader_election_role.yaml
 - role_binding.yaml
 - role.yaml
+- prometheusrule_role.yaml
+- prometheusrule_role_binding.yaml
 - service_account.yaml
 - argo_role.yaml
 - argo_role_binding.yaml
