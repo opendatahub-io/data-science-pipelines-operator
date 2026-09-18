@@ -22,13 +22,4 @@ resources:
 - serviceaccount.argo.yaml
 
 # CRDs only needed for PNS executors
-- crd.applications.yaml
-- crd.clusterworkflowtemplates.yaml
-- crd.cronworkflows.yaml
-- crd.viewers.yaml
-- crd.workflowartifactgctasks.yaml
-- crd.workfloweventbinding.yaml
-- crd.workflows.yaml
-- crd.workflowtaskresult.yaml
-- crd.workflowtaskset.yaml
-- crd.workflowtemplate.yaml
+- crds
