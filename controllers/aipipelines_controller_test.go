@@ -35,6 +35,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -181,7 +182,14 @@ func TestAIPipelinesReconcileUpdatesStatus(t *testing.T) {
 	require.NoError(t, clientgoscheme.AddToScheme(scheme))
 	require.NoError(t, apiextensionsv1.AddToScheme(scheme))
 	require.NoError(t, aipipelinesv1alpha1.AddToScheme(scheme))
+	scheme.AddKnownTypeWithName(legacyDataSciencePipelinesGVK, &unstructured.Unstructured{})
 	module := newTestAIPipelines(common.Managed)
+	legacy := newLegacyDataSciencePipelines()
+	legacy.SetOwnerReferences([]metav1.OwnerReference{{
+		APIVersion: "datasciencecluster.opendatahub.io/v2",
+		Kind:       "DataScienceCluster",
+		Name:       "default-dsc",
+	}})
 	dspoDeployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{Name: dspoDeploymentName, Namespace: "opendatahub", Generation: 1},
 		Status: appsv1.DeploymentStatus{
@@ -193,10 +201,10 @@ func TestAIPipelinesReconcileUpdatesStatus(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: platformConfigMapName, Namespace: "opendatahub"},
 		Data:       map[string]string{platformVersionKey: "3.6.0"},
 	}
-	client := fake.NewClientBuilder().
+	k8sClient := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithStatusSubresource(&aipipelinesv1alpha1.AIPipelines{}).
-		WithObjects(module, dspoDeployment, platformConfig).
+		WithObjects(module, dspoDeployment, platformConfig, legacy).
 		Build()
 	assets, err := argoassets.Objects("opendatahub")
 	require.NoError(t, err)
@@ -217,10 +225,10 @@ func TestAIPipelinesReconcileUpdatesStatus(t *testing.T) {
 		if asset.GetKind() != "CustomResourceDefinition" {
 			require.NoError(t, controllerutil.SetControllerReference(module, asset, scheme))
 		}
-		require.NoError(t, client.Create(context.Background(), asset))
+		require.NoError(t, k8sClient.Create(context.Background(), asset))
 	}
-	setArgoCRDsEstablished(t, context.Background(), client, "opendatahub", metav1.ConditionTrue)
-	reconciler := &AIPipelinesReconciler{Client: client, APIReader: client, Scheme: scheme, Namespace: "opendatahub"}
+	setArgoCRDsEstablished(t, context.Background(), k8sClient, "opendatahub", metav1.ConditionTrue)
+	reconciler := &AIPipelinesReconciler{Client: k8sClient, APIReader: k8sClient, Scheme: scheme, Namespace: "opendatahub"}
 
 	result, err := reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{
 		Name: aipipelinesv1alpha1.AIPipelinesInstanceName,
@@ -229,23 +237,24 @@ func TestAIPipelinesReconcileUpdatesStatus(t *testing.T) {
 	require.Equal(t, config.DefaultRequeueTime, result.RequeueAfter)
 
 	updated := &aipipelinesv1alpha1.AIPipelines{}
-	require.NoError(t, client.Get(context.Background(), types.NamespacedName{Name: module.Name}, updated))
+	require.NoError(t, k8sClient.Get(context.Background(), types.NamespacedName{Name: module.Name}, updated))
 	require.Equal(t, common.PhaseReady, updated.Status.Phase)
 	require.Equal(t, "3.6.0", updated.Status.GetPlatformRelease())
 	require.Equal(t, metav1.ConditionTrue, requireModuleCondition(t, updated.Status.Conditions, "PlatformConfigurationValid").Status)
+	require.True(t, apierrors.IsNotFound(k8sClient.Get(context.Background(), client.ObjectKeyFromObject(legacy), newLegacyDataSciencePipelines())))
 
 	rule, err := monitoringassets.Rule("opendatahub")
 	require.NoError(t, err)
 	ruleKey := types.NamespacedName{Name: rule.GetName(), Namespace: rule.GetNamespace()}
-	require.NoError(t, client.Get(context.Background(), ruleKey, rule))
-	require.NoError(t, client.Delete(context.Background(), rule))
+	require.NoError(t, k8sClient.Get(context.Background(), ruleKey, rule))
+	require.NoError(t, k8sClient.Delete(context.Background(), rule))
 
 	result, err = reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{
 		Name: aipipelinesv1alpha1.AIPipelinesInstanceName,
 	}})
 	require.NoError(t, err)
 	require.Equal(t, config.DefaultRequeueTime, result.RequeueAfter)
-	require.NoError(t, client.Get(context.Background(), ruleKey, rule))
+	require.NoError(t, k8sClient.Get(context.Background(), ruleKey, rule))
 }
 
 func TestAIPipelinesReconcileRequeuesWhileNotReady(t *testing.T) {
@@ -255,11 +264,18 @@ func TestAIPipelinesReconcileRequeuesWhileNotReady(t *testing.T) {
 
 	scheme := runtime.NewScheme()
 	require.NoError(t, aipipelinesv1alpha1.AddToScheme(scheme))
+	scheme.AddKnownTypeWithName(legacyDataSciencePipelinesGVK, &unstructured.Unstructured{})
 	module := newTestAIPipelines(common.Managed)
+	legacy := newLegacyDataSciencePipelines()
+	legacy.SetOwnerReferences([]metav1.OwnerReference{{
+		APIVersion: "datasciencecluster.opendatahub.io/v2",
+		Kind:       "DataScienceCluster",
+		Name:       "default-dsc",
+	}})
 	k8sClient := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithStatusSubresource(&aipipelinesv1alpha1.AIPipelines{}).
-		WithObjects(module).
+		WithObjects(module, legacy).
 		Build()
 	reconciler := &AIPipelinesReconciler{
 		Client: k8sClient, APIReader: k8sClient, Scheme: scheme, Namespace: "opendatahub",
@@ -270,6 +286,7 @@ func TestAIPipelinesReconcileRequeuesWhileNotReady(t *testing.T) {
 	}})
 	require.NoError(t, err)
 	require.Equal(t, config.DefaultRequeueTime, result.RequeueAfter)
+	require.NoError(t, k8sClient.Get(context.Background(), client.ObjectKeyFromObject(legacy), newLegacyDataSciencePipelines()))
 }
 
 func TestAIPipelinesReconcileUpdatesStatusWhenPrometheusRuleCRDWasRemoved(t *testing.T) {
