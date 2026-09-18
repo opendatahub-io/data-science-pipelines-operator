@@ -208,6 +208,8 @@ rules:
   - update
 - apiGroups:
   - components.platform.opendatahub.io
+  resourceNames:
+  - default-datasciencepipelines
   resources:
   - datasciencepipelines
   verbs:
