@@ -65,6 +65,8 @@ type DSPAParams struct {
 	APIServerServiceName                  string
 	APIServerConfigHash                   string
 	KubeRBACProxy                         string
+	TLSMinVersion                         string
+	TLSCipherSuites                       string
 	SampleConfigJSON                      string
 	ScheduledWorkflow                     *dspa.ScheduledWorkflow
 	ScheduledWorkflowDefaultResourceName  string
