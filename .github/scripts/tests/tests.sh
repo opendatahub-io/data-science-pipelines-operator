@@ -119,7 +119,7 @@ enable_aipipelines_module() {
   fi
   # Fail on an existing singleton/handshake: these tests own their fixtures.
   kubectl wait crd/aipipelines.components.platform.opendatahub.io --for=condition=Established --timeout=60s
-  kubectl create -f "${GIT_WORKSPACE}/.github/resources/aipipelines/module.yaml"
+  ( cd "${GIT_WORKSPACE}/.github/resources/aipipelines" && kubectl create -k . )
   kubectl set env -n "$OPENDATAHUB_NAMESPACE" deployment/data-science-pipelines-operator-controller-manager \
     DSPO_ENABLEAIPIPELINESMODULECONTROLLER=true \
     APPLICATIONS_NAMESPACE="$OPENDATAHUB_NAMESPACE" \
