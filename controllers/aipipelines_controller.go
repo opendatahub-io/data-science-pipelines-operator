@@ -72,7 +72,7 @@ type AIPipelinesReconciler struct {
 
 // +kubebuilder:rbac:groups=components.platform.opendatahub.io,resources=aipipelines,verbs=get;list;watch
 // +kubebuilder:rbac:groups=components.platform.opendatahub.io,resources=aipipelines/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=components.platform.opendatahub.io,resources=datasciencepipelines,verbs=get;delete
+// +kubebuilder:rbac:groups=components.platform.opendatahub.io,resources=datasciencepipelines,resourceNames=default-datasciencepipelines,verbs=get;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch
 
