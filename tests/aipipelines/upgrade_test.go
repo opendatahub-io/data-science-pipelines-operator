@@ -45,7 +45,16 @@ func TestAIPipelinesUpgradeDowngrade(t *testing.T) {
 	baselineImage := os.Getenv("AIPIPELINES_BASELINE_IMAGE")
 	baselineVersion := os.Getenv("AIPIPELINES_BASELINE_VERSION")
 	candidateVersion := os.Getenv("AIPIPELINES_CANDIDATE_VERSION")
+	baselineRelatedImagesJSON := os.Getenv("AIPIPELINES_BASELINE_RELATED_IMAGES")
 	require.NotEmpty(t, baselineImage)
+	require.NotEmpty(t, baselineRelatedImagesJSON)
+	baselineRelatedImages := map[string]string{}
+	require.NoError(t, json.Unmarshal([]byte(baselineRelatedImagesJSON), &baselineRelatedImages), "AIPIPELINES_BASELINE_RELATED_IMAGES must be a JSON object")
+	require.NotEmpty(t, baselineRelatedImages)
+	for name, image := range baselineRelatedImages {
+		require.True(t, strings.HasPrefix(name, "RELATED_IMAGE_"), "unsupported baseline image variable %q", name)
+		require.NotEmpty(t, image, "baseline image %s is empty", name)
+	}
 	oldVersion, err := version.ParseSemantic(baselineVersion)
 	require.NoError(t, err, "set AIPIPELINES_BASELINE_VERSION")
 	newVersion, err := version.ParseSemantic(candidateVersion)
@@ -63,17 +72,38 @@ func TestAIPipelinesUpgradeDowngrade(t *testing.T) {
 	}
 	require.NotEmpty(t, candidateImage)
 	require.NotEqual(t, baselineImage, candidateImage, "upgrade must roll between distinct operator images")
+	candidateRelatedImages := make(map[string]string, len(baselineRelatedImages))
+	for _, container := range original.Spec.Template.Spec.Containers {
+		if container.Name != "manager" {
+			continue
+		}
+		for _, env := range container.Env {
+			if _, configured := baselineRelatedImages[env.Name]; configured {
+				require.Empty(t, env.ValueFrom, "candidate related image %s must be a literal value", env.Name)
+				candidateRelatedImages[env.Name] = env.Value
+			}
+		}
+	}
+	for name, baseline := range baselineRelatedImages {
+		candidate, found := candidateRelatedImages[name]
+		require.True(t, found, "candidate operator Deployment has no %s", name)
+		require.NotEmpty(t, candidate, "candidate image %s is empty", name)
+		require.NotEqual(t, baseline, candidate, "baseline and candidate %s must differ", name)
+	}
 	t.Cleanup(func() {
-		assert.NoError(t, retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		if !assert.NoError(t, retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 			current := &appsv1.Deployment{}
 			if err := f.client.Get(f.ctx, operatorKey, current); err != nil {
 				return err
 			}
 			current.Spec.Template = *original.Spec.Template.DeepCopy()
 			return f.client.Update(f.ctx, current)
-		}))
+		})) {
+			return
+		}
+		f.waitDeployment(f.applications, operatorName)
 	})
-	roll := func(image, release string) {
+	roll := func(image, release string, relatedImages map[string]string) {
 		t.Helper()
 		f.setVersion(release)
 		require.NoError(t, retry.RetryOnConflict(retry.DefaultBackoff, func() error {
@@ -87,6 +117,16 @@ func TestAIPipelinesUpgradeDowngrade(t *testing.T) {
 					continue
 				}
 				container.Image = image
+				for name, relatedImage := range relatedImages {
+					found := false
+					for j := range container.Env {
+						if container.Env[j].Name == name {
+							container.Env[j] = corev1.EnvVar{Name: name, Value: relatedImage}
+							found = true
+						}
+					}
+					require.True(t, found, "manager container has no %s", name)
+				}
 				// Early modular releases read this fallback. Current releases must
 				// also consume the live handshake (tested separately below).
 				found := false
@@ -107,8 +147,9 @@ func TestAIPipelinesUpgradeDowngrade(t *testing.T) {
 	}
 
 	t.Log("install baseline and write database, object-store, and workflow sentinels")
-	roll(baselineImage, baselineVersion)
+	roll(baselineImage, baselineVersion, baselineRelatedImages)
 	f.deployDSPA()
+	baselineOperandImages := f.operandImages()
 	data := f.apiRequest("POST", "/experiments", strings.NewReader(`{"display_name":"module-upgrade-sentinel","description":"must survive upgrade and downgrade"}`))
 	var experiment struct {
 		ID   string `json:"experiment_id"`
@@ -177,8 +218,11 @@ func TestAIPipelinesUpgradeDowngrade(t *testing.T) {
 	}
 	assertData()
 	t.Logf("upgrade %s -> %s", baselineImage, candidateImage)
-	roll(candidateImage, candidateVersion)
+	roll(candidateImage, candidateVersion, candidateRelatedImages)
+	f.waitSampleVersion(candidateVersion)
 	assertData()
+	candidateOperandImages := f.operandImages()
+	require.NotEqual(t, baselineOperandImages, candidateOperandImages, "no DSPA Deployment image changed during upgrade")
 	f.runWorkflow("run-after-upgrade")
 	// A ConfigMap-only transition must reach both the module status and DSPA
 	// metadata without a restart or a DSPA spec edit.
@@ -186,7 +230,9 @@ func TestAIPipelinesUpgradeDowngrade(t *testing.T) {
 	f.waitModule(common.Managed, candidateVersion+"-handshake-test")
 	f.waitSampleVersion(candidateVersion + "-handshake-test")
 	t.Logf("downgrade %s -> %s", candidateImage, baselineImage)
-	roll(baselineImage, baselineVersion)
+	roll(baselineImage, baselineVersion, baselineRelatedImages)
+	f.waitSampleVersion(baselineVersion)
 	assertData()
+	require.Equal(t, baselineOperandImages, f.operandImages(), "downgrade did not restore baseline DSPA Deployment images")
 	f.runWorkflow("run-after-downgrade")
 }
