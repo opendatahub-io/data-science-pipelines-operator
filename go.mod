@@ -22,6 +22,7 @@ require (
 	github.com/opendatahub-io/operator-chaos v0.0.0-20260525094355-9e6ac9668b9a
 	github.com/openshift/api v0.0.0-20260331162130-f7b3bd900c75
 	github.com/openshift/controller-runtime-common v0.0.0-20260428152732-64ee174f5e2e
+	github.com/openshift/library-go v0.0.0-20260213153706-03f1709971c5
 	github.com/prometheus/client_golang v1.23.2
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
@@ -99,7 +100,6 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
-	github.com/openshift/library-go v0.0.0-20260213153706-03f1709971c5 // indirect
 	github.com/pelletier/go-toml/v2 v2.3.0 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
