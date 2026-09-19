@@ -60,3 +60,13 @@ func TestModuleOverlaysInstallArgoCRDs(t *testing.T) {
 		})
 	}
 }
+
+func TestArgoCRDBootstrapIncludesOwnershipMarkers(t *testing.T) {
+	data, err := os.ReadFile("crds/kustomization.yaml")
+	require.NoError(t, err)
+
+	content := string(data)
+	require.Contains(t, content, `app.opendatahub.io/data-science-pipelines-operator: "true"`)
+	require.Contains(t, content, "dsp-version: v2")
+	require.Contains(t, content, `aipipelines.components.platform.opendatahub.io/argo-managed: "true"`)
+}
