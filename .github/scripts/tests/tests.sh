@@ -833,11 +833,19 @@ if [ "$SETUP_ONLY" = true ]; then
   exit 0
 fi
 
+# Modular lifecycle tests attach to the main integration DSPA after these suites run.
+if [ "$MODULAR" = true ]; then
+  SKIP_CLEANUP=true
+fi
+
 run_tests
 run_tests_dspa_k8s
 run_tests_dspa_external_connections
 
 if [ "$MODULAR" = true ]; then
   export KUBECONFIG="${KUBECONFIGPATH:-${KUBECONFIG:-$HOME/.kube/config}}"
+  export APPLICATIONS_NAMESPACE="$OPENDATAHUB_NAMESPACE"
+  export DSPANAMESPACE="$DSPA_NAMESPACE"
+  export AIPIPELINES_DSPA_NAME="test-dspa"
   ( cd "$GIT_WORKSPACE" && make aipipelines-e2e-test )
 fi
