@@ -142,6 +142,23 @@ func (f *fixture) attachIntegrationDSPA() {
 	}, deadline, pollInterval)
 }
 
+func (f *fixture) assertIntegrationDSPAReady() {
+	f.t.Helper()
+	require.EventuallyWithT(f.t, func(c *assert.CollectT) {
+		current := &dspav1.DataSciencePipelinesApplication{}
+		if !assert.NoError(c, f.client.Get(f.ctx, client.ObjectKeyFromObject(f.dspa), current)) {
+			return
+		}
+		found := false
+		for _, condition := range current.Status.Conditions {
+			if condition.Type == "Ready" && condition.Status == metav1.ConditionTrue {
+				found = true
+			}
+		}
+		assert.True(c, found, "integration DSPA %s/%s must remain Ready after module cleanup", f.namespace, f.dspa.Name)
+	}, deadline, pollInterval)
+}
+
 func (f *fixture) get(key client.ObjectKey, object client.Object) {
 	f.t.Helper()
 	require.NoError(f.t, f.client.Get(f.ctx, key, object))
