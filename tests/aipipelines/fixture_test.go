@@ -20,12 +20,7 @@ package aipipelines_test
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -35,26 +30,19 @@ import (
 	"github.com/opendatahub-io/odh-platform-utilities/api/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/tools/portforward"
-	"k8s.io/client-go/transport/spdy"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/yaml"
 )
 
 const (
 	fixtureLabel = "testing.opendatahub.io/aipipelines"
-	operatorName = "data-science-pipelines-operator-controller-manager"
 	configName   = "odh-aipipelines-config"
 	pollInterval = 2 * time.Second
 	deadline     = 8 * time.Minute
@@ -70,13 +58,8 @@ type fixture struct {
 	dspa         *dspav1.DataSciencePipelinesApplication
 }
 
-type serviceProbe struct {
-	Host string
-	Port int
-}
-
 // The singleton and its handshake must be explicitly marked as test fixtures.
-// These tests change module-wide settings and must run on a dedicated cluster.
+// Run after the modular integration suite on the same cluster.
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
 	kubeconfig := os.Getenv("KUBECONFIG")
@@ -103,20 +86,7 @@ func newFixture(t *testing.T) *fixture {
 	require.Empty(t, module.OwnerReferences, "run directly against DSPO, without a platform controller overwriting the fixture")
 	f.waitModule(common.Managed, handshake.Data["platformVersion"])
 
-	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{GenerateName: "aipipelines-e2e-", Labels: map[string]string{fixtureLabel: "true"}}}
-	require.NoError(t, f.client.Create(f.ctx, namespace))
-	f.namespace = namespace.Name
-	t.Cleanup(func() { assert.NoError(t, client.IgnoreNotFound(f.client.Delete(f.ctx, namespace))) })
-	// Restore only the fixture fields this suite changes, even after a failure.
 	t.Cleanup(func() {
-		assert.NoError(t, retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-			current := &corev1.ConfigMap{}
-			if err := f.client.Get(f.ctx, client.ObjectKeyFromObject(handshake), current); err != nil {
-				return err
-			}
-			current.Data = handshake.Data
-			return f.client.Update(f.ctx, current)
-		}))
 		assert.NoError(t, retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 			current := &aipipelinesv1alpha1.AIPipelines{}
 			err := f.client.Get(f.ctx, client.ObjectKeyFromObject(module), current)
@@ -140,20 +110,36 @@ func newFixture(t *testing.T) *fixture {
 		if err := f.client.Get(f.ctx, client.ObjectKeyFromObject(module), current); err == nil {
 			t.Logf("module status: %+v", current.Status)
 		}
-		pods := &corev1.PodList{}
-		if err := f.client.List(f.ctx, pods, client.InNamespace(f.namespace)); err == nil {
-			for _, pod := range pods.Items {
-				t.Logf("pod %s status: %+v", pod.Name, pod.Status)
-			}
-		}
-		events := &corev1.EventList{}
-		if err := f.client.List(f.ctx, events, client.InNamespace(f.namespace)); err == nil {
-			for _, event := range events.Items {
-				t.Logf("%s/%s %s: %s", event.InvolvedObject.Kind, event.InvolvedObject.Name, event.Reason, event.Message)
-			}
-		}
 	})
 	return f
+}
+
+func (f *fixture) attachIntegrationDSPA() {
+	f.t.Helper()
+	namespace := os.Getenv("DSPANAMESPACE")
+	if namespace == "" {
+		namespace = "test-dspa"
+	}
+	name := os.Getenv("AIPIPELINES_DSPA_NAME")
+	if name == "" {
+		name = "test-dspa"
+	}
+	f.namespace = namespace
+	f.dspa = &dspav1.DataSciencePipelinesApplication{}
+	f.get(client.ObjectKey{Namespace: namespace, Name: name}, f.dspa)
+	require.EventuallyWithT(f.t, func(c *assert.CollectT) {
+		current := &dspav1.DataSciencePipelinesApplication{}
+		if !assert.NoError(c, f.client.Get(f.ctx, client.ObjectKeyFromObject(f.dspa), current)) {
+			return
+		}
+		found := false
+		for _, condition := range current.Status.Conditions {
+			if condition.Type == "Ready" && condition.Status == metav1.ConditionTrue {
+				found = true
+			}
+		}
+		assert.True(c, found, "integration DSPA %s/%s must be Ready before module lifecycle tests", namespace, name)
+	}, deadline, pollInterval)
 }
 
 func (f *fixture) get(key client.ObjectKey, object client.Object) {
@@ -230,192 +216,6 @@ func (f *fixture) waitModuleCondition(kind string, status metav1.ConditionStatus
 	}, deadline, pollInterval)
 }
 
-func (f *fixture) waitDSPACondition(kind string, status metav1.ConditionStatus) {
-	f.t.Helper()
-	require.EventuallyWithT(f.t, func(c *assert.CollectT) {
-		current := &dspav1.DataSciencePipelinesApplication{}
-		if !assert.NoError(c, f.client.Get(f.ctx, client.ObjectKeyFromObject(f.dspa), current)) {
-			return
-		}
-		found := false
-		for _, condition := range current.Status.Conditions {
-			if condition.Type != kind {
-				continue
-			}
-			found = true
-			assert.Equal(c, status, condition.Status, condition.Message)
-			assert.Equal(c, current.Generation, condition.ObservedGeneration)
-		}
-		assert.True(c, found, "missing %s: %+v", kind, current.Status.Conditions)
-	}, deadline, pollInterval)
-}
-
-func (f *fixture) setVersion(version string) {
-	f.t.Helper()
-	require.NoError(f.t, retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		cm := &corev1.ConfigMap{}
-		if err := f.client.Get(f.ctx, client.ObjectKey{Name: configName, Namespace: f.applications}, cm); err != nil {
-			return err
-		}
-		cm.Data["platformVersion"] = version
-		return f.client.Update(f.ctx, cm)
-	}))
-}
-
-func (f *fixture) deployDSPA() {
-	f.t.Helper()
-	data, err := os.ReadFile("../resources/dspa-lite.yaml")
-	require.NoError(f.t, err)
-	f.dspa = &dspav1.DataSciencePipelinesApplication{}
-	require.NoError(f.t, yaml.Unmarshal(data, f.dspa))
-	f.dspa.Namespace = f.namespace
-	// This fixture does not use the custom PyPI server from the user-flow suite.
-	f.dspa.Spec.APIServer.CABundle = nil
-	require.NoError(f.t, f.client.Create(f.ctx, f.dspa))
-	f.waitOperands()
-}
-
-func (f *fixture) waitDeployment(namespace, name string) {
-	f.t.Helper()
-	require.EventuallyWithT(f.t, func(c *assert.CollectT) {
-		deployment := &appsv1.Deployment{}
-		if !assert.NoError(c, f.client.Get(f.ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployment)) {
-			return
-		}
-		assert.GreaterOrEqual(c, deployment.Status.ObservedGeneration, deployment.Generation)
-		assert.NotNil(c, deployment.Spec.Replicas)
-		if deployment.Spec.Replicas == nil {
-			return
-		}
-		assert.Positive(c, *deployment.Spec.Replicas)
-		assert.Equal(c, *deployment.Spec.Replicas, deployment.Status.UpdatedReplicas)
-		assert.Equal(c, *deployment.Spec.Replicas, deployment.Status.AvailableReplicas)
-		assert.Equal(c, *deployment.Spec.Replicas, deployment.Status.Replicas)
-		available := false
-		for _, condition := range deployment.Status.Conditions {
-			if condition.Type == appsv1.DeploymentAvailable && condition.Status == corev1.ConditionTrue {
-				available = true
-			}
-		}
-		assert.True(c, available, "%s is unavailable: %+v", name, deployment.Status)
-	}, deadline, pollInterval)
-}
-
-func (f *fixture) waitOperands() {
-	f.t.Helper()
-	for _, name := range f.operandDeployments() {
-		f.waitDeployment(f.namespace, name)
-	}
-	f.waitDSPACondition("Ready", metav1.ConditionTrue)
-}
-
-func (f *fixture) operandDeployments() []string {
-	f.t.Helper()
-	name := f.dspa.Name
-	return []string{
-		"ds-pipeline-" + name,
-		"ds-pipeline-persistenceagent-" + name,
-		"ds-pipeline-scheduledworkflow-" + name,
-		"ds-pipeline-workflow-controller-" + name,
-		"mariadb-" + name,
-		"minio-" + name,
-		"ds-pipeline-metadata-grpc-" + name,
-		"ds-pipeline-metadata-envoy-" + name,
-	}
-}
-
-func (f *fixture) operandImages() map[string][]string {
-	f.t.Helper()
-	images := make(map[string][]string, len(f.operandDeployments()))
-	for _, name := range f.operandDeployments() {
-		deployment := &appsv1.Deployment{}
-		f.get(client.ObjectKey{Name: name, Namespace: f.namespace}, deployment)
-		for _, container := range deployment.Spec.Template.Spec.InitContainers {
-			images[name] = append(images[name], container.Name+"="+container.Image)
-		}
-		for _, container := range deployment.Spec.Template.Spec.Containers {
-			images[name] = append(images[name], container.Name+"="+container.Image)
-		}
-	}
-	return images
-}
-
-func (f *fixture) forward(service string, port int) (string, func()) {
-	f.t.Helper()
-	svc := &corev1.Service{}
-	f.get(client.ObjectKey{Name: service, Namespace: f.namespace}, svc)
-	require.NotEmpty(f.t, svc.Spec.Selector)
-	pods := &corev1.PodList{}
-	require.NoError(f.t, f.client.List(f.ctx, pods, client.InNamespace(f.namespace), client.MatchingLabels(svc.Spec.Selector)))
-	podName := ""
-	for _, pod := range pods.Items {
-		if pod.DeletionTimestamp != nil {
-			continue
-		}
-		for _, condition := range pod.Status.Conditions {
-			if condition.Type == corev1.PodReady && condition.Status == corev1.ConditionTrue {
-				podName = pod.Name
-				break
-			}
-		}
-		if podName != "" {
-			break
-		}
-	}
-	require.NotEmpty(f.t, podName, "no ready pod for Service %s", service)
-	clientset, err := kubernetes.NewForConfig(f.restConfig)
-	require.NoError(f.t, err)
-	endpoint := clientset.CoreV1().RESTClient().Post().Namespace(f.namespace).Resource("pods").Name(podName).SubResource("portforward").URL()
-	transport, upgrader, err := spdy.RoundTripperFor(f.restConfig)
-	require.NoError(f.t, err)
-	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, http.MethodPost, endpoint)
-	stop, ready := make(chan struct{}), make(chan struct{})
-	forward, err := portforward.NewOnAddresses(dialer, []string{"127.0.0.1"}, []string{fmt.Sprintf("0:%d", port)}, stop, ready, io.Discard, io.Discard)
-	require.NoError(f.t, err)
-	done := make(chan error, 1)
-	go func() { done <- forward.ForwardPorts(); close(done) }()
-	select {
-	case <-ready:
-	case err := <-done:
-		close(stop)
-		f.t.Fatalf("port forward to %s failed: %v", service, err)
-	case <-time.After(30 * time.Second):
-		close(stop)
-		f.t.Fatalf("port forward to %s did not become ready", service)
-	}
-	ports, err := forward.GetPorts()
-	if err != nil {
-		close(stop)
-		f.t.Fatal(err)
-	}
-	require.Len(f.t, ports, 1)
-	return fmt.Sprintf("http://127.0.0.1:%d", ports[0].Local), func() {
-		close(stop)
-		select {
-		case err := <-done:
-			assert.NoError(f.t, err)
-		case <-time.After(10 * time.Second):
-			f.t.Error("port forward did not stop")
-		}
-	}
-}
-
-func (f *fixture) apiRequest(method, path string, body io.Reader) []byte {
-	f.t.Helper()
-	endpoint, closeForward := f.forward("ds-pipeline-"+f.dspa.Name, 8888)
-	defer closeForward()
-	request, err := http.NewRequestWithContext(f.ctx, method, endpoint+"/apis/v2beta1"+path, body)
-	require.NoError(f.t, err)
-	request.Header.Set("Content-Type", "application/json")
-	response, err := (&http.Client{Timeout: 30 * time.Second}).Do(request)
-	require.NoError(f.t, err)
-	defer response.Body.Close()
-	data, err := io.ReadAll(response.Body)
-	require.NoError(f.t, err)
-	require.Equal(f.t, http.StatusOK, response.StatusCode, "%s %s: %s", method, path, data)
-	return data
-}
-
 func (f *fixture) assertSharedAssets(removed bool) {
 	f.t.Helper()
 	assets, err := argoassets.Objects(f.applications)
@@ -438,81 +238,4 @@ func (f *fixture) assertSharedAssets(removed bool) {
 			require.True(f.t, metav1.IsControlledBy(current, module))
 		}
 	}
-}
-
-func (f *fixture) waitSampleVersion(version string) {
-	f.t.Helper()
-	require.EventuallyWithT(f.t, func(c *assert.CollectT) {
-		cm := &corev1.ConfigMap{}
-		if !assert.NoError(c, f.client.Get(f.ctx, client.ObjectKey{Name: "sample-config-" + f.dspa.Name, Namespace: f.namespace}, cm)) {
-			return
-		}
-		var samples struct {
-			Pipelines []struct {
-				VersionName string `json:"versionName"`
-			} `json:"pipelines"`
-		}
-		if !assert.NoError(c, json.Unmarshal([]byte(cm.Data["sample_config.json"]), &samples)) {
-			return
-		}
-		if assert.NotEmpty(c, samples.Pipelines) {
-			name := samples.Pipelines[0].VersionName
-			assert.True(c, name == version || strings.HasSuffix(name, " - "+version), "sample version %q does not report %q", name, version)
-		}
-	}, deadline, pollInterval)
-}
-
-func operandServiceProbes(namespace, dspaName string) []serviceProbe {
-	serviceHost := func(name string) string { return name + "." + namespace + ".svc" }
-	return []serviceProbe{
-		{Host: serviceHost("ds-pipeline-" + dspaName), Port: 8888},
-		{Host: serviceHost("ml-pipeline"), Port: 8888},
-		{Host: serviceHost("minio-" + dspaName), Port: 9000},
-		{Host: serviceHost("minio-service"), Port: 9000},
-		{Host: serviceHost("ds-pipeline-workflow-controller-metrics-" + dspaName), Port: 9090},
-		{Host: serviceHost("ds-pipeline-md-" + dspaName), Port: 9090},
-		{Host: serviceHost("ds-pipeline-metadata-grpc-" + dspaName), Port: 8080},
-		{Host: serviceHost("metadata-grpc-service"), Port: 8080},
-	}
-}
-
-func workflow(namespace, dspaName, name string) *unstructured.Unstructured {
-	probes, err := json.Marshal(operandServiceProbes(namespace, dspaName))
-	if err != nil {
-		panic(err)
-	}
-	script := fmt.Sprintf(
-		"import socket, urllib.request; probes = %s; [socket.create_connection((probe['Host'], probe['Port']), timeout=30).close() for probe in probes]; urllib.request.urlopen('http://ds-pipeline-%s.%s.svc:8888/apis/v2beta1/healthz', timeout=30).read(); urllib.request.urlopen('http://minio-service.%s.svc:9000/minio/health/live', timeout=30).read(); print('aipipelines-e2e services reachable')",
-		probes, dspaName, namespace, namespace,
-	)
-	return &unstructured.Unstructured{Object: map[string]interface{}{
-		"apiVersion": "argoproj.io/v1alpha1", "kind": "Workflow",
-		"metadata": map[string]interface{}{"name": name, "namespace": namespace},
-		"spec": map[string]interface{}{
-			"entrypoint": "main", "serviceAccountName": "pipeline-runner-" + dspaName,
-			"podMetadata": map[string]interface{}{"labels": map[string]interface{}{"pipelines.kubeflow.org/v2_component": "true"}},
-			"templates": []interface{}{map[string]interface{}{
-				"name": "main", "container": map[string]interface{}{
-					"image":   "quay.io/opendatahub/ds-pipelines-ci-executor-image:v1.1",
-					"command": []interface{}{"python", "-c"},
-					"args":    []interface{}{script},
-				},
-			}},
-		},
-	}}
-}
-
-func (f *fixture) runWorkflow(name string) *unstructured.Unstructured {
-	f.t.Helper()
-	run := workflow(f.namespace, f.dspa.Name, name)
-	require.NoError(f.t, f.client.Create(f.ctx, run))
-	require.EventuallyWithT(f.t, func(c *assert.CollectT) {
-		if !assert.NoError(c, f.client.Get(f.ctx, client.ObjectKeyFromObject(run), run)) {
-			return
-		}
-		phase, _, err := unstructured.NestedString(run.Object, "status", "phase")
-		assert.NoError(c, err)
-		assert.Equal(c, "Succeeded", phase, "workflow status: %v", run.Object["status"])
-	}, deadline, pollInterval)
-	return run
 }
