@@ -1,7 +1,7 @@
 # DSP Integration tests
 
 For the modular AIPipelines controller's ownership boundary, lifecycle tests,
-upgrade/downgrade tests, and CI commands, see [AIPipelines module testing](aipipelines/README.md).
+and CI commands, see [AIPipelines module testing](aipipelines/README.md).
 The legacy DSPA suite and the module suite have separate Make targets; their
 fixtures and command-line options differ.
 

@@ -1,0 +1,9 @@
+apiVersion: components.platform.opendatahub.io/v1alpha1
+kind: AIPipelines
+metadata:
+  name: default-aipipelines
+  labels:
+    testing.opendatahub.io/aipipelines: "true"
+spec:
+  argoWorkflowsControllers:
+    managementState: Managed

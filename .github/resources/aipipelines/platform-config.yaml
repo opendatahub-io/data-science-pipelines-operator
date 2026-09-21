@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: odh-aipipelines-config
+  namespace: opendatahub
+  labels:
+    testing.opendatahub.io/aipipelines: "true"
+data:
+  # Platform handshake version for modular Kind CI (controllers/platform_config.go).
+  platformVersion: kind-modular-ci

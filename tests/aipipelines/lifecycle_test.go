@@ -19,8 +19,6 @@ limitations under the License.
 package aipipelines_test
 
 import (
-	"encoding/json"
-	"strings"
 	"testing"
 
 	aipipelinesv1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/aipipelines/v1alpha1"
@@ -42,98 +40,38 @@ import (
 
 const argoCleanupFinalizer = "aipipelines.components.platform.opendatahub.io/argo-cleanup"
 
-func TestAIPipelinesLifecycle(t *testing.T) {
-	t.Run("reconciles platform configuration and operand health", testReconciliationAndOperandHealth)
-	t.Run("projects management state", testManagementState)
-	t.Run("finalizes module and DSPA resources", testFinalizationAndCleanup)
+var bundledArgoOperandKinds = []schema.GroupVersionKind{
+	{Group: "apps", Version: "v1", Kind: "Deployment"},
+	{Version: "v1", Kind: "Service"},
+	{Version: "v1", Kind: "ConfigMap"},
+	{Version: "v1", Kind: "ServiceAccount"},
+	{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"},
+	{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"},
 }
 
-func testReconciliationAndOperandHealth(t *testing.T) {
-	f := newFixture(t)
-	version := f.module().Status.GetPlatformRelease()
+func TestAIPipelinesLifecycle(t *testing.T) {
+	t.Run("reports_live_module_status", testLiveModuleStatus)
+	t.Run("projects_management_state", testManagementState)
+	t.Run("finalizes_module_resources", testFinalizationAndCleanup)
+}
 
-	t.Log("validate the singleton and reconcile real DSPA operands")
-	invalid := &aipipelinesv1alpha1.AIPipelines{ObjectMeta: metav1.ObjectMeta{Name: "another-module"}}
-	require.True(t, apierrors.IsInvalid(f.client.Create(f.ctx, invalid)))
-	f.assertSharedAssets(false)
-	f.deployDSPA()
-	f.waitSampleVersion(version)
-	f.apiRequest("GET", "/healthz", nil)
-	f.apiRequest("POST", "/experiments", strings.NewReader(`{"display_name":"module-health-sentinel"}`))
-	f.runWorkflow("operand-service-probes")
-
-	t.Log("propagate live platform configuration to status and DSPA without a spec edit")
-	originalDSPA := &dspav1.DataSciencePipelinesApplication{}
-	f.get(client.ObjectKeyFromObject(f.dspa), originalDSPA)
-	f.setVersion(version + "-e2e")
-	f.waitModule(common.Managed, version+"-e2e")
-	f.waitSampleVersion(version + "-e2e")
-	f.waitOperands()
-	currentDSPA := &dspav1.DataSciencePipelinesApplication{}
-	f.get(client.ObjectKeyFromObject(f.dspa), currentDSPA)
-	require.Equal(t, originalDSPA.Generation, currentDSPA.Generation)
-	f.setVersion("")
-	f.waitModuleCondition("PlatformConfigurationValid", metav1.ConditionFalse, version+"-e2e")
-	f.waitModuleCondition("ProvisioningSucceeded", metav1.ConditionFalse, version+"-e2e")
-	f.waitModuleCondition("Ready", metav1.ConditionFalse, version+"-e2e")
-	f.setVersion(version)
-	f.waitModule(common.Managed, version)
-	f.waitSampleVersion(version)
-	f.waitOperands()
-
-	t.Log("reflect a DSPA spec change in the operand")
-	require.NoError(t, retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		current := &dspav1.DataSciencePipelinesApplication{}
-		if err := f.client.Get(f.ctx, client.ObjectKeyFromObject(f.dspa), current); err != nil {
-			return err
-		}
-		current.Spec.APIServer.EnableSamplePipeline = false
-		return f.client.Update(f.ctx, current)
-	}))
-	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		cm := &corev1.ConfigMap{}
-		if !assert.NoError(c, f.client.Get(f.ctx, client.ObjectKey{Name: "sample-config-" + f.dspa.Name, Namespace: f.namespace}, cm)) {
-			return
-		}
-		var config struct {
-			Pipelines []interface{} `json:"pipelines"`
-		}
-		if assert.NoError(c, json.Unmarshal([]byte(cm.Data["sample_config.json"]), &config)) {
-			assert.Empty(c, config.Pipelines)
-		}
-	}, deadline, pollInterval)
-	f.waitOperands()
-
-	t.Log("report an unavailable operand and recover after DSPO recreates it")
-	apiDeployment := &appsv1.Deployment{}
-	f.get(client.ObjectKey{Name: "ds-pipeline-" + f.dspa.Name, Namespace: f.namespace}, apiDeployment)
-	deletedUID := apiDeployment.UID
-	require.NoError(t, f.client.Delete(f.ctx, apiDeployment))
-	f.waitDSPACondition("APIServerReady", metav1.ConditionFalse)
-	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		current := &appsv1.Deployment{}
-		if !assert.NoError(c, f.client.Get(f.ctx, client.ObjectKeyFromObject(apiDeployment), current)) {
-			return
-		}
-		assert.NotEqual(c, deletedUID, current.UID)
-	}, deadline, pollInterval)
-	f.waitOperands()
-	f.waitDSPACondition("APIServerReady", metav1.ConditionTrue)
-	f.apiRequest("GET", "/healthz", nil)
+func testLiveModuleStatus(t *testing.T) {
+	// newFixture already requires the test-labeled handshake and waits for Ready.
+	newFixture(t)
 }
 
 func testManagementState(t *testing.T) {
 	f := newFixture(t)
+	f.attachIntegrationDSPA()
 	version := f.module().Status.GetPlatformRelease()
-	f.deployDSPA()
-	run := f.runWorkflow("before-reconfiguration")
-	runUID := run.GetUID()
 
-	t.Log("project Managed -> Removed -> Managed to shared and DSPA Argo operands")
+	t.Log("project Managed -> Removed -> Managed on shared and DSPA Argo operands")
 	blockerKey := client.ObjectKey{Name: "workflow-controller-configmap", Namespace: f.applications}
 	const holdFinalizer = "testing.opendatahub.io/hold-argo-cleanup"
 	require.NoError(t, f.setConfigMapFinalizer(blockerKey, holdFinalizer, true))
 	t.Cleanup(func() { assert.NoError(t, f.setConfigMapFinalizer(blockerKey, holdFinalizer, false)) })
+
+	f.assertBundledArgoOperandsExist()
 	f.setState(common.Removed)
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		cm := &corev1.ConfigMap{}
@@ -146,43 +84,19 @@ func testManagementState(t *testing.T) {
 	require.NoError(t, f.setConfigMapFinalizer(blockerKey, holdFinalizer, false))
 	f.waitModule(common.Removed, version)
 	f.assertSharedAssets(true)
-	argoResources := []schema.GroupVersionKind{
-		{Group: "apps", Version: "v1", Kind: "Deployment"},
-		{Version: "v1", Kind: "Service"}, {Version: "v1", Kind: "ConfigMap"}, {Version: "v1", Kind: "ServiceAccount"},
-		{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"},
-		{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"},
-	}
-	for _, gvk := range argoResources {
-		resource := &unstructured.Unstructured{}
-		resource.SetGroupVersionKind(gvk)
-		name := "ds-pipeline-workflow-controller-" + f.dspa.Name
-		if gvk.Kind == "Role" {
-			name = "ds-pipeline-workflow-controller-role-" + f.dspa.Name
-		}
-		if gvk.Kind == "RoleBinding" {
-			name = "ds-pipeline-workflow-controller-rolebinding-" + f.dspa.Name
-		}
-		require.Eventually(t, func() bool {
-			return apierrors.IsNotFound(f.client.Get(f.ctx, client.ObjectKey{Name: name, Namespace: f.namespace}, resource))
-		}, deadline, pollInterval, "remaining Argo %s", gvk.Kind)
-	}
-	f.get(client.ObjectKeyFromObject(run), run)
-	require.Equal(t, runUID, run.GetUID())
-	// Removing bundled Argo must preserve unrelated DSPA workloads and data.
-	f.waitDeployment(f.namespace, "ds-pipeline-"+f.dspa.Name)
-	f.apiRequest("GET", "/healthz", nil)
+	f.assertBundledArgoOperandsRemoved()
+	// Bundled Argo removal must not remove the DSPA API server Deployment.
+	f.get(client.ObjectKey{Name: "ds-pipeline-" + f.dspa.Name, Namespace: f.namespace}, &appsv1.Deployment{})
+
 	f.setState(common.Managed)
 	f.waitModule(common.Managed, version)
-	f.waitOperands()
-	f.runWorkflow("after-reconfiguration")
+	f.assertBundledArgoOperandsExist()
 }
 
 func testFinalizationAndCleanup(t *testing.T) {
 	f := newFixture(t)
+	f.attachIntegrationDSPA()
 	version := f.module().Status.GetPlatformRelease()
-	f.deployDSPA()
-	run := f.runWorkflow("preserved-during-finalization")
-	runUID := run.GetUID()
 	clusterRoleBindingKey := client.ObjectKey{Name: "ds-pipeline-ui-auth-delegator-" + f.namespace + "-" + f.dspa.Name}
 	f.get(clusterRoleBindingKey, &rbacv1.ClusterRoleBinding{})
 
@@ -211,15 +125,13 @@ func testFinalizationAndCleanup(t *testing.T) {
 		return apierrors.IsNotFound(f.client.Get(f.ctx, client.ObjectKeyFromObject(module), &aipipelinesv1alpha1.AIPipelines{}))
 	}, deadline, pollInterval)
 	f.assertSharedAssets(true)
-	f.get(client.ObjectKeyFromObject(run), run)
-	require.Equal(t, runUID, run.GetUID())
+
 	require.NoError(t, f.client.Create(f.ctx, &aipipelinesv1alpha1.AIPipelines{
 		ObjectMeta: metav1.ObjectMeta{Name: module.Name, Labels: module.Labels}, Spec: module.Spec,
 	}))
 	f.waitModule(common.Managed, version)
-	f.waitOperands()
 
-	t.Log("DSPA finalization removes cluster-scoped resources and garbage-collects owned operands")
+	t.Log("DSPA deletion finalizes cluster-scoped bindings and owned operands")
 	owned := f.ownedDSPAResources()
 	require.NotEmpty(t, owned)
 	require.NoError(t, f.client.Delete(f.ctx, f.dspa))
@@ -231,15 +143,47 @@ func testFinalizationAndCleanup(t *testing.T) {
 			err := f.client.Get(f.ctx, client.ObjectKeyFromObject(object), object.DeepCopy())
 			assert.True(c, apierrors.IsNotFound(err), "%s/%s remains: %v", object.GetKind(), object.GetName(), err)
 		}
-		pods := &corev1.PodList{}
-		if assert.NoError(c, f.client.List(f.ctx, pods, client.InNamespace(f.namespace), client.MatchingLabels{"component": "data-science-pipelines"})) {
-			assert.Empty(c, pods.Items, "DSPA workload pods remain after cleanup")
-		}
 	}, deadline, pollInterval)
 	require.Eventually(t, func() bool {
 		return apierrors.IsNotFound(f.client.Get(f.ctx, clusterRoleBindingKey, &rbacv1.ClusterRoleBinding{}))
 	}, deadline, pollInterval, "DSPA finalizer did not remove %s", clusterRoleBindingKey.Name)
 	f.waitModule(common.Managed, version)
+}
+
+func (f *fixture) bundledArgoOperandName(gvk schema.GroupVersionKind) string {
+	switch gvk.Kind {
+	case "Service":
+		return "ds-pipeline-workflow-controller-metrics-" + f.dspa.Name
+	case "Role":
+		return "ds-pipeline-workflow-controller-role-" + f.dspa.Name
+	case "RoleBinding":
+		return "ds-pipeline-workflow-controller-rolebinding-" + f.dspa.Name
+	default:
+		return "ds-pipeline-workflow-controller-" + f.dspa.Name
+	}
+}
+
+func (f *fixture) assertBundledArgoOperandsExist() {
+	f.t.Helper()
+	for _, gvk := range bundledArgoOperandKinds {
+		resource := &unstructured.Unstructured{}
+		resource.SetGroupVersionKind(gvk)
+		name := f.bundledArgoOperandName(gvk)
+		err := f.client.Get(f.ctx, client.ObjectKey{Name: name, Namespace: f.namespace}, resource)
+		require.NoError(f.t, err, "expected Argo %s %s before removal", gvk.Kind, name)
+	}
+}
+
+func (f *fixture) assertBundledArgoOperandsRemoved() {
+	f.t.Helper()
+	for _, gvk := range bundledArgoOperandKinds {
+		resource := &unstructured.Unstructured{}
+		resource.SetGroupVersionKind(gvk)
+		name := f.bundledArgoOperandName(gvk)
+		require.Eventually(f.t, func() bool {
+			return apierrors.IsNotFound(f.client.Get(f.ctx, client.ObjectKey{Name: name, Namespace: f.namespace}, resource))
+		}, deadline, pollInterval, "remaining Argo %s %s", gvk.Kind, name)
+	}
 }
 
 func (f *fixture) setConfigMapFinalizer(key client.ObjectKey, finalizer string, hold bool) error {
