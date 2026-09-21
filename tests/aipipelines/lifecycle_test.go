@@ -180,4 +180,3 @@ func (f *fixture) setConfigMapFinalizer(key client.ObjectKey, finalizer string, 
 		return f.client.Update(f.ctx, cm)
 	})
 }
-
