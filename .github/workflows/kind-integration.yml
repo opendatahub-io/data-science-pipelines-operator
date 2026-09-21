@@ -119,6 +119,7 @@ jobs:
 
       - name: Collect events and logs
         if: |
+          failure() ||
           steps.test.outcome != 'success' ||
           (matrix.test-mode == 'legacy' && (
             steps.deploy-mlflow.outcome == 'failure' ||

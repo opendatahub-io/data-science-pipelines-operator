@@ -12,8 +12,8 @@ existing DSP integration suite when run with `tests.sh --kind --modular`.
 | Webhook behavior | `tests/webhook_test.go` rejects immutable PipelineVersion updates | Modular Kind integration suite. |
 | Module status (`observedGeneration`, Ready, ProvisioningSucceeded, platform release) | `TestAIPipelinesLifecycle/reports_live_module_status` via `waitModule` | Modular Kind CI (`make aipipelines-e2e-test`). |
 | Argo `managementState` Managed → Removed → Managed | `TestAIPipelinesLifecycle/projects_management_state` on integration DSPA; metrics Service name `ds-pipeline-workflow-controller-metrics-<dspa>` | Modular Kind CI. |
-| Module deletion and shared-resource cleanup | `TestAIPipelinesLifecycle/finalizes_module_resources` (cleanup finalizer, shared assets, CRDs retained) | Modular Kind CI. |
-| DSPA finalizer / owned resource GC | Same finalization subtest after module recreate | Modular Kind CI. |
+| Module deletion and shared-resource cleanup | `TestAIPipelinesLifecycle/finalizes_module_resources` (cleanup finalizer, shared assets, CRDs retained, integration DSPA still Ready) | Modular Kind CI. |
+| DSPA finalizer / owned resource GC | Existing `make integrationtest` suite | Not duplicated in module lifecycle suite. |
 | PlatformObject, singleton, status construction, RBAC | `make unittest`, `make functest`, and `api/aipipelines/v1alpha1` envtest tests | Not duplicated in Kind lifecycle suite. |
 | Routes and Ingresses | Integration suite with `--endpoint-type route` on OpenShift | Separate OpenShift run. |
 | Product upgrade | `opendatahub-io/data-science-pipelines` `UpgradePreparation` / `UpgradeVerification` | Out of scope for DSPO Kind tests. |

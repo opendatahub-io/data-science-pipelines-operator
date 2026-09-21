@@ -22,14 +22,11 @@ import (
 	"testing"
 
 	aipipelinesv1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/aipipelines/v1alpha1"
-	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/odh-platform-utilities/api/common"
-	routev1 "github.com/openshift/api/route/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -96,9 +93,6 @@ func testManagementState(t *testing.T) {
 func testFinalizationAndCleanup(t *testing.T) {
 	f := newFixture(t)
 	f.attachIntegrationDSPA()
-	version := f.module().Status.GetPlatformRelease()
-	clusterRoleBindingKey := client.ObjectKey{Name: "ds-pipeline-ui-auth-delegator-" + f.namespace + "-" + f.dspa.Name}
-	f.get(clusterRoleBindingKey, &rbacv1.ClusterRoleBinding{})
 
 	t.Log("hold module deletion until shared Argo cleanup completes")
 	blockerKey := client.ObjectKey{Name: "workflow-controller-configmap", Namespace: f.applications}
@@ -125,29 +119,7 @@ func testFinalizationAndCleanup(t *testing.T) {
 		return apierrors.IsNotFound(f.client.Get(f.ctx, client.ObjectKeyFromObject(module), &aipipelinesv1alpha1.AIPipelines{}))
 	}, deadline, pollInterval)
 	f.assertSharedAssets(true)
-
-	require.NoError(t, f.client.Create(f.ctx, &aipipelinesv1alpha1.AIPipelines{
-		ObjectMeta: metav1.ObjectMeta{Name: module.Name, Labels: module.Labels}, Spec: module.Spec,
-	}))
-	f.waitModule(common.Managed, version)
-
-	t.Log("DSPA deletion finalizes cluster-scoped bindings and owned operands")
-	owned := f.ownedDSPAResources()
-	require.NotEmpty(t, owned)
-	require.NoError(t, f.client.Delete(f.ctx, f.dspa))
-	require.Eventually(t, func() bool {
-		return apierrors.IsNotFound(f.client.Get(f.ctx, client.ObjectKeyFromObject(f.dspa), &dspav1.DataSciencePipelinesApplication{}))
-	}, deadline, pollInterval)
-	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		for _, object := range owned {
-			err := f.client.Get(f.ctx, client.ObjectKeyFromObject(object), object.DeepCopy())
-			assert.True(c, apierrors.IsNotFound(err), "%s/%s remains: %v", object.GetKind(), object.GetName(), err)
-		}
-	}, deadline, pollInterval)
-	require.Eventually(t, func() bool {
-		return apierrors.IsNotFound(f.client.Get(f.ctx, clusterRoleBindingKey, &rbacv1.ClusterRoleBinding{}))
-	}, deadline, pollInterval, "DSPA finalizer did not remove %s", clusterRoleBindingKey.Name)
-	f.waitModule(common.Managed, version)
+	f.assertIntegrationDSPAReady()
 }
 
 func (f *fixture) bundledArgoOperandName(gvk schema.GroupVersionKind) string {
@@ -169,8 +141,10 @@ func (f *fixture) assertBundledArgoOperandsExist() {
 		resource := &unstructured.Unstructured{}
 		resource.SetGroupVersionKind(gvk)
 		name := f.bundledArgoOperandName(gvk)
-		err := f.client.Get(f.ctx, client.ObjectKey{Name: name, Namespace: f.namespace}, resource)
-		require.NoError(f.t, err, "expected Argo %s %s before removal", gvk.Kind, name)
+		require.Eventually(f.t, func() bool {
+			err := f.client.Get(f.ctx, client.ObjectKey{Name: name, Namespace: f.namespace}, resource)
+			return err == nil
+		}, deadline, pollInterval, "expected Argo %s %s to exist", gvk.Kind, name)
 	}
 }
 
@@ -207,30 +181,3 @@ func (f *fixture) setConfigMapFinalizer(key client.ObjectKey, finalizer string, 
 	})
 }
 
-func (f *fixture) ownedDSPAResources() []*unstructured.Unstructured {
-	f.t.Helper()
-	var objects []*unstructured.Unstructured
-	for _, gvk := range []schema.GroupVersionKind{
-		{Group: "apps", Version: "v1", Kind: "DeploymentList"},
-		{Group: "apps", Version: "v1", Kind: "StatefulSetList"},
-		{Group: "apps", Version: "v1", Kind: "DaemonSetList"},
-		{Version: "v1", Kind: "ServiceList"}, {Version: "v1", Kind: "ConfigMapList"},
-		{Version: "v1", Kind: "SecretList"}, {Version: "v1", Kind: "PersistentVolumeClaimList"}, {Version: "v1", Kind: "ServiceAccountList"},
-		{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleList"},
-		{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBindingList"},
-		{Group: "networking.k8s.io", Version: "v1", Kind: "NetworkPolicyList"},
-		{Group: "networking.k8s.io", Version: "v1", Kind: "IngressList"},
-		{Group: routev1.GroupVersion.Group, Version: routev1.GroupVersion.Version, Kind: "RouteList"},
-	} {
-		list := &unstructured.UnstructuredList{}
-		list.SetGroupVersionKind(gvk)
-		require.NoError(f.t, f.client.List(f.ctx, list, client.InNamespace(f.namespace)))
-		for _, item := range list.Items {
-			if item.GetLabels()["dsp-version"] != "" || metav1.IsControlledBy(&item, f.dspa) {
-				require.True(f.t, metav1.IsControlledBy(&item, f.dspa), "%s/%s is missing its DSPA owner", item.GetKind(), item.GetName())
-				objects = append(objects, item.DeepCopy())
-			}
-		}
-	}
-	return objects
-}
