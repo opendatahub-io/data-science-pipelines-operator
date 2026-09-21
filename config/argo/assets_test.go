@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/yaml"
 )
 
 func TestObjects(t *testing.T) {
@@ -59,4 +60,27 @@ func TestModuleOverlaysInstallArgoCRDs(t *testing.T) {
 			require.Contains(t, strings.Split(string(data), "\n"), "- ../../../argo/crds")
 		})
 	}
+}
+
+func TestArgoCRDBootstrapIncludesOwnershipMarkers(t *testing.T) {
+	data, err := os.ReadFile("crds/kustomization.yaml")
+	require.NoError(t, err)
+
+	var kustomization struct {
+		Labels []struct {
+			Pairs map[string]string `json:"pairs"`
+		} `json:"labels"`
+		CommonAnnotations map[string]string `json:"commonAnnotations"`
+	}
+	require.NoError(t, yaml.Unmarshal(data, &kustomization))
+
+	labelPairs := make(map[string]string)
+	for _, label := range kustomization.Labels {
+		for key, value := range label.Pairs {
+			labelPairs[key] = value
+		}
+	}
+	require.Equal(t, "true", labelPairs["app.opendatahub.io/data-science-pipelines-operator"])
+	require.Equal(t, "v2", labelPairs["dsp-version"])
+	require.Equal(t, "true", kustomization.CommonAnnotations["aipipelines.components.platform.opendatahub.io/argo-managed"])
 }
