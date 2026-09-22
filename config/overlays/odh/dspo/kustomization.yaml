@@ -4,3 +4,16 @@ resources:
 - ../../openshift
 - ../../../argo/crds
 namespace: opendatahub
+
+patches:
+- patch: |-
+    apiVersion: monitoring.coreos.com/v1
+    kind: ServiceMonitor
+    metadata:
+      name: data-science-pipelines-operator-service-monitor
+    $patch: delete
+  target:
+    group: monitoring.coreos.com
+    version: v1
+    kind: ServiceMonitor
+    name: data-science-pipelines-operator-service-monitor

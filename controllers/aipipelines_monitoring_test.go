@@ -26,9 +26,12 @@ import (
 	monitoringassets "github.com/opendatahub-io/data-science-pipelines-operator/config/prometheus"
 	"github.com/opendatahub-io/odh-platform-utilities/api/common"
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -143,4 +146,127 @@ func TestReconcilePrometheusRuleRefusesForeignControllerOwner(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, found)
 	require.Empty(t, groups)
+}
+
+func TestReconcileMonitoringResourcesCreatesBothServiceMonitors(t *testing.T) {
+	const applicationsNamespace = "custom-applications"
+	const monitoringNamespace = "custom-monitoring"
+	ctx := context.Background()
+	scheme := runtime.NewScheme()
+	require.NoError(t, aipipelinesv1alpha1.AddToScheme(scheme))
+	module := &aipipelinesv1alpha1.AIPipelines{
+		ObjectMeta: metav1.ObjectMeta{Name: aipipelinesv1alpha1.AIPipelinesInstanceName, UID: "module-uid"},
+	}
+	k8sClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(module).Build()
+	reconciler := &AIPipelinesReconciler{
+		Client: k8sClient, APIReader: k8sClient, Scheme: scheme,
+		Namespace: "operator-namespace", ApplicationsNamespace: applicationsNamespace,
+		MonitoringNamespace: monitoringNamespace,
+	}
+
+	require.NoError(t, reconciler.reconcileMonitoringResources(ctx, module))
+
+	core, err := monitoringassets.CoreServiceMonitor("operator-namespace")
+	require.NoError(t, err)
+	rhoai, err := monitoringassets.RHOAIServiceMonitor(applicationsNamespace, monitoringNamespace)
+	require.NoError(t, err)
+	rule, err := monitoringassets.Rule(applicationsNamespace)
+	require.NoError(t, err)
+	binding, err := monitoringassets.RHOAIMetricsReaderRoleBinding(monitoringNamespace)
+	require.NoError(t, err)
+	for _, object := range []*unstructured.Unstructured{core, rhoai, rule, binding} {
+		actual := &unstructured.Unstructured{}
+		actual.SetGroupVersionKind(object.GroupVersionKind())
+		require.NoError(t, k8sClient.Get(ctx, client.ObjectKeyFromObject(object), actual))
+		require.True(t, metav1.IsControlledBy(actual, module), "%s/%s", actual.GetKind(), actual.GetName())
+	}
+}
+
+func TestReconcileMonitoringResourcesWithoutMonitoringNamespaceCreatesOnlyCoreMonitor(t *testing.T) {
+	ctx := context.Background()
+	scheme := runtime.NewScheme()
+	require.NoError(t, aipipelinesv1alpha1.AddToScheme(scheme))
+	module := &aipipelinesv1alpha1.AIPipelines{
+		ObjectMeta: metav1.ObjectMeta{Name: aipipelinesv1alpha1.AIPipelinesInstanceName, UID: "module-uid"},
+	}
+	k8sClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(module).Build()
+	reconciler := &AIPipelinesReconciler{
+		Client: k8sClient, APIReader: k8sClient, Scheme: scheme,
+		Namespace: "operator-namespace", ApplicationsNamespace: "custom-applications",
+	}
+
+	require.NoError(t, reconciler.reconcileMonitoringResources(ctx, module))
+
+	core, err := monitoringassets.CoreServiceMonitor("operator-namespace")
+	require.NoError(t, err)
+	require.NoError(t, k8sClient.Get(ctx, client.ObjectKeyFromObject(core), core))
+
+	rule, err := monitoringassets.Rule("custom-applications")
+	require.NoError(t, err)
+	rhoai, err := monitoringassets.RHOAIServiceMonitor("custom-applications", "custom-monitoring")
+	require.NoError(t, err)
+	binding, err := monitoringassets.RHOAIMetricsReaderRoleBinding("custom-monitoring")
+	require.NoError(t, err)
+	for _, object := range []*unstructured.Unstructured{rule, rhoai, binding} {
+		actual := &unstructured.Unstructured{}
+		actual.SetGroupVersionKind(object.GroupVersionKind())
+		require.True(t, apierrors.IsNotFound(k8sClient.Get(ctx, client.ObjectKeyFromObject(object), actual)))
+	}
+}
+
+func TestReconcileMonitoringObjectHandlesAPIChangesDuringUpdate(t *testing.T) {
+	for _, test := range []struct {
+		name              string
+		updateError       error
+		expectedSupported bool
+	}{
+		{
+			name: "API removed",
+			updateError: &meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{
+				Group: "monitoring.rhobs", Version: "v1", Resource: "prometheusrules",
+			}},
+			expectedSupported: false,
+		},
+		{
+			name: "object deleted",
+			updateError: apierrors.NewNotFound(schema.GroupResource{
+				Group: "monitoring.rhobs", Resource: "prometheusrules",
+			}, monitoringassets.RuleName),
+			expectedSupported: true,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+			scheme := runtime.NewScheme()
+			require.NoError(t, aipipelinesv1alpha1.AddToScheme(scheme))
+			module := &aipipelinesv1alpha1.AIPipelines{
+				ObjectMeta: metav1.ObjectMeta{Name: aipipelinesv1alpha1.AIPipelinesInstanceName, UID: "module-uid"},
+			}
+			existing, err := monitoringassets.Rule("opendatahub")
+			require.NoError(t, err)
+			require.NoError(t, unstructured.SetNestedSlice(existing.Object, []interface{}{}, "spec", "groups"))
+			baseClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(module, existing).Build()
+			reconciler := &AIPipelinesReconciler{
+				Client:    &updateErrorClient{Client: baseClient, err: test.updateError},
+				APIReader: baseClient,
+				Scheme:    scheme,
+				Namespace: "opendatahub",
+			}
+			desired, err := monitoringassets.Rule("opendatahub")
+			require.NoError(t, err)
+
+			supported, err := reconciler.reconcileMonitoringObject(ctx, module, desired, "spec")
+			require.NoError(t, err)
+			require.Equal(t, test.expectedSupported, supported)
+		})
+	}
+}
+
+type updateErrorClient struct {
+	client.Client
+	err error
+}
+
+func (c *updateErrorClient) Update(context.Context, client.Object, ...client.UpdateOption) error {
+	return c.err
 }
