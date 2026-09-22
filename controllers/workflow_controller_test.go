@@ -53,6 +53,19 @@ func TestAIPipelinesConfigOverridesLegacyArgoConfigInModularMode(t *testing.T) {
 	require.Equal(t, "Removed", argoConfig.GetManagementState())
 }
 
+func TestMissingAIPipelinesConfigPreservesWorkflowControllersInModularMode(t *testing.T) {
+	t.Cleanup(viper.Reset)
+	viper.Set(config.EnableAIPipelinesModuleControllerConfigName, true)
+	viper.Set("DSPO.ArgoWorkflowsControllers", `{"managementState":"Removed"}`)
+
+	ctx, _, reconciler := CreateNewTestObjects()
+	require.NoError(t, aipipelinesv1alpha1.AddToScheme(reconciler.Scheme))
+
+	argoConfig, err := reconciler.argoWorkflowsControllersConfig(ctx)
+	require.NoError(t, err)
+	require.Equal(t, config.DefaultArgoWorkflowsControllersManagementState, argoConfig.GetManagementState())
+}
+
 func TestAIPipelinesChangeEnqueuesSupportedDSPAs(t *testing.T) {
 	ctx, _, reconciler := CreateNewTestObjects()
 	require.NoError(t, reconciler.Create(ctx, &dspav1.DataSciencePipelinesApplication{
