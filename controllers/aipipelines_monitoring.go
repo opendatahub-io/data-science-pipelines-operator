@@ -153,8 +153,13 @@ func (r *AIPipelinesReconciler) reconcileMonitoringObject(
 	if apiequality.Semantic.DeepEqual(current.Object, updated.Object) {
 		return true, nil
 	}
-	if err := r.Update(ctx, updated); err != nil &&
-		!meta.IsNoMatchError(err) && !apierrors.IsNotFound(err) {
+	if err := r.Update(ctx, updated); err != nil {
+		if meta.IsNoMatchError(err) || runtime.IsNotRegisteredError(err) {
+			return false, nil
+		}
+		if apierrors.IsNotFound(err) {
+			return true, nil
+		}
 		return false, fmt.Errorf("update AIPipelines %s: %w", desired.GetKind(), err)
 	}
 	return true, nil
