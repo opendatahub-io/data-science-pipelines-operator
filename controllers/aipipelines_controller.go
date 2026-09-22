@@ -86,7 +86,7 @@ func (r *AIPipelinesReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	if module.DeletionTimestamp.IsZero() {
-		if err := r.reconcilePrometheusRule(ctx, module); err != nil {
+		if err := r.reconcileMonitoringResources(ctx, module); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
