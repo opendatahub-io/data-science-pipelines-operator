@@ -3,6 +3,17 @@ kind: Kustomization
 resources:
 - applications
 - ../../../argo/crds
-- rhoai_metrics_reader_role_binding.yaml
-- rhoai_metrics_service_monitor.yaml
 namespace: redhat-ods-applications
+
+patches:
+- patch: |-
+    apiVersion: monitoring.coreos.com/v1
+    kind: ServiceMonitor
+    metadata:
+      name: data-science-pipelines-operator-service-monitor
+    $patch: delete
+  target:
+    group: monitoring.coreos.com
+    version: v1
+    kind: ServiceMonitor
+    name: data-science-pipelines-operator-service-monitor

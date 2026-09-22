@@ -4,8 +4,7 @@ resources:
 - dspo/applications
 - ../../argo
 - ../../prometheus
-- dspo/rhoai_metrics_reader_role_binding.yaml
-- dspo/rhoai_metrics_service_monitor.yaml
+- ../../prometheus/rhoai
 namespace: redhat-ods-applications
 
 replacements:

@@ -144,3 +144,34 @@ func TestReconcilePrometheusRuleRefusesForeignControllerOwner(t *testing.T) {
 	require.True(t, found)
 	require.Empty(t, groups)
 }
+
+func TestReconcileMonitoringResourcesCreatesBothServiceMonitors(t *testing.T) {
+	ctx := context.Background()
+	scheme := runtime.NewScheme()
+	require.NoError(t, aipipelinesv1alpha1.AddToScheme(scheme))
+	module := &aipipelinesv1alpha1.AIPipelines{
+		ObjectMeta: metav1.ObjectMeta{Name: aipipelinesv1alpha1.AIPipelinesInstanceName, UID: "module-uid"},
+	}
+	k8sClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(module).Build()
+	reconciler := &AIPipelinesReconciler{
+		Client: k8sClient, APIReader: k8sClient, Scheme: scheme,
+		Namespace: monitoringassets.RHOAIApplicationsNamespace,
+	}
+
+	require.NoError(t, reconciler.reconcileMonitoringResources(ctx, module))
+
+	core, err := monitoringassets.CoreServiceMonitor(monitoringassets.RHOAIApplicationsNamespace)
+	require.NoError(t, err)
+	rhoai, err := monitoringassets.RHOAIServiceMonitor()
+	require.NoError(t, err)
+	rule, err := monitoringassets.Rule(monitoringassets.RHOAIApplicationsNamespace)
+	require.NoError(t, err)
+	binding, err := monitoringassets.RHOAIMetricsReaderRoleBinding()
+	require.NoError(t, err)
+	for _, object := range []*unstructured.Unstructured{core, rhoai, rule, binding} {
+		actual := &unstructured.Unstructured{}
+		actual.SetGroupVersionKind(object.GroupVersionKind())
+		require.NoError(t, k8sClient.Get(ctx, client.ObjectKeyFromObject(object), actual))
+		require.True(t, metav1.IsControlledBy(actual, module), "%s/%s", actual.GetKind(), actual.GetName())
+	}
+}

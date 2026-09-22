@@ -281,6 +281,7 @@ rules:
   - watch
 - apiGroups:
   - monitoring.coreos.com
+  - monitoring.rhobs
   resources:
   - servicemonitors
   verbs:
