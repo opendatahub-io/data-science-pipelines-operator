@@ -63,11 +63,13 @@ type platformConfigObservation struct {
 // expose readiness through the resources this reconciler observes.
 type AIPipelinesReconciler struct {
 	client.Client
-	APIReader      client.Reader
-	Scheme         *runtime.Scheme
-	Log            logr.Logger
-	Namespace      string
-	CRDWatchCaches CRDWatchCaches
+	APIReader             client.Reader
+	Scheme                *runtime.Scheme
+	Log                   logr.Logger
+	Namespace             string
+	ApplicationsNamespace string
+	MonitoringNamespace   string
+	CRDWatchCaches        CRDWatchCaches
 }
 
 // +kubebuilder:rbac:groups=components.platform.opendatahub.io,resources=aipipelines,verbs=get;list;watch
