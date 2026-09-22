@@ -59,6 +59,8 @@ spec:
               value: "pipeline-runner-testdsp6"
             - name: OBJECTSTORECONFIG_BUCKETNAME
               value: "mlpipeline"
+            - name: OBJECTSTORECONFIG_REGION
+              value: "minio"
             - name: OBJECTSTORECONFIG_ACCESSKEY
               valueFrom:
                 secretKeyRef:

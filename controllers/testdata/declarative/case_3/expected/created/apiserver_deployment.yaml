@@ -59,6 +59,8 @@ spec:
               value: "pipeline-runner-testdsp3"
             - name: OBJECTSTORECONFIG_BUCKETNAME
               value: "testbucket3"
+            - name: OBJECTSTORECONFIG_REGION
+              value: "auto"
             - name: OBJECTSTORECONFIG_ACCESSKEY
               valueFrom:
                 secretKeyRef:

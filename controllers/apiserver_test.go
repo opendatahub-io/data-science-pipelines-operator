@@ -1234,6 +1234,28 @@ func TestReconcileAPIServer_ConfigHashIdempotent(t *testing.T) {
 		"hash should be identical across reconciles with the same input")
 }
 
+func TestAPIServerDeploymentTemplate_IncludesObjectStoreRegion(t *testing.T) {
+	ctx, params, reconciler := CreateNewTestObjects()
+	dspa := testutil.CreateEmptyDSPA()
+	dspa.Spec.APIServer.Deploy = true
+
+	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+	params.ObjectStorageConnection.Region = "ap-southeast-1"
+	require.NoError(t, reconciler.ReconcileAPIServer(ctx, dspa, params))
+
+	deployment := &appsv1.Deployment{}
+	require.NoError(t, reconciler.Client.Get(ctx, types.NamespacedName{
+		Name:      params.APIServerDefaultResourceName,
+		Namespace: dspa.Namespace,
+	}, deployment))
+
+	apiServerContainer := getDSPipelineAPIServerContainer(deployment)
+	require.NotNil(t, apiServerContainer)
+	region, found := getEnvValue(t, apiServerContainer, "OBJECTSTORECONFIG_REGION")
+	require.True(t, found)
+	assert.Equal(t, "ap-southeast-1", region)
+}
+
 func TestManagedPipelineSampleEntry_VersionNameIsPlatformVersionOnly(t *testing.T) {
 	const platformVersion = "rhoai-3.5-ea.2"
 

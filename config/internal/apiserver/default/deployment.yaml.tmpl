@@ -125,6 +125,8 @@ spec:
               value: "pipeline-runner-{{.Name}}"
             - name: OBJECTSTORECONFIG_BUCKETNAME
               value: "{{.ObjectStorageConnection.Bucket}}"
+            - name: OBJECTSTORECONFIG_REGION
+              value: "{{.ObjectStorageConnection.Region}}"
             - name: OBJECTSTORECONFIG_ACCESSKEY
               valueFrom:
                 secretKeyRef:
