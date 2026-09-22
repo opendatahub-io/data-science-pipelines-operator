@@ -57,11 +57,28 @@ func TestServiceMonitorAssets(t *testing.T) {
 	serverName := endpoints[0].(map[string]interface{})["tlsConfig"].(map[string]interface{})["serverName"].(string)
 	require.Equal(t, "data-science-pipelines-operator-service.opendatahub.svc", serverName)
 
-	rhoai, err := monitoringassets.RHOAIServiceMonitor()
+	rhoai, err := monitoringassets.RHOAIServiceMonitor("custom-applications", "custom-monitoring")
 	require.NoError(t, err)
 	require.Equal(t, "monitoring.rhobs/v1", rhoai.GetAPIVersion())
 	require.Equal(t, monitoringassets.RHOAIServiceMonitorName, rhoai.GetName())
-	require.Equal(t, monitoringassets.RHOAIMonitoringNamespace, rhoai.GetNamespace())
+	require.Equal(t, "custom-monitoring", rhoai.GetNamespace())
+	matchNames, found, err := unstructured.NestedStringSlice(rhoai.Object, "spec", "namespaceSelector", "matchNames")
+	require.NoError(t, err)
+	require.True(t, found)
+	require.Equal(t, []string{"custom-applications"}, matchNames)
+	endpoints, found, err = unstructured.NestedSlice(rhoai.Object, "spec", "endpoints")
+	require.NoError(t, err)
+	require.True(t, found)
+	serverName = endpoints[0].(map[string]interface{})["tlsConfig"].(map[string]interface{})["serverName"].(string)
+	require.Equal(t, "data-science-pipelines-operator-service.custom-applications.svc", serverName)
+
+	binding, err := monitoringassets.RHOAIMetricsReaderRoleBinding("custom-monitoring")
+	require.NoError(t, err)
+	require.Equal(t, monitoringassets.RHOAIMetricsReaderRoleBindingName, binding.GetName())
+	subjects, found, err := unstructured.NestedSlice(binding.Object, "subjects")
+	require.NoError(t, err)
+	require.True(t, found)
+	require.Equal(t, "custom-monitoring", subjects[0].(map[string]interface{})["namespace"])
 }
 
 func TestPlatformModuleOverlaysExcludeMonitoringResources(t *testing.T) {

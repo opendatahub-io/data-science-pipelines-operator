@@ -51,12 +51,6 @@ const RHOAIServiceMonitorName = "data-science-pipelines-operator-rhoai-service-m
 // RHOAIMetricsReaderRoleBindingName grants the COO monitoring stack access to metrics.
 const RHOAIMetricsReaderRoleBindingName = "data-science-pipelines-operator-rhoai-prometheus"
 
-// RHOAIApplicationsNamespace is the fixed namespace for RHOAI applications.
-const RHOAIApplicationsNamespace = "redhat-ods-applications"
-
-// RHOAIMonitoringNamespace is the fixed namespace for the RHOAI monitoring stack.
-const RHOAIMonitoringNamespace = "redhat-ods-monitoring"
-
 func decodeAsset(data []byte, description string) (*unstructured.Unstructured, error) {
 	object := &unstructured.Unstructured{}
 	if err := yaml.Unmarshal(data, &object.Object); err != nil {
@@ -143,12 +137,62 @@ func CoreServiceMonitor(namespace string) (*unstructured.Unstructured, error) {
 	return object, nil
 }
 
-// RHOAIServiceMonitor returns the COO monitoring object.
-func RHOAIServiceMonitor() (*unstructured.Unstructured, error) {
-	return decodeAsset(rhoaiServiceMonitorYAML, "RHOAI ServiceMonitor")
+// RHOAIServiceMonitor returns the COO monitoring object for the platform namespaces.
+func RHOAIServiceMonitor(applicationsNamespace, monitoringNamespace string) (*unstructured.Unstructured, error) {
+	object, err := decodeAsset(rhoaiServiceMonitorYAML, "RHOAI ServiceMonitor")
+	if err != nil {
+		return nil, err
+	}
+	object.SetName(RHOAIServiceMonitorName)
+	object.SetNamespace(monitoringNamespace)
+	if err := unstructured.SetNestedStringSlice(
+		object.Object, []string{applicationsNamespace}, "spec", "namespaceSelector", "matchNames",
+	); err != nil {
+		return nil, fmt.Errorf("configure RHOAI ServiceMonitor namespace selector: %w", err)
+	}
+	endpoints, found, err := unstructured.NestedSlice(object.Object, "spec", "endpoints")
+	if err != nil {
+		return nil, fmt.Errorf("read RHOAI ServiceMonitor endpoints: %w", err)
+	}
+	if !found || len(endpoints) != 1 {
+		return nil, fmt.Errorf("embedded RHOAI ServiceMonitor must have one endpoint")
+	}
+	endpoint, ok := endpoints[0].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("embedded RHOAI ServiceMonitor has an invalid endpoint")
+	}
+	tlsConfig, ok := endpoint["tlsConfig"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("embedded RHOAI ServiceMonitor has an invalid TLS config")
+	}
+	tlsConfig["serverName"] = "data-science-pipelines-operator-service." + applicationsNamespace + ".svc"
+	if err := unstructured.SetNestedSlice(object.Object, endpoints, "spec", "endpoints"); err != nil {
+		return nil, fmt.Errorf("configure RHOAI ServiceMonitor endpoints: %w", err)
+	}
+	return object, nil
 }
 
 // RHOAIMetricsReaderRoleBinding returns the COO metrics-reader binding.
-func RHOAIMetricsReaderRoleBinding() (*unstructured.Unstructured, error) {
-	return decodeAsset(rhoaiMetricsReaderRoleBindingYAML, "RHOAI metrics reader ClusterRoleBinding")
+func RHOAIMetricsReaderRoleBinding(monitoringNamespace string) (*unstructured.Unstructured, error) {
+	object, err := decodeAsset(rhoaiMetricsReaderRoleBindingYAML, "RHOAI metrics reader ClusterRoleBinding")
+	if err != nil {
+		return nil, err
+	}
+	object.SetName(RHOAIMetricsReaderRoleBindingName)
+	subjects, found, err := unstructured.NestedSlice(object.Object, "subjects")
+	if err != nil {
+		return nil, fmt.Errorf("read RHOAI metrics reader subjects: %w", err)
+	}
+	if !found || len(subjects) != 1 {
+		return nil, fmt.Errorf("embedded RHOAI metrics reader ClusterRoleBinding must have one subject")
+	}
+	subject, ok := subjects[0].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("embedded RHOAI metrics reader ClusterRoleBinding has an invalid subject")
+	}
+	subject["namespace"] = monitoringNamespace
+	if err := unstructured.SetNestedSlice(object.Object, subjects, "subjects"); err != nil {
+		return nil, fmt.Errorf("configure RHOAI metrics reader subject: %w", err)
+	}
+	return object, nil
 }

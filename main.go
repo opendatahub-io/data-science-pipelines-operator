@@ -389,12 +389,14 @@ func main() {
 			os.Exit(1)
 		}
 		if err = (&controllers.AIPipelinesReconciler{
-			Client:         mgr.GetClient(),
-			APIReader:      mgr.GetAPIReader(),
-			Scheme:         mgr.GetScheme(),
-			Log:            ctrl.Log.WithName("controllers").WithName("AIPipelines"),
-			Namespace:      dspoNamespace,
-			CRDWatchCaches: crdWatchCaches,
+			Client:                mgr.GetClient(),
+			APIReader:             mgr.GetAPIReader(),
+			Scheme:                mgr.GetScheme(),
+			Log:                   ctrl.Log.WithName("controllers").WithName("AIPipelines"),
+			Namespace:             dspoNamespace,
+			ApplicationsNamespace: strings.TrimSpace(os.Getenv("APPLICATIONS_NAMESPACE")),
+			MonitoringNamespace:   strings.TrimSpace(os.Getenv("MONITORING_NAMESPACE")),
+			CRDWatchCaches:        crdWatchCaches,
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AIPipelines")
 			os.Exit(1)

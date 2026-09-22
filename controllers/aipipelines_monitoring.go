@@ -42,6 +42,10 @@ func (r *AIPipelinesReconciler) reconcileMonitoringResources(
 	ctx context.Context,
 	module *aipipelinesv1alpha1.AIPipelines,
 ) error {
+	applicationsNamespace := r.ApplicationsNamespace
+	if applicationsNamespace == "" {
+		applicationsNamespace = r.Namespace
+	}
 	coreServiceMonitor, err := monitoringassets.CoreServiceMonitor(r.Namespace)
 	if err != nil {
 		return err
@@ -50,14 +54,14 @@ func (r *AIPipelinesReconciler) reconcileMonitoringResources(
 		return fmt.Errorf("reconcile core ServiceMonitor: %w", err)
 	}
 
+	if r.MonitoringNamespace == "" {
+		return nil
+	}
 	if err := r.reconcilePrometheusRule(ctx, module); err != nil {
 		return err
 	}
 
-	if r.Namespace != monitoringassets.RHOAIApplicationsNamespace {
-		return nil
-	}
-	rhoaiServiceMonitor, err := monitoringassets.RHOAIServiceMonitor()
+	rhoaiServiceMonitor, err := monitoringassets.RHOAIServiceMonitor(applicationsNamespace, r.MonitoringNamespace)
 	if err != nil {
 		return err
 	}
@@ -68,7 +72,7 @@ func (r *AIPipelinesReconciler) reconcileMonitoringResources(
 	if !supported {
 		return nil
 	}
-	binding, err := monitoringassets.RHOAIMetricsReaderRoleBinding()
+	binding, err := monitoringassets.RHOAIMetricsReaderRoleBinding(r.MonitoringNamespace)
 	if err != nil {
 		return err
 	}
@@ -85,7 +89,11 @@ func (r *AIPipelinesReconciler) reconcilePrometheusRule(
 	ctx context.Context,
 	module *aipipelinesv1alpha1.AIPipelines,
 ) error {
-	desired, err := monitoringassets.Rule(r.Namespace)
+	applicationsNamespace := r.ApplicationsNamespace
+	if applicationsNamespace == "" {
+		applicationsNamespace = r.Namespace
+	}
+	desired, err := monitoringassets.Rule(applicationsNamespace)
 	if err != nil {
 		return err
 	}
