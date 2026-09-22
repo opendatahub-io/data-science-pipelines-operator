@@ -224,7 +224,10 @@ func TestAIPipelinesReconcileUpdatesStatus(t *testing.T) {
 		require.NoError(t, k8sClient.Create(context.Background(), asset))
 	}
 	setArgoCRDsEstablished(t, context.Background(), k8sClient, "opendatahub", metav1.ConditionTrue)
-	reconciler := &AIPipelinesReconciler{Client: k8sClient, APIReader: k8sClient, Scheme: scheme, Namespace: "opendatahub"}
+	reconciler := &AIPipelinesReconciler{
+		Client: k8sClient, APIReader: k8sClient, Scheme: scheme,
+		Namespace: "opendatahub", MonitoringNamespace: "odh-monitoring",
+	}
 
 	result, err := reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{
 		Name: aipipelinesv1alpha1.AIPipelinesInstanceName,
@@ -312,7 +315,8 @@ func TestAIPipelinesReconcileUpdatesStatusWhenPrometheusRuleCRDWasRemoved(t *tes
 		Build()
 	k8sClient := &prometheusRuleCreateNotFoundClient{Client: baseClient}
 	reconciler := &AIPipelinesReconciler{
-		Client: k8sClient, APIReader: baseClient, Scheme: scheme, Namespace: "opendatahub",
+		Client: k8sClient, APIReader: baseClient, Scheme: scheme,
+		Namespace: "opendatahub", MonitoringNamespace: "odh-monitoring",
 	}
 
 	result, err := reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{
