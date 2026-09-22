@@ -25,6 +25,7 @@ import (
 	aipipelinesv1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/aipipelines/v1alpha1"
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -95,6 +96,12 @@ func (r *DSPAReconciler) argoWorkflowsControllersConfig(ctx context.Context) (Ar
 		}
 		module := &aipipelinesv1alpha1.AIPipelines{}
 		if err := reader.Get(ctx, types.NamespacedName{Name: aipipelinesv1alpha1.AIPipelinesInstanceName}, module); err != nil {
+			if apierrors.IsNotFound(err) {
+				r.Log.Info("AIPipelines module configuration not found; preserving DSPA workflow controllers with the default management state")
+				return ArgoWorkflowsControllersConfig{
+					ManagementState: config.DefaultArgoWorkflowsControllersManagementState,
+				}, nil
+			}
 			return ArgoWorkflowsControllersConfig{}, fmt.Errorf("read AIPipelines module configuration: %w", err)
 		}
 		return ArgoWorkflowsControllersConfig{
