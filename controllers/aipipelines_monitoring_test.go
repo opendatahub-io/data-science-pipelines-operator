@@ -164,7 +164,10 @@ func TestReconcileMonitoringResourcesCreatesBothServiceMonitors(t *testing.T) {
 		MonitoringNamespace: monitoringNamespace,
 	}
 
-	require.NoError(t, reconciler.reconcileMonitoringResources(ctx, module))
+	observation, err := reconciler.reconcileMonitoringResources(ctx, module)
+	require.NoError(t, err)
+	require.Equal(t, metav1.ConditionTrue, observation.Status)
+	require.Equal(t, "MonitoringResourcesReady", observation.Reason)
 
 	core, err := monitoringassets.CoreServiceMonitor("operator-namespace")
 	require.NoError(t, err)
@@ -195,7 +198,10 @@ func TestReconcileMonitoringResourcesWithoutMonitoringNamespaceCreatesOnlyCoreMo
 		Namespace: "operator-namespace", ApplicationsNamespace: "custom-applications",
 	}
 
-	require.NoError(t, reconciler.reconcileMonitoringResources(ctx, module))
+	observation, err := reconciler.reconcileMonitoringResources(ctx, module)
+	require.NoError(t, err)
+	require.Equal(t, metav1.ConditionTrue, observation.Status)
+	require.Equal(t, "MonitoringNotConfigured", observation.Reason)
 
 	core, err := monitoringassets.CoreServiceMonitor("operator-namespace")
 	require.NoError(t, err)

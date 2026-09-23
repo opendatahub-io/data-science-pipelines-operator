@@ -42,6 +42,7 @@ const (
 	conditionTypeDSPOReady          = "DSPOReady"
 	conditionTypeArgoReady          = "ArgoWorkflowsControllersReady"
 	conditionTypeConfigurationValid = "ConfigurationValid"
+	conditionTypeMonitoringReady    = "MonitoringReady"
 	dspoDeploymentName              = "data-science-pipelines-operator-controller-manager"
 )
 
@@ -87,9 +88,20 @@ func (r *AIPipelinesReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if err := r.Get(ctx, req.NamespacedName, module); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+	monitoring := monitoringObservation{
+		Status:  metav1.ConditionTrue,
+		Reason:  "MonitoringNotApplicable",
+		Message: "Monitoring resources are not reconciled while AIPipelines is being deleted",
+	}
+	var monitoringErr error
 	if module.DeletionTimestamp.IsZero() {
-		if err := r.reconcileMonitoringResources(ctx, module); err != nil {
-			return ctrl.Result{}, err
+		monitoring, monitoringErr = r.reconcileMonitoringResources(ctx, module)
+		if monitoringErr != nil {
+			monitoring = monitoringObservation{
+				Status:  metav1.ConditionFalse,
+				Reason:  "MonitoringReconcileFailed",
+				Message: monitoringErr.Error(),
+			}
 		}
 	}
 
@@ -100,7 +112,7 @@ func (r *AIPipelinesReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	dspo := observeDSPODeployment(ctx, reader, r.Namespace)
 	argo := observeArgoLifecycle(ctx, reader, r.Namespace, module.Spec.ArgoWorkflowsControllersManagementState(), module)
 	platformConfig := observePlatformConfig(ctx, reader)
-	desired := buildAIPipelinesStatus(module, dspo, argo, platformConfig)
+	desired := buildAIPipelinesStatus(module, dspo, argo, monitoring, platformConfig)
 	if desired.Phase == common.PhaseReady {
 		if err := cleanupLegacyDataSciencePipelines(ctx, r.Client); err != nil {
 			return ctrl.Result{}, fmt.Errorf("clean up legacy DataSciencePipelines after module handoff: %w", err)
@@ -112,13 +124,25 @@ func (r *AIPipelinesReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		RequeueAfter: config.GetDurationConfigWithDefault(config.RequeueTimeConfigName, config.DefaultRequeueTime),
 	}
 	if apiequality.Semantic.DeepEqual(module.Status, desired) {
+		if monitoringErr != nil {
+			return ctrl.Result{}, monitoringErr
+		}
 		return result, nil
 	}
 
 	updated := module.DeepCopy()
 	updated.Status = desired
 	if err := r.Status().Update(ctx, updated); err != nil {
+		// Another controller may update AIPipelines metadata between the read and
+		// status write. Requeue with a fresh resourceVersion without emitting a
+		// reconciler error for this expected optimistic concurrency race.
+		if apierrors.IsConflict(err) {
+			return ctrl.Result{Requeue: true}, nil
+		}
 		return ctrl.Result{}, fmt.Errorf("update AIPipelines status: %w", err)
+	}
+	if monitoringErr != nil {
+		return ctrl.Result{}, monitoringErr
 	}
 
 	return result, nil
@@ -174,11 +198,13 @@ func buildAIPipelinesStatus(
 	module *aipipelinesv1alpha1.AIPipelines,
 	dspoObservation dspoDeploymentObservation,
 	argoObservation argoLifecycleObservation,
+	monitoringObservation monitoringObservation,
 	platformObservations ...platformConfigObservation,
 ) aipipelinesv1alpha1.AIPipelinesStatus {
 	configurationStatus, configurationReason, configurationMessage := validateAIPipelinesConfiguration(module)
 	dspoStatus, dspoReason, dspoMessage := dspoObservation.Status, dspoObservation.Reason, dspoObservation.Message
 	argoStatus, argoReason, argoMessage := argoObservation.Status, argoObservation.Reason, argoObservation.Message
+	monitoringStatus := monitoringObservation.Status
 	platformConfig := platformConfigObservation{
 		Status:  metav1.ConditionTrue,
 		Reason:  "StandaloneConfiguration",
@@ -189,15 +215,15 @@ func buildAIPipelinesStatus(
 		platformConfig = platformObservations[0]
 	}
 
-	readyStatus := aggregateConditionStatuses(configurationStatus, platformConfig.Status, dspoStatus, argoStatus)
+	readyStatus := aggregateConditionStatuses(configurationStatus, platformConfig.Status, dspoStatus, argoStatus, monitoringStatus)
 	readyReason := "Ready"
 	readyMessage := "AIPipelines is ready"
 	if readyStatus != metav1.ConditionTrue {
 		readyReason = "ComponentsNotReady"
-		readyMessage = "AIPipelines is waiting for configuration, DSPO, or Argo readiness"
+		readyMessage = "AIPipelines is waiting for configuration, DSPO, Argo, or monitoring readiness"
 	}
 
-	provisioningStatus := aggregateConditionStatuses(configurationStatus, platformConfig.Status, argoStatus)
+	provisioningStatus := aggregateConditionStatuses(configurationStatus, platformConfig.Status, argoStatus, monitoringStatus)
 	provisioningReason := "ManifestApplicationSucceeded"
 	provisioningMessage := "All AIPipelines manifests were applied successfully"
 	switch {
@@ -210,6 +236,9 @@ func buildAIPipelinesStatus(
 	case argoStatus != metav1.ConditionTrue:
 		provisioningReason = argoReason
 		provisioningMessage = argoMessage
+	case monitoringStatus != metav1.ConditionTrue:
+		provisioningReason = monitoringObservation.Reason
+		provisioningMessage = monitoringObservation.Message
 	}
 
 	status := aipipelinesv1alpha1.AIPipelinesStatus{}
@@ -225,6 +254,7 @@ func buildAIPipelinesStatus(
 		moduleCondition(module, common.ConditionType("PlatformConfigurationValid"), platformConfig.Status, platformConfig.Reason, platformConfig.Message),
 		moduleCondition(module, common.ConditionType(conditionTypeDSPOReady), dspoStatus, dspoReason, dspoMessage),
 		moduleCondition(module, common.ConditionType(conditionTypeArgoReady), argoStatus, argoReason, argoMessage),
+		moduleCondition(module, common.ConditionType(conditionTypeMonitoringReady), monitoringStatus, monitoringObservation.Reason, monitoringObservation.Message),
 	}
 
 	// Acknowledge the live platform version after all module manifests have been

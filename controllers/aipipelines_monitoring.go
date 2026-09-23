@@ -34,52 +34,71 @@ import (
 
 const prometheusRuleCRDName = "prometheusrules.monitoring.rhobs"
 
+type monitoringObservation struct {
+	Status  metav1.ConditionStatus
+	Reason  string
+	Message string
+}
+
 // +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,resourceNames=prometheusrules.monitoring.rhobs,verbs=list;watch
 // +kubebuilder:rbac:groups=monitoring.rhobs,resources=prometheusrules,resourceNames=data-science-pipelines-operator-datasciencepipelines-prometheusrules,verbs=get;update;patch
 // +kubebuilder:rbac:groups=monitoring.rhobs,resources=servicemonitors,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:urls=/metrics,verbs=get
 
 func (r *AIPipelinesReconciler) reconcileMonitoringResources(
 	ctx context.Context,
 	module *aipipelinesv1alpha1.AIPipelines,
-) error {
+) (monitoringObservation, error) {
 	applicationsNamespace := r.ApplicationsNamespace
 	if applicationsNamespace == "" {
 		applicationsNamespace = r.Namespace
 	}
 	coreServiceMonitor, err := monitoringassets.CoreServiceMonitor(r.Namespace)
 	if err != nil {
-		return err
+		return monitoringObservation{}, err
 	}
 	if _, err := r.reconcileMonitoringObject(ctx, module, coreServiceMonitor, "spec"); err != nil {
-		return fmt.Errorf("reconcile core ServiceMonitor: %w", err)
+		return monitoringObservation{}, fmt.Errorf("reconcile core ServiceMonitor: %w", err)
 	}
 
 	if r.MonitoringNamespace == "" {
-		return nil
+		return monitoringObservation{
+			Status:  metav1.ConditionTrue,
+			Reason:  "MonitoringNotConfigured",
+			Message: "RHOAI monitoring is not configured",
+		}, nil
 	}
 	if err := r.reconcilePrometheusRule(ctx, module); err != nil {
-		return err
+		return monitoringObservation{}, err
 	}
 
 	rhoaiServiceMonitor, err := monitoringassets.RHOAIServiceMonitor(applicationsNamespace, r.MonitoringNamespace)
 	if err != nil {
-		return err
+		return monitoringObservation{}, err
 	}
 	supported, err := r.reconcileMonitoringObject(ctx, module, rhoaiServiceMonitor, "spec")
 	if err != nil {
-		return fmt.Errorf("reconcile RHOAI ServiceMonitor: %w", err)
+		return monitoringObservation{}, fmt.Errorf("reconcile RHOAI ServiceMonitor: %w", err)
 	}
 	if !supported {
-		return nil
+		return monitoringObservation{
+			Status:  metav1.ConditionTrue,
+			Reason:  "MonitoringAPINotAvailable",
+			Message: "RHOAI monitoring API is not available; optional monitoring resources were skipped",
+		}, nil
 	}
 	binding, err := monitoringassets.RHOAIMetricsReaderRoleBinding(r.MonitoringNamespace)
 	if err != nil {
-		return err
+		return monitoringObservation{}, err
 	}
 	if _, err := r.reconcileMonitoringObject(ctx, module, binding, "roleRef", "subjects"); err != nil {
-		return fmt.Errorf("reconcile RHOAI metrics reader binding: %w", err)
+		return monitoringObservation{}, fmt.Errorf("reconcile RHOAI metrics reader binding: %w", err)
 	}
-	return nil
+	return monitoringObservation{
+		Status:  metav1.ConditionTrue,
+		Reason:  "MonitoringResourcesReady",
+		Message: "RHOAI monitoring resources are ready",
+	}, nil
 }
 
 // reconcilePrometheusRule keeps monitoring ownership inside DSPO. The rule is
