@@ -4,6 +4,10 @@ kind: ClusterRole
 metadata:
   name: manager-role
 rules:
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
 - apiGroups:
   - ""
   resources:
@@ -281,6 +285,7 @@ rules:
   - watch
 - apiGroups:
   - monitoring.coreos.com
+  - monitoring.rhobs
   resources:
   - servicemonitors
   verbs:

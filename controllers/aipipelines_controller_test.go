@@ -20,6 +20,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -53,7 +54,7 @@ func TestBuildAIPipelinesStatusReady(t *testing.T) {
 	module := newTestAIPipelines(common.Managed)
 	module.Generation = 4
 
-	status := buildAIPipelinesStatus(module, readyDSPOObservation(), readyArgoObservation())
+	status := buildAIPipelinesStatus(module, readyDSPOObservation(), readyArgoObservation(), readyMonitoringObservation())
 
 	require.Equal(t, common.PhaseReady, status.Phase)
 	require.EqualValues(t, 4, status.ObservedGeneration)
@@ -69,7 +70,7 @@ func TestBuildAIPipelinesStatusReportsDSPODeploymentReadiness(t *testing.T) {
 	module := newTestAIPipelines(common.Managed)
 	dspo := dspoDeploymentObservation{Status: metav1.ConditionFalse, Reason: "DSPOUnavailable", Message: "waiting"}
 
-	status := buildAIPipelinesStatus(module, dspo, readyArgoObservation())
+	status := buildAIPipelinesStatus(module, dspo, readyArgoObservation(), readyMonitoringObservation())
 
 	require.Equal(t, common.PhaseNotReady, status.Phase)
 	require.Equal(t, metav1.ConditionFalse, requireModuleCondition(t, status.Conditions, string(common.ConditionTypeReady)).Status)
@@ -82,7 +83,7 @@ func TestBuildAIPipelinesStatusRemovedArgoDoesNotBlockReadiness(t *testing.T) {
 
 	module := newTestAIPipelines(common.Removed)
 
-	status := buildAIPipelinesStatus(module, readyDSPOObservation(), argoLifecycleObservation{Status: metav1.ConditionTrue, Reason: "Removed", Message: "removed"})
+	status := buildAIPipelinesStatus(module, readyDSPOObservation(), argoLifecycleObservation{Status: metav1.ConditionTrue, Reason: "Removed", Message: "removed"}, readyMonitoringObservation())
 
 	require.Equal(t, common.PhaseReady, status.Phase)
 	require.Equal(t, metav1.ConditionTrue, requireModuleCondition(t, status.Conditions, conditionTypeArgoReady).Status)
@@ -92,7 +93,7 @@ func TestBuildAIPipelinesStatusRejectsInvalidManagementState(t *testing.T) {
 	t.Cleanup(viper.Reset)
 
 	module := newTestAIPipelines(common.ManagementState("Invalid"))
-	status := buildAIPipelinesStatus(module, readyDSPOObservation(), readyArgoObservation())
+	status := buildAIPipelinesStatus(module, readyDSPOObservation(), readyArgoObservation(), readyMonitoringObservation())
 
 	require.Equal(t, common.PhaseNotReady, status.Phase)
 	require.Equal(t, metav1.ConditionFalse, requireModuleCondition(t, status.Conditions, conditionTypeConfigurationValid).Status)
@@ -109,11 +110,32 @@ func TestBuildAIPipelinesStatusReportsManifestApplicationFailure(t *testing.T) {
 		Message: "Waiting for shared Argo resources: ConfigMap/workflow-controller-configmap",
 	}
 
-	status := buildAIPipelinesStatus(module, readyDSPOObservation(), argo)
+	status := buildAIPipelinesStatus(module, readyDSPOObservation(), argo, readyMonitoringObservation())
 	provisioning := requireModuleCondition(t, status.Conditions, string(common.ConditionTypeProvisioningSucceeded))
 	require.Equal(t, metav1.ConditionFalse, provisioning.Status)
 	require.Equal(t, argo.Reason, provisioning.Reason)
 	require.Equal(t, argo.Message, provisioning.Message)
+}
+
+func TestBuildAIPipelinesStatusReportsMonitoringFailure(t *testing.T) {
+	t.Cleanup(viper.Reset)
+
+	module := newTestAIPipelines(common.Managed)
+	monitoring := monitoringObservation{
+		Status:  metav1.ConditionFalse,
+		Reason:  "MonitoringReconcileFailed",
+		Message: "forbidden",
+	}
+
+	status := buildAIPipelinesStatus(module, readyDSPOObservation(), readyArgoObservation(), monitoring)
+
+	require.Equal(t, common.PhaseNotReady, status.Phase)
+	require.Equal(t, metav1.ConditionFalse, requireModuleCondition(t, status.Conditions, string(common.ConditionTypeReady)).Status)
+	require.Equal(t, metav1.ConditionFalse, requireModuleCondition(t, status.Conditions, conditionTypeMonitoringReady).Status)
+	provisioning := requireModuleCondition(t, status.Conditions, string(common.ConditionTypeProvisioningSucceeded))
+	require.Equal(t, metav1.ConditionFalse, provisioning.Status)
+	require.Equal(t, monitoring.Reason, provisioning.Reason)
+	require.Equal(t, monitoring.Message, provisioning.Message)
 }
 
 func TestBuildAIPipelinesStatusPreservesPlatformReleaseUntilManifestsApply(t *testing.T) {
@@ -128,11 +150,11 @@ func TestBuildAIPipelinesStatusPreservesPlatformReleaseUntilManifestsApply(t *te
 		Message: "Waiting for shared Argo resources: ConfigMap/workflow-controller-configmap",
 	}
 
-	failedStatus := buildAIPipelinesStatus(module, readyDSPOObservation(), argo)
+	failedStatus := buildAIPipelinesStatus(module, readyDSPOObservation(), argo, readyMonitoringObservation())
 	require.Equal(t, "3.5.0", failedStatus.GetPlatformRelease())
 
 	module.Status = failedStatus
-	successfulStatus := buildAIPipelinesStatus(module, readyDSPOObservation(), readyArgoObservation())
+	successfulStatus := buildAIPipelinesStatus(module, readyDSPOObservation(), readyArgoObservation(), readyMonitoringObservation())
 	require.Equal(t, "3.6.0", successfulStatus.GetPlatformRelease())
 }
 
@@ -149,7 +171,7 @@ func TestBuildAIPipelinesStatusAcknowledgesLivePlatformVersion(t *testing.T) {
 		Version: "3.6.0",
 	}
 
-	status := buildAIPipelinesStatus(module, readyDSPOObservation(), readyArgoObservation(), platformConfig)
+	status := buildAIPipelinesStatus(module, readyDSPOObservation(), readyArgoObservation(), readyMonitoringObservation(), platformConfig)
 	require.Equal(t, "3.6.0", status.GetPlatformRelease())
 }
 
@@ -164,7 +186,7 @@ func TestBuildAIPipelinesStatusPreservesTransitionTime(t *testing.T) {
 		LastTransitionTime: transitionTime,
 	}}
 
-	status := buildAIPipelinesStatus(module, readyDSPOObservation(), readyArgoObservation())
+	status := buildAIPipelinesStatus(module, readyDSPOObservation(), readyArgoObservation(), readyMonitoringObservation())
 	require.Equal(t, transitionTime, requireModuleCondition(t, status.Conditions, string(common.ConditionTypeReady)).LastTransitionTime)
 }
 
@@ -224,7 +246,10 @@ func TestAIPipelinesReconcileUpdatesStatus(t *testing.T) {
 		require.NoError(t, k8sClient.Create(context.Background(), asset))
 	}
 	setArgoCRDsEstablished(t, context.Background(), k8sClient, "opendatahub", metav1.ConditionTrue)
-	reconciler := &AIPipelinesReconciler{Client: k8sClient, APIReader: k8sClient, Scheme: scheme, Namespace: "opendatahub"}
+	reconciler := &AIPipelinesReconciler{
+		Client: k8sClient, APIReader: k8sClient, Scheme: scheme,
+		Namespace: "opendatahub", MonitoringNamespace: "odh-monitoring",
+	}
 
 	result, err := reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{
 		Name: aipipelinesv1alpha1.AIPipelinesInstanceName,
@@ -312,7 +337,8 @@ func TestAIPipelinesReconcileUpdatesStatusWhenPrometheusRuleCRDWasRemoved(t *tes
 		Build()
 	k8sClient := &prometheusRuleCreateNotFoundClient{Client: baseClient}
 	reconciler := &AIPipelinesReconciler{
-		Client: k8sClient, APIReader: baseClient, Scheme: scheme, Namespace: "opendatahub",
+		Client: k8sClient, APIReader: baseClient, Scheme: scheme,
+		Namespace: "opendatahub", MonitoringNamespace: "odh-monitoring",
 	}
 
 	result, err := reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{
@@ -325,6 +351,62 @@ func TestAIPipelinesReconcileUpdatesStatusWhenPrometheusRuleCRDWasRemoved(t *tes
 	require.NoError(t, baseClient.Get(context.Background(), client.ObjectKeyFromObject(module), updated))
 	require.Equal(t, common.PhaseNotReady, updated.Status.Phase)
 	require.NotEmpty(t, updated.Status.Conditions)
+}
+
+func TestAIPipelinesReconcileReportsMonitoringFailure(t *testing.T) {
+	t.Cleanup(viper.Reset)
+	t.Setenv(applicationsNamespaceEnv, "opendatahub")
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aipipelinesv1alpha1.AddToScheme(scheme))
+	module := newTestAIPipelines(common.Managed)
+	module.UID = "module-uid"
+	baseClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithStatusSubresource(&aipipelinesv1alpha1.AIPipelines{}).
+		WithObjects(module).
+		Build()
+	k8sClient := &clusterRoleBindingCreateForbiddenClient{Client: baseClient}
+	reconciler := &AIPipelinesReconciler{
+		Client: k8sClient, APIReader: baseClient, Scheme: scheme,
+		Namespace: "opendatahub", MonitoringNamespace: "odh-monitoring",
+	}
+
+	_, err := reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{
+		Name: aipipelinesv1alpha1.AIPipelinesInstanceName,
+	}})
+	require.ErrorContains(t, err, "reconcile RHOAI metrics reader binding")
+
+	updated := &aipipelinesv1alpha1.AIPipelines{}
+	require.NoError(t, baseClient.Get(context.Background(), client.ObjectKeyFromObject(module), updated))
+	monitoring := requireModuleCondition(t, updated.Status.Conditions, conditionTypeMonitoringReady)
+	require.Equal(t, metav1.ConditionFalse, monitoring.Status)
+	require.Equal(t, "MonitoringReconcileFailed", monitoring.Reason)
+	require.Contains(t, monitoring.Message, "forbidden")
+}
+
+func TestAIPipelinesReconcileRequeuesStatusConflictWithoutError(t *testing.T) {
+	t.Cleanup(viper.Reset)
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aipipelinesv1alpha1.AddToScheme(scheme))
+	module := newTestAIPipelines(common.Managed)
+	module.UID = "module-uid"
+	baseClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithStatusSubresource(&aipipelinesv1alpha1.AIPipelines{}).
+		WithObjects(module).
+		Build()
+	k8sClient := &statusConflictClient{Client: baseClient}
+	reconciler := &AIPipelinesReconciler{
+		Client: k8sClient, APIReader: baseClient, Scheme: scheme, Namespace: "opendatahub",
+	}
+
+	result, err := reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{
+		Name: aipipelinesv1alpha1.AIPipelinesInstanceName,
+	}})
+	require.NoError(t, err)
+	require.True(t, result.Requeue)
 }
 
 func TestAIPipelinesReconcileIgnoresNonSingleton(t *testing.T) {
@@ -359,6 +441,10 @@ func readyDSPOObservation() dspoDeploymentObservation {
 	return dspoDeploymentObservation{Status: metav1.ConditionTrue, Reason: "DSPOAvailable", Message: "ready"}
 }
 
+func readyMonitoringObservation() monitoringObservation {
+	return monitoringObservation{Status: metav1.ConditionTrue, Reason: "MonitoringResourcesReady", Message: "ready"}
+}
+
 func newTestAIPipelines(state common.ManagementState) *aipipelinesv1alpha1.AIPipelines {
 	return &aipipelinesv1alpha1.AIPipelines{
 		ObjectMeta: metav1.ObjectMeta{Name: aipipelinesv1alpha1.AIPipelinesInstanceName},
@@ -381,6 +467,71 @@ func requireModuleCondition(t *testing.T, conditions []common.Condition, conditi
 
 type prometheusRuleCreateNotFoundClient struct {
 	client.Client
+}
+
+type clusterRoleBindingCreateForbiddenClient struct {
+	client.Client
+}
+
+func (c *clusterRoleBindingCreateForbiddenClient) Create(
+	ctx context.Context,
+	object client.Object,
+	opts ...client.CreateOption,
+) error {
+	if object.GetObjectKind().GroupVersionKind().Kind == "ClusterRoleBinding" {
+		return apierrors.NewForbidden(schema.GroupResource{
+			Group: "rbac.authorization.k8s.io", Resource: "clusterrolebindings",
+		}, object.GetName(), errors.New("attempting to grant RBAC permissions not currently held"))
+	}
+	return c.Client.Create(ctx, object, opts...)
+}
+
+type statusConflictClient struct {
+	client.Client
+}
+
+func (c *statusConflictClient) Status() client.SubResourceWriter {
+	return &statusConflictWriter{delegate: c.Client.Status()}
+}
+
+type statusConflictWriter struct {
+	delegate client.SubResourceWriter
+}
+
+func (w *statusConflictWriter) Create(
+	ctx context.Context,
+	object client.Object,
+	subResource client.Object,
+	opts ...client.SubResourceCreateOption,
+) error {
+	return w.delegate.Create(ctx, object, subResource, opts...)
+}
+
+func (w *statusConflictWriter) Update(
+	_ context.Context,
+	object client.Object,
+	_ ...client.SubResourceUpdateOption,
+) error {
+	return apierrors.NewConflict(schema.GroupResource{
+		Group: "components.platform.opendatahub.io", Resource: "aipipelines",
+	}, object.GetName(), errors.New("object has been modified"))
+}
+
+func (w *statusConflictWriter) Patch(
+	ctx context.Context,
+	object client.Object,
+	patch client.Patch,
+	opts ...client.SubResourcePatchOption,
+) error {
+	return w.delegate.Patch(ctx, object, patch, opts...)
+}
+
+func (w *statusConflictWriter) Apply(
+	ctx context.Context,
+	object runtime.ApplyConfiguration,
+	opts ...client.SubResourceApplyOption,
+) error {
+	return w.delegate.Apply(ctx, object, opts...)
 }
 
 func (c *prometheusRuleCreateNotFoundClient) Create(

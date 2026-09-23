@@ -31,10 +31,6 @@ on:
       - closed
       - synchronize
 
-concurrency:
-  group: ${{ github.head_ref }}-${{ github.workflow }}
-  cancel-in-progress: true
-
 env:
   GIT_WORKSPACE: ${{ github.workspace }}
 
@@ -44,12 +40,20 @@ permissions:
 jobs:
   dspo-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        test-mode: [legacy, modular]
+    timeout-minutes: ${{ matrix.test-mode == 'modular' && 120 || 90 }}
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-${{ matrix.test-mode }}
+      cancel-in-progress: true
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Go
         uses: ./.github/actions/setup-go
@@ -75,10 +79,15 @@ jobs:
         id: test
         working-directory: ${{ github.workspace }}/.github/scripts/tests
         run: |
-          sh tests.sh --kind
+          if [ "${{ matrix.test-mode }}" = "modular" ]; then
+            sh tests.sh --kind --modular
+          else
+            sh tests.sh --kind
+          fi
         continue-on-error: true
 
       - name: Deploy MLflow
+        if: matrix.test-mode == 'legacy'
         id: deploy-mlflow
         uses: opendatahub-io/mlflow-operator/.github/actions/deploy@ec59b7c996ef4d14c448254132e21bd85fd1c28f
         with:
@@ -92,13 +101,13 @@ jobs:
           s3_secret_key: minio123
 
       - name: Verify MLflow deployment
-        if: ${{ steps.deploy-mlflow.outcome == 'success' }}
+        if: matrix.test-mode == 'legacy' && steps.deploy-mlflow.outcome == 'success'
         run: |
           kubectl get mlflow mlflow -n opendatahub
 
       - name: Run DSP MLflow tests
         id: test-mlflow
-        if: ${{ steps.deploy-mlflow.outcome == 'success' }}
+        if: matrix.test-mode == 'legacy' && steps.deploy-mlflow.outcome == 'success'
         working-directory: ${{ github.workspace }}/.github/scripts/tests
         env:
           CONTAINER_CLI: podman
@@ -109,7 +118,13 @@ jobs:
         continue-on-error: true
 
       - name: Collect events and logs
-        if: steps.test.outcome != 'success' || steps.deploy-mlflow.outcome != 'success' || steps.test-mlflow.outcome != 'success'
+        if: |
+          failure() ||
+          steps.test.outcome != 'success' ||
+          (matrix.test-mode == 'legacy' && (
+            steps.deploy-mlflow.outcome == 'failure' ||
+            steps.test-mlflow.outcome == 'failure'
+          ))
         working-directory: ${{ github.workspace }}/.github/scripts/tests
         run: |
           ./collect_logs.sh --dspa-ns test-dspa --dspo-ns opendatahub
