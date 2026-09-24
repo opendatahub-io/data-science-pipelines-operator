@@ -79,6 +79,8 @@ type DSPAReconciler struct {
 	APIReader client.Reader
 	// MLflowEndpointCacheTTL is the duration to cache the MLflow endpoint.
 	MLflowEndpointCacheTTL time.Duration
+	TLSMinVersion          string
+	TLSCipherSuites        string
 	mlflowEndpointCache    map[string]mlflowEndpointCacheEntry
 	mlflowEndpointCacheMu  sync.RWMutex
 }
@@ -316,6 +318,8 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	params := &DSPAParams{
 		WebhookAnnotations: r.WebhookAnnotations,
+		TLSMinVersion:      r.TLSMinVersion,
+		TLSCipherSuites:    r.TLSCipherSuites,
 	}
 	params.ResolveMLflowEndpoint = r.retrieveMLflowEndpointCached
 	reader := r.APIReader

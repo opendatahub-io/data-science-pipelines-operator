@@ -5,9 +5,11 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"strings"
 
 	configv1 "github.com/openshift/api/config/v1"
 	tlspkg "github.com/openshift/controller-runtime-common/pkg/tls"
+	libgocrypto "github.com/openshift/library-go/pkg/crypto"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -50,6 +52,10 @@ type tlsResult struct {
 	TLSOpts            []func(*tls.Config)
 	ProfileSpec        configv1.TLSProfileSpec
 	HasOpenShiftConfig bool
+}
+
+func proxyTLSConfig(profile configv1.TLSProfileSpec) (string, string) {
+	return string(profile.MinTLSVersion), strings.Join(libgocrypto.OpenSSLToIANACipherSuites(profile.Ciphers), ",")
 }
 
 func fetchTLSProfile(ctx context.Context, cli client.Client) (*tlsResult, error) {
