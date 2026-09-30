@@ -46,6 +46,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+
 	// to ensure that exec-entrypoint and run can make use of them.
 	admv1 "k8s.io/api/admissionregistration/v1"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -58,6 +59,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
 	//+kubebuilder:scaffold:imports
 	mlflowv1 "github.com/opendatahub-io/mlflow-operator/api/v1"
 )
@@ -242,6 +244,7 @@ func main() {
 	}
 	tlsOpts := tlsResult.TLSOpts
 	profile := tlsResult.ProfileSpec
+	proxyTLSMinVersion, proxyTLSCipherSuites := proxyTLSConfig(profile)
 	hasOpenShiftConfigAPI := tlsResult.HasOpenShiftConfig
 
 	// Fetch the TLS adherence policy (only meaningful on OpenShift clusters with the config API)
@@ -375,6 +378,8 @@ func main() {
 		MaxConcurrentReconciles: maxConcurrentReconciles,
 		WebhookAnnotations:      webhookAnnotations,
 		AllowedRegistries:       allowedRegistries,
+		TLSMinVersion:           proxyTLSMinVersion,
+		TLSCipherSuites:         proxyTLSCipherSuites,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DSPAParams")
 		os.Exit(1)
