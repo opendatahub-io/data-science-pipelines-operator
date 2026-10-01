@@ -64,7 +64,7 @@ spec:
               mountPath: /.minio/certs
             - name: cabundle
               mountPath: /.minio/certs/CAs
-          image: 'quay.io/minio/minio:RELEASE.2023-10-16T04-13-43Z'
+          image: 'icr.io/fusion-open/minio/minio:v210-1'
           args:
             - server
             - /data
