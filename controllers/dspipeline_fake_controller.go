@@ -25,9 +25,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	buildv1 "github.com/openshift/api/build/v1"
 	imagev1 "github.com/openshift/api/image/v1"
 	routev1 "github.com/openshift/api/route/v1"
+	"github.com/spf13/viper"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -36,6 +38,9 @@ import (
 )
 
 func NewFakeController() *DSPAReconciler {
+	// Mirror the shipped operator configuration now that omitted settings enable pipelines.
+	// Tests for missing configuration explicitly override this with MustSetInConfig or "".
+	viper.SetDefault(config.PipelinesComponentsImagePath, "pipelines-components:test")
 	// Setup Fake Client Builder
 	FakeBuilder := fake.NewClientBuilder()
 

@@ -1,6 +1,8 @@
 apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
 kind: DataSciencePipelinesApplication
 metadata:
+  annotations:
+    datasciencepipelinesapplications.opendatahub.io/disable-managed-pipelines: "true"
   name: testdspa
 spec:
   podToPodTLS: false
