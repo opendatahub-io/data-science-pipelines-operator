@@ -138,8 +138,13 @@ spec:
                     description: Specify a custom image for DSP API Server.
                     type: string
                   managedPipelines:
-                    description: Configures managed pipelines compiled and uploaded
-                      via an init container.
+                    description: |-
+                      Configures managed pipelines compiled and uploaded via an init container.
+                      The operator enables all bundled pipelines when omitted or null, including for existing DSPAs on upgrade.
+                      To disable, set the annotation
+                      datasciencepipelinesapplications.opendatahub.io/disable-managed-pipelines: "true"
+                      before upgrading. The annotation overrides this configuration.
+                    nullable: true
                     properties:
                       image:
                         description: |-

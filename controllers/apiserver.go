@@ -109,7 +109,7 @@ func (r *DSPAReconciler) generateSampleConfigJSON(dsp *dspav1.DataSciencePipelin
 
 	// Explicit managed pipeline list: add each to sample_config (API server loads these from sample_config).
 	// Omitted list ("all"): do not add managed entries here; API server loads from managed-pipelines.json in volume.
-	if mp := dsp.Spec.APIServer.ManagedPipelines; mp != nil && len(mp.Pipelines) > 0 {
+	if mp := dsp.Spec.APIServer.ManagedPipelines; dsp.ManagedPipelinesEnabled() && mp != nil && len(mp.Pipelines) > 0 {
 		seenManaged := make(map[string]struct{})
 		for _, p := range mp.Pipelines {
 			key := strings.ToLower(p.Name)

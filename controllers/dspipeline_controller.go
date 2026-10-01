@@ -602,7 +602,7 @@ func (r *DSPAReconciler) validateManagedPipelines(
 	dspaStatus dspastatus.DSPAStatus,
 	log logr.Logger,
 ) (bool, bool, error) {
-	if dspa.Spec.APIServer == nil {
+	if !dspa.ManagedPipelinesEnabled() {
 		dspaStatus.SetManagedPipelineNotApplicable()
 		return true, false, nil
 	}

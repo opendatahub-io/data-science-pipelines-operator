@@ -91,7 +91,7 @@ Images:
 ```
 In `controllers/testdata/declarative/case_4/config.yaml`
 
-**Managed pipelines:** If the DSPA under test sets `spec.apiServer.managedPipelines` **without** `image`, the case `config.yaml` must include `Images.PipelinesComponents` (mirroring `IMAGES_PIPELINES_COMPONENTS` / `dspo-config`) or reconciliation will fail with a clear configuration error. Cases that set `managedPipelines.image` explicitly can omit it. The case_2 `apiserver_deployment` golden `configHash` reflects resolved `params` (including defaulted init resources); expect to refresh it if managed-pipelines defaults change.
+**Managed pipelines:** The operator enables omitted/null configuration only in copied workload parameters, including existing DSPAs after upgrade. Cases unrelated to managed pipelines explicitly use the `datasciencepipelinesapplications.opendatahub.io/disable-managed-pipelines: "true"` annotation to retain their deployment expectations. Enabled cases without an explicit image must include `Images.PipelinesComponents` in `config.yaml` (mirroring `IMAGES_PIPELINES_COMPONENTS` / `dspo-config`). The case_2 `apiserver_deployment` golden `configHash` reflects resolved `params` (including defaulted init resources); expect to refresh it if managed-pipelines defaults change.
 
 Then run the tests by running: 
 

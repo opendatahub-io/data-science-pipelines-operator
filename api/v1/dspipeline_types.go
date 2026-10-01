@@ -23,6 +23,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+// DisableManagedPipelinesAnnotation is a persistent opt-out that can be set
+// before upgrading to an operator that enables managed pipelines by default.
+const DisableManagedPipelinesAnnotation = "datasciencepipelinesapplications.opendatahub.io/disable-managed-pipelines"
+
 type DSPASpec struct {
 	// DS Pipelines API Server configuration.
 	// +kubebuilder:default:={deploy: true}
@@ -156,6 +160,12 @@ type APIServer struct {
 	// Driver image used during pipeline execution.
 	ArgoDriverImage string `json:"argoDriverImage,omitempty"`
 	// Configures managed pipelines compiled and uploaded via an init container.
+	// The operator enables all bundled pipelines when omitted or null, including for existing DSPAs on upgrade.
+	// To disable, set the annotation
+	// datasciencepipelinesapplications.opendatahub.io/disable-managed-pipelines: "true"
+	// before upgrading. The annotation overrides this configuration.
+	// +kubebuilder:validation:Optional
+	// +nullable
 	ManagedPipelines *ManagedPipelinesSpec `json:"managedPipelines,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
@@ -610,6 +620,13 @@ type DataSciencePipelinesApplication struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	Spec              DSPASpec   `json:"spec,omitempty"`
 	Status            DSPAStatus `json:"status,omitempty"`
+}
+
+// ManagedPipelinesEnabled resolves the operator default and annotation opt-out without
+// modifying the stored managed-pipeline configuration.
+func (d *DataSciencePipelinesApplication) ManagedPipelinesEnabled() bool {
+	return d.Spec.APIServer != nil &&
+		d.Annotations[DisableManagedPipelinesAnnotation] != "true"
 }
 
 //+kubebuilder:object:root=true
