@@ -369,6 +369,7 @@ func TestDeployAPIServerWithoutManagedPipelines(t *testing.T) {
 	}
 	dspa.Name = testDSPAName
 	dspa.Namespace = testNamespace
+	dspa.Annotations = map[string]string{dspav1.DisableManagedPipelinesAnnotation: "true"}
 
 	ctx, params, reconciler := CreateNewTestObjects()
 	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
@@ -679,6 +680,7 @@ func TestExtractParams_ManagedPipelinesFailsWhenEnvVarEmpty(t *testing.T) {
 
 func TestExtractParams_ManagedPipelinesFailsWhenImageUnsetAndNotInOperatorConfig(t *testing.T) {
 	t.Cleanup(func() { viper.Reset() })
+	viper.Set(config.PipelinesComponentsImagePath, config.DefaultImageValue)
 
 	dspa := testutil.CreateDSPAWithManagedPipelines("", nil, nil)
 	dspa.Name = "dspa"
@@ -712,6 +714,7 @@ func TestExtractParams_ManagedPipelinesWhitespaceImageTreatedAsOmitted(t *testin
 
 func TestExtractParams_ManagedPipelinesWhitespaceOnlyFailsWithoutOperatorConfig(t *testing.T) {
 	t.Cleanup(func() { viper.Reset() })
+	viper.Set(config.PipelinesComponentsImagePath, config.DefaultImageValue)
 
 	dspa := testutil.CreateDSPAWithManagedPipelines("   ", nil, nil)
 	dspa.Name = "dspa"
@@ -735,6 +738,7 @@ func TestReconcile_SetsAPIServerNotReadyOnExtractParamsErrors(t *testing.T) {
 		{
 			name: "managed_pipelines_image_unset",
 			prepareDSPA: func(_ *testing.T) *dspav1.DataSciencePipelinesApplication {
+				viper.Set(config.PipelinesComponentsImagePath, config.DefaultImageValue)
 				d := testutil.CreateDSPAWithManagedPipelines("", nil, nil)
 				d.Name = "dspa-mp-status"
 				d.Namespace = "testnamespace"
@@ -1062,6 +1066,7 @@ func TestExtractParams_ManagedPipelineImageEnvVarsNilWithoutManagedPipelines(t *
 	dspa.Namespace = "ns"
 	dspa.Spec.APIServer = &dspav1.APIServer{Deploy: true}
 	dspa.Spec.APIServer.ManagedPipelines = nil
+	dspa.Annotations = map[string]string{dspav1.DisableManagedPipelinesAnnotation: "true"}
 
 	ctx, params, reconciler := CreateNewTestObjects()
 	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
