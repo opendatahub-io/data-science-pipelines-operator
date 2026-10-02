@@ -9,7 +9,6 @@
 # The image defaults to the operator's configured pipelines-components image.
 # Null also follows the enabled default; use the annotation to disable them.
 # Defaulting happens only in operator workload parameters, not in the stored DSPA.
-# See ../../../docs/managed-pipelines.md for upgrade and opt-out instructions.
 #
 # Omitting managedPipelines.pipelines sets ALL_PIPELINES=true for the init image.
 # To pin a subset, set pipelines: [ { name: <pipeline-name> }, ... ].
