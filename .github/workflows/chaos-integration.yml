@@ -77,12 +77,7 @@ jobs:
       - name: Collect logs on failure
         if: failure() || steps.chaos-run.outcome == 'failure'
         working-directory: ${{ github.workspace }}/.github/scripts/tests
-        run: |
-          ./collect_logs.sh --dspa-ns "$DSPA_NAMESPACE" --dspo-ns "$OPERATOR_NAMESPACE" \
-            --dependency-ns test-minio \
-            --dependency-ns test-mariadb \
-            --dependency-ns test-pypiserver \
-            --dependency-ns cert-manager
+        run: ./collect_logs.sh --dspa-ns $DSPA_NAMESPACE --dspo-ns $OPERATOR_NAMESPACE
 
       - name: Upload raw chaos results
         if: always()
