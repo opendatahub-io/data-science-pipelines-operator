@@ -76,47 +76,45 @@ func FormFromFile(t *testing.T, form map[string]string) (*bytes.Buffer, string) 
 }
 
 func RetrievePipelineId(t *testing.T, httpClient http.Client, APIServerURL string, PipelineDisplayName string) (string, error) {
-	// Retry the GET request to handle race conditions in Kubernetes native API mode
-	var response *http.Response
-	var err error
+	// A successful list request can still return a stale Kubernetes cache snapshot.
+	// Retry until the requested pipeline is visible, not just until GET succeeds.
+	var err = errors.New("pipeline not found")
 
 	timeout := time.After(10 * time.Second)
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
-	success := false
-	for !success {
+	for {
 		select {
 		case <-timeout:
 			return "", fmt.Errorf("timed out retrieving pipelines after 10 seconds, last error: %w", err)
 		case <-ticker.C:
+			var response *http.Response
 			response, err = httpClient.Get(fmt.Sprintf("%s/apis/v2beta1/pipelines", APIServerURL))
-			if err == nil {
-				success = true
-				break
+			if err != nil {
+				t.Logf("Retrying GET request due to error: %v", err)
+				continue
 			}
-			t.Logf("Retrying GET request due to error: %v", err)
+			responseData, readErr := io.ReadAll(response.Body)
+			response.Body.Close()
+			if readErr != nil {
+				return "", readErr
+			}
+			if response.StatusCode != http.StatusOK {
+				return "", fmt.Errorf("listing pipelines returned HTTP %d: %s", response.StatusCode, responseData)
+			}
+			var pipelineData Pipeline
+			if decodeErr := json.Unmarshal(responseData, &pipelineData); decodeErr != nil {
+				return "", decodeErr
+			}
+			for _, pipeline := range pipelineData.Pipelines {
+				if pipeline.DisplayName == PipelineDisplayName {
+					return pipeline.PipelineID, nil
+				}
+			}
+			err = fmt.Errorf("pipeline %q not found", PipelineDisplayName)
+			t.Logf("Retrying pipeline lookup: %v", err)
 		}
-	}
-
-	require.NoError(t, err)
-	responseData, err := io.ReadAll(response.Body)
-	require.NoError(t, err)
-	var pipelineData Pipeline
-	var pipelineID *string
-	err = json.Unmarshal(responseData, &pipelineData)
-	require.NoError(t, err)
-	for _, pipeline := range pipelineData.Pipelines {
-		if pipeline.DisplayName == PipelineDisplayName {
-			pipelineID = &pipeline.PipelineID
-			break
-		}
-	}
-
-	if pipelineID != nil {
-		return *pipelineID, nil
-	} else {
-		return "", errors.New("pipeline not found")
 	}
 }
 
