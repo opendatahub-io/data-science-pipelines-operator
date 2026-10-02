@@ -3,14 +3,14 @@ kind: DataSciencePipelinesApplication
 metadata:
   name: sample
 spec:
+  mlflow:
+    integrationMode: AUTODETECT
+    injectUserEnvVars: true
   dspVersion: v2
   # Omit the `mlflow` key entirely for the same defaults (AUTODETECT, injectUserEnvVars false).
   # Use `mlflow.integrationMode: DISABLED` to opt out of MLflow integration.
   apiServer:
     enableSamplePipeline: true
-  mlflow:
-    integrationMode: AUTODETECT
-    injectUserEnvVars: true
   objectStorage:
     minio:
       deploy: true

@@ -102,7 +102,6 @@ func (s *ControllerSuite) TestResourceClaimCRDValidation() {
 			dspa := testutil.CreateEmptyDSPA()
 			dspa.Name = fmt.Sprintf("resource-claim-validation-%d", idx)
 			dspa.Namespace = namespace
-			dspa.Spec.MLMD.Deploy = false
 			dspa.Spec.APIServer.ResourceClaims = []dspav1.PodResourceClaim{tt.claim}
 			t.Cleanup(func() {
 				_ = ctrlclient.IgnoreNotFound(k8sClient.Delete(ctx, dspa))
@@ -130,7 +129,6 @@ func (s *ControllerSuite) TestResourceClaimCRDDuplicateNamesValidation() {
 	dspa := testutil.CreateEmptyDSPA()
 	dspa.Name = namespace
 	dspa.Namespace = namespace
-	dspa.Spec.MLMD.Deploy = false
 	dspa.Spec.APIServer.ResourceClaims = []dspav1.PodResourceClaim{
 		{Name: "gpu", ResourceClaimName: ptr.To("existing-gpu")},
 		{Name: "gpu", ResourceClaimName: ptr.To("another-gpu")},

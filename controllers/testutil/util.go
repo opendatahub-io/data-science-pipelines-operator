@@ -216,7 +216,6 @@ func CreateEmptyDSPA() *dspav1.DataSciencePipelinesApplication {
 		Spec: dspav1.DSPASpec{
 			PodToPodTLS:        BoolPtr(false),
 			APIServer:          &dspav1.APIServer{Deploy: false},
-			MLMD:               &dspav1.MLMD{Deploy: true}, // MLMD is required
 			PersistenceAgent:   &dspav1.PersistenceAgent{Deploy: false},
 			ScheduledWorkflow:  &dspav1.ScheduledWorkflow{Deploy: false},
 			WorkflowController: &dspav1.WorkflowController{Deploy: false},
@@ -253,7 +252,6 @@ func CreateDSPAWithAPIServerPodtoPodTlsEnabled() *dspav1.DataSciencePipelinesApp
 	dspa.Spec.APIServer = &dspav1.APIServer{
 		Deploy: true,
 	}
-	dspa.Spec.MLMD.Deploy = true
 	dspa.Spec.PodToPodTLS = BoolPtr(true)
 
 	return dspa
@@ -270,7 +268,6 @@ func CreateDSPAWithCustomKfpLauncherConfigMap(configMapName string) *dspav1.Data
 	// required, or we get an error because OCP certs aren't found
 	dspa.Spec.PodToPodTLS = BoolPtr(false)
 	// required, or we get an error because this is required in v2
-	dspa.Spec.MLMD.Deploy = true
 	dspa.Spec.APIServer = &dspav1.APIServer{
 		Deploy:                     true,
 		CustomKfpLauncherConfigMap: configMapName,
@@ -282,7 +279,6 @@ func CreateDSPAWithResourceTTL(duration time.Duration) *dspav1.DataSciencePipeli
 	dspa := CreateEmptyDSPA()
 	dspa.Spec.DSPVersion = "v2"
 	dspa.Spec.PodToPodTLS = BoolPtr(false)
-	dspa.Spec.MLMD.Deploy = true
 	dspa.Spec.APIServer = &dspav1.APIServer{
 		Deploy:      true,
 		ResourceTTL: &metav1.Duration{Duration: duration},
@@ -294,7 +290,6 @@ func CreateDSPAWithManagedPipelines(image string, pipelines []dspav1.ManagedPipe
 	dspa := CreateEmptyDSPA()
 	dspa.Spec.DSPVersion = "v2"
 	dspa.Spec.PodToPodTLS = BoolPtr(false)
-	dspa.Spec.MLMD.Deploy = true
 	dspa.Spec.APIServer = &dspav1.APIServer{
 		Deploy: true,
 		ManagedPipelines: &dspav1.ManagedPipelinesSpec{
@@ -316,9 +311,6 @@ func CreateTestDSPA() *dspav1.DataSciencePipelinesApplication {
 		APIServer: &dspav1.APIServer{
 			Deploy:        true,
 			PipelineStore: "kubernetes",
-		},
-		MLMD: &dspav1.MLMD{
-			Deploy: true,
 		},
 		Database: &dspav1.Database{
 			DisableHealthCheck: false,

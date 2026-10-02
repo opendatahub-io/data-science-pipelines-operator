@@ -101,14 +101,6 @@ func TestDeployWorkflowController(t *testing.T) {
 					Deploy: true,
 				},
 			},
-			MLMD: &dspav1.MLMD{Deploy: true},
-			ObjectStorage: &dspav1.ObjectStorage{
-				DisableHealthCheck: false,
-				Minio: &dspav1.Minio{
-					Deploy: false,
-					Image:  "someimage",
-				},
-			},
 		},
 	}
 
@@ -205,14 +197,6 @@ func TestChangeManagementStateWorkflowController(t *testing.T) {
 					Deploy: true,
 				},
 			},
-			MLMD: &dspav1.MLMD{Deploy: true},
-			ObjectStorage: &dspav1.ObjectStorage{
-				DisableHealthCheck: false,
-				Minio: &dspav1.Minio{
-					Deploy: false,
-					Image:  "someimage",
-				},
-			},
 		},
 	}
 
@@ -292,14 +276,6 @@ func TestBadManagementStateWorkflowController(t *testing.T) {
 					Deploy: true,
 				},
 			},
-			MLMD: &dspav1.MLMD{Deploy: true},
-			ObjectStorage: &dspav1.ObjectStorage{
-				DisableHealthCheck: false,
-				Minio: &dspav1.Minio{
-					Deploy: false,
-					Image:  "someimage",
-				},
-			},
 		},
 	}
 
@@ -346,14 +322,6 @@ func TestManagementStateWorkflowControllerInvalidJSONRecovery(t *testing.T) {
 				DisableHealthCheck: false,
 				MariaDB: &dspav1.MariaDB{
 					Deploy: true,
-				},
-			},
-			MLMD: &dspav1.MLMD{Deploy: true},
-			ObjectStorage: &dspav1.ObjectStorage{
-				DisableHealthCheck: false,
-				Minio: &dspav1.Minio{
-					Deploy: false,
-					Image:  "someimage",
 				},
 			},
 		},
@@ -411,14 +379,6 @@ func TestWorkflowControllerConfigMapInjectsSSLCertDirWhenCABundlePresent(t *test
 				DisableHealthCheck: false,
 				MariaDB: &dspav1.MariaDB{
 					Deploy: true,
-				},
-			},
-			MLMD: &dspav1.MLMD{Deploy: true},
-			ObjectStorage: &dspav1.ObjectStorage{
-				DisableHealthCheck: false,
-				Minio: &dspav1.Minio{
-					Deploy: false,
-					Image:  "someimage",
 				},
 			},
 		},

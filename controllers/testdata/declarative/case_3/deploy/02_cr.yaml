@@ -12,17 +12,6 @@ spec:
     argoDriverImage: argodriverimage:test3
   persistenceAgent: {}
   scheduledWorkflow: {}
-  mlmd:
-    deploy: true
-  database:
-    externalDB:
-      host: testdbhost3
-      passwordSecret:
-        key: testpswkey3
-        name: testdbpswsecretname3
-      pipelineDBName: testdbname3
-      port: test3
-      username: testuser3
   objectStorage:
     externalStorage:
       port: '80'

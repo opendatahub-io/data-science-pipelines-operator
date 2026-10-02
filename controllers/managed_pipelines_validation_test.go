@@ -337,7 +337,6 @@ func newAllReadyStatus(t *testing.T) dspastatus.DSPAStatus {
 	status.SetPersistenceAgentStatus(dspastatus.BuildTrueCondition(config.PersistenceAgentReady, "ready"))
 	status.SetScheduledWorkflowStatus(dspastatus.BuildTrueCondition(config.ScheduledWorkflowReady, "ready"))
 	status.SetWorkflowControllerReady()
-	status.SetMLMDProxyStatus(dspastatus.BuildTrueCondition(config.MLMDProxyReady, "ready"))
 	status.SetWebhookReady()
 	return status
 }
@@ -499,7 +498,6 @@ func TestPreservePostValidationConditions_AllPreviousConditions(t *testing.T) {
 		{Type: config.PersistenceAgentReady, Status: metav1.ConditionTrue, Reason: config.MinimumReplicasAvailable, Message: "persistence agent healthy"},
 		{Type: config.ScheduledWorkflowReady, Status: metav1.ConditionTrue, Reason: config.MinimumReplicasAvailable, Message: "scheduled workflow healthy"},
 		{Type: config.WorkflowControllerReady, Status: metav1.ConditionTrue, Reason: config.MinimumReplicasAvailable, Message: "workflow controller healthy"},
-		{Type: config.MLMDProxyReady, Status: metav1.ConditionTrue, Reason: config.MinimumReplicasAvailable, Message: "mlmd proxy healthy"},
 	}
 
 	status := dspastatus.NewDSPAStatus(dspa)
@@ -512,7 +510,6 @@ func TestPreservePostValidationConditions_AllPreviousConditions(t *testing.T) {
 		config.PersistenceAgentReady,
 		config.ScheduledWorkflowReady,
 		config.WorkflowControllerReady,
-		config.MLMDProxyReady,
 	} {
 		cond := findCondition(conditions, ct)
 		require.NotNil(t, cond, "condition %s must be present", ct)
@@ -535,7 +532,6 @@ func TestPreservePostValidationConditions_NoPreviousConditions_LeavesUnknown(t *
 		config.PersistenceAgentReady,
 		config.ScheduledWorkflowReady,
 		config.WorkflowControllerReady,
-		config.MLMDProxyReady,
 	} {
 		cond := findCondition(conditions, ct)
 		require.NotNil(t, cond, "condition %s must be present", ct)
@@ -547,7 +543,6 @@ func TestPreservePostValidationConditions_PartialPreviousConditions(t *testing.T
 	dspa := testutil.CreateEmptyDSPA()
 	dspa.Status.Conditions = []metav1.Condition{
 		{Type: config.APIServerReady, Status: metav1.ConditionTrue, Reason: config.MinimumReplicasAvailable, Message: "api server healthy"},
-		{Type: config.MLMDProxyReady, Status: metav1.ConditionFalse, Reason: config.FailingToDeploy, Message: "mlmd failing"},
 	}
 
 	status := dspastatus.NewDSPAStatus(dspa)
@@ -559,11 +554,6 @@ func TestPreservePostValidationConditions_PartialPreviousConditions(t *testing.T
 	apiCond := findCondition(conditions, config.APIServerReady)
 	require.NotNil(t, apiCond)
 	assert.Equal(t, metav1.ConditionTrue, apiCond.Status)
-
-	mlmdCond := findCondition(conditions, config.MLMDProxyReady)
-	require.NotNil(t, mlmdCond)
-	assert.Equal(t, metav1.ConditionFalse, mlmdCond.Status)
-	assert.Equal(t, config.FailingToDeploy, mlmdCond.Reason)
 
 	for _, ct := range []string{
 		config.PersistenceAgentReady,

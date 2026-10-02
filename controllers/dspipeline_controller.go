@@ -351,7 +351,6 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			util.GetConditionByType(config.PersistenceAgentReady, conditions):   PersistenceAgentReadyMetric,
 			util.GetConditionByType(config.ScheduledWorkflowReady, conditions):  ScheduledWorkflowReadyMetric,
 			util.GetConditionByType(config.WorkflowControllerReady, conditions): WorkflowControllerReadyMetric,
-			util.GetConditionByType(config.MLMDProxyReady, conditions):          MLMDProxyReadyMetric,
 			util.GetConditionByType(config.ManagedPipelineValid, conditions):    ManagedPipelineValidMetric,
 			util.GetConditionByType(config.CrReady, conditions):                 CrReadyMetric,
 		}
@@ -366,7 +365,6 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		r.setStatusAsUnsupported(config.APIServerReady, err1, dspaStatus.SetApiServerStatus)
 		r.setStatusAsUnsupported(config.PersistenceAgentReady, err1, dspaStatus.SetPersistenceAgentStatus)
 		r.setStatusAsUnsupported(config.ScheduledWorkflowReady, err1, dspaStatus.SetScheduledWorkflowStatus)
-		r.setStatusAsUnsupported(config.MLMDProxyReady, err1, dspaStatus.SetMLMDProxyStatus)
 		dspaStatus.SetDSPANotReady(err1, config.UnsupportedVersion)
 		log.Info(err1.Error())
 		return ctrl.Result{}, nil
@@ -540,15 +538,6 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			}
 		}
 
-		// MLMD should be the last to reconcile because it can cause an early exit due to the lack of the TLS secret, which may not have been created yet.
-		err = r.ReconcileMLMD(ctx, dspa, params)
-		if err != nil {
-			r.setStatusAsNotReady(config.MLMDProxyReady, err, dspaStatus.SetMLMDProxyStatus)
-			return ctrl.Result{}, err
-		} else {
-			r.setStatus(ctx, params.MlmdProxyDefaultResourceName, config.MLMDProxyReady, dspa,
-				dspaStatus.SetMLMDProxyStatus, log)
-		}
 	}
 
 	if !dspaPrereqsReady {
@@ -580,7 +569,6 @@ func (r *DSPAReconciler) preservePostValidationConditions(
 		{config.PersistenceAgentReady, dspaStatus.SetPersistenceAgentStatus},
 		{config.ScheduledWorkflowReady, dspaStatus.SetScheduledWorkflowStatus},
 		{config.WorkflowControllerReady, dspaStatus.SetWorkflowControllerStatus},
-		{config.MLMDProxyReady, dspaStatus.SetMLMDProxyStatus},
 	}
 	for _, cs := range conditionSetters {
 		prev := util.GetConditionByType(cs.condType, dspa.Status.Conditions)
@@ -852,18 +840,7 @@ func (r *DSPAReconciler) PublishMetrics(dspa *dspav1.DataSciencePipelinesApplica
 
 func (r *DSPAReconciler) GetComponents(ctx context.Context, dspa *dspav1.DataSciencePipelinesApplication) dspav1.ComponentStatus {
 	log := r.Log.WithValues("namespace", dspa.Namespace).WithValues("dspa_name", dspa.Name)
-	mlmdProxyResourceName := fmt.Sprintf("ds-pipeline-md-%s", dspa.Name)
 	apiServerResourceName := fmt.Sprintf("ds-pipeline-%s", dspa.Name)
-
-	mlmdProxyUrl, err := util.GetServiceHostname(ctx, mlmdProxyResourceName, dspa.Namespace, r.Client)
-	if err != nil {
-		log.Error(err, "Error retrieving MLMD Proxy Service endpoint")
-	}
-
-	mlmdProxyExternalUrl, err := util.GetRouteHostname(ctx, mlmdProxyResourceName, dspa.Namespace, r.Client)
-	if err != nil {
-		log.Error(err, "Error retrieving MLMD Proxy Route endpoint")
-	}
 
 	apiServerUrl, err := util.GetServiceHostname(ctx, apiServerResourceName, dspa.Namespace, r.Client)
 	if err != nil {
@@ -875,14 +852,6 @@ func (r *DSPAReconciler) GetComponents(ctx context.Context, dspa *dspav1.DataSci
 		log.Error(err, "Error retrieving API Server Route endpoint")
 	}
 
-	mlmdProxyComponent := &dspav1.ComponentDetailStatus{}
-	if mlmdProxyUrl != "" {
-		mlmdProxyComponent.Url = mlmdProxyUrl
-	}
-	if mlmdProxyExternalUrl != "" {
-		mlmdProxyComponent.ExternalUrl = mlmdProxyExternalUrl
-	}
-
 	apiServerComponent := &dspav1.ComponentDetailStatus{}
 	if apiServerUrl != "" {
 		apiServerComponent.Url = apiServerUrl
@@ -892,9 +861,6 @@ func (r *DSPAReconciler) GetComponents(ctx context.Context, dspa *dspav1.DataSci
 	}
 
 	status := dspav1.ComponentStatus{}
-	if mlmdProxyComponent.Url != "" && mlmdProxyComponent.ExternalUrl != "" {
-		status.MLMDProxy = *mlmdProxyComponent
-	}
 	if apiServerComponent.Url != "" && apiServerComponent.ExternalUrl != "" {
 		status.APIServer = *apiServerComponent
 	}

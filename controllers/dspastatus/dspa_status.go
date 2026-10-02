@@ -31,8 +31,6 @@ type DSPAStatus interface {
 	SetWorkflowControllerReady()
 	SetWorkflowControllerNotApplicable()
 
-	SetMLMDProxyStatus(mlmdProxyReady metav1.Condition)
-
 	SetManagedPipelineValid()
 	SetManagedPipelineInvalid(err error, reason string)
 	SetManagedPipelineNotApplicable()
@@ -49,7 +47,6 @@ func NewDSPAStatus(dspa *dspav1.DataSciencePipelinesApplication) DSPAStatus {
 	persistenceAgentCondition := BuildUnknownCondition(config.PersistenceAgentReady)
 	scheduledWorkflowReadyCondition := BuildUnknownCondition(config.ScheduledWorkflowReady)
 	workflowControllerReadyCondition := BuildUnknownCondition(config.WorkflowControllerReady)
-	mlmdProxyReadyCondition := BuildUnknownCondition(config.MLMDProxyReady)
 	webhookReadyCondition := BuildUnknownCondition(config.WebhookReady)
 	managedPipelineValidCondition := BuildUnknownCondition(config.ManagedPipelineValid)
 
@@ -61,7 +58,6 @@ func NewDSPAStatus(dspa *dspav1.DataSciencePipelinesApplication) DSPAStatus {
 		persistenceAgentReady:   &persistenceAgentCondition,
 		scheduledWorkflowReady:  &scheduledWorkflowReadyCondition,
 		workflowControllerReady: &workflowControllerReadyCondition,
-		mlmdProxyReady:          &mlmdProxyReadyCondition,
 		webhookReady:            &webhookReadyCondition,
 		managedPipelineValid:    &managedPipelineValidCondition,
 	}
@@ -75,7 +71,6 @@ type dspaStatus struct {
 	persistenceAgentReady   *metav1.Condition
 	scheduledWorkflowReady  *metav1.Condition
 	workflowControllerReady *metav1.Condition
-	mlmdProxyReady          *metav1.Condition
 	dspaReady               *metav1.Condition
 	webhookReady            *metav1.Condition
 	managedPipelineValid    *metav1.Condition
@@ -169,10 +164,6 @@ func (s *dspaStatus) SetWorkflowControllerNotApplicable() {
 	s.workflowControllerReady = &condition
 }
 
-func (s *dspaStatus) SetMLMDProxyStatus(mlmdProxyReady metav1.Condition) {
-	s.mlmdProxyReady = &mlmdProxyReady
-}
-
 func (s *dspaStatus) SetManagedPipelineValid() {
 	condition := BuildTrueCondition(config.ManagedPipelineValid, "All managed pipeline names are valid")
 	s.managedPipelineValid = &condition
@@ -214,7 +205,6 @@ func (s *dspaStatus) GetConditions() []metav1.Condition {
 		*s.getPersistenceAgentReadyCondition(),
 		*s.getScheduledWorkflowReadyCondition(),
 		*s.getWorkflowControllerReadyCondition(),
-		*s.getMLMDProxyReadyCondition(),
 		*s.getWebhookReadyCondition(),
 		*s.getManagedPipelineValidCondition(),
 	}
@@ -260,7 +250,6 @@ func (s *dspaStatus) GetConditions() []metav1.Condition {
 		*s.persistenceAgentReady,
 		*s.scheduledWorkflowReady,
 		*s.workflowControllerReady,
-		*s.mlmdProxyReady,
 		*s.webhookReady,
 		*s.managedPipelineValid,
 		*crReady,
@@ -302,10 +291,6 @@ func (s *dspaStatus) getScheduledWorkflowReadyCondition() *metav1.Condition {
 
 func (s *dspaStatus) getWorkflowControllerReadyCondition() *metav1.Condition {
 	return s.workflowControllerReady
-}
-
-func (s *dspaStatus) getMLMDProxyReadyCondition() *metav1.Condition {
-	return s.mlmdProxyReady
 }
 
 func (s *dspaStatus) getWebhookReadyCondition() *metav1.Condition {

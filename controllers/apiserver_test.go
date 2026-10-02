@@ -118,9 +118,6 @@ func TestDeployAPIServer(t *testing.T) {
 			APIServer: &dspav1.APIServer{
 				Deploy: true,
 			},
-			MLMD: &dspav1.MLMD{
-				Deploy: true,
-			},
 			Database: &dspav1.Database{
 				DisableHealthCheck: false,
 				MariaDB: &dspav1.MariaDB{
@@ -356,11 +353,6 @@ func TestDeployAPIServerWithoutManagedPipelines(t *testing.T) {
 			APIServer: &dspav1.APIServer{
 				Deploy: true,
 			},
-			MLMD: &dspav1.MLMD{Deploy: true},
-			Database: &dspav1.Database{
-				DisableHealthCheck: false,
-				MariaDB:            &dspav1.MariaDB{Deploy: true},
-			},
 			ObjectStorage: &dspav1.ObjectStorage{
 				DisableHealthCheck: false,
 				Minio:              &dspav1.Minio{Deploy: false, Image: "someimage"},
@@ -406,9 +398,6 @@ func TestApiServerEndpoints(t *testing.T) {
 		Spec: dspav1.DSPASpec{
 			PodToPodTLS: testutil.BoolPtr(false),
 			APIServer: &dspav1.APIServer{
-				Deploy: true,
-			},
-			MLMD: &dspav1.MLMD{
 				Deploy: true,
 			},
 			Database: &dspav1.Database{

@@ -96,8 +96,6 @@ const (
 	GeneratedObjectStorageAccessKeyLength = 16
 	GeneratedObjectStorageSecretKeyLength = 24
 
-	MlmdGrpcPort = "8080"
-
 	// DefaultManagedPipelinesVolumeSizeLimit is the default emptyDir sizeLimit for the managed-pipelines volume.
 	DefaultManagedPipelinesVolumeSizeLimit = "1024Mi"
 
@@ -135,8 +133,6 @@ const (
 	APIServerImagePath              = "Images.ApiServer"
 	PersistenceAgentImagePath       = "Images.PersistenceAgent"
 	ScheduledWorkflowImagePath      = "Images.ScheduledWorkflow"
-	MlmdEnvoyImagePath              = "Images.MlmdEnvoy"
-	MlmdGRPCImagePath               = "Images.MlmdGRPC"
 	LauncherImagePath               = "Images.LauncherImage"
 	DriverImagePath                 = "Images.DriverImage"
 	ArgoExecImagePath               = "Images.ArgoExecImage"
@@ -164,8 +160,6 @@ var platformRelatedImages = map[string]string{
 	DriverImagePath:                 "RELATED_IMAGE_ODH_ML_PIPELINES_DRIVER_IMAGE",
 	LauncherImagePath:               "RELATED_IMAGE_ODH_ML_PIPELINES_LAUNCHER_IMAGE",
 	MariaDBImagePath:                "RELATED_IMAGE_DSP_MARIADB_IMAGE",
-	MlmdEnvoyImagePath:              "RELATED_IMAGE_DSP_PROXYV2_IMAGE",
-	MlmdGRPCImagePath:               "RELATED_IMAGE_ODH_MLMD_GRPC_SERVER_IMAGE",
 	KubeRBACProxyImagePath:          "RELATED_IMAGE_ODH_KUBE_RBAC_PROXY_IMAGE",
 	PipelinesComponentsImagePath:    "RELATED_IMAGE_ODH_PIPELINES_COMPONENTS_IMAGE",
 }
@@ -178,7 +172,6 @@ const (
 	PersistenceAgentReady   = "PersistenceAgentReady"
 	ScheduledWorkflowReady  = "ScheduledWorkflowReady"
 	WorkflowControllerReady = "WorkflowControllerReady"
-	MLMDProxyReady          = "MLMDProxyReady"
 	WebhookReady            = "WebhookReady"
 	ManagedPipelineValid    = "ManagedPipelineValid"
 	CrReady                 = "Ready"
@@ -253,8 +246,6 @@ var (
 	WorkflowControllerResourceRequirements   = createResourceRequirement(resource.MustParse("120m"), resource.MustParse("500Mi"), resource.MustParse("250m"), resource.MustParse("1Gi"))
 	MariaDBResourceRequirements              = createResourceRequirement(resource.MustParse("300m"), resource.MustParse("800Mi"), resource.MustParse("1"), resource.MustParse("1Gi"))
 	MinioResourceRequirements                = createResourceRequirement(resource.MustParse("200m"), resource.MustParse("100Mi"), resource.MustParse("250m"), resource.MustParse("1Gi"))
-	MlmdEnvoyResourceRequirements            = createResourceRequirement(resource.MustParse("100m"), resource.MustParse("256Mi"), resource.MustParse("100m"), resource.MustParse("256Mi"))
-	MlmdGRPCResourceRequirements             = createResourceRequirement(resource.MustParse("100m"), resource.MustParse("256Mi"), resource.MustParse("100m"), resource.MustParse("256Mi"))
 	ManagedPipelinesInitResourceRequirements = createResourceRequirement(resource.MustParse("250m"), resource.MustParse("500Mi"), resource.MustParse("500m"), resource.MustParse("1Gi"))
 )
 

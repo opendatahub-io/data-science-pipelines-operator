@@ -84,16 +84,6 @@ var (
 			"dspa_namespace",
 		},
 	)
-	MLMDProxyReadyMetric = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "data_science_pipelines_application_mlmdproxy_ready",
-			Help: "Data Science Pipelines Application - MLMD Proxy Ready Status",
-		},
-		[]string{
-			"dspa_name",
-			"dspa_namespace",
-		},
-	)
 	ManagedPipelineValidMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "data_science_pipelines_application_managed_pipeline_valid",
@@ -126,7 +116,6 @@ var (
 		PersistenceAgentReadyMetric,
 		ScheduledWorkflowReadyMetric,
 		WorkflowControllerReadyMetric,
-		MLMDProxyReadyMetric,
 		CrReadyMetric,
 	}
 

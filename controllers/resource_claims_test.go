@@ -47,9 +47,6 @@ func baseDSPA() *dspav1.DataSciencePipelinesApplication {
 			WorkflowController: &dspav1.WorkflowController{
 				Deploy: true,
 			},
-			MLMD: &dspav1.MLMD{
-				Deploy: true,
-			},
 			Database: &dspav1.Database{
 				DisableHealthCheck: false,
 				MariaDB: &dspav1.MariaDB{
@@ -455,66 +452,6 @@ func TestMinioResourceClaims(t *testing.T) {
 	assert.Equal(t, resource.MustParse("1Gi"), container.Resources.Limits.Memory().DeepCopy())
 }
 
-func TestMLMDEnvoyResourceClaims(t *testing.T) {
-	dspa := baseDSPA()
-	dspa.Spec.MLMD.Envoy = &dspav1.Envoy{
-		ResourceClaims: []dspav1.PodResourceClaim{
-			{
-				Name:                      "gpu-claim",
-				ResourceClaimTemplateName: ptr.To("gpu-template"),
-			},
-		},
-	}
-
-	ctx, params, reconciler := CreateNewTestObjects()
-	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
-	require.NoError(t, err)
-
-	err = reconciler.ReconcileMLMD(ctx, dspa, params)
-	require.NoError(t, err)
-
-	deployment := &appsv1.Deployment{}
-	created, err := reconciler.IsResourceCreated(ctx, deployment, "ds-pipeline-metadata-envoy-"+dspa.Name, dspa.Namespace)
-	require.NoError(t, err)
-	require.True(t, created)
-
-	claims := deployment.Spec.Template.Spec.ResourceClaims
-	require.Len(t, claims, 1)
-	assert.Equal(t, "gpu-claim", claims[0].Name)
-	assert.Equal(t, ptr.To("gpu-template"), claims[0].ResourceClaimTemplateName)
-	requireComponentContainerClaims(t, deployment, "container")
-}
-
-func TestMLMDGRPCResourceClaims(t *testing.T) {
-	dspa := baseDSPA()
-	dspa.Spec.MLMD.GRPC = &dspav1.GRPC{
-		ResourceClaims: []dspav1.PodResourceClaim{
-			{
-				Name:                      "gpu-claim",
-				ResourceClaimTemplateName: ptr.To("gpu-template"),
-			},
-		},
-	}
-
-	ctx, params, reconciler := CreateNewTestObjects()
-	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
-	require.NoError(t, err)
-
-	err = reconciler.ReconcileMLMD(ctx, dspa, params)
-	require.NoError(t, err)
-
-	deployment := &appsv1.Deployment{}
-	created, err := reconciler.IsResourceCreated(ctx, deployment, "ds-pipeline-metadata-grpc-"+dspa.Name, dspa.Namespace)
-	require.NoError(t, err)
-	require.True(t, created)
-
-	claims := deployment.Spec.Template.Spec.ResourceClaims
-	require.Len(t, claims, 1)
-	assert.Equal(t, "gpu-claim", claims[0].Name)
-	assert.Equal(t, ptr.To("gpu-template"), claims[0].ResourceClaimTemplateName)
-	requireComponentContainerClaims(t, deployment, "container")
-}
-
 // Params extraction test
 
 func TestExtractParams_ResourceClaimsPreserved(t *testing.T) {
@@ -537,8 +474,6 @@ func TestExtractParams_ResourceClaimsPreserved(t *testing.T) {
 	dspa.Spec.WorkflowController.ResourceClaims = expectedClaims
 	dspa.Spec.Database.MariaDB.ResourceClaims = expectedClaims
 	dspa.Spec.ObjectStorage.Minio.ResourceClaims = expectedClaims
-	dspa.Spec.MLMD.Envoy = &dspav1.Envoy{ResourceClaims: expectedClaims}
-	dspa.Spec.MLMD.GRPC = &dspav1.GRPC{ResourceClaims: expectedClaims}
 
 	ctx, params, reconciler := CreateNewTestObjects()
 	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
@@ -550,8 +485,6 @@ func TestExtractParams_ResourceClaimsPreserved(t *testing.T) {
 	assert.Equal(t, expectedClaims, params.WorkflowController.ResourceClaims)
 	assert.Equal(t, expectedClaims, params.MariaDB.ResourceClaims)
 	assert.Equal(t, expectedClaims, params.Minio.ResourceClaims)
-	assert.Equal(t, expectedClaims, params.MLMD.Envoy.ResourceClaims)
-	assert.Equal(t, expectedClaims, params.MLMD.GRPC.ResourceClaims)
 }
 
 func TestDSPAResourceClaimsJSONRoundTrip(t *testing.T) {
@@ -573,8 +506,6 @@ func TestDSPAResourceClaimsJSONRoundTrip(t *testing.T) {
 	dspa.Spec.WorkflowController.ResourceClaims = expectedClaims
 	dspa.Spec.Database.MariaDB.ResourceClaims = expectedClaims
 	dspa.Spec.ObjectStorage.Minio.ResourceClaims = expectedClaims
-	dspa.Spec.MLMD.Envoy = &dspav1.Envoy{ResourceClaims: expectedClaims}
-	dspa.Spec.MLMD.GRPC = &dspav1.GRPC{ResourceClaims: expectedClaims}
 
 	serialized, err := json.Marshal(dspa)
 	require.NoError(t, err)
@@ -588,6 +519,4 @@ func TestDSPAResourceClaimsJSONRoundTrip(t *testing.T) {
 	assert.Equal(t, expectedClaims, decoded.Spec.WorkflowController.ResourceClaims)
 	assert.Equal(t, expectedClaims, decoded.Spec.Database.MariaDB.ResourceClaims)
 	assert.Equal(t, expectedClaims, decoded.Spec.ObjectStorage.Minio.ResourceClaims)
-	assert.Equal(t, expectedClaims, decoded.Spec.MLMD.Envoy.ResourceClaims)
-	assert.Equal(t, expectedClaims, decoded.Spec.MLMD.GRPC.ResourceClaims)
 }

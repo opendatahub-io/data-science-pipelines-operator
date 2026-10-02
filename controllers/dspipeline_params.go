@@ -45,8 +45,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const MlmdIsRequired = "MLMD explicitly disabled in DSPA, but is a required component for DSP"
-
 // ErrManagedPipelinesImageUnset is returned by ExtractParams when managed pipelines is enabled
 // but neither spec.apiServer.managedPipelines.image nor operator Images.PipelinesComponents resolves to a real image.
 var ErrManagedPipelinesImageUnset = errors.New("managedPipelines init image not configured")
@@ -73,10 +71,6 @@ type DSPAParams struct {
 	WorkflowControllerDefaultResourceName string
 	MariaDB                               *dspa.MariaDB
 	Minio                                 *dspa.Minio
-	MLMD                                  *dspa.MLMD
-	MlmdProxyDefaultResourceName          string
-	MlmdGrpcCertificateContents           string
-	MlmdGrpcPrivateKeyContents            string
 	WebhookName                           string
 	WorkflowController                    *dspa.WorkflowController
 	CustomKfpLauncherConfigMapData        string
@@ -580,46 +574,6 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 
 }
 
-func (p *DSPAParams) SetupMLMD(dsp *dspa.DataSciencePipelinesApplication, log logr.Logger) error {
-	if p.MLMD == nil {
-		log.Info("MLMD not specified, but is a required component for Pipelines. Including MLMD with default specs.")
-		p.MLMD = &dspa.MLMD{
-			Deploy: true,
-			Envoy: &dspa.Envoy{
-				DeployRoute: true,
-			},
-		}
-	} else if !p.MLMD.Deploy {
-		return errors.New(MlmdIsRequired)
-	}
-
-	if p.MLMD != nil {
-		if p.MLMD.Envoy == nil {
-			p.MLMD.Envoy = &dspa.Envoy{
-				Image:       config.ResolveImage(config.MlmdEnvoyImagePath),
-				DeployRoute: true,
-			}
-		}
-		if p.MLMD.GRPC == nil {
-			p.MLMD.GRPC = &dspa.GRPC{
-				Image: config.ResolveImage(config.MlmdGRPCImagePath),
-			}
-		}
-
-		mlmdEnvoyImageFromConfig := config.ResolveImage(config.MlmdEnvoyImagePath)
-		mlmdGRPCImageFromConfig := config.ResolveImage(config.MlmdGRPCImagePath)
-
-		setStringDefault(mlmdEnvoyImageFromConfig, &p.MLMD.Envoy.Image)
-		setStringDefault(mlmdGRPCImageFromConfig, &p.MLMD.GRPC.Image)
-
-		setResourcesDefault(config.MlmdEnvoyResourceRequirements, &p.MLMD.Envoy.Resources)
-		setResourcesDefault(config.MlmdGRPCResourceRequirements, &p.MLMD.GRPC.Resources)
-
-		setStringDefault(config.MlmdGrpcPort, &p.MLMD.GRPC.Port)
-	}
-	return nil
-}
-
 func (p *DSPAParams) SetupOwner(dsp *dspa.DataSciencePipelinesApplication) {
 	p.IncludeOwnerReference = config.GetBoolConfigWithDefault(config.ApiServerIncludeOwnerReferenceConfigName, config.DefaultApiServerIncludeOwnerReferenceConfigName)
 
@@ -734,20 +688,6 @@ func ensureManagedPipelinesVolumeSizeLimit(mp *dspa.ManagedPipelinesSpec) error 
 	return nil
 }
 
-func (p *DSPAParams) LoadMlmdCertificates(ctx context.Context, client client.Client) (bool, error) {
-	secret, err := util.GetSecret(ctx, "ds-pipeline-metadata-grpc-tls-certs-"+p.Name, p.Namespace, client)
-	if err != nil {
-		if apierrs.IsNotFound(err) {
-			return false, nil
-		} else {
-			return false, err
-		}
-	}
-	p.MlmdGrpcCertificateContents = strings.ReplaceAll(string(secret.Data["tls.crt"]), "\n", "\\n")
-	p.MlmdGrpcPrivateKeyContents = strings.ReplaceAll(string(secret.Data["tls.key"]), "\n", "\\n")
-	return true, nil
-}
-
 func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, loggr logr.Logger) error {
 	p.Name = dsp.Name
 	p.Namespace = dsp.Namespace
@@ -775,8 +715,6 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.MariaDB = dsp.Spec.Database.MariaDB.DeepCopy()
 	p.Minio = dsp.Spec.ObjectStorage.Minio.DeepCopy()
 	p.KubeRBACProxy = config.ResolveImage(config.KubeRBACProxyImagePath)
-	p.MLMD = dsp.Spec.MLMD.DeepCopy()
-	p.MlmdProxyDefaultResourceName = mlmdProxyDefaultResourceNamePrefix + dsp.Name
 	p.CustomCABundleRootMountPath = config.CustomCABundleRootMountPath
 	p.PiplinesCABundleMountPath = config.GetCABundleFileMountPath()
 	p.PodToPodTLS = false
@@ -1153,12 +1091,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		setResourcesDefault(config.WorkflowControllerResourceRequirements, &p.WorkflowController.Resources)
 	}
 
-	err := p.SetupMLMD(dsp, log)
-	if err != nil {
-		return err
-	}
-
-	err = p.SetupDBParams(ctx, dsp, client, log)
+	err := p.SetupDBParams(ctx, dsp, client, log)
 	if err != nil {
 		return err
 	}

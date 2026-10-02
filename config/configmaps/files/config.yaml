@@ -2,8 +2,6 @@ Images:
   ApiServer: $(IMAGES_APISERVER)
   PersistenceAgent: $(IMAGES_PERSISTENCEAGENT)
   ScheduledWorkflow: $(IMAGES_SCHEDULEDWORKFLOW)
-  MlmdEnvoy: $(IMAGES_MLMDENVOY)
-  MlmdGRPC: $(IMAGES_MLMDGRPC)
   ArgoExecImage: $(IMAGES_ARGO_EXEC)
   ArgoWorkflowController: $(IMAGES_ARGO_WORKFLOWCONTROLLER)
   LauncherImage: $(IMAGES_LAUNCHER)

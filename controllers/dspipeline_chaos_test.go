@@ -86,9 +86,6 @@ func createChaosTestDSPA(name string) *dspav1.DataSciencePipelinesApplication {
 		WorkflowController: &dspav1.WorkflowController{
 			Deploy: false,
 		},
-		MLMD: &dspav1.MLMD{
-			Deploy: false,
-		},
 		Database: &dspav1.Database{
 			DisableHealthCheck: true,
 			MariaDB: &dspav1.MariaDB{
