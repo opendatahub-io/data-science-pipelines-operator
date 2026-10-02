@@ -244,6 +244,18 @@ spec:
               name: http
             - containerPort: 8887
               name: grpc
+          # Allow slow initialization before liveness checks can restart the API server.
+          startupProbe:
+            httpGet:
+              path: /apis/v1beta1/healthz
+              port: http
+              {{ if .PodToPodTLS }}
+              scheme: HTTPS
+              {{ end }}
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 24
           livenessProbe:
             httpGet:
               path: /apis/v1beta1/healthz

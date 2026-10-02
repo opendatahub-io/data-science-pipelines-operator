@@ -1239,6 +1239,52 @@ func TestReconcileAPIServer_ConfigHashIdempotent(t *testing.T) {
 		"hash should be identical across reconciles with the same input")
 }
 
+func TestAPIServerDeploymentTemplate_StartupProbe(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		tls    bool
+		scheme corev1.URIScheme
+	}{
+		{name: "HTTP", scheme: corev1.URISchemeHTTP},
+		{name: "HTTPS", tls: true, scheme: corev1.URISchemeHTTPS},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, params, reconciler := CreateNewTestObjects()
+			dspa := testutil.CreateEmptyDSPA()
+			dspa.Spec.APIServer.Deploy = true
+			require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+			params.PodToPodTLS = tc.tls
+
+			src, err := config.PathTemplateSource(reconciler.TemplatesPath+"apiserver/default/deployment.yaml.tmpl", params)
+			require.NoError(t, err)
+			objs, err := src.Parse()
+			require.NoError(t, err)
+			require.Len(t, objs, 1)
+
+			deployment := &appsv1.Deployment{}
+			require.NoError(t, reconciler.Scheme.Convert(&objs[0], deployment, nil))
+			container := getDSPipelineAPIServerContainer(deployment)
+			require.NotNil(t, container)
+			require.NotNil(t, container.StartupProbe)
+			probe := container.StartupProbe
+			require.NotNil(t, probe.HTTPGet)
+			assert.Equal(t, "/apis/v1beta1/healthz", probe.HTTPGet.Path)
+			assert.Equal(t, "http", probe.HTTPGet.Port.StrVal)
+			// HTTP is the Kubernetes default when scheme is omitted.
+			if probe.HTTPGet.Scheme != "" {
+				assert.Equal(t, tc.scheme, probe.HTTPGet.Scheme)
+			} else {
+				assert.Equal(t, corev1.URISchemeHTTP, tc.scheme)
+			}
+			assert.Equal(t, int32(120), probe.PeriodSeconds*probe.FailureThreshold)
+			require.NotNil(t, container.LivenessProbe)
+			assert.Equal(t, container.LivenessProbe.HTTPGet, probe.HTTPGet)
+			require.NotNil(t, container.ReadinessProbe)
+			assert.Equal(t, container.ReadinessProbe.HTTPGet, probe.HTTPGet)
+		})
+	}
+}
+
 func TestAPIServerDeploymentTemplate_IncludesObjectStoreRegion(t *testing.T) {
 	ctx, params, reconciler := CreateNewTestObjects()
 	dspa := testutil.CreateEmptyDSPA()
