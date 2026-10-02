@@ -48,11 +48,18 @@ function display_pod_info {
         echo "----- EVENTS -----"
         kubectl describe pod "${POD_NAME}" -n "${NAMESPACE}" | grep -A 100 Events || echo "No events found for pod ${POD_NAME}."
 
-        echo "----- LOGS -----"
-        kubectl logs "${POD_NAME}" -n "${NAMESPACE}" --all-containers=true || echo "No logs found for pod ${POD_NAME}."
+        local CONTAINER_NAMES
+        if CONTAINER_NAMES=$(kubectl get pod "${POD_NAME}" -n "${NAMESPACE}" -o jsonpath='{.spec.initContainers[*].name} {.spec.containers[*].name} {.spec.ephemeralContainers[*].name}'); then
+            for CONTAINER_NAME in ${CONTAINER_NAMES}; do
+                echo "----- LOGS: ${CONTAINER_NAME} -----"
+                kubectl logs "${POD_NAME}" -n "${NAMESPACE}" -c "${CONTAINER_NAME}" || echo "No logs found for container ${CONTAINER_NAME} in pod ${POD_NAME}."
 
-        echo "----- PREVIOUS LOGS -----"
-        kubectl logs "${POD_NAME}" -n "${NAMESPACE}" --all-containers=true --previous || echo "No previous logs found for pod ${POD_NAME}."
+                echo "----- PREVIOUS LOGS: ${CONTAINER_NAME} -----"
+                kubectl logs "${POD_NAME}" -n "${NAMESPACE}" -c "${CONTAINER_NAME}" --previous || echo "No previous logs found for container ${CONTAINER_NAME} in pod ${POD_NAME}."
+            done
+        else
+            echo "Failed to list containers for pod ${POD_NAME}."
+        fi
 
         echo "==========================="
         echo ""
