@@ -755,6 +755,14 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.DSPVersion = dsp.Spec.DSPVersion
 	p.Owner = dsp
 	p.APIServer = dsp.Spec.APIServer.DeepCopy()
+	if p.APIServer != nil {
+		if !dsp.ManagedPipelinesEnabled() {
+			p.APIServer.ManagedPipelines = nil
+		} else if p.APIServer.ManagedPipelines == nil {
+			// Default only the copy used to render workloads, never the stored DSPA.
+			p.APIServer.ManagedPipelines = &dspa.ManagedPipelinesSpec{}
+		}
+	}
 	p.PlatformVersion = config.ResolvedPlatformVersion()
 	if p.ResolvePlatformVersion != nil {
 		platformVersion, err := p.ResolvePlatformVersion(ctx)

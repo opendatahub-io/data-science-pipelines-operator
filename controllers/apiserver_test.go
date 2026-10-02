@@ -369,6 +369,7 @@ func TestDeployAPIServerWithoutManagedPipelines(t *testing.T) {
 	}
 	dspa.Name = testDSPAName
 	dspa.Namespace = testNamespace
+	dspa.Annotations = map[string]string{dspav1.DisableManagedPipelinesAnnotation: "true"}
 
 	ctx, params, reconciler := CreateNewTestObjects()
 	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
@@ -679,6 +680,7 @@ func TestExtractParams_ManagedPipelinesFailsWhenEnvVarEmpty(t *testing.T) {
 
 func TestExtractParams_ManagedPipelinesFailsWhenImageUnsetAndNotInOperatorConfig(t *testing.T) {
 	t.Cleanup(func() { viper.Reset() })
+	viper.Set(config.PipelinesComponentsImagePath, config.DefaultImageValue)
 
 	dspa := testutil.CreateDSPAWithManagedPipelines("", nil, nil)
 	dspa.Name = "dspa"
@@ -712,6 +714,7 @@ func TestExtractParams_ManagedPipelinesWhitespaceImageTreatedAsOmitted(t *testin
 
 func TestExtractParams_ManagedPipelinesWhitespaceOnlyFailsWithoutOperatorConfig(t *testing.T) {
 	t.Cleanup(func() { viper.Reset() })
+	viper.Set(config.PipelinesComponentsImagePath, config.DefaultImageValue)
 
 	dspa := testutil.CreateDSPAWithManagedPipelines("   ", nil, nil)
 	dspa.Name = "dspa"
@@ -735,6 +738,7 @@ func TestReconcile_SetsAPIServerNotReadyOnExtractParamsErrors(t *testing.T) {
 		{
 			name: "managed_pipelines_image_unset",
 			prepareDSPA: func(_ *testing.T) *dspav1.DataSciencePipelinesApplication {
+				viper.Set(config.PipelinesComponentsImagePath, config.DefaultImageValue)
 				d := testutil.CreateDSPAWithManagedPipelines("", nil, nil)
 				d.Name = "dspa-mp-status"
 				d.Namespace = "testnamespace"
@@ -1062,6 +1066,7 @@ func TestExtractParams_ManagedPipelineImageEnvVarsNilWithoutManagedPipelines(t *
 	dspa.Namespace = "ns"
 	dspa.Spec.APIServer = &dspav1.APIServer{Deploy: true}
 	dspa.Spec.APIServer.ManagedPipelines = nil
+	dspa.Annotations = map[string]string{dspav1.DisableManagedPipelinesAnnotation: "true"}
 
 	ctx, params, reconciler := CreateNewTestObjects()
 	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
@@ -1232,6 +1237,52 @@ func TestReconcileAPIServer_ConfigHashIdempotent(t *testing.T) {
 
 	assert.Equal(t, params1.APIServerConfigHash, params2.APIServerConfigHash,
 		"hash should be identical across reconciles with the same input")
+}
+
+func TestAPIServerDeploymentTemplate_StartupProbe(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		tls    bool
+		scheme corev1.URIScheme
+	}{
+		{name: "HTTP", scheme: corev1.URISchemeHTTP},
+		{name: "HTTPS", tls: true, scheme: corev1.URISchemeHTTPS},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, params, reconciler := CreateNewTestObjects()
+			dspa := testutil.CreateEmptyDSPA()
+			dspa.Spec.APIServer.Deploy = true
+			require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+			params.PodToPodTLS = tc.tls
+
+			src, err := config.PathTemplateSource(reconciler.TemplatesPath+"apiserver/default/deployment.yaml.tmpl", params)
+			require.NoError(t, err)
+			objs, err := src.Parse()
+			require.NoError(t, err)
+			require.Len(t, objs, 1)
+
+			deployment := &appsv1.Deployment{}
+			require.NoError(t, reconciler.Scheme.Convert(&objs[0], deployment, nil))
+			container := getDSPipelineAPIServerContainer(deployment)
+			require.NotNil(t, container)
+			require.NotNil(t, container.StartupProbe)
+			probe := container.StartupProbe
+			require.NotNil(t, probe.HTTPGet)
+			assert.Equal(t, "/apis/v1beta1/healthz", probe.HTTPGet.Path)
+			assert.Equal(t, "http", probe.HTTPGet.Port.StrVal)
+			// HTTP is the Kubernetes default when scheme is omitted.
+			if probe.HTTPGet.Scheme != "" {
+				assert.Equal(t, tc.scheme, probe.HTTPGet.Scheme)
+			} else {
+				assert.Equal(t, corev1.URISchemeHTTP, tc.scheme)
+			}
+			assert.Equal(t, int32(120), probe.PeriodSeconds*probe.FailureThreshold)
+			require.NotNil(t, container.LivenessProbe)
+			assert.Equal(t, container.LivenessProbe.HTTPGet, probe.HTTPGet)
+			require.NotNil(t, container.ReadinessProbe)
+			assert.Equal(t, container.ReadinessProbe.HTTPGet, probe.HTTPGet)
+		})
+	}
 }
 
 func TestAPIServerDeploymentTemplate_IncludesObjectStoreRegion(t *testing.T) {
