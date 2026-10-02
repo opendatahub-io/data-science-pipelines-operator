@@ -4,13 +4,11 @@ set -e
 
 DSPA_NS=""
 DSPO_NS=""
-DEPENDENCY_NAMESPACES=()
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --dspa-ns) DSPA_NS="$2"; shift ;;
         --dspo-ns) DSPO_NS="$2"; shift ;;
-        --dependency-ns) DEPENDENCY_NAMESPACES+=("$2"); shift ;;
         *) echo "Unknown parameter passed: $1"; exit 1 ;;
     esac
     shift
@@ -23,8 +21,8 @@ fi
 
 function check_namespace {
     if ! kubectl get namespace "$1" &>/dev/null; then
-        echo "Namespace '$1' is unavailable; skipping diagnostics for it."
-        return 1
+        echo "Namespace '$1' does not exist."
+        exit 1
     fi
 }
 
@@ -32,10 +30,7 @@ function display_pod_info {
     local NAMESPACE=$1
     local POD_NAMES
 
-    if ! POD_NAMES=$(kubectl -n "${NAMESPACE}" get pods --no-headers -o custom-columns=":metadata.name"); then
-        echo "Failed to list pods in namespace '${NAMESPACE}'."
-        return
-    fi
+    POD_NAMES=$(kubectl -n "${NAMESPACE}" get pods -o custom-columns=":metadata.name")
 
     if [[ -z "${POD_NAMES}" ]]; then
         echo "No pods found in namespace '${NAMESPACE}'."
@@ -48,18 +43,8 @@ function display_pod_info {
         echo "----- EVENTS -----"
         kubectl describe pod "${POD_NAME}" -n "${NAMESPACE}" | grep -A 100 Events || echo "No events found for pod ${POD_NAME}."
 
-        local CONTAINER_NAMES
-        if CONTAINER_NAMES=$(kubectl get pod "${POD_NAME}" -n "${NAMESPACE}" -o jsonpath='{.spec.initContainers[*].name} {.spec.containers[*].name} {.spec.ephemeralContainers[*].name}'); then
-            for CONTAINER_NAME in ${CONTAINER_NAMES}; do
-                echo "----- LOGS: ${CONTAINER_NAME} -----"
-                kubectl logs "${POD_NAME}" -n "${NAMESPACE}" -c "${CONTAINER_NAME}" || echo "No logs found for container ${CONTAINER_NAME} in pod ${POD_NAME}."
-
-                echo "----- PREVIOUS LOGS: ${CONTAINER_NAME} -----"
-                kubectl logs "${POD_NAME}" -n "${NAMESPACE}" -c "${CONTAINER_NAME}" --previous || echo "No previous logs found for container ${CONTAINER_NAME} in pod ${POD_NAME}."
-            done
-        else
-            echo "Failed to list containers for pod ${POD_NAME}."
-        fi
+        echo "----- LOGS -----"
+        kubectl logs "${POD_NAME}" -n "${NAMESPACE}" || echo "No logs found for pod ${POD_NAME}."
 
         echo "==========================="
         echo ""
@@ -69,7 +54,7 @@ function display_pod_info {
 function get_pods {
     local NAMESPACE=$1
     echo "===== List of pods in the '${NAMESPACE}' namespace ====="
-    kubectl get pods -n "${NAMESPACE}" || echo "Failed to list pods in namespace '${NAMESPACE}'."
+    kubectl get pods -n "${NAMESPACE}"
     echo "==========================="
 }
 
@@ -87,19 +72,13 @@ function collect_workflow_info {
     echo ""
 }
 
-for NAMESPACE in "$DSPA_NS" "$DSPO_NS" "${DEPENDENCY_NAMESPACES[@]}"; do
-    if ! check_namespace "$NAMESPACE"; then
-        continue
-    fi
+check_namespace "$DSPA_NS"
+check_namespace "$DSPO_NS"
 
-    get_pods "$NAMESPACE"
+get_pods "$DSPA_NS"
 
-    echo "===== Events in namespace '${NAMESPACE}' ====="
-    kubectl get events -n "$NAMESPACE" --sort-by=.metadata.creationTimestamp || echo "Failed to retrieve events in namespace '${NAMESPACE}'."
+display_pod_info "$DSPA_NS"
+display_pod_info "$DSPO_NS"
 
-    display_pod_info "$NAMESPACE"
-
-    if [[ "$NAMESPACE" == "$DSPA_NS" ]]; then
-        collect_workflow_info "$NAMESPACE"
-    fi
-done
+# Collect Argo Workflows for DSPA namespace
+collect_workflow_info "$DSPA_NS"
