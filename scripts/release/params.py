@@ -23,10 +23,6 @@ TAGGED_REPOS = {
         "TAG": "odh-v3.4.17-1",
         "REPO": "ds-pipelines-argo-argoexec"
     },
-    "IMAGES_MLMDGRPC": {
-        "TAG": "main-94ae1e9",
-        "REPO": "mlmd-grpc-server"
-    },
     "IMAGES_PIPELINES_COMPONENTS": {
         "TAG": "odh-stable",
         "REPO": "odh-pipelines-components",
@@ -34,7 +30,6 @@ TAGGED_REPOS = {
 }
 
 STATIC_REPOS = {
-    "IMAGES_MLMDENVOY": "registry.redhat.io/openshift-service-mesh/proxyv2-rhel8@sha256:b30d60cd458133430d4c92bf84911e03cecd02f60e88a58d1c6c003543cf833a",
     "IMAGES_MARIADB": "registry.redhat.io/rhel8/mariadb-103@sha256:f0ee0d27bb784e289f7d88cc8ee0e085ca70e88a5d126562105542f259a1ac01",
     "kube-rbac-proxy": "registry.redhat.io/openshift4/ose-kube-rbac-proxy-rhel9@sha256:784c4667a867abdbec6d31a4bbde52676a0f37f8e448eaae37568a46fcdeace7",
 }

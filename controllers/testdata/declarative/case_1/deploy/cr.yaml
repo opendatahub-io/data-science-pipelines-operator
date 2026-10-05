@@ -17,8 +17,3 @@ spec:
     minio:
       deploy: false
       image: minio:test0
-  mlmd:
-    # curently logic requires mlmd
-    # probably should make this consistent
-    # with other components
-    deploy: true

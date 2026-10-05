@@ -80,25 +80,3 @@ spec:
         limits:
           cpu: "2535m"
           memory: "5Gi"
-  mlmd:
-    deploy: true
-    grpc:
-      resources:
-        requests:
-          cpu: "1334m"
-          memory: "1Gi"
-        limits:
-          cpu: "2535m"
-          memory: "5Gi"
-      image: mlmdgrpc:test2
-      port: "8080"
-    envoy:
-      resources:
-        requests:
-          cpu: "1334m"
-          memory: "1Gi"
-        limits:
-          cpu: "2535m"
-          memory: "5Gi"
-      image: mlmdenvoy:test2
-      deployRoute: false

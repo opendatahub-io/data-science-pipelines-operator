@@ -39,7 +39,6 @@ type DSPASpec struct {
 	// ObjectStorage specifies Object Store configurations, used for DS Pipelines artifact passing and storage. Specify either the your own External Storage (e.g. AWS S3), or use the default Minio deployment (unsupported, primarily for development, and testing) .
 	// +kubebuilder:validation:Required
 	*ObjectStorage `json:"objectStorage"`
-	*MLMD          `json:"mlmd,omitempty"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="v2"
 	DSPVersion string `json:"dspVersion,omitempty"`
@@ -418,15 +417,6 @@ type Minio struct {
 	Image string `json:"image"`
 }
 
-type MLMD struct {
-	// Enable DS Pipelines Operator management of MLMD. Setting Deploy to false disables operator reconciliation. Default: true
-	// +kubebuilder:default:=false
-	// +kubebuilder:validation:Optional
-	Deploy bool `json:"deploy"`
-	*Envoy `json:"envoy,omitempty"`
-	*GRPC  `json:"grpc,omitempty"`
-}
-
 type Envoy struct {
 	Resources *ResourceRequirements `json:"resources,omitempty"`
 	// ResourceClaims defines which ResourceClaims must be allocated
@@ -570,7 +560,6 @@ type DSPAStatus struct {
 
 type ComponentStatus struct {
 	// +kubebuilder:validation:Optional
-	MLMDProxy ComponentDetailStatus `json:"mlmdProxy,omitempty"`
 	APIServer ComponentDetailStatus `json:"apiServer,omitempty"`
 }
 

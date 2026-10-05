@@ -29,24 +29,6 @@ spec:
       requests:
         cpu: 20m
         memory: 100Mi
-  mlmd:
-    deploy: true
-    envoy:
-      resources:
-        limits:
-          cpu: 20m
-          memory: 500Mi
-        requests:
-          cpu: 20m
-          memory: 100Mi
-    grpc:
-      resources:
-        limits:
-          cpu: 20m
-          memory: 500Mi
-        requests:
-          cpu: 20m
-          memory: 100Mi
   database:
     mariaDB:
       image: quay.io/sclorg/mariadb-105-c9s:latest

@@ -13,8 +13,6 @@ spec:
   database:
     mariaDB:
       deploy: true
-  mlmd:
-    deploy: true
   apiServer:
     deploy: true
     enableSamplePipeline: false

@@ -16,8 +16,6 @@ spec:
     deploy: true
   persistenceAgent:
     deploy: true
-  mlmd:
-    deploy: true
   database:
     customExtraParams: '{"tls":"true"}'
     externalDB:

@@ -2,8 +2,6 @@ Images:
   ApiServer: api-server:test2
   PersistenceAgent: persistenceagent:test2
   ScheduledWorkflow: scheduledworkflow:test2
-  MlmdEnvoy: mlmdenvoy:test2
-  MlmdGRPC: mlmdgrpc:test2
   ArgoExecImage: argoexec:test2
   ArgoWorkflowController: argowfcontroller:test2
   LauncherImage: launcherimage:test2

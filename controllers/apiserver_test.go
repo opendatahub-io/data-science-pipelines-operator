@@ -1399,9 +1399,6 @@ func TestReconcileAPIServer_ServiceAccountAnnotations(t *testing.T) {
 					APIServer: &dspav1.APIServer{
 						Deploy: true,
 					},
-					MLMD: &dspav1.MLMD{
-						Deploy: true,
-					},
 					Database: &dspav1.Database{
 						DisableHealthCheck: false,
 						MariaDB: &dspav1.MariaDB{

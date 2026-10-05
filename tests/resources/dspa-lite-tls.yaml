@@ -36,25 +36,6 @@ spec:
       requests:
         cpu: 20m
         memory: 100Mi
-  mlmd:
-    deploy: true
-    envoy:
-      deployRoute: false
-      resources:
-        limits:
-          cpu: 20m
-          memory: 500Mi
-        requests:
-          cpu: 20m
-          memory: 100Mi
-    grpc:
-      resources:
-        limits:
-          cpu: 20m
-          memory: 500Mi
-        requests:
-          cpu: 20m
-          memory: 100Mi
   database:
     mariaDB:
       deploy: true

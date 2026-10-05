@@ -604,7 +604,6 @@ func TestObjectStorageHealthCheck_SkippedWhenCredentialsFromEnv(t *testing.T) {
 				Spec: dspav1.DSPASpec{
 					PodToPodTLS:        testutil.BoolPtr(false),
 					APIServer:          &dspav1.APIServer{Deploy: false},
-					MLMD:               &dspav1.MLMD{Deploy: true},
 					PersistenceAgent:   &dspav1.PersistenceAgent{Deploy: false},
 					ScheduledWorkflow:  &dspav1.ScheduledWorkflow{Deploy: false},
 					WorkflowController: &dspav1.WorkflowController{Deploy: false},

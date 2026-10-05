@@ -19,5 +19,3 @@ spec:
     minio:
       deploy: false
       image: someimage
-  mlmd:
-    deploy: true

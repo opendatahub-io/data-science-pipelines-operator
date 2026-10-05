@@ -62,28 +62,6 @@ spec:
       limits:
         cpu: 250m
         memory: 250Mi
-  # deploys an optional ML-Metadata Component
-  mlmd:
-    deploy: true
-    envoy:
-      image: quay.io/opendatahub/ds-pipelines-metadata-envoy:1.7.0
-      resources:
-        limits:
-          cpu: 100m
-          memory: 256Mi
-        requests:
-          cpu: 100m
-          memory: 256Mi
-    grpc:
-      image: quay.io/opendatahub/ds-pipelines-metadata-grpc:1.0.0
-      port: "8080"
-      resources:
-        limits:
-          cpu: 100m
-          memory: 256Mi
-        requests:
-          cpu: 100m
-          memory: 256Mi
   workflowController:
     deploy: true
     image: quay.io/opendatahub/ds-pipelines-argo-workflowcontroller:3.3.10-upstream
@@ -174,9 +152,6 @@ spec:
 # example status fields
 status:
   components:
-    mlmdProxy:
-      url: http://mlmd-proxy.svc.cluster.local
-      externalUrl: https://mlmd-proxy-dspa.example.com
     apiServer:
       url: http://apiserver.svc.cluster.local
       externalUrl: https://apiserver-dspa.example.com
@@ -217,12 +192,6 @@ status:
       reason: MinimumReplicasAvailable
       status: 'True'
       type: WorkflowControllerReady
-    - lastTransitionTime: '2024-03-14T22:04:30Z'
-      message: 'Component [ds-pipeline-metadata-envoy] is minimally available.'
-      observedGeneration: 3
-      reason: MinimumReplicasAvailable
-      status: 'True'
-      type: MLMDProxyReady
     - lastTransitionTime: '2024-03-14T22:06:37Z'
       message: All components are ready.
       observedGeneration: 3
