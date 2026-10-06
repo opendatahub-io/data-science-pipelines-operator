@@ -1,7 +1,7 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: minio
+  name: rustfs
 spec:
   ports:
     - name: https
@@ -13,4 +13,4 @@ spec:
       port: 9001
       targetPort: 9001
   selector:
-    app: minio
+    app: rustfs

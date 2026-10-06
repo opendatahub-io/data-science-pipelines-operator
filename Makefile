@@ -77,7 +77,9 @@ K8SAPISERVERHOST ?= http://localhost:6443
 DSPANAMESPACE ?= default
 DSPAPATH ?= resources/dspa-lite.yaml
 ENDPOINT_TYPE ?= service
+# Legacy alias for external object storage.
 MINIONAMESPACE ?= default
+OBJECTSTORAGENAMESPACE ?= $(MINIONAMESPACE)
 
 # Integration Testing EnvVars
 INTTEST_SKIP_DEPLOY ?= false
@@ -159,7 +161,7 @@ functest: manifests generate fmt vet envtest ## Run tests.
 .PHONY: integrationtest
 integrationtest: ## Run integration tests
 	cd tests && \
-	go test . --tags=test_integration -v -kubeconfig=${KUBECONFIGPATH} -k8sApiServerHost=${K8SAPISERVERHOST} -DSPANamespace=${DSPANAMESPACE} -DSPAPath=${DSPAPATH} -endpointType=${ENDPOINT_TYPE} -MinioNamespace=${MINIONAMESPACE} -ArgoWorkflowsControllersManagementState=$(INTTEST_AWF_MANAGEMENT_STATE) -skipDeploy=$(INTTEST_SKIP_DEPLOY) -skipCleanup=$(INTTEST_SKIP_CLEANUP)
+	go test . --tags=test_integration -v -kubeconfig=${KUBECONFIGPATH} -k8sApiServerHost=${K8SAPISERVERHOST} -DSPANamespace=${DSPANAMESPACE} -DSPAPath=${DSPAPATH} -endpointType=${ENDPOINT_TYPE} -ObjectStorageNamespace=${OBJECTSTORAGENAMESPACE} -ArgoWorkflowsControllersManagementState=$(INTTEST_AWF_MANAGEMENT_STATE) -skipDeploy=$(INTTEST_SKIP_DEPLOY) -skipCleanup=$(INTTEST_SKIP_CLEANUP)
 
 .PHONY: aipipelines-e2e-test
 aipipelines-e2e-test: ## Test module/operand lifecycle on a dedicated cluster with a test-labeled module fixture.
