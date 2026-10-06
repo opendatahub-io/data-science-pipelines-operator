@@ -54,3 +54,33 @@ func TestRetrievePipelineIdRejectsInvalidResponses(t *testing.T) {
 		})
 	}
 }
+
+func TestRetrievePipelineIdResponseSizeLimit(t *testing.T) {
+	const maxSize = 10 << 20
+	const pipelineJSON = `{"pipelines":[{"pipeline_id":"test-id","display_name":"test-pipeline"}]}`
+
+	for _, tc := range []struct {
+		name string
+		size int
+	}{
+		{name: "at limit", size: maxSize},
+		{name: "over limit", size: maxSize + 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// Valid JSON with trailing whitespace verifies that size, not decoding, rejects the response.
+			body := pipelineJSON + strings.Repeat(" ", tc.size-len(pipelineJSON))
+			client := http.Client{Transport: pipelineListTransport(func(*http.Request) (*http.Response, error) {
+				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(body))}, nil
+			})}
+
+			id, err := RetrievePipelineId(t, client, "http://pipelines.test", "test-pipeline")
+			if tc.size > maxSize {
+				require.EqualError(t, err, "pipeline list response exceeds the 10 MiB size limit")
+				require.Empty(t, id)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, "test-id", id)
+			}
+		})
+	}
+}
