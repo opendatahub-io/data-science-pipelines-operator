@@ -28,6 +28,7 @@ import (
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -49,6 +50,7 @@ func TestManagedPipelinesAPIServerDefaulting(t *testing.T) {
 	legacyAPIServer := legacySpec.Properties["apiServer"]
 	legacyManaged := legacyAPIServer.Properties["managedPipelines"]
 	legacyManaged.Default, legacyManaged.Nullable = nil, false
+	delete(legacyManaged.Properties, "enabled")
 	legacyAPIServer.Properties["managedPipelines"] = legacyManaged
 	legacySpec.Properties["apiServer"] = legacyAPIServer
 	legacyCRD.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"] = legacySpec
@@ -65,13 +67,15 @@ func TestManagedPipelinesAPIServerDefaulting(t *testing.T) {
 	const optOutAnnotation = "datasciencepipelinesapplications.opendatahub.io/disable-managed-pipelines"
 
 	legacyCases := []struct {
-		name      string
-		apiServer map[string]interface{}
-		optOut    bool
+		name       string
+		apiServer  map[string]interface{}
+		optOut     bool
+		configured bool
 	}{
 		{name: "legacy-omitted"},
 		{name: "legacy-empty", apiServer: map[string]interface{}{}},
-		{name: "legacy-enabled", apiServer: map[string]interface{}{"managedPipelines": map[string]interface{}{"image": "legacy:test"}}},
+		{name: "legacy-enabled", apiServer: map[string]interface{}{"managedPipelines": map[string]interface{}{"image": "legacy:test"}}, configured: true},
+		{name: "legacy-new-field-pruned", apiServer: map[string]interface{}{"managedPipelines": map[string]interface{}{"image": "legacy:test", "enabled": false}}, configured: true},
 		{name: "legacy-opt-out", optOut: true},
 		{name: "legacy-null-pruned", apiServer: map[string]interface{}{"managedPipelines": nil}},
 	}
@@ -85,10 +89,15 @@ func TestManagedPipelinesAPIServerDefaulting(t *testing.T) {
 			"metadata": map[string]interface{}{"name": tt.name, "namespace": "default"}, "spec": spec,
 		}}
 		require.NoError(t, k8sClient.Create(ctx, object))
-		if tt.name != "legacy-enabled" {
+		if !tt.configured {
 			_, present, err := unstructured.NestedFieldNoCopy(object.Object, "spec", "apiServer", "managedPipelines")
 			require.NoError(t, err)
 			require.False(t, present, "the old schema must not default or retain null")
+		}
+		if tt.name == "legacy-new-field-pruned" {
+			_, present, err := unstructured.NestedFieldNoCopy(object.Object, "spec", "apiServer", "managedPipelines", "enabled")
+			require.NoError(t, err)
+			require.False(t, present, "the old CRD cannot retain the new spec opt-out")
 		}
 		if tt.optOut {
 			// This is the documented pre-upgrade annotation operation.
@@ -119,7 +128,7 @@ func TestManagedPipelinesAPIServerDefaulting(t *testing.T) {
 			key := client.ObjectKey{Name: tt.name, Namespace: "default"}
 			var dspa dspav1.DataSciencePipelinesApplication
 			require.NoError(t, k8sClient.Get(ctx, key, &dspa))
-			if tt.name == "legacy-enabled" {
+			if tt.configured {
 				require.NotNil(t, dspa.Spec.APIServer.ManagedPipelines)
 				require.Equal(t, "legacy:test", dspa.Spec.APIServer.ManagedPipelines.Image)
 			} else {
@@ -132,7 +141,7 @@ func TestManagedPipelinesAPIServerDefaulting(t *testing.T) {
 			dspa.Labels = map[string]string{"test": "metadata-update"}
 			require.NoError(t, k8sClient.Update(ctx, &dspa))
 			require.NoError(t, k8sClient.Get(ctx, key, &dspa))
-			require.Equal(t, tt.name != "legacy-enabled", dspa.Spec.APIServer.ManagedPipelines == nil)
+			require.Equal(t, !tt.configured, dspa.Spec.APIServer.ManagedPipelines == nil)
 			if tt.optOut {
 				require.Equal(t, "true", dspa.Annotations[optOutAnnotation])
 			}
@@ -144,11 +153,16 @@ func TestManagedPipelinesAPIServerDefaulting(t *testing.T) {
 		name      string
 		apiServer map[string]interface{}
 		disabled  bool
+		optOut    bool
 	}{
 		{name: "new-omitted-apiserver"},
 		{name: "new-omitted-managed", apiServer: map[string]interface{}{}},
 		{name: "new-null-follows-default", apiServer: map[string]interface{}{"managedPipelines": nil}},
-		{name: "new-annotation-opt-out", disabled: true},
+		{name: "new-annotation-opt-out", disabled: true, optOut: true},
+		{name: "new-spec-opt-out", apiServer: map[string]interface{}{"managedPipelines": map[string]interface{}{"enabled": false}}, disabled: true},
+		{name: "new-spec-enabled", apiServer: map[string]interface{}{"managedPipelines": map[string]interface{}{"enabled": true}}},
+		{name: "new-null-enabled", apiServer: map[string]interface{}{"managedPipelines": map[string]interface{}{"enabled": nil}}},
+		{name: "new-annotation-overrides-enabled", apiServer: map[string]interface{}{"managedPipelines": map[string]interface{}{"enabled": true}}, disabled: true, optOut: true},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			spec := map[string]interface{}{"objectStorage": map[string]interface{}{}}
@@ -159,14 +173,15 @@ func TestManagedPipelinesAPIServerDefaulting(t *testing.T) {
 				"apiVersion": dspav1.GroupVersion.String(), "kind": "DataSciencePipelinesApplication",
 				"metadata": map[string]interface{}{"name": tt.name, "namespace": "default"}, "spec": spec,
 			}}
-			if tt.disabled {
+			if tt.optOut {
 				object.SetAnnotations(map[string]string{optOutAnnotation: "true"})
 			}
 			require.NoError(t, k8sClient.Create(ctx, object))
 			key := client.ObjectKeyFromObject(object)
 			var dspa dspav1.DataSciencePipelinesApplication
 			require.NoError(t, k8sClient.Get(ctx, key, &dspa))
-			require.Nil(t, dspa.Spec.APIServer.ManagedPipelines)
+			configured := tt.apiServer != nil && tt.apiServer["managedPipelines"] != nil
+			require.Equal(t, !configured, dspa.Spec.APIServer.ManagedPipelines == nil)
 			require.Equal(t, !tt.disabled, dspa.ManagedPipelinesEnabled())
 			// The controller adds its finalizer through a typed update.
 			dspa.Finalizers = []string{finalizerName}
@@ -174,11 +189,20 @@ func TestManagedPipelinesAPIServerDefaulting(t *testing.T) {
 			require.NoError(t, k8sClient.Get(ctx, key, object))
 			_, present, err := unstructured.NestedFieldNoCopy(object.Object, "spec", "apiServer", "managedPipelines")
 			require.NoError(t, err)
-			require.False(t, present, "typed updates must not write reconciliation defaults")
+			require.Equal(t, configured, present, "typed updates must preserve explicit configuration without adding reconciliation defaults")
 			require.NoError(t, k8sClient.Get(ctx, key, &dspa))
 			require.Equal(t, !tt.disabled, dspa.ManagedPipelinesEnabled())
 		})
 	}
+
+	t.Run("invalid enabled type rejected", func(t *testing.T) {
+		object := &unstructured.Unstructured{Object: map[string]interface{}{
+			"apiVersion": dspav1.GroupVersion.String(), "kind": "DataSciencePipelinesApplication",
+			"metadata": map[string]interface{}{"name": "invalid-enabled", "namespace": "default"},
+			"spec":     map[string]interface{}{"objectStorage": map[string]interface{}{}, "apiServer": map[string]interface{}{"managedPipelines": map[string]interface{}{"enabled": "false"}}},
+		}}
+		require.True(t, apierrors.IsInvalid(k8sClient.Create(ctx, object)))
+	})
 
 	t.Run("patch and apply transitions", func(t *testing.T) {
 		object := &dspav1.DataSciencePipelinesApplication{
@@ -196,8 +220,13 @@ func TestManagedPipelinesAPIServerDefaulting(t *testing.T) {
 			{name: "JSON patch null follows default", patchType: types.JSONPatchType, patch: `[{"op":"add","path":"/spec/apiServer/managedPipelines","value":null}]`},
 			{name: "merge patch null follows default", patchType: types.MergePatchType, patch: `{"spec":{"apiServer":{"managedPipelines":null}}}`},
 			{name: "server-side apply null follows default", patchType: types.ApplyPatchType, patch: fmt.Sprintf(`{"apiVersion":%q,"kind":"DataSciencePipelinesApplication","metadata":{"name":"patch-transitions","namespace":"default"},"spec":{"apiServer":{"managedPipelines":null}}}`, dspav1.GroupVersion.String())},
+			{name: "JSON patch spec disables", patchType: types.JSONPatchType, patch: `[{"op":"add","path":"/spec/apiServer/managedPipelines","value":{"enabled":false}}]`, disabled: true},
+			{name: "merge patch spec enables", patchType: types.MergePatchType, patch: `{"spec":{"apiServer":{"managedPipelines":{"enabled":true}}}}`},
+			{name: "server-side apply spec disables", patchType: types.ApplyPatchType, patch: fmt.Sprintf(`{"apiVersion":%q,"kind":"DataSciencePipelinesApplication","metadata":{"name":"patch-transitions","namespace":"default"},"spec":{"apiServer":{"managedPipelines":{"enabled":false}}}}`, dspav1.GroupVersion.String()), disabled: true},
+			{name: "JSON patch remove enabled follows default", patchType: types.JSONPatchType, patch: `[{"op":"remove","path":"/spec/apiServer/managedPipelines/enabled"}]`},
 			{name: "annotation disables", patchType: types.MergePatchType, patch: fmt.Sprintf(`{"metadata":{"annotations":{%q:"true"}}}`, optOutAnnotation), disabled: true},
 			{name: "server-side apply empty cannot override annotation", patchType: types.ApplyPatchType, patch: fmt.Sprintf(`{"apiVersion":%q,"kind":"DataSciencePipelinesApplication","metadata":{"name":"patch-transitions","namespace":"default"},"spec":{"apiServer":{"managedPipelines":{}}}}`, dspav1.GroupVersion.String()), disabled: true},
+			{name: "explicit enabled cannot override annotation", patchType: types.MergePatchType, patch: `{"spec":{"apiServer":{"managedPipelines":{"enabled":true}}}}`, disabled: true},
 			{name: "JSON patch remove cannot override annotation", patchType: types.JSONPatchType, patch: `[{"op":"remove","path":"/spec/apiServer/managedPipelines"}]`, disabled: true},
 			{name: "false annotation enables", patchType: types.MergePatchType, patch: fmt.Sprintf(`{"metadata":{"annotations":{%q:"false"}}}`, optOutAnnotation)},
 			{name: "annotation removed enables", patchType: types.MergePatchType, patch: fmt.Sprintf(`{"metadata":{"annotations":{%q:null}}}`, optOutAnnotation)},

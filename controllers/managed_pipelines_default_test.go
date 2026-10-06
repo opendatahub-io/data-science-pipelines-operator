@@ -19,6 +19,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"testing"
 
@@ -36,6 +37,7 @@ import (
 	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
 	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/defaulting"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 )
 
@@ -92,6 +94,12 @@ func TestManagedPipelinesReconcileDefaulting(t *testing.T) {
 		{name: "apiServer empty", apiServer: `{}`},
 		{name: "managedPipelines empty", apiServer: `{"managedPipelines":{}}`},
 		{name: "explicit null follows default", apiServer: `{"managedPipelines":null}`},
+		{name: "explicit enabled", apiServer: `{"managedPipelines":{"enabled":true}}`},
+		{name: "explicit disabled", apiServer: `{"managedPipelines":{"enabled":false}}`, disabled: true},
+		{name: "null enabled follows default", apiServer: `{"managedPipelines":{"enabled":null}}`},
+		{name: "false annotation cannot override spec opt-out", apiServer: `{"managedPipelines":{"enabled":false}}`, optOut: "false", disabled: true},
+		{name: "annotation overrides explicit enabled", apiServer: `{"managedPipelines":{"enabled":true}}`, optOut: "true", disabled: true},
+		{name: "disabled preserves configured pipelines", apiServer: `{"managedPipelines":{"enabled":false,"image":"custom:latest","pipelines":[{"name":"trainer-ostf"}]}}`, disabled: true},
 		{name: "pre-upgrade annotation opt-out", optOut: "true", disabled: true},
 		{name: "annotation overrides configured pipelines", apiServer: `{"managedPipelines":{"image":"custom:latest","pipelines":[{"name":"trainer-ostf"}]}}`, optOut: "true", disabled: true},
 		{name: "false annotation does not opt out", optOut: "false"},
@@ -198,54 +206,78 @@ func TestManagedPipelinesReconcileDefaulting(t *testing.T) {
 	}
 }
 
-func TestManagedPipelinesAnnotationSkipsValidation(t *testing.T) {
-	ctx, _, reconciler := CreateNewTestObjects()
-	dspa := testutil.CreateDSPAWithManagedPipelines("unavailable:test", []dspav1.ManagedPipeline{{Name: "trainer-ostf"}}, nil)
-	dspa.Annotations = map[string]string{"datasciencepipelinesapplications.opendatahub.io/disable-managed-pipelines": "true"}
-	reconciler.ManifestFetcher = &mockPipelineNamesFetcher{err: assert.AnError}
-	status := dspastatus.NewDSPAStatus(dspa)
-	proceed, requeue, err := reconciler.validateManagedPipelines(ctx, dspa, status, reconciler.Log)
-	require.NoError(t, err)
-	require.True(t, proceed)
-	require.False(t, requeue, "opt-out must bypass manifest fetching")
-	condition := findCondition(status.GetConditions(), config.ManagedPipelineValid)
-	require.NotNil(t, condition)
-	assert.Equal(t, "NotApplicable", condition.Reason)
-}
-
-func TestManagedPipelinesAnnotationBypassesMissingImage(t *testing.T) {
-	ctx, params, reconciler := CreateNewTestObjects()
-	t.Cleanup(viper.Reset)
-	viper.Set(config.PipelinesComponentsImagePath, "")
-	dspa := testutil.CreateDSPAWithManagedPipelines("", nil, nil)
-	dspa.Annotations = map[string]string{dspav1.DisableManagedPipelinesAnnotation: "true"}
-	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
-	require.Nil(t, params.APIServer.ManagedPipelines)
-	require.NotNil(t, dspa.Spec.APIServer.ManagedPipelines, "opt-out must not erase stored configuration")
-}
-
-func TestManagedPipelinesAnnotationPreservesIrisSample(t *testing.T) {
-	ctx, params, reconciler := CreateNewTestObjects()
-	t.Cleanup(viper.Reset)
-	viper.Set("ManagedPipelinesMetadata.iris.Name", "[Demo] iris")
-	viper.Set("ManagedPipelinesMetadata.iris.Filepath", "/samples/iris.yaml")
-	dspa := testutil.CreateDSPAWithManagedPipelines("", []dspav1.ManagedPipeline{{Name: "trainer-ostf"}}, nil)
-	dspa.Spec.APIServer.EnableSamplePipeline = true
-	dspa.Annotations = map[string]string{dspav1.DisableManagedPipelinesAnnotation: "true"}
-	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
-	require.NoError(t, reconciler.ReconcileAPIServer(ctx, dspa, params))
-	var sampleConfig struct {
-		Pipelines []map[string]string `json:"pipelines"`
+func TestManagedPipelinesOptOutSkipsValidation(t *testing.T) {
+	for _, annotation := range []bool{true, false} {
+		t.Run(fmt.Sprintf("annotation=%t", annotation), func(t *testing.T) {
+			ctx, _, reconciler := CreateNewTestObjects()
+			dspa := testutil.CreateDSPAWithManagedPipelines("unavailable:test", []dspav1.ManagedPipeline{{Name: "trainer-ostf"}}, nil)
+			if annotation {
+				dspa.Annotations = map[string]string{dspav1.DisableManagedPipelinesAnnotation: "true"}
+			} else {
+				dspa.Spec.APIServer.ManagedPipelines.Enabled = ptr.To(false)
+			}
+			reconciler.ManifestFetcher = &mockPipelineNamesFetcher{err: assert.AnError}
+			status := dspastatus.NewDSPAStatus(dspa)
+			proceed, requeue, err := reconciler.validateManagedPipelines(ctx, dspa, status, reconciler.Log)
+			require.NoError(t, err)
+			require.True(t, proceed)
+			require.False(t, requeue, "opt-out must bypass manifest fetching")
+			condition := findCondition(status.GetConditions(), config.ManagedPipelineValid)
+			require.NotNil(t, condition)
+			assert.Equal(t, "NotApplicable", condition.Reason)
+		})
 	}
-	require.NoError(t, json.Unmarshal([]byte(params.SampleConfigJSON), &sampleConfig))
-	require.Len(t, sampleConfig.Pipelines, 1)
-	assert.Equal(t, "[Demo] iris", sampleConfig.Pipelines[0]["name"])
-	assert.Equal(t, "/samples/iris.yaml", sampleConfig.Pipelines[0]["file"])
-	deployment := &appsv1.Deployment{}
-	created, err := reconciler.IsResourceCreated(ctx, deployment, apiServerDefaultResourceNamePrefix+dspa.Name, dspa.Namespace)
-	require.NoError(t, err)
-	require.True(t, created)
-	assert.Nil(t, getInitManagedPipelinesContainer(t, deployment))
+}
+
+func TestManagedPipelinesOptOutBypassesMissingImage(t *testing.T) {
+	for _, annotation := range []bool{true, false} {
+		t.Run(fmt.Sprintf("annotation=%t", annotation), func(t *testing.T) {
+			ctx, params, reconciler := CreateNewTestObjects()
+			t.Cleanup(viper.Reset)
+			viper.Set(config.PipelinesComponentsImagePath, "")
+			dspa := testutil.CreateDSPAWithManagedPipelines("", nil, nil)
+			if annotation {
+				dspa.Annotations = map[string]string{dspav1.DisableManagedPipelinesAnnotation: "true"}
+			} else {
+				dspa.Spec.APIServer.ManagedPipelines.Enabled = ptr.To(false)
+			}
+			require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+			require.Nil(t, params.APIServer.ManagedPipelines)
+			require.NotNil(t, dspa.Spec.APIServer.ManagedPipelines, "opt-out must not erase stored configuration")
+		})
+	}
+}
+
+func TestManagedPipelinesOptOutPreservesIrisSample(t *testing.T) {
+	for _, annotation := range []bool{true, false} {
+		t.Run(fmt.Sprintf("annotation=%t", annotation), func(t *testing.T) {
+			ctx, params, reconciler := CreateNewTestObjects()
+			t.Cleanup(viper.Reset)
+			viper.Set("ManagedPipelinesMetadata.iris.Name", "[Demo] iris")
+			viper.Set("ManagedPipelinesMetadata.iris.Filepath", "/samples/iris.yaml")
+			dspa := testutil.CreateDSPAWithManagedPipelines("", []dspav1.ManagedPipeline{{Name: "trainer-ostf"}}, nil)
+			dspa.Spec.APIServer.EnableSamplePipeline = true
+			if annotation {
+				dspa.Annotations = map[string]string{dspav1.DisableManagedPipelinesAnnotation: "true"}
+			} else {
+				dspa.Spec.APIServer.ManagedPipelines.Enabled = ptr.To(false)
+			}
+			require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+			require.NoError(t, reconciler.ReconcileAPIServer(ctx, dspa, params))
+			var sampleConfig struct {
+				Pipelines []map[string]string `json:"pipelines"`
+			}
+			require.NoError(t, json.Unmarshal([]byte(params.SampleConfigJSON), &sampleConfig))
+			require.Len(t, sampleConfig.Pipelines, 1)
+			assert.Equal(t, "[Demo] iris", sampleConfig.Pipelines[0]["name"])
+			assert.Equal(t, "/samples/iris.yaml", sampleConfig.Pipelines[0]["file"])
+			deployment := &appsv1.Deployment{}
+			created, err := reconciler.IsResourceCreated(ctx, deployment, apiServerDefaultResourceNamePrefix+dspa.Name, dspa.Namespace)
+			require.NoError(t, err)
+			require.True(t, created)
+			assert.Nil(t, getInitManagedPipelinesContainer(t, deployment))
+		})
+	}
 }
 
 func TestManagedPipelinesDeploymentTransitions(t *testing.T) {
@@ -257,21 +289,28 @@ func TestManagedPipelinesDeploymentTransitions(t *testing.T) {
 	var previousHash string
 
 	for _, tt := range []struct {
-		name       string
-		enabled    bool
-		annotated  bool
-		configured bool
+		name         string
+		enabled      bool
+		annotated    bool
+		configured   bool
+		specDisabled bool
 	}{
 		{name: "enabled", enabled: true},
 		{name: "omitted settings opt-out", annotated: true},
 		{name: "omitted settings re-enabled", enabled: true},
 		{name: "configured settings opt-out", annotated: true, configured: true},
 		{name: "configured settings re-enabled", enabled: true, configured: true},
+		{name: "spec opt-out", specDisabled: true},
+		{name: "spec opt-out removed", enabled: true},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			dspa.Spec.APIServer.ManagedPipelines = nil
 			if tt.configured {
 				dspa.Spec.APIServer.ManagedPipelines = &dspav1.ManagedPipelinesSpec{}
+			}
+			if tt.specDisabled {
+				dspa.Spec.APIServer.ManagedPipelines = &dspav1.ManagedPipelinesSpec{}
+				dspa.Spec.APIServer.ManagedPipelines.Enabled = ptr.To(false)
 			}
 			dspa.Annotations = nil
 			if tt.annotated {
