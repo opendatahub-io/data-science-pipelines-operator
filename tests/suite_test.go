@@ -66,7 +66,7 @@ var (
 	k8sApiServerHost                        string
 	DSPAPath                                string
 	DSPANamespace                           string
-	MinioNamespace                          string
+	ObjectStorageNamespace                  string
 	ArgoWorkflowsControllersManagementState string
 	skipDeploy                              bool
 	skipCleanup                             bool
@@ -87,7 +87,7 @@ const (
 	DefaultKubeConfigPath                          = "~/.kube/config"
 	Defaultk8sApiServerHost                        = "localhost:6443"
 	DefaultDSPANamespace                           = "default"
-	DefaultMinioNamespace                          = "default"
+	DefaultObjectStorageNamespace                  = "default"
 	DefaultArgoWorkflowsControllersManagementState = "Managed"
 	DefaultDeployTimeout                           = 240
 	DefaultPollInterval                            = 2
@@ -111,7 +111,7 @@ type IntegrationTestSuite struct {
 	Clientmgr                               ClientManager
 	Ctx                                     context.Context
 	DSPANamespace                           string
-	MinioNamespace                          string
+	ObjectStorageNamespace                  string
 	ArgoWorkflowsControllersManagementState string
 	DSPA                                    *dspav1.DataSciencePipelinesApplication
 }
@@ -162,7 +162,8 @@ func init() {
 	flag.StringVar(&k8sApiServerHost, "k8sApiServerHost", Defaultk8sApiServerHost, "The k8s cluster api server host.")
 	flag.StringVar(&DSPAPath, "DSPAPath", DefaultDSPAPath, "The DSP resource file to deploy for testing.")
 	flag.StringVar(&DSPANamespace, "DSPANamespace", DefaultDSPANamespace, "The namespace to deploy DSPA.")
-	flag.StringVar(&MinioNamespace, "MinioNamespace", DefaultMinioNamespace, "The namespace where MinIO is deployed.")
+	flag.StringVar(&ObjectStorageNamespace, "ObjectStorageNamespace", DefaultObjectStorageNamespace, "The namespace where the external S3 object store is deployed.")
+	flag.StringVar(&ObjectStorageNamespace, "MinioNamespace", DefaultObjectStorageNamespace, "Deprecated alias for ObjectStorageNamespace.")
 	flag.StringVar(&ArgoWorkflowsControllersManagementState, "ArgoWorkflowsControllersManagementState", DefaultArgoWorkflowsControllersManagementState, "The global management state of the DSPA-owned Argo WorkflowsControllers. Options: 'Managed' or 'Removed'.")
 
 	flag.DurationVar(&DeployTimeout, "DeployTimeout", DefaultDeployTimeout, "Seconds to wait for deployments. Consider increasing this on resource starved environments.")
@@ -214,7 +215,7 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 	DSPA = testUtil.GetDSPAFromPath(suite.T(), clientmgr.mfopts, DSPAPath)
 
 	suite.DSPANamespace = DSPANamespace
-	suite.MinioNamespace = MinioNamespace
+	suite.ObjectStorageNamespace = ObjectStorageNamespace
 	suite.ArgoWorkflowsControllersManagementState = ArgoWorkflowsControllersManagementState
 	suite.DSPA = DSPA
 
