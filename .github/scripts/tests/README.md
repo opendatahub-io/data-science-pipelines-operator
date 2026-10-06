@@ -103,7 +103,14 @@ configure namespaces, build and deploy images, and execute integration tests.
    The script requires and verifies environment variables such as `GIT_WORKSPACE`, `REGISTRY_ADDRESS`, and `K8SAPISERVERHOST`. These variables define the workspace, registry for container images, and K8s API server address.
 
 2. **Deployment Functions**:  
-   Functions like `deploy_dspo`, `deploy_minio`, and `deploy_mariadb` handle deploying necessary components (e.g., MinIO, MariaDB, PyPI server) to the cluster.
+   Functions like `deploy_dspo`, `deploy_rustfs`, and `deploy_mariadb` handle deploying necessary components (e.g., RustFS, MariaDB, PyPI server) to the cluster.
+   The external S3 fixture uses the pinned RustFS image in `.github/resources/rustfs/base/deployment.yaml`.
+   Its HTTPS endpoint is `rustfs.test-rustfs.svc.cluster.local:9000`; credentials remain in the `rustfs` Secret.
+   Its certificate Secret keys are projected as `rustfs_cert.pem` and `rustfs_key.pem` under `RUSTFS_TLS_PATH`.
+   Data and logs use the `rustfs` PVC, preserving buckets and objects when the pod is recreated.
+   KinD uses `.github/resources/rustfs/kind` to set the volume `fsGroup` to `10001`; the base leaves UID/GID selection to OpenShift SCC admission.
+   Use `OBJECTSTORAGENAMESPACE=test-rustfs` with `make integrationtest` for the external fixture (`MINIONAMESPACE` remains a legacy alias).
+   Operator-managed MinIO deployments remain separate from this external fixture.
 
 3. **Namespace Configuration**:  
    Functions like `create_opendatahub_namespace` and `create_dspa_namespace` create and configure Kubernetes namespaces required for DSPO and other dependencies.

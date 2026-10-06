@@ -42,34 +42,34 @@ func (suite *IntegrationTestSuite) TestFetchArtifacts() {
 
 		log.Println("Starting port-forwarding for artifact-service...")
 
-		minioNamespace := suite.DSPANamespace
-		minioServiceName := "minio-service" // Default for DSPA namespace
+		objectStorageNamespace := suite.DSPANamespace
+		objectStorageServiceName := "minio-service" // Default for DSPA namespace
 
-		if suite.MinioNamespace != "default" {
-			minioNamespace = suite.MinioNamespace
-			minioServiceName = "minio" // Use "minio" for external namespace
+		if suite.ObjectStorageNamespace != "default" {
+			objectStorageNamespace = suite.ObjectStorageNamespace
+			objectStorageServiceName = "rustfs" // External RustFS fixture
 		}
 
 		// Start port-forwarding
-		minioPortForwardCmd := exec.CommandContext(context.Background(),
-			"kubectl", "port-forward", "-n", minioNamespace, fmt.Sprintf("svc/%s", minioServiceName), fmt.Sprintf("%d:9000", 9000))
-		minioPortForwardCmd.Stderr = os.Stderr
-		minioPortForwardCmd.Stdout = os.Stdout
-		err := minioPortForwardCmd.Start()
+		objectStoragePortForwardCmd := exec.CommandContext(context.Background(),
+			"kubectl", "port-forward", "-n", objectStorageNamespace, fmt.Sprintf("svc/%s", objectStorageServiceName), fmt.Sprintf("%d:9000", 9000))
+		objectStoragePortForwardCmd.Stderr = os.Stderr
+		objectStoragePortForwardCmd.Stdout = os.Stdout
+		err := objectStoragePortForwardCmd.Start()
 		require.NoError(t, err, "Failed to start port-forwarding")
 
 		go func() {
-			err := minioPortForwardCmd.Wait()
-			log.Printf("The Minio port forward ended: %v\n", err)
+			err := objectStoragePortForwardCmd.Wait()
+			log.Printf("The object storage port forward ended: %v\n", err)
 		}()
 
 		defer func() {
-			if minioPortForwardCmd.ProcessState == nil || !minioPortForwardCmd.ProcessState.Exited() {
-				_ = minioPortForwardCmd.Process.Kill()
-				minioPortForwardCmd.Wait()
+			if objectStoragePortForwardCmd.ProcessState == nil || !objectStoragePortForwardCmd.ProcessState.Exited() {
+				_ = objectStoragePortForwardCmd.Process.Kill()
+				objectStoragePortForwardCmd.Wait()
 			}
 
-			log.Println("Minio port-forward process terminated.")
+			log.Println("Object storage port-forward process terminated.")
 		}()
 
 		type ResponseArtifact struct {
