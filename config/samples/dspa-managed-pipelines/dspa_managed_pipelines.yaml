@@ -7,7 +7,14 @@
 # container (init-managed-pipelines) that compiles bundled pipelines into a
 # shared volume; the API server then exposes them like other sample pipelines.
 # The image defaults to the operator's configured pipelines-components image.
-# Null also follows the enabled default; use the annotation to disable them.
+# After upgrading, disable managed pipelines with:
+# spec:
+#   apiServer:
+#     managedPipelines:
+#       enabled: false
+# The annotation remains an upgrade compatibility opt-out and overrides
+# enabled: true. Remove it before re-enabling through the spec.
+# Omitted/null managedPipelines and omitted enabled follow the enabled default.
 # Defaulting happens only in operator workload parameters, not in the stored DSPA.
 #
 # Omitting managedPipelines.pipelines sets ALL_PIPELINES=true for the init image.

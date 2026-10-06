@@ -141,11 +141,18 @@ spec:
                     description: |-
                       Configures managed pipelines compiled and uploaded via an init container.
                       The operator enables all bundled pipelines when omitted or null, including for existing DSPAs on upgrade.
-                      To disable, set the annotation
+                      To disable after upgrading, set managedPipelines.enabled to false.
+                      To opt out before upgrading, set the annotation
                       datasciencepipelinesapplications.opendatahub.io/disable-managed-pipelines: "true"
-                      before upgrading. The annotation overrides this configuration.
+                      The annotation overrides this configuration, including enabled: true.
                     nullable: true
                     properties:
+                      enabled:
+                        description: |-
+                          Enabled controls managed pipeline compilation and uploads. Defaults to true when omitted.
+                          Set to false to disable managed pipelines. The disable-managed-pipelines annotation
+                          set to "true" overrides this field; remove that annotation before re-enabling.
+                        type: boolean
                       image:
                         description: |-
                           Container image for the init-managed-pipelines step (pipelines-components). Optional: when omitted, empty (""), or whitespace-only, DSPO uses operator config Images.PipelinesComponents
