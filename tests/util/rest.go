@@ -76,6 +76,8 @@ func FormFromFile(t *testing.T, form map[string]string) (*bytes.Buffer, string) 
 }
 
 func RetrievePipelineId(t *testing.T, httpClient http.Client, APIServerURL string, PipelineDisplayName string) (string, error) {
+	const maxSize = 10 << 20 // 10 MiB
+
 	// A successful list request can still return a stale Kubernetes cache snapshot.
 	// Retry until the requested pipeline is visible, not just until GET succeeds.
 	var err = errors.New("pipeline not found")
@@ -95,10 +97,13 @@ func RetrievePipelineId(t *testing.T, httpClient http.Client, APIServerURL strin
 				t.Logf("Retrying GET request due to error: %v", err)
 				continue
 			}
-			responseData, readErr := io.ReadAll(response.Body)
+			responseData, readErr := io.ReadAll(io.LimitReader(response.Body, maxSize+1))
 			response.Body.Close()
 			if readErr != nil {
 				return "", readErr
+			}
+			if len(responseData) > maxSize {
+				return "", fmt.Errorf("pipeline list response exceeds the 10 MiB size limit")
 			}
 			if response.StatusCode != http.StatusOK {
 				return "", fmt.Errorf("listing pipelines returned HTTP %d: %s", response.StatusCode, responseData)
