@@ -102,6 +102,11 @@ type ManagedPipeline struct {
 // MANAGED_PIPELINES_UPLOAD_TAGS (managed=true and rhoai-version from DSPO platform version). The same tag env is set on the ds-pipeline-api-server container.
 // Init writes <name>.yaml per pipeline and managed-pipelines.json on the volume.
 type ManagedPipelinesSpec struct {
+	// Enabled controls managed pipeline compilation and uploads. Defaults to true when omitted.
+	// Set to false to disable managed pipelines. The disable-managed-pipelines annotation
+	// set to "true" overrides this field; remove that annotation before re-enabling.
+	// +kubebuilder:validation:Optional
+	Enabled *bool `json:"enabled,omitempty"`
 	// Container image for the init-managed-pipelines step (pipelines-components). Optional: when omitted, empty (""), or whitespace-only, DSPO uses operator config Images.PipelinesComponents
 	// (populated from IMAGES_PIPELINES_COMPONENTS in params.env / dspo-config). Set explicitly only to override the operator default for this DSPA.
 	// +kubebuilder:validation:Optional
@@ -161,9 +166,10 @@ type APIServer struct {
 	ArgoDriverImage string `json:"argoDriverImage,omitempty"`
 	// Configures managed pipelines compiled and uploaded via an init container.
 	// The operator enables all bundled pipelines when omitted or null, including for existing DSPAs on upgrade.
-	// To disable, set the annotation
+	// To disable after upgrading, set managedPipelines.enabled to false.
+	// To opt out before upgrading, set the annotation
 	// datasciencepipelinesapplications.opendatahub.io/disable-managed-pipelines: "true"
-	// before upgrading. The annotation overrides this configuration.
+	// The annotation overrides this configuration, including enabled: true.
 	// +kubebuilder:validation:Optional
 	// +nullable
 	ManagedPipelines *ManagedPipelinesSpec `json:"managedPipelines,omitempty"`
@@ -622,11 +628,14 @@ type DataSciencePipelinesApplication struct {
 	Status            DSPAStatus `json:"status,omitempty"`
 }
 
-// ManagedPipelinesEnabled resolves the operator default and annotation opt-out without
+// ManagedPipelinesEnabled resolves the spec, operator default, and annotation opt-out without
 // modifying the stored managed-pipeline configuration.
 func (d *DataSciencePipelinesApplication) ManagedPipelinesEnabled() bool {
-	return d.Spec.APIServer != nil &&
-		d.Annotations[DisableManagedPipelinesAnnotation] != "true"
+	if d.Spec.APIServer == nil || d.Annotations[DisableManagedPipelinesAnnotation] == "true" {
+		return false
+	}
+	managed := d.Spec.APIServer.ManagedPipelines
+	return managed == nil || managed.Enabled == nil || *managed.Enabled
 }
 
 //+kubebuilder:object:root=true
