@@ -58,6 +58,8 @@ data:
             - name: metadata-cluster
               connect_timeout: 30.0s
               type: logical_dns
+              # MLMD deployments use IPv4; avoid unnecessary AAAA lookups.
+              dns_lookup_family: V4_ONLY
               http2_protocol_options: {}
               lb_policy: round_robin
               load_assignment:
