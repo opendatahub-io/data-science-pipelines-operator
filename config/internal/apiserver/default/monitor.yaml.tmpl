@@ -10,7 +10,7 @@ metadata:
 spec:
   endpoints:
     - path: /metrics
-      port: proxy
+      port: prom-metrics
       scheme: https
       bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
       tlsConfig:

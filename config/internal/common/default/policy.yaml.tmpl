@@ -18,6 +18,23 @@ spec:
     - ports:
         - protocol: TCP
           port: 8443
+    # Prometheus-only kube-rbac-proxy. Restricted to monitoring namespaces.
+    - ports:
+        - protocol: TCP
+          port: 8445
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-monitoring
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-user-workload-monitoring
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: redhat-ods-monitoring
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: opendatahub-monitoring
     {{ end }}
     # Direct API HTTP. No login check, so only the persistence agent and the
     # KFP runtime roles may connect.

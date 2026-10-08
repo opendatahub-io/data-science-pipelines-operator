@@ -214,6 +214,55 @@ spec:
               name: proxy-tls
             - mountPath: /etc/kube-rbac-proxy
               name: proxy-config
+        - name: kube-rbac-proxy-metrics
+          args:
+            - --secure-listen-address=0.0.0.0:8445
+            - --proxy-endpoints-port=8446
+            - --upstream=http://localhost:8888
+            - --tls-cert-file=/etc/tls/private/tls.crt
+            - --tls-private-key-file=/etc/tls/private/tls.key
+            - --config-file=/etc/kube-rbac-proxy/metrics-config-file.yaml
+            - --allow-paths=/metrics
+          image: kube-rbac-proxy:test0
+          ports:
+            - containerPort: 8445
+              name: prom-metrics
+              protocol: TCP
+            - containerPort: 8446
+              name: prom-health
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: prom-health
+              scheme: HTTPS
+            initialDelaySeconds: 30
+            timeoutSeconds: 1
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: prom-health
+              scheme: HTTPS
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          resources:
+            limits:
+              cpu: 100m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          volumeMounts:
+            - mountPath: /etc/tls/private
+              name: proxy-tls
+            - mountPath: /etc/kube-rbac-proxy
+              name: proxy-config
       volumes:
         - name: proxy-tls
           secret:

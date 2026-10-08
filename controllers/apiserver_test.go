@@ -1579,7 +1579,7 @@ func TestAPIServerMetricsUseAuthenticatedProxy(t *testing.T) {
 	require.True(t, found)
 	require.Len(t, endpoints, 1)
 	endpoint := endpoints[0].(map[string]interface{})
-	require.Equal(t, "proxy", endpoint["port"])
+	require.Equal(t, "prom-metrics", endpoint["port"])
 	require.Equal(t, "https", endpoint["scheme"])
 	require.Equal(t, "/metrics", endpoint["path"])
 	require.Equal(t, "/var/run/secrets/kubernetes.io/serviceaccount/token", endpoint["bearerTokenFile"])
@@ -1600,7 +1600,7 @@ func TestAPIServerMetricsUseAuthenticatedProxy(t *testing.T) {
 	}, role))
 	require.Equal(t, []rbacv1.PolicyRule{{
 		APIGroups:     []string{"datasciencepipelinesapplications.opendatahub.io"},
-		Resources:     []string{"datasciencepipelinesapplications/api"},
+		Resources:     []string{"datasciencepipelinesapplications/metrics"},
 		ResourceNames: []string{testDSPAName},
 		Verbs:         []string{"get"},
 	}}, role.Rules)
@@ -1624,14 +1624,21 @@ func TestAPIServerMetricsUseAuthenticatedProxy(t *testing.T) {
 		Namespace: testNamespace,
 	}, deployment))
 	var proxyArgs []string
+	var prometheusProxyArgs []string
 	for _, container := range deployment.Spec.Template.Spec.Containers {
 		if container.Name == "kube-rbac-proxy" {
 			proxyArgs = container.Args
+		}
+		if container.Name == "kube-rbac-proxy-metrics" {
+			prometheusProxyArgs = container.Args
 		}
 	}
 	require.NotEmpty(t, proxyArgs)
 	require.Contains(t, proxyArgs, "--ignore-paths=/healthz,/apis/v1beta1/healthz")
 	require.NotContains(t, strings.Join(proxyArgs, " "), "/metrics")
+	require.NotEmpty(t, prometheusProxyArgs)
+	require.Contains(t, prometheusProxyArgs, "--allow-paths=/metrics")
+	require.Contains(t, prometheusProxyArgs, "--secure-listen-address=0.0.0.0:8445")
 
 	dspa.Spec.APIServer.EnableRoute = false
 	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))

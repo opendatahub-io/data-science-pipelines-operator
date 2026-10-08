@@ -15,3 +15,11 @@ data:
         resource: datasciencepipelinesapplications
         subresource: api
         name: testdsp6
+  metrics-config-file.yaml: |-
+    authorization:
+      resourceAttributes:
+        namespace: default
+        apiGroup: datasciencepipelinesapplications.opendatahub.io
+        resource: datasciencepipelinesapplications
+        subresource: metrics
+        name: testdsp6

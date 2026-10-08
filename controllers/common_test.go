@@ -85,6 +85,7 @@ func TestDeployCommonPolicies(t *testing.T) {
 	assert.Nil(t, err)
 	// APIServer is omitted, so the OAuth proxy port is not opened.
 	assertPortAbsent(t, np, 8443)
+	assertPortAbsent(t, np, 8445)
 	assertDirectAPICallers(t, np, 8888, apiServerHTTPPeers(testDSPAName))
 	assertDirectAPICallers(t, np, 8887, apiServerGRPCPeers(testDSPAName))
 
@@ -115,6 +116,7 @@ func TestCommonPoliciesFollowProxyFlags(t *testing.T) {
 
 	apiPolicy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipelines-"+ingressTestDSPAName)
 	assertPortPresent(t, apiPolicy, 8443)
+	assertIngressFrom(t, apiPolicy, 8445, monitoringNamespacePeers())
 	assertDirectAPICallers(t, apiPolicy, 8888, apiServerHTTPPeers(ingressTestDSPAName))
 	assertDirectAPICallers(t, apiPolicy, 8887, apiServerGRPCPeers(ingressTestDSPAName))
 	assertPortAbsent(t, requireNetworkPolicy(t, ctx, reconciler, "ds-pipelines-envoy-"+ingressTestDSPAName), 8443)

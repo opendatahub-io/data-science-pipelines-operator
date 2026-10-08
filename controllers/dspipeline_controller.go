@@ -394,6 +394,9 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			params.Name = dspa.Name
 			params.Namespace = dspa.Namespace
 			params.DSPONamespace = os.Getenv("DSPO_NAMESPACE")
+			if err := r.deleteAPIServerMetricsResources(ctx, dspa); err != nil {
+				return ctrl.Result{}, err
+			}
 			if err := r.cleanUpResources(params); err != nil {
 				return ctrl.Result{}, err
 			}
