@@ -1,0 +1,12 @@
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: {{.ScheduledWorkflowDefaultResourceName}}
+  namespace: {{.Namespace}}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{.ScheduledWorkflowDefaultResourceName}}
+      component: data-science-pipelines
+  policyTypes:
+    - Ingress

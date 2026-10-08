@@ -26,7 +26,14 @@ import (
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/util"
 	v1 "github.com/openshift/api/route/v1"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var apiServerTemplatesDir = "apiserver/default"
@@ -206,6 +213,9 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1.Dat
 		if err != nil {
 			return err
 		}
+		if err := r.deleteAPIServerMetricsResources(ctx, dsp); err != nil {
+			return err
+		}
 	}
 
 	for _, template := range samplePipelineTemplates {
@@ -216,5 +226,36 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1.Dat
 	}
 
 	log.Info("Finished applying APIServer Resources")
+	return nil
+}
+
+// deleteAPIServerMetricsResources removes the authenticated metrics scrape
+// resources. They are only rendered while the API route, and therefore the
+// kube-rbac-proxy port, is enabled.
+func (r *DSPAReconciler) deleteAPIServerMetricsResources(ctx context.Context, dsp *dspav1.DataSciencePipelinesApplication) error {
+	monitor := &unstructured.Unstructured{}
+	monitor.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "monitoring.coreos.com",
+		Version: "v1",
+		Kind:    "ServiceMonitor",
+	})
+	resources := []client.Object{
+		monitor,
+		&rbacv1.Role{},
+		&rbacv1.RoleBinding{},
+		&corev1.ConfigMap{},
+	}
+	names := []string{
+		apiServerDefaultResourceNamePrefix + dsp.Name,
+		"ds-pipeline-metrics-" + dsp.Name,
+		"ds-pipeline-metrics-" + dsp.Name,
+		"ds-pipeline-proxy-ca-" + dsp.Name,
+	}
+	for i, obj := range resources {
+		namespacedName := types.NamespacedName{Name: names[i], Namespace: dsp.Namespace}
+		if err := r.DeleteResourceIfItExists(ctx, obj, namespacedName); err != nil && !apierrs.IsNotFound(err) && !meta.IsNoMatchError(err) {
+			return err
+		}
+	}
 	return nil
 }

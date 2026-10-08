@@ -173,7 +173,7 @@ spec:
             - --tls-cert-file=/etc/tls/private/tls.crt
             - --tls-private-key-file=/etc/tls/private/tls.key
             - --config-file=/etc/kube-rbac-proxy/config-file.yaml
-            - --ignore-paths=/healthz,/apis/v1beta1/healthz,/metrics
+            - --ignore-paths=/healthz,/apis/v1beta1/healthz
           image: kube-rbac-proxy:test4
           ports:
             - containerPort: 8443

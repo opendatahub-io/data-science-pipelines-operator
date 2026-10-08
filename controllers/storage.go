@@ -46,6 +46,7 @@ var minioTemplates = []string{
 	"minio/default/service.yaml.tmpl",
 	"minio/default/service.minioservice.yaml.tmpl",
 	"minio/default/minio-sa.yaml.tmpl",
+	"minio/default/networkpolicy.yaml.tmpl",
 	storageRoute,
 }
 

@@ -13,6 +13,7 @@ spec:
         - protocol: TCP
           port: 3306
       from:
+        # The operator dials built-in MariaDB for its readiness check.
         - podSelector:
             matchLabels:
               app.kubernetes.io/name: data-science-pipelines-operator

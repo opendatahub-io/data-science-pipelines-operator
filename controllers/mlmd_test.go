@@ -122,6 +122,9 @@ func TestDeployMLMD(t *testing.T) {
 	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedMLMDWriterName, testNamespace)
 	assert.False(t, created)
 	assert.Nil(t, err)
+
+	mlmdPolicy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipeline-metadata-grpc-"+testDSPAName)
+	assertIngressFrom(t, mlmdPolicy, 8080, mlmdGRPCPeers(testDSPAName))
 }
 
 func TestDontDeployMLMD(t *testing.T) {
@@ -475,4 +478,22 @@ func TestGetEndpointsMLMD(t *testing.T) {
 	created, err = reconciler.IsResourceCreated(ctx, dspa, testDSPAName, testNamespace)
 	require.NotNil(t, dspa_created.Status.Components.MLMDProxy.Url)
 	require.NotNil(t, dspa_created.Status.Components.MLMDProxy.ExternalUrl)
+}
+
+func TestMetadataGRPCIngressUsesConfiguredPort(t *testing.T) {
+	dspa := newIngressTestDSPA(dspav1.DSPASpec{
+		APIServer: &dspav1.APIServer{},
+		MLMD: &dspav1.MLMD{
+			Deploy: true,
+			GRPC:   &dspav1.GRPC{Port: "9095"},
+		},
+	})
+
+	ctx, params, reconciler := CreateNewTestObjects()
+	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+	require.NoError(t, reconciler.ReconcileMLMD(ctx, dspa, params))
+
+	policy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipeline-metadata-grpc-"+ingressTestDSPAName)
+	assertPortAbsent(t, policy, 8080)
+	assertIngressFrom(t, policy, 9095, mlmdGRPCPeers(ingressTestDSPAName))
 }

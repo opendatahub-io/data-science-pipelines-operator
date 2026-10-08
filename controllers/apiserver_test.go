@@ -34,9 +34,12 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
@@ -1543,4 +1546,113 @@ func TestReconcileAPIServer_ServiceAccountAnnotations(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestAPIServerMetricsUseAuthenticatedProxy(t *testing.T) {
+	testNamespace := "testnamespace"
+	testDSPAName := "testdspa"
+	dspa := &dspav1.DataSciencePipelinesApplication{
+		ObjectMeta: metav1.ObjectMeta{Name: testDSPAName, Namespace: testNamespace},
+		Spec: dspav1.DSPASpec{
+			PodToPodTLS: testutil.BoolPtr(false),
+			APIServer: &dspav1.APIServer{
+				Deploy:      true,
+				EnableRoute: true,
+			},
+			Database:      &dspav1.Database{MariaDB: &dspav1.MariaDB{Deploy: true}},
+			ObjectStorage: &dspav1.ObjectStorage{Minio: &dspav1.Minio{Deploy: false, Image: "someimage"}},
+		},
+	}
+
+	ctx, params, reconciler := CreateNewTestObjects()
+	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+	require.NoError(t, reconciler.ReconcileAPIServer(ctx, dspa, params))
+
+	monitor := &unstructured.Unstructured{}
+	monitor.SetGroupVersionKind(serviceMonitorGVK())
+	require.NoError(t, reconciler.Get(ctx, types.NamespacedName{
+		Name:      apiServerDefaultResourceNamePrefix + testDSPAName,
+		Namespace: testNamespace,
+	}, monitor))
+	endpoints, found, err := unstructured.NestedSlice(monitor.Object, "spec", "endpoints")
+	require.NoError(t, err)
+	require.True(t, found)
+	require.Len(t, endpoints, 1)
+	endpoint := endpoints[0].(map[string]interface{})
+	require.Equal(t, "proxy", endpoint["port"])
+	require.Equal(t, "https", endpoint["scheme"])
+	require.Equal(t, "/metrics", endpoint["path"])
+	require.Equal(t, "/var/run/secrets/kubernetes.io/serviceaccount/token", endpoint["bearerTokenFile"])
+	tlsConfig := endpoint["tlsConfig"].(map[string]interface{})
+	require.Equal(t, "ds-pipeline-testdspa.testnamespace.svc", tlsConfig["serverName"])
+
+	caConfigMap := &corev1.ConfigMap{}
+	require.NoError(t, reconciler.Get(ctx, types.NamespacedName{
+		Name:      "ds-pipeline-proxy-ca-" + testDSPAName,
+		Namespace: testNamespace,
+	}, caConfigMap))
+	require.Equal(t, "true", caConfigMap.Annotations["service.beta.openshift.io/inject-cabundle"])
+
+	role := &rbacv1.Role{}
+	require.NoError(t, reconciler.Get(ctx, types.NamespacedName{
+		Name:      "ds-pipeline-metrics-" + testDSPAName,
+		Namespace: testNamespace,
+	}, role))
+	require.Equal(t, []rbacv1.PolicyRule{{
+		APIGroups:     []string{"datasciencepipelinesapplications.opendatahub.io"},
+		Resources:     []string{"datasciencepipelinesapplications/api"},
+		ResourceNames: []string{testDSPAName},
+		Verbs:         []string{"get"},
+	}}, role.Rules)
+
+	binding := &rbacv1.RoleBinding{}
+	require.NoError(t, reconciler.Get(ctx, types.NamespacedName{
+		Name:      "ds-pipeline-metrics-" + testDSPAName,
+		Namespace: testNamespace,
+	}, binding))
+	require.Equal(t, []rbacv1.Subject{
+		{Kind: "ServiceAccount", Name: "prometheus-k8s", Namespace: "openshift-monitoring"},
+		{Kind: "ServiceAccount", Name: "prometheus-user-workload", Namespace: "openshift-user-workload-monitoring"},
+		{Kind: "ServiceAccount", Name: "prometheus", Namespace: "redhat-ods-monitoring"},
+		{Kind: "ServiceAccount", Name: "data-science-monitoringstack-prometheus", Namespace: "redhat-ods-monitoring"},
+		{Kind: "ServiceAccount", Name: "prometheus", Namespace: "opendatahub-monitoring"},
+	}, binding.Subjects)
+
+	deployment := &appsv1.Deployment{}
+	require.NoError(t, reconciler.Get(ctx, types.NamespacedName{
+		Name:      apiServerDefaultResourceNamePrefix + testDSPAName,
+		Namespace: testNamespace,
+	}, deployment))
+	var proxyArgs []string
+	for _, container := range deployment.Spec.Template.Spec.Containers {
+		if container.Name == "kube-rbac-proxy" {
+			proxyArgs = container.Args
+		}
+	}
+	require.NotEmpty(t, proxyArgs)
+	require.Contains(t, proxyArgs, "--ignore-paths=/healthz,/apis/v1beta1/healthz")
+	require.NotContains(t, strings.Join(proxyArgs, " "), "/metrics")
+
+	dspa.Spec.APIServer.EnableRoute = false
+	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+	require.NoError(t, reconciler.ReconcileAPIServer(ctx, dspa, params))
+	metricsName := types.NamespacedName{
+		Name:      "ds-pipeline-metrics-" + testDSPAName,
+		Namespace: testNamespace,
+	}
+	err = reconciler.Get(ctx, types.NamespacedName{
+		Name:      apiServerDefaultResourceNamePrefix + testDSPAName,
+		Namespace: testNamespace,
+	}, monitor)
+	require.True(t, apierrs.IsNotFound(err))
+	require.True(t, apierrs.IsNotFound(reconciler.Get(ctx, metricsName, &rbacv1.Role{})))
+	require.True(t, apierrs.IsNotFound(reconciler.Get(ctx, metricsName, &rbacv1.RoleBinding{})))
+	require.True(t, apierrs.IsNotFound(reconciler.Get(ctx, types.NamespacedName{
+		Name:      "ds-pipeline-proxy-ca-" + testDSPAName,
+		Namespace: testNamespace,
+	}, &corev1.ConfigMap{})))
+}
+
+func serviceMonitorGVK() schema.GroupVersionKind {
+	return schema.GroupVersionKind{Group: "monitoring.coreos.com", Version: "v1", Kind: "ServiceMonitor"}
 }

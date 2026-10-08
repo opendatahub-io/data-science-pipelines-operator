@@ -1,0 +1,12 @@
+{{ if .APIServer.EnableRoute }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ds-pipeline-proxy-ca-{{.Name}}
+  namespace: {{.Namespace}}
+  labels:
+    app: {{.APIServerDefaultResourceName}}
+    component: data-science-pipelines
+  annotations:
+    service.beta.openshift.io/inject-cabundle: "true"
+{{ end }}
