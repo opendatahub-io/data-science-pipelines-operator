@@ -385,6 +385,7 @@ spec:
             - mountPath: {{ .CustomCABundleRootMountPath  }}
               name: ca-bundle
             {{ end }}
+        {{ end }}
         - name: kube-rbac-proxy-metrics
           args:
             - --secure-listen-address=0.0.0.0:8445
@@ -445,7 +446,6 @@ spec:
             - mountPath: {{ .CustomCABundleRootMountPath  }}
               name: ca-bundle
             {{ end }}
-        {{ end }}
       {{ if .APIServer.ResourceClaims }}
       resourceClaims:
       {{ range .APIServer.ResourceClaims }}

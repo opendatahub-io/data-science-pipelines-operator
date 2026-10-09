@@ -18,6 +18,8 @@ spec:
     - ports:
         - protocol: TCP
           port: 8443
+    {{ end }}
+    {{ if .APIServer }}
     # Prometheus-only kube-rbac-proxy. Restricted to monitoring namespaces.
     - ports:
         - protocol: TCP

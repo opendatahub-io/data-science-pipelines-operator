@@ -213,9 +213,6 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1.Dat
 		if err != nil {
 			return err
 		}
-		if err := r.deleteAPIServerMetricsResources(ctx, dsp); err != nil {
-			return err
-		}
 	}
 
 	for _, template := range samplePipelineTemplates {
@@ -230,8 +227,8 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1.Dat
 }
 
 // deleteAPIServerMetricsResources removes the authenticated metrics scrape
-// resources. They are only rendered while the API route, and therefore the
-// kube-rbac-proxy port, is enabled.
+// resources when the DSPA is deleted. Namespaced owner refs do not cover every
+// scrape object, so the finalizer deletes them explicitly.
 func (r *DSPAReconciler) deleteAPIServerMetricsResources(ctx context.Context, dsp *dspav1.DataSciencePipelinesApplication) error {
 	monitor := &unstructured.Unstructured{}
 	monitor.SetGroupVersionKind(schema.GroupVersionKind{

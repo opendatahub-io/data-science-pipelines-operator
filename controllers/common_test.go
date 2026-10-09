@@ -122,6 +122,20 @@ func TestCommonPoliciesFollowProxyFlags(t *testing.T) {
 	assertPortAbsent(t, requireNetworkPolicy(t, ctx, reconciler, "ds-pipelines-envoy-"+ingressTestDSPAName), 8443)
 }
 
+func TestCommonPoliciesKeepMetricsPortWithoutRoute(t *testing.T) {
+	dspa := newIngressTestDSPA(dspav1.DSPASpec{
+		APIServer: &dspav1.APIServer{EnableRoute: false},
+	})
+
+	ctx, params, reconciler := CreateNewTestObjects()
+	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+	require.NoError(t, reconciler.ReconcileCommon(dspa, params))
+
+	apiPolicy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipelines-"+ingressTestDSPAName)
+	assertPortAbsent(t, apiPolicy, 8443)
+	assertIngressFrom(t, apiPolicy, 8445, monitoringNamespacePeers())
+}
+
 const ingressTestDSPAName = "testdspa"
 const ingressTestNamespace = "testnamespace"
 

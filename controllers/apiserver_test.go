@@ -35,7 +35,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -1643,21 +1642,42 @@ func TestAPIServerMetricsUseAuthenticatedProxy(t *testing.T) {
 	dspa.Spec.APIServer.EnableRoute = false
 	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
 	require.NoError(t, reconciler.ReconcileAPIServer(ctx, dspa, params))
-	metricsName := types.NamespacedName{
-		Name:      "ds-pipeline-metrics-" + testDSPAName,
-		Namespace: testNamespace,
-	}
-	err = reconciler.Get(ctx, types.NamespacedName{
+	require.NoError(t, reconciler.Get(ctx, types.NamespacedName{
 		Name:      apiServerDefaultResourceNamePrefix + testDSPAName,
 		Namespace: testNamespace,
-	}, monitor)
-	require.True(t, apierrs.IsNotFound(err))
-	require.True(t, apierrs.IsNotFound(reconciler.Get(ctx, metricsName, &rbacv1.Role{})))
-	require.True(t, apierrs.IsNotFound(reconciler.Get(ctx, metricsName, &rbacv1.RoleBinding{})))
-	require.True(t, apierrs.IsNotFound(reconciler.Get(ctx, types.NamespacedName{
+	}, monitor))
+	endpoints, found, err = unstructured.NestedSlice(monitor.Object, "spec", "endpoints")
+	require.NoError(t, err)
+	require.True(t, found)
+	require.Equal(t, "prom-metrics", endpoints[0].(map[string]interface{})["port"])
+	require.NoError(t, reconciler.Get(ctx, types.NamespacedName{
+		Name:      "ds-pipeline-metrics-" + testDSPAName,
+		Namespace: testNamespace,
+	}, &rbacv1.Role{}))
+	require.NoError(t, reconciler.Get(ctx, types.NamespacedName{
+		Name:      "ds-pipeline-metrics-" + testDSPAName,
+		Namespace: testNamespace,
+	}, &rbacv1.RoleBinding{}))
+	require.NoError(t, reconciler.Get(ctx, types.NamespacedName{
 		Name:      "ds-pipeline-proxy-ca-" + testDSPAName,
 		Namespace: testNamespace,
-	}, &corev1.ConfigMap{})))
+	}, &corev1.ConfigMap{}))
+
+	require.NoError(t, reconciler.Get(ctx, types.NamespacedName{
+		Name:      apiServerDefaultResourceNamePrefix + testDSPAName,
+		Namespace: testNamespace,
+	}, deployment))
+	var hasDashboardProxy, hasMetricsProxy bool
+	for _, container := range deployment.Spec.Template.Spec.Containers {
+		if container.Name == "kube-rbac-proxy" {
+			hasDashboardProxy = true
+		}
+		if container.Name == "kube-rbac-proxy-metrics" {
+			hasMetricsProxy = true
+		}
+	}
+	require.False(t, hasDashboardProxy)
+	require.True(t, hasMetricsProxy)
 }
 
 func serviceMonitorGVK() schema.GroupVersionKind {

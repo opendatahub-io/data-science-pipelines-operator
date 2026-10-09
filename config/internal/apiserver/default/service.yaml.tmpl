@@ -15,11 +15,11 @@ spec:
       port: 8443
       protocol: TCP
       targetPort: proxy
+    {{ end }}
     - name: prom-metrics
       port: 8445
       protocol: TCP
       targetPort: prom-metrics
-    {{ end }}
     - name: http
       port: 8888
       protocol: TCP
