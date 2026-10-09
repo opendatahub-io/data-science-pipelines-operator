@@ -124,6 +124,7 @@ func TestDeployMLMD(t *testing.T) {
 	assert.Nil(t, err)
 
 	mlmdPolicy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipeline-metadata-grpc-"+testDSPAName)
+	assertPolicySelects(t, mlmdPolicy, pipelineComponentLabels("ds-pipeline-metadata-grpc-"+testDSPAName))
 	assertIngressFrom(t, mlmdPolicy, 8080, mlmdGRPCPeers(testDSPAName))
 }
 
@@ -494,6 +495,7 @@ func TestMetadataGRPCIngressUsesConfiguredPort(t *testing.T) {
 	require.NoError(t, reconciler.ReconcileMLMD(ctx, dspa, params))
 
 	policy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipeline-metadata-grpc-"+ingressTestDSPAName)
+	assertPolicySelects(t, policy, pipelineComponentLabels("ds-pipeline-metadata-grpc-"+ingressTestDSPAName))
 	assertPortAbsent(t, policy, 8080)
 	assertIngressFrom(t, policy, 9095, mlmdGRPCPeers(ingressTestDSPAName))
 }

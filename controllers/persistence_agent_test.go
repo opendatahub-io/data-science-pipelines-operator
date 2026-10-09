@@ -77,7 +77,9 @@ func TestDeployPersistenceAgent(t *testing.T) {
 	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedPersistenceAgentName, testNamespace)
 	assert.True(t, created)
 	assert.Nil(t, err)
-	assertNoIngress(t, requireNetworkPolicy(t, ctx, reconciler, expectedPersistenceAgentName))
+	persistencePolicy := requireNetworkPolicy(t, ctx, reconciler, expectedPersistenceAgentName)
+	assertPolicySelects(t, persistencePolicy, pipelineComponentLabels(expectedPersistenceAgentName))
+	assertNoIngress(t, persistencePolicy)
 
 	// Ensure readiness is handled
 	persistenceAgentReady, err := reconciler.evaluateCondition(ctx, dspa, params.PersistentAgentDefaultResourceName, config.PersistenceAgentReady)

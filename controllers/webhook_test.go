@@ -72,7 +72,8 @@ func TestWebhookLifecycle(t *testing.T) {
 		created, err = reconciler.IsResourceCreated(ctx, webhookPolicy, testWebhookName, testDSPONamespace)
 		assert.True(t, created)
 		require.NoError(t, err)
-		assertPortPresent(t, webhookPolicy, 8443)
+		assertPolicySelects(t, webhookPolicy, pipelineComponentLabels(testWebhookName))
+		assertPortOnlyTCP(t, webhookPolicy, 8443)
 	})
 
 	t.Run("WebhookNotDeployedWithoutKubernetesPipelineStore", func(t *testing.T) {

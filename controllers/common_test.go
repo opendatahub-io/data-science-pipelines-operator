@@ -24,6 +24,7 @@ import (
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -86,6 +87,7 @@ func TestDeployCommonPolicies(t *testing.T) {
 	// APIServer is omitted, so the OAuth proxy port is not opened.
 	assertPortAbsent(t, np, 8443)
 	assertPortAbsent(t, np, 8445)
+	assertPolicySelects(t, np, pipelineComponentLabels("ds-pipeline-"+testDSPAName))
 	assertDirectAPICallers(t, np, 8888, apiServerHTTPPeers(testDSPAName))
 	assertDirectAPICallers(t, np, 8887, apiServerGRPCPeers(testDSPAName))
 
@@ -94,7 +96,10 @@ func TestDeployCommonPolicies(t *testing.T) {
 	assert.True(t, created)
 	assert.Nil(t, err)
 	// MLMD is omitted and defaults to deploying the Envoy route.
+	assertPolicySelects(t, np, pipelineComponentLabels("ds-pipeline-metadata-envoy-"+testDSPAName))
 	assertPortPresent(t, np, 8443)
+	assertIngressFrom(t, np, 9090, envoyListenerPeers(testDSPAName))
+	assertPortAbsent(t, np, 9901)
 
 	driverPolicy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipeline-drivers-"+testDSPAName)
 	assertNoIngress(t, driverPolicy)
@@ -115,11 +120,16 @@ func TestCommonPoliciesFollowProxyFlags(t *testing.T) {
 	require.NoError(t, reconciler.ReconcileCommon(dspa, params))
 
 	apiPolicy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipelines-"+ingressTestDSPAName)
+	assertPolicySelects(t, apiPolicy, pipelineComponentLabels("ds-pipeline-"+ingressTestDSPAName))
 	assertPortPresent(t, apiPolicy, 8443)
 	assertIngressFrom(t, apiPolicy, 8445, monitoringNamespacePeers())
 	assertDirectAPICallers(t, apiPolicy, 8888, apiServerHTTPPeers(ingressTestDSPAName))
 	assertDirectAPICallers(t, apiPolicy, 8887, apiServerGRPCPeers(ingressTestDSPAName))
-	assertPortAbsent(t, requireNetworkPolicy(t, ctx, reconciler, "ds-pipelines-envoy-"+ingressTestDSPAName), 8443)
+	envoyPolicy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipelines-envoy-"+ingressTestDSPAName)
+	assertPolicySelects(t, envoyPolicy, pipelineComponentLabels("ds-pipeline-metadata-envoy-"+ingressTestDSPAName))
+	assertPortAbsent(t, envoyPolicy, 8443)
+	assertIngressFrom(t, envoyPolicy, 9090, envoyListenerPeers(ingressTestDSPAName))
+	assertPortAbsent(t, envoyPolicy, 9901)
 }
 
 func TestCommonPoliciesKeepMetricsPortWithoutRoute(t *testing.T) {
@@ -132,6 +142,7 @@ func TestCommonPoliciesKeepMetricsPortWithoutRoute(t *testing.T) {
 	require.NoError(t, reconciler.ReconcileCommon(dspa, params))
 
 	apiPolicy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipelines-"+ingressTestDSPAName)
+	assertPolicySelects(t, apiPolicy, pipelineComponentLabels("ds-pipeline-"+ingressTestDSPAName))
 	assertPortAbsent(t, apiPolicy, 8443)
 	assertIngressFrom(t, apiPolicy, 8445, monitoringNamespacePeers())
 }
@@ -181,6 +192,32 @@ func assertNoIngress(t *testing.T, policy *networkingv1.NetworkPolicy) {
 	require.Empty(t, policy.Spec.Ingress)
 }
 
+func pipelineComponentLabels(app string) map[string]string {
+	return map[string]string{
+		"app":       app,
+		"component": "data-science-pipelines",
+	}
+}
+
+func assertPolicySelects(t *testing.T, policy *networkingv1.NetworkPolicy, labels map[string]string) {
+	t.Helper()
+	require.Equal(t, labels, policy.Spec.PodSelector.MatchLabels)
+	require.Empty(t, policy.Spec.PodSelector.MatchExpressions)
+}
+
+func assertPortOnlyTCP(t *testing.T, policy *networkingv1.NetworkPolicy, port int32) {
+	t.Helper()
+	require.Len(t, policy.Spec.Ingress, 1)
+	rule := policy.Spec.Ingress[0]
+	require.Empty(t, rule.From)
+	require.Len(t, rule.Ports, 1)
+	require.NotNil(t, rule.Ports[0].Protocol)
+	require.Equal(t, corev1.ProtocolTCP, *rule.Ports[0].Protocol)
+	require.NotNil(t, rule.Ports[0].Port)
+	require.Equal(t, intstr.Int, rule.Ports[0].Port.Type)
+	require.Equal(t, port, rule.Ports[0].Port.IntVal)
+}
+
 func assertDriverRoleSelector(t *testing.T, policy *networkingv1.NetworkPolicy) {
 	t.Helper()
 	require.Empty(t, policy.Spec.PodSelector.MatchLabels)
@@ -213,6 +250,12 @@ func runtimeRolePeers() []ingressPeer {
 		{podLabels: map[string]string{"pipelines.kubeflow.org/pod-role": "container-executor"}},
 		{podLabels: map[string]string{"pipelines.kubeflow.org/pod-role": "importer"}},
 	}
+}
+
+func envoyListenerPeers(name string) []ingressPeer {
+	return append([]ingressPeer{{
+		podLabels: pipelineComponentLabels("ds-pipeline-" + name),
+	}}, runtimeRolePeers()...)
 }
 
 func apiServerHTTPPeers(name string) []ingressPeer {

@@ -145,6 +145,7 @@ func TestDeployWorkflowController(t *testing.T) {
 	assert.Empty(t, cm.Data["workflowDefaults"])
 
 	workflowPolicy := requireNetworkPolicy(t, ctx, reconciler, expectedWorkflowControllerName)
+	assertPolicySelects(t, workflowPolicy, pipelineComponentLabels(expectedWorkflowControllerName))
 	assertIngressFrom(t, workflowPolicy, 9090, monitoringNamespacePeers())
 	assertPortAbsent(t, workflowPolicy, 6060)
 }
