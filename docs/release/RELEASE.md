@@ -29,7 +29,7 @@ metadata:
 
 This annotation prevents managed-pipeline enablement; other upgrade changes may still trigger a rollout. After upgrading, `spec.apiServer.managedPipelines.enabled: false` also disables the feature. The annotation takes precedence over `enabled: true` and must be removed before re-enabling managed pipelines through the spec.
 
-Rollback caveat: older DSPO versions do not recognize `spec.apiServer.managedPipelines.enabled` and treat any non-null `managedPipelines` object as enabled. If an admin disables the feature with `enabled: false` and the operator is rolled back, managed pipelines will be re-enabled and imported again. To keep managed pipelines disabled across a rollback, remove the `spec.apiServer.managedPipelines` object and keep the `disable-managed-pipelines` annotation set to `"true"`: the older operator disables the feature because the object is absent, while the current operator keeps it disabled because of the annotation.
+Rollback caveat: older DSPO versions do not recognize `spec.apiServer.managedPipelines.enabled` or the `disable-managed-pipelines` annotation, and they enable managed pipelines only when the `managedPipelines` object is present. If an admin disables the feature with `enabled: false` and the operator is rolled back while that object remains, managed pipelines are re-enabled and imported again. To keep managed pipelines disabled across a rollback, remove the `managedPipelines` object and set the annotation to `"true"`: the older operator disables the feature because the object is absent, while the current operator keeps it disabled because of the annotation.
 
 ## Release pre-requisites
 
