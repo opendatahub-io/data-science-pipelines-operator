@@ -1,0 +1,39 @@
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: minio-{{.Name}}
+  namespace: {{.Namespace}}
+spec:
+  podSelector:
+    matchLabels:
+      app: minio-{{.Name}}
+      component: data-science-pipelines
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 9000
+      from:
+        - podSelector:
+            matchLabels:
+              app: {{.APIServerDefaultResourceName}}
+              component: data-science-pipelines
+        - podSelector:
+            matchLabels:
+              pipelines.kubeflow.org/pod-role: container-executor
+        - podSelector:
+            matchLabels:
+              pipelines.kubeflow.org/pod-role: importer
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: data-science-pipelines-operator
+          namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{.DSPONamespace}}
+        {{ if .MinioExternalRoute }}
+        - namespaceSelector:
+            matchLabels:
+              policy-group.network.openshift.io/ingress: ""
+          podSelector: {}
+        {{ end }}

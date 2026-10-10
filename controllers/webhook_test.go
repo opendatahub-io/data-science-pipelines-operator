@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 	admv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -66,6 +67,13 @@ func TestWebhookLifecycle(t *testing.T) {
 		created, err = reconciler.IsResourceCreated(ctx, deployment, testWebhookName, testDSPONamespace)
 		assert.True(t, created)
 		require.NoError(t, err)
+
+		webhookPolicy := &networkingv1.NetworkPolicy{}
+		created, err = reconciler.IsResourceCreated(ctx, webhookPolicy, testWebhookName, testDSPONamespace)
+		assert.True(t, created)
+		require.NoError(t, err)
+		assertPolicySelects(t, webhookPolicy, pipelineComponentLabels(testWebhookName))
+		assertPortOnlyTCP(t, webhookPolicy, 8443)
 	})
 
 	t.Run("WebhookNotDeployedWithoutKubernetesPipelineStore", func(t *testing.T) {
@@ -98,6 +106,11 @@ func TestWebhookLifecycle(t *testing.T) {
 		// Webhook Deployment should NOT be created
 		deployment := &appsv1.Deployment{}
 		created, err := reconciler.IsResourceCreated(ctx, deployment, testWebhookName, testDSPONamespace)
+		assert.False(t, created)
+		require.NoError(t, err)
+
+		webhookPolicy := &networkingv1.NetworkPolicy{}
+		created, err = reconciler.IsResourceCreated(ctx, webhookPolicy, testWebhookName, testDSPONamespace)
 		assert.False(t, created)
 		require.NoError(t, err)
 	})
@@ -143,6 +156,11 @@ func TestWebhookLifecycle(t *testing.T) {
 		// Webhook should now be deleted
 		deployment = &appsv1.Deployment{}
 		created, err = reconciler.IsResourceCreated(ctx, deployment, testWebhookName, testDSPONamespace)
+		assert.False(t, created)
+		require.NoError(t, err)
+
+		webhookPolicy := &networkingv1.NetworkPolicy{}
+		created, err = reconciler.IsResourceCreated(ctx, webhookPolicy, testWebhookName, testDSPONamespace)
 		assert.False(t, created)
 		require.NoError(t, err)
 	})

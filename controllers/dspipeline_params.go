@@ -73,6 +73,7 @@ type DSPAParams struct {
 	WorkflowControllerDefaultResourceName string
 	MariaDB                               *dspa.MariaDB
 	Minio                                 *dspa.Minio
+	MinioExternalRoute                    bool
 	MLMD                                  *dspa.MLMD
 	MlmdProxyDefaultResourceName          string
 	MlmdGrpcCertificateContents           string
@@ -782,6 +783,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.PersistentAgentDefaultResourceName = persistenceAgentDefaultResourceNamePrefix + dsp.Name
 	p.MariaDB = dsp.Spec.Database.MariaDB.DeepCopy()
 	p.Minio = dsp.Spec.ObjectStorage.Minio.DeepCopy()
+	p.MinioExternalRoute = p.ExternalRouteEnabled(dsp)
 	p.KubeRBACProxy = config.ResolveImage(config.KubeRBACProxyImagePath)
 	p.MLMD = dsp.Spec.MLMD.DeepCopy()
 	p.MlmdProxyDefaultResourceName = mlmdProxyDefaultResourceNamePrefix + dsp.Name

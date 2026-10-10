@@ -9,15 +9,33 @@ spec:
       app: ds-pipeline-metadata-envoy-{{ .Name }}
       component: data-science-pipelines
   ingress:
+    {{ if and .MLMD .MLMD.Envoy .MLMD.Envoy.DeployRoute }}
+    # Authenticated kube-rbac-proxy, used by the dashboard and the Route.
+    # Port-only so cluster pods and the OpenShift router can reach it.
     - ports:
         - protocol: TCP
           port: 8443
+    {{ end }}
+    # Direct Envoy listener. No login check. Admin port 9901 is not allowed.
     - ports:
         - protocol: TCP
           port: 9090
       from:
         - podSelector:
             matchLabels:
+              app: {{.APIServerDefaultResourceName}}
               component: data-science-pipelines
+        - podSelector:
+            matchLabels:
+              pipelines.kubeflow.org/pod-role: container-driver
+        - podSelector:
+            matchLabels:
+              pipelines.kubeflow.org/pod-role: dag-driver
+        - podSelector:
+            matchLabels:
+              pipelines.kubeflow.org/pod-role: container-executor
+        - podSelector:
+            matchLabels:
+              pipelines.kubeflow.org/pod-role: importer
   policyTypes:
     - Ingress

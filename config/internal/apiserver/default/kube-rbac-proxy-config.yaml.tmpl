@@ -15,3 +15,11 @@ data:
         resource: datasciencepipelinesapplications
         subresource: api
         name: {{.Name}}
+  metrics-config-file.yaml: |-
+    authorization:
+      resourceAttributes:
+        namespace: {{.Namespace}}
+        apiGroup: datasciencepipelinesapplications.opendatahub.io
+        resource: datasciencepipelinesapplications
+        subresource: metrics
+        name: {{.Name}}

@@ -295,6 +295,7 @@ func TestOperatorRolesAreSupersetOfRoleTemplates(t *testing.T) {
 	templates := map[string]string{
 		"workflow-controller": "../config/internal/workflow-controller/role.yaml.tmpl",
 		"pipeline-runner":     "../config/internal/apiserver/default/role_pipeline-runner.yaml.tmpl",
+		"ds-pipeline-metrics": "../config/internal/apiserver/default/role_ds-pipeline-metrics.yaml.tmpl",
 	}
 
 	for name, path := range templates {

@@ -11,36 +11,60 @@ spec:
   policyTypes:
     - Ingress
   ingress:
-    # Match all sources for the proxy endpoint
+    {{ if and .APIServer .APIServer.EnableRoute }}
+    # Authenticated kube-rbac-proxy. Port-only so any cluster pod and the
+    # OpenShift router can reach it. The router commonly uses host networking,
+    # so a pod or namespace selector is not portable.
     - ports:
         - protocol: TCP
           port: 8443
-    # The components that are permitted to directly communicate with API Server
-    # Note: all other external traffic should go through the proxy
+    {{ end }}
+    {{ if .APIServer }}
+    # Prometheus-only kube-rbac-proxy. Restricted to monitoring namespaces.
     - ports:
         - protocol: TCP
-          port: 8888
-        - protocol: TCP
-          port: 8887
+          port: 8445
       from:
         - namespaceSelector:
             matchLabels:
-              name: openshift-user-workload-monitoring
+              kubernetes.io/metadata.name: openshift-monitoring
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-user-workload-monitoring
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: redhat-ods-monitoring
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: opendatahub-monitoring
+    {{ end }}
+    # Direct API HTTP. No login check, so only the persistence agent and the
+    # KFP runtime roles may connect.
+    - ports:
+        - protocol: TCP
+          port: 8888
+      from:
         - podSelector:
             matchLabels:
-              app: ds-pipeline-{{.Name}}
+              app: ds-pipeline-persistenceagent-{{.Name}}
               component: data-science-pipelines
         - podSelector:
             matchLabels:
-              app: mariadb-{{.Name}}
-              component: data-science-pipelines
+              pipelines.kubeflow.org/pod-role: container-driver
         - podSelector:
             matchLabels:
-              app: minio-{{.Name}}
-              component: data-science-pipelines
+              pipelines.kubeflow.org/pod-role: dag-driver
+        - podSelector:
+            matchLabels:
+              pipelines.kubeflow.org/pod-role: container-executor
+        - podSelector:
+            matchLabels:
+              pipelines.kubeflow.org/pod-role: importer
+    # Direct API gRPC. Same callers as 8888, plus the scheduled-workflow controller.
+    - ports:
+        - protocol: TCP
+          port: 8887
+      from:
         - podSelector:
             matchLabels:
               app: ds-pipeline-persistenceagent-{{.Name}}
@@ -51,15 +75,13 @@ spec:
               component: data-science-pipelines
         - podSelector:
             matchLabels:
-              app: ds-pipeline-metadata-envoy-{{.Name}}
-              component: data-science-pipelines
+              pipelines.kubeflow.org/pod-role: container-driver
         - podSelector:
             matchLabels:
-              app: ds-pipeline-metadata-grpc-{{.Name}}
-              component: data-science-pipelines
+              pipelines.kubeflow.org/pod-role: dag-driver
         - podSelector:
             matchLabels:
-              pipelines.kubeflow.org/v2_component: 'true'
+              pipelines.kubeflow.org/pod-role: container-executor
         - podSelector:
             matchLabels:
-              opendatahub.io/workbenches: 'true'
+              pipelines.kubeflow.org/pod-role: importer

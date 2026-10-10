@@ -235,6 +235,12 @@ rules:
 - apiGroups:
   - datasciencepipelinesapplications.opendatahub.io
   resources:
+  - datasciencepipelinesapplications/metrics
+  verbs:
+  - get
+- apiGroups:
+  - datasciencepipelinesapplications.opendatahub.io
+  resources:
   - datasciencepipelinesapplications/finalizers
   verbs:
   - update
