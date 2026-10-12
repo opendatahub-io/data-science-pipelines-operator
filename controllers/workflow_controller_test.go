@@ -148,6 +148,9 @@ func TestDeployWorkflowController(t *testing.T) {
 	assertPolicySelects(t, workflowPolicy, pipelineComponentLabels(expectedWorkflowControllerName))
 	assertIngressFrom(t, workflowPolicy, 9090, monitoringNamespacePeers())
 	assertPortAbsent(t, workflowPolicy, 6060)
+	assertDNSEgress(t, workflowPolicy)
+	assertKubernetesAPIEgress(t, workflowPolicy)
+	require.Len(t, workflowPolicy.Spec.Egress, 2)
 }
 
 func TestDontDeployWorkflowController(t *testing.T) {

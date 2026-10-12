@@ -18,6 +18,7 @@ package v1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -66,6 +67,11 @@ type DSPASpec struct {
 	// Set integrationMode to DISABLED to opt out of MLflow integration.
 	// +kubebuilder:validation:Optional
 	MLflow *MLflowConfig `json:"mlflow,omitempty"`
+
+	// NetworkPolicy configures administrator overrides for operand NetworkPolicies.
+	// Omitted or empty egress lists use the operator's default outbound rules.
+	// +kubebuilder:validation:Optional
+	NetworkPolicy *NetworkPolicySpec `json:"networkPolicy,omitempty"`
 
 	// ServiceAccountAnnotations allows users to specify arbitrary annotations
 	// to be applied to DSPA-managed ServiceAccounts (ml-pipeline, pipeline-runner).
@@ -541,6 +547,44 @@ type SecretKeyValue struct {
 	// +kubebuilder:validation:Required
 	Name string `json:"name"`
 	Key  string `json:"key"`
+}
+
+// NetworkPolicySpec configures administrator overrides for operand NetworkPolicies.
+type NetworkPolicySpec struct {
+	// Egress configures outbound overrides. Only the API server and the driver accept them.
+	// +kubebuilder:validation:Optional
+	Egress *NetworkPolicyEgressSpec `json:"egress,omitempty"`
+}
+
+// NetworkPolicyEgressSpec holds per-workload outbound overrides.
+type NetworkPolicyEgressSpec struct {
+	// APIServer overrides outbound rules for the Pipelines API server.
+	// +kubebuilder:validation:Optional
+	APIServer *WorkloadEgressSpec `json:"apiServer,omitempty"`
+
+	// Driver overrides outbound rules for the KFP driver pods.
+	// +kubebuilder:validation:Optional
+	Driver *WorkloadEgressSpec `json:"driver,omitempty"`
+}
+
+// WorkloadEgressSpec controls outbound NetworkPolicy rules for one Pipelines workload.
+// A rule with neither ports nor a destination is rejected, because that shape allows every connection.
+// +kubebuilder:validation:XValidation:rule="!has(self.rules) || self.rules.all(r, (has(r.ports) && size(r.ports) > 0) || (has(r.to) && size(r.to) > 0))",message="each rules entry must specify at least one port or one destination"
+// +kubebuilder:validation:XValidation:rule="!has(self.additionalRules) || self.additionalRules.all(r, (has(r.ports) && size(r.ports) > 0) || (has(r.to) && size(r.to) > 0))",message="each additionalRules entry must specify at least one port or one destination"
+type WorkloadEgressSpec struct {
+	// Rules, when non-empty, replaces this workload's default egress list.
+	// The admin must put back every path that workload needs, including DNS and the Kubernetes API.
+	// When omitted or empty, the operator uses the default egress rules.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxItems=32
+	Rules []networkingv1.NetworkPolicyEgressRule `json:"rules,omitempty"`
+
+	// AdditionalRules is appended after the active egress list and does not remove the defaults.
+	// When Rules is non-empty, AdditionalRules is appended after Rules.
+	// When omitted or empty, nothing is added.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxItems=32
+	AdditionalRules []networkingv1.NetworkPolicyEgressRule `json:"additionalRules,omitempty"`
 }
 
 type ProxyConfig struct {

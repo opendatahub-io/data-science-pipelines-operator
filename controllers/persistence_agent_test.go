@@ -23,6 +23,7 @@ import (
 
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 )
 
@@ -80,6 +81,12 @@ func TestDeployPersistenceAgent(t *testing.T) {
 	persistencePolicy := requireNetworkPolicy(t, ctx, reconciler, expectedPersistenceAgentName)
 	assertPolicySelects(t, persistencePolicy, pipelineComponentLabels(expectedPersistenceAgentName))
 	assertNoIngress(t, persistencePolicy)
+	assertDNSEgress(t, persistencePolicy)
+	assertKubernetesAPIEgress(t, persistencePolicy)
+	apiServerLabels := pipelineComponentLabels("ds-pipeline-" + testDSPAName)
+	assertEgressToPod(t, persistencePolicy, 8888, apiServerLabels)
+	assertEgressToPod(t, persistencePolicy, 8887, apiServerLabels)
+	require.Len(t, persistencePolicy.Spec.Egress, 3)
 
 	// Ensure readiness is handled
 	persistenceAgentReady, err := reconciler.evaluateCondition(ctx, dspa, params.PersistentAgentDefaultResourceName, config.PersistenceAgentReady)

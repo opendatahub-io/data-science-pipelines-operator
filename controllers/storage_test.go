@@ -106,6 +106,7 @@ func TestDeployStorage(t *testing.T) {
 	assertPolicySelects(t, minioPolicy, pipelineComponentLabels(expectedStorageName))
 	assertIngressFrom(t, minioPolicy, 9000, minioPeers(testDSPAName, params.DSPONamespace, false))
 	assert.False(t, policyHasIngressRouterPeer(minioPolicy))
+	assertDeniesAllEgress(t, minioPolicy)
 }
 
 func TestDeployStorageWithExternalRouteEnabled(t *testing.T) {
@@ -184,6 +185,7 @@ func TestDeployStorageWithExternalRouteEnabled(t *testing.T) {
 	assertPolicySelects(t, minioPolicy, pipelineComponentLabels(expectedStorageName))
 	assertIngressFrom(t, minioPolicy, 9000, minioPeers(testDSPAName, params.DSPONamespace, true))
 	assert.True(t, policyHasIngressRouterPeer(minioPolicy))
+	assertDeniesAllEgress(t, minioPolicy)
 }
 
 func TestDontDeployStorage(t *testing.T) {

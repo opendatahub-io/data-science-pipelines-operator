@@ -23,7 +23,9 @@ import (
 
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func TestDeployScheduledWorkflow(t *testing.T) {
@@ -80,6 +82,11 @@ func TestDeployScheduledWorkflow(t *testing.T) {
 	scheduledWorkflowPolicy := requireNetworkPolicy(t, ctx, reconciler, expectedScheduledWorkflowName)
 	assertPolicySelects(t, scheduledWorkflowPolicy, pipelineComponentLabels(expectedScheduledWorkflowName))
 	assertNoIngress(t, scheduledWorkflowPolicy)
+	assertDNSEgress(t, scheduledWorkflowPolicy)
+	assertKubernetesAPIEgress(t, scheduledWorkflowPolicy)
+	assertEgressToPod(t, scheduledWorkflowPolicy, 8887, pipelineComponentLabels("ds-pipeline-"+testDSPAName))
+	assertEgressPortAbsent(t, scheduledWorkflowPolicy, corev1.ProtocolTCP, 8888)
+	require.Len(t, scheduledWorkflowPolicy.Spec.Egress, 3)
 
 	// Ensure readiness is handled
 	scheduledWorkflowReady, err := reconciler.evaluateCondition(ctx, dspa, params.ScheduledWorkflowDefaultResourceName, config.ScheduledWorkflowReady)
