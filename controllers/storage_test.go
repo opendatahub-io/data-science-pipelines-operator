@@ -101,6 +101,11 @@ func TestDeployStorage(t *testing.T) {
 	created, err = reconciler.IsResourceCreated(ctx, route, expectedStorageName, testNamespace)
 	assert.False(t, created)
 	assert.Nil(t, err)
+
+	minioPolicy := requireNetworkPolicy(t, ctx, reconciler, expectedStorageName)
+	assertPolicySelects(t, minioPolicy, pipelineComponentLabels(expectedStorageName))
+	assertIngressFrom(t, minioPolicy, 9000, minioPeers(testDSPAName, params.DSPONamespace, false))
+	assert.False(t, policyHasIngressRouterPeer(minioPolicy))
 }
 
 func TestDeployStorageWithExternalRouteEnabled(t *testing.T) {
@@ -174,6 +179,11 @@ func TestDeployStorageWithExternalRouteEnabled(t *testing.T) {
 	created, err = reconciler.IsResourceCreated(ctx, route, expectedStorageName, testNamespace)
 	assert.True(t, created)
 	assert.Nil(t, err)
+
+	minioPolicy := requireNetworkPolicy(t, ctx, reconciler, expectedStorageName)
+	assertPolicySelects(t, minioPolicy, pipelineComponentLabels(expectedStorageName))
+	assertIngressFrom(t, minioPolicy, 9000, minioPeers(testDSPAName, params.DSPONamespace, true))
+	assert.True(t, policyHasIngressRouterPeer(minioPolicy))
 }
 
 func TestDontDeployStorage(t *testing.T) {
@@ -224,6 +234,7 @@ func TestDontDeployStorage(t *testing.T) {
 	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedStorageName, testNamespace)
 	assert.False(t, created)
 	assert.Nil(t, err)
+	assertNetworkPolicyAbsent(t, ctx, reconciler, expectedStorageName)
 }
 
 func TestDefaultDeployBehaviorStorage(t *testing.T) {

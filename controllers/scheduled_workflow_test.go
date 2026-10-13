@@ -77,6 +77,9 @@ func TestDeployScheduledWorkflow(t *testing.T) {
 	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedScheduledWorkflowName, testNamespace)
 	assert.True(t, created)
 	assert.Nil(t, err)
+	scheduledWorkflowPolicy := requireNetworkPolicy(t, ctx, reconciler, expectedScheduledWorkflowName)
+	assertPolicySelects(t, scheduledWorkflowPolicy, pipelineComponentLabels(expectedScheduledWorkflowName))
+	assertNoIngress(t, scheduledWorkflowPolicy)
 
 	// Ensure readiness is handled
 	scheduledWorkflowReady, err := reconciler.evaluateCondition(ctx, dspa, params.ScheduledWorkflowDefaultResourceName, config.ScheduledWorkflowReady)
@@ -120,4 +123,5 @@ func TestDontDeployScheduledWorkflow(t *testing.T) {
 	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedScheduledWorkflowName, testNamespace)
 	assert.False(t, created)
 	assert.Nil(t, err)
+	assertNetworkPolicyAbsent(t, ctx, reconciler, expectedScheduledWorkflowName)
 }
