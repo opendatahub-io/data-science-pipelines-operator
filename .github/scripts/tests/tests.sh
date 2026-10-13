@@ -18,8 +18,11 @@ SKIP_CLEANUP=false
 SETUP_ONLY=false
 K8SAPISERVERHOST=""
 DSPA_NAMESPACE="test-dspa"
+DSPA_NAME="test-dspa"
 DSPA_EXTERNAL_NAMESPACE="dspa-ext"
+DSPA_EXTERNAL_NAME="dspa-ext"
 DSPA_K8S_NAMESPACE="test-k8s-dspa"
+DSPA_K8S_NAME="test-k8s-dspa"
 DSPA_MLFLOW_NAMESPACE="test-dspa-mlflow"
 RUSTFS_NAMESPACE="test-rustfs"
 MARIADB_NAMESPACE="test-mariadb"
@@ -593,7 +596,12 @@ setup_kind_requirements() {
   create_dspa_k8s_namespace
   create_dspa_mlflow_namespace
   apply_mariadb_rustfs_secrets_configmaps_external_namespace
-  configure_kind_service_ca "$DSPA_EXTERNAL_NAMESPACE" "dspa-ext"
+  # Kind has no OpenShift service-ca. Mint the proxy TLS secrets the always-on
+  # kube-rbac-proxy-metrics sidecar mounts (ds-pipelines-proxy-tls-<dspa>).
+  configure_kind_service_ca "$DSPA_NAMESPACE" "$DSPA_NAME"
+  configure_kind_service_ca "$DSPA_EXTERNAL_NAMESPACE" "$DSPA_EXTERNAL_NAME"
+  configure_kind_service_ca "$DSPA_K8S_NAMESPACE" "$DSPA_K8S_NAME"
+  configure_kind_service_ca "$DSPA_MLFLOW_NAMESPACE" "$DSPA_MLFLOW_NAME"
   apply_pip_server_configmap
 }
 

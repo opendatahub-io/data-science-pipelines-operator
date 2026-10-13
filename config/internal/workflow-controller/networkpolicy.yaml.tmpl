@@ -1,0 +1,29 @@
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: {{.WorkflowControllerDefaultResourceName}}
+  namespace: {{.Namespace}}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{.WorkflowControllerDefaultResourceName}}
+      component: data-science-pipelines
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 9090
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-monitoring
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-user-workload-monitoring
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: redhat-ods-monitoring
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: opendatahub-monitoring

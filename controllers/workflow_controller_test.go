@@ -143,6 +143,11 @@ func TestDeployWorkflowController(t *testing.T) {
 	assert.True(t, created)
 	assert.Nil(t, err)
 	assert.Empty(t, cm.Data["workflowDefaults"])
+
+	workflowPolicy := requireNetworkPolicy(t, ctx, reconciler, expectedWorkflowControllerName)
+	assertPolicySelects(t, workflowPolicy, pipelineComponentLabels(expectedWorkflowControllerName))
+	assertIngressFrom(t, workflowPolicy, 9090, monitoringNamespacePeers())
+	assertPortAbsent(t, workflowPolicy, 6060)
 }
 
 func TestDontDeployWorkflowController(t *testing.T) {
@@ -182,6 +187,7 @@ func TestDontDeployWorkflowController(t *testing.T) {
 	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedWorkflowControllerName, testNamespace)
 	assert.False(t, created)
 	assert.Nil(t, err)
+	assertNetworkPolicyAbsent(t, ctx, reconciler, expectedWorkflowControllerName)
 }
 
 func TestChangeManagementStateWorkflowController(t *testing.T) {

@@ -9,7 +9,15 @@ metadata:
 spec:
   endpoints:
     - path: /metrics
-      port: http
+      port: prom-metrics
+      scheme: https
+      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      tlsConfig:
+        ca:
+          configMap:
+            name: ds-pipeline-proxy-ca-{{.Name}}
+            key: service-ca.crt
+        serverName: {{.APIServerServiceName}}.{{.Namespace}}.svc
   selector:
     matchLabels:
       app: {{.APIServerDefaultResourceName}}
