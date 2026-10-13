@@ -77,6 +77,9 @@ func TestDeployPersistenceAgent(t *testing.T) {
 	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedPersistenceAgentName, testNamespace)
 	assert.True(t, created)
 	assert.Nil(t, err)
+	persistencePolicy := requireNetworkPolicy(t, ctx, reconciler, expectedPersistenceAgentName)
+	assertPolicySelects(t, persistencePolicy, pipelineComponentLabels(expectedPersistenceAgentName))
+	assertNoIngress(t, persistencePolicy)
 
 	// Ensure readiness is handled
 	persistenceAgentReady, err := reconciler.evaluateCondition(ctx, dspa, params.PersistentAgentDefaultResourceName, config.PersistenceAgentReady)
@@ -120,4 +123,5 @@ func TestDontDeployPersistenceAgent(t *testing.T) {
 	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedPersistenceAgentName, testNamespace)
 	assert.False(t, created)
 	assert.Nil(t, err)
+	assertNetworkPolicyAbsent(t, ctx, reconciler, expectedPersistenceAgentName)
 }

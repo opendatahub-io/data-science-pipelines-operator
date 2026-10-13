@@ -22,6 +22,7 @@ import (
 	admv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -117,6 +118,11 @@ func (r *DSPAReconciler) cleanupWebhookResources(ctx context.Context, namespace 
 	// Delete ServiceAccount
 	if err := r.DeleteResourceIfItExists(ctx, &corev1.ServiceAccount{}, webhookNamespaced); err != nil {
 		log.Error(err, "Failed to delete ServiceAccount")
+		return err
+	}
+
+	if err := r.DeleteResourceIfItExists(ctx, &networkingv1.NetworkPolicy{}, webhookNamespaced); err != nil {
+		log.Error(err, "Failed to delete NetworkPolicy")
 		return err
 	}
 

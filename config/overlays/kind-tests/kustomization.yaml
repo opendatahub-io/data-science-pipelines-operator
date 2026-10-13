@@ -5,6 +5,13 @@ resources:
   - ../../base
   - ../../argo
   - ../../prometheus
+generatorOptions:
+  disableNameSuffixHash: true
+configMapGenerator:
+  - name: dspo-parameters
+    behavior: merge
+    literals:
+      - kube-rbac-proxy=registry.k8s.io/kubebuilder/kube-rbac-proxy:v0.16.0
 patchesStrategicMerge:
   - img_patch.yaml
   - res_patch.yaml

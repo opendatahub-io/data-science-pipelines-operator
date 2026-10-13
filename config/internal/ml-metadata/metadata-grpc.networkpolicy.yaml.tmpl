@@ -11,13 +11,18 @@ spec:
   ingress:
     - ports:
         - protocol: TCP
-          port: 8080
+          port: {{.MLMD.GRPC.Port}}
       from:
         - podSelector:
             matchLabels:
-              pipelines.kubeflow.org/v2_component: 'true'
+              app: {{.APIServerDefaultResourceName}}
+              component: data-science-pipelines
         - podSelector:
-           matchLabels:
-             component: data-science-pipelines
+            matchLabels:
+              app: ds-pipeline-metadata-envoy-{{ .Name }}
+              component: data-science-pipelines
+        - podSelector:
+            matchLabels:
+              pipelines.kubeflow.org/v2_component: "true"
   policyTypes:
     - Ingress
