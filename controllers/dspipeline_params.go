@@ -885,7 +885,6 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		setResourcesDefault(config.APIServerResourceRequirements, &p.APIServer.Resources)
 
 		mlflowMode := *p.MLflow.IntegrationMode
-		p.resolvedMLflowEndpoint = ""
 
 		if mlflowMode == dspa.AutoDetect {
 			apiServerReady, readinessErr := p.IsAPIServerDeploymentReady(ctx, client)

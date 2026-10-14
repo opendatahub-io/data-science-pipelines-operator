@@ -563,6 +563,7 @@ type NetworkPolicyEgressSpec struct {
 	APIServer *WorkloadEgressSpec `json:"apiServer,omitempty"`
 
 	// Driver overrides outbound rules for the KFP driver pods.
+	// The default driver policy does not include the HTTP proxy. Use additionalRules to allow it.
 	// +kubebuilder:validation:Optional
 	Driver *WorkloadEgressSpec `json:"driver,omitempty"`
 }

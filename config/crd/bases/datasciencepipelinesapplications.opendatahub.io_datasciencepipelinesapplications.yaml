@@ -1321,8 +1321,9 @@ spec:
                             (has(r.ports) && size(r.ports) > 0) || (has(r.to) && size(r.to)
                             > 0))'
                       driver:
-                        description: Driver overrides outbound rules for the KFP driver
-                          pods.
+                        description: |-
+                          Driver overrides outbound rules for the KFP driver pods.
+                          The default driver policy does not include the HTTP proxy. Use additionalRules to allow it.
                         properties:
                           additionalRules:
                             description: |-
