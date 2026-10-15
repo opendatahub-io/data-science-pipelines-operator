@@ -31,3 +31,6 @@ spec:
 
   policyTypes:
     - Ingress
+    - Egress
+  # The MariaDB pod only accepts connections. Its probes use 127.0.0.1 and its own port.
+  egress: []

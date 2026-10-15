@@ -10,6 +10,7 @@ spec:
       component: data-science-pipelines
   policyTypes:
     - Ingress
+    - Egress
   ingress:
     {{ if and .APIServer .APIServer.EnableRoute }}
     # Authenticated kube-rbac-proxy. Port-only so any cluster pod and the
@@ -67,3 +68,63 @@ spec:
         - podSelector:
             matchLabels:
               pipelines.kubeflow.org/v2_component: "true"
+  egress:
+    {{ if .APIServerReplacementEgress }}
+{{ .APIServerReplacementEgress }}
+    {{ else }}
+    # DNS. Port 53 is the Service port and 5353 is the CoreDNS target port.
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 5353
+        - protocol: TCP
+          port: 5353
+    # Kubernetes API. 443 is the Service port and 6443 is the apiserver port.
+    - ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 6443
+    # MySQL may be external, so the port is allowed to any address.
+    - ports:
+        - protocol: TCP
+          port: {{ .DBConnection.Port }}
+    # S3-compatible storage may be external. The built-in MinIO Route uses HTTPS on 443.
+    {{ if .ObjectStorageConnection.Port }}
+    - ports:
+        - protocol: TCP
+          port: {{ .ObjectStorageConnection.Port }}
+    {{ else if eq .ObjectStorageConnection.Scheme "https" }}
+    - ports:
+        - protocol: TCP
+          port: 443
+    {{ else }}
+    - ports:
+        - protocol: TCP
+          port: 80
+    {{ end }}
+    - ports:
+        - protocol: TCP
+          port: {{ .MLMD.GRPC.Port }}
+      to:
+        - podSelector:
+            matchLabels:
+              app: ds-pipeline-metadata-grpc-{{ .Name }}
+              component: data-science-pipelines
+    {{ range .ProxyEgressPorts }}
+    - ports:
+        - protocol: TCP
+          port: {{ . }}
+    {{ end }}
+    {{ if .MLflowEgressPort }}
+    - ports:
+        - protocol: TCP
+          port: {{ .MLflowEgressPort }}
+    {{ end }}
+    {{ end }}
+    {{ if .APIServerAdditionalEgress }}
+{{ .APIServerAdditionalEgress }}
+    {{ end }}

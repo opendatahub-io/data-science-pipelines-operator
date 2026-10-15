@@ -119,6 +119,26 @@ type DSPAParams struct {
 	// Proxy configuration for all DSPA components
 	ProxyConfig *dspa.ProxyConfig
 
+	// BuiltInDatabase is true when the DSPA does not use an external database.
+	// MariaDB may still be copied from the spec when the database is external, so templates must use this flag.
+	BuiltInDatabase bool
+	// ProxyEgressPorts are the distinct TCP ports from spec.proxy. Empty when no proxy is configured.
+	ProxyEgressPorts []string
+	// MLflowEgressPort is the TCP port of the resolved MLflow endpoint.
+	// Empty when integration is disabled or the endpoint is not resolved yet.
+	MLflowEgressPort string
+	// resolvedMLflowEndpoint is the tracking URL resolved during this ExtractParams call.
+	resolvedMLflowEndpoint string
+	// APIServerReplacementEgress is indented YAML for spec.networkPolicy.egress.apiServer.rules.
+	// Empty when that list is empty, so the template keeps the default egress rules.
+	APIServerReplacementEgress string
+	// APIServerAdditionalEgress is indented YAML for spec.networkPolicy.egress.apiServer.additionalRules.
+	APIServerAdditionalEgress string
+	// DriverReplacementEgress is indented YAML for spec.networkPolicy.egress.driver.rules.
+	DriverReplacementEgress string
+	// DriverAdditionalEgress is indented YAML for spec.networkPolicy.egress.driver.additionalRules.
+	DriverAdditionalEgress string
+
 	// CompiledPipelineSpecPatch is a JSON patch applied to all compiled pipeline specs
 	// Used for global workflow configuration like TTL strategy
 	CompiledPipelineSpecPatch string
@@ -816,6 +836,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	}
 
 	p.ProxyConfig = dsp.Spec.Proxy
+	p.resolvedMLflowEndpoint = ""
 	p.ServiceAccountAnnotations = dsp.Spec.ServiceAccountAnnotations
 
 	// Extract CredentialsMode from ExternalStorage
@@ -888,6 +909,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 					} else if mlflowEndpoint == "" {
 						log.V(1).Info("MLflow integration is unavailable. Skipping MLflow API server plugin config generation.")
 					} else {
+						p.resolvedMLflowEndpoint = mlflowEndpoint
 						apiServerExternalURL, routeErr := util.GetRouteHostname(ctx, p.APIServerServiceName, p.Namespace, client)
 						if routeErr != nil {
 							log.Info("Unable to retrieve API server route for KFP base URL", "error", routeErr)
@@ -1175,6 +1197,10 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 
 	err = p.SetupObjectParams(ctx, dsp, client, log)
 	if err != nil {
+		return err
+	}
+
+	if err := p.setEgressTemplateFields(dsp); err != nil {
 		return err
 	}
 
