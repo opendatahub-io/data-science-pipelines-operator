@@ -28,6 +28,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestDeployCommonPolicies(t *testing.T) {
@@ -369,7 +370,16 @@ func ingressRuleForPort(t *testing.T, policy *networkingv1.NetworkPolicy, port i
 		rule := &policy.Spec.Ingress[i]
 		require.NotEmpty(t, rule.Ports, "a portless ingress rule allows every port")
 		for _, rulePort := range rule.Ports {
-			if rulePort.Port != nil && rulePort.Port.Type == intstr.Int && rulePort.Port.IntVal == port {
+			require.NotNilf(t, rulePort.Port,
+				"port entry with no port number allows all %v traffic", rulePort.Protocol)
+			require.Equalf(t, intstr.Int, rulePort.Port.Type,
+				"named port %q cannot be verified; use an integer port", rulePort.Port.StrVal)
+			start := rulePort.Port.IntVal
+			end := start
+			if rulePort.EndPort != nil {
+				end = *rulePort.EndPort
+			}
+			if port >= start && port <= end {
 				require.Nil(t, match, "multiple ingress rules allow port %d", port)
 				match = rule
 			}
@@ -405,6 +415,70 @@ func policyHasPort(policy *networkingv1.NetworkPolicy, port int32) bool {
 		}
 	}
 	return false
+}
+
+// TestNoUnrestrictedDirectAPIAccess fails if any operator-rendered ingress rule
+// for the unauthenticated ports 8888/8887 has an empty or unlabeled From.
+// All policies selecting the API server pods are checked because NP rules are additive.
+func TestNoUnrestrictedDirectAPIAccess(t *testing.T) {
+	dspa := newIngressTestDSPA(dspav1.DSPASpec{
+		APIServer: &dspav1.APIServer{EnableRoute: true},
+	})
+
+	ctx, params, reconciler := CreateNewTestObjects()
+	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+	require.NoError(t, reconciler.ReconcileCommon(dspa, params))
+
+	// NP rules are additive — check every operator-rendered policy selecting the API
+	// server pods to guard against a future template accidentally opening these ports.
+	allPolicies := &networkingv1.NetworkPolicyList{}
+	require.NoError(t, reconciler.Client.List(ctx, allPolicies,
+		client.InNamespace(ingressTestNamespace)))
+
+	apiServerLabels := pipelineComponentLabels("ds-pipeline-" + ingressTestDSPAName)
+	var apiPolicies []*networkingv1.NetworkPolicy
+	for i := range allPolicies.Items {
+		p := &allPolicies.Items[i]
+		sel := p.Spec.PodSelector.MatchLabels
+		if len(sel) == len(apiServerLabels) {
+			match := true
+			for k, v := range apiServerLabels {
+				if sel[k] != v {
+					match = false
+					break
+				}
+			}
+			if match {
+				apiPolicies = append(apiPolicies, p)
+			}
+		}
+	}
+	require.NotEmpty(t, apiPolicies, "no NetworkPolicy found selecting the API server pods")
+
+	for _, policy := range apiPolicies {
+		for _, port := range []int32{8888, 8887} {
+			if !policyHasPort(policy, port) {
+				continue
+			}
+			rule := ingressRuleForPort(t, policy, port)
+			require.NotEmptyf(t, rule.From,
+				"policy %s port %d: empty From grants access to all pods", policy.Name, port)
+			for _, peer := range rule.From {
+				require.Nilf(t, peer.NamespaceSelector,
+					"policy %s port %d: namespace-scoped peer grants access to entire namespaces", policy.Name, port)
+				require.NotNilf(t, peer.PodSelector,
+					"policy %s port %d: peer with no PodSelector is an unrestricted allow", policy.Name, port)
+				require.NotEmptyf(t, peer.PodSelector.MatchLabels,
+					"policy %s port %d: PodSelector with no labels matches all pods", policy.Name, port)
+			}
+		}
+	}
+
+	// 8443 is intentionally open — kube-rbac-proxy enforces auth before forwarding.
+	policy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipelines-"+ingressTestDSPAName)
+	rule8443 := ingressRuleForPort(t, policy, 8443)
+	require.Emptyf(t, rule8443.From,
+		"port 8443: kube-rbac-proxy handles auth; NP openness is intentional")
 }
 
 func policyHasIngressRouterPeer(policy *networkingv1.NetworkPolicy) bool {
