@@ -53,6 +53,8 @@ spec:
               value: testcabundleconfigmapkey5.crt
             - name: SSL_CERT_DIR
               value: "/dsp-custom-certs:/etc/ssl/certs:/etc/pki/tls/certs"
+            - name: DSPA_NAME
+              value: "testdsp5"
             - name: ML_PIPELINE_SERVICE_NAME
               value: "ds-pipeline-testdsp5"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_HOST
