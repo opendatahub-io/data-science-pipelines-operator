@@ -104,6 +104,8 @@ spec:
             - name: SSL_CERT_DIR
               value: {{.CustomSSLCertDir}}
             {{ end }}
+            - name: DSPA_NAME
+              value: "{{.Name}}"
             - name: ML_PIPELINE_SERVICE_NAME
               value: "ds-pipeline-{{.Name}}"
             # Visualization server is something we deploy
