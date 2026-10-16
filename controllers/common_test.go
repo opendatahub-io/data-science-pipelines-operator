@@ -369,7 +369,15 @@ func ingressRuleForPort(t *testing.T, policy *networkingv1.NetworkPolicy, port i
 		rule := &policy.Spec.Ingress[i]
 		require.NotEmpty(t, rule.Ports, "a portless ingress rule allows every port")
 		for _, rulePort := range rule.Ports {
-			if rulePort.Port != nil && rulePort.Port.Type == intstr.Int && rulePort.Port.IntVal == port {
+			if rulePort.Port == nil || rulePort.Port.Type != intstr.Int {
+				continue
+			}
+			start := rulePort.Port.IntVal
+			end := start
+			if rulePort.EndPort != nil {
+				end = *rulePort.EndPort
+			}
+			if port >= start && port <= end {
 				require.Nil(t, match, "multiple ingress rules allow port %d", port)
 				match = rule
 			}
@@ -405,6 +413,40 @@ func policyHasPort(policy *networkingv1.NetworkPolicy, port int32) bool {
 		}
 	}
 	return false
+}
+
+// TestNoUnrestrictedDirectAPIAccess fails if any ingress rule for the
+// unauthenticated ports 8888/8887 has an empty or unlabeled From — which
+// would allow all pods through. Port 8443 is intentionally open; kube-rbac-proxy
+// enforces auth before forwarding.
+func TestNoUnrestrictedDirectAPIAccess(t *testing.T) {
+	dspa := newIngressTestDSPA(dspav1.DSPASpec{
+		APIServer: &dspav1.APIServer{EnableRoute: true},
+	})
+
+	ctx, params, reconciler := CreateNewTestObjects()
+	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+	require.NoError(t, reconciler.ReconcileCommon(dspa, params))
+
+	policy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipelines-"+ingressTestDSPAName)
+
+	for _, port := range []int32{8888, 8887} {
+		rule := ingressRuleForPort(t, policy, port)
+		require.NotEmptyf(t, rule.From,
+			"port %d: empty From grants access to all pods", port)
+		for _, peer := range rule.From {
+			require.Nilf(t, peer.NamespaceSelector,
+				"port %d: namespace-scoped peer grants access to entire namespaces", port)
+			require.NotNilf(t, peer.PodSelector,
+				"port %d: peer with no PodSelector is an unrestricted allow", port)
+			require.NotEmptyf(t, peer.PodSelector.MatchLabels,
+				"port %d: PodSelector with no labels matches all pods", port)
+		}
+	}
+
+	rule8443 := ingressRuleForPort(t, policy, 8443)
+	require.Emptyf(t, rule8443.From,
+		"port 8443: kube-rbac-proxy handles auth; NP openness is intentional")
 }
 
 func policyHasIngressRouterPeer(policy *networkingv1.NetworkPolicy) bool {
