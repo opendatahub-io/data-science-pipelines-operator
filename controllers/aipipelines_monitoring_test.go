@@ -148,6 +148,116 @@ func TestReconcilePrometheusRuleRefusesForeignControllerOwner(t *testing.T) {
 	require.Empty(t, groups)
 }
 
+func TestReconcileMonitoringResourcesAdoptsLegacyCoreServiceMonitor(t *testing.T) {
+	ctx := context.Background()
+	scheme := runtime.NewScheme()
+	require.NoError(t, aipipelinesv1alpha1.AddToScheme(scheme))
+	module := &aipipelinesv1alpha1.AIPipelines{
+		ObjectMeta: metav1.ObjectMeta{Name: aipipelinesv1alpha1.AIPipelinesInstanceName, UID: "module-uid"},
+	}
+	existing, err := monitoringassets.CoreServiceMonitor("redhat-ods-applications")
+	require.NoError(t, err)
+	existing.SetUID("monitor-uid")
+	require.NoError(t, unstructured.SetNestedSlice(existing.Object, []interface{}{}, "spec", "endpoints"))
+	isController := true
+	existing.SetOwnerReferences([]metav1.OwnerReference{{
+		APIVersion: legacyDataSciencePipelinesGVK.GroupVersion().String(),
+		Kind:       legacyDataSciencePipelinesKind,
+		Name:       legacyDataSciencePipelinesName,
+		UID:        "old-legacy-uid",
+		Controller: &isController,
+	}})
+	cli := fake.NewClientBuilder().WithScheme(scheme).WithObjects(module, existing).Build()
+	reconciler := &AIPipelinesReconciler{
+		Client: cli, APIReader: cli, Scheme: scheme, Namespace: "redhat-ods-applications",
+	}
+
+	for range 2 {
+		observation, err := reconciler.reconcileMonitoringResources(ctx, module)
+		require.NoError(t, err)
+		require.Equal(t, metav1.ConditionTrue, observation.Status)
+	}
+
+	actual := &unstructured.Unstructured{}
+	actual.SetGroupVersionKind(existing.GroupVersionKind())
+	require.NoError(t, cli.Get(ctx, client.ObjectKeyFromObject(existing), actual))
+	require.EqualValues(t, "monitor-uid", actual.GetUID())
+	require.True(t, metav1.IsControlledBy(actual, module))
+	require.Len(t, actual.GetOwnerReferences(), 1)
+	endpoints, found, err := unstructured.NestedSlice(actual.Object, "spec", "endpoints")
+	require.NoError(t, err)
+	require.True(t, found)
+	require.NotEmpty(t, endpoints)
+}
+
+func TestReconcileMonitoringObjectRejectsOtherControllerOwners(t *testing.T) {
+	tests := []struct {
+		name            string
+		objectName      string
+		objectNamespace string
+		owner           metav1.OwnerReference
+	}{
+		{
+			name:  "foreign group",
+			owner: metav1.OwnerReference{APIVersion: "example.io/v1", Kind: legacyDataSciencePipelinesKind, Name: legacyDataSciencePipelinesName},
+		},
+		{
+			name:  "foreign kind",
+			owner: metav1.OwnerReference{APIVersion: legacyDataSciencePipelinesGVK.GroupVersion().String(), Kind: "Other", Name: legacyDataSciencePipelinesName},
+		},
+		{
+			name:  "foreign name",
+			owner: metav1.OwnerReference{APIVersion: legacyDataSciencePipelinesGVK.GroupVersion().String(), Kind: legacyDataSciencePipelinesKind, Name: "other"},
+		},
+		{
+			name:       "other ServiceMonitor",
+			objectName: monitoringassets.RHOAIServiceMonitorName,
+			owner:      metav1.OwnerReference{APIVersion: legacyDataSciencePipelinesGVK.GroupVersion().String(), Kind: legacyDataSciencePipelinesKind, Name: legacyDataSciencePipelinesName},
+		},
+		{
+			name:            "other namespace",
+			objectNamespace: "other-namespace",
+			owner:           metav1.OwnerReference{APIVersion: legacyDataSciencePipelinesGVK.GroupVersion().String(), Kind: legacyDataSciencePipelinesKind, Name: legacyDataSciencePipelinesName},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			scheme := runtime.NewScheme()
+			require.NoError(t, aipipelinesv1alpha1.AddToScheme(scheme))
+			module := &aipipelinesv1alpha1.AIPipelines{
+				ObjectMeta: metav1.ObjectMeta{Name: aipipelinesv1alpha1.AIPipelinesInstanceName, UID: "module-uid"},
+			}
+			existing, err := monitoringassets.CoreServiceMonitor("redhat-ods-applications")
+			require.NoError(t, err)
+			if tt.objectName != "" {
+				existing.SetName(tt.objectName)
+			}
+			if tt.objectNamespace != "" {
+				existing.SetNamespace(tt.objectNamespace)
+			}
+			isController := true
+			owner := tt.owner
+			owner.UID = "foreign-uid"
+			owner.Controller = &isController
+			existing.SetOwnerReferences([]metav1.OwnerReference{owner})
+			cli := fake.NewClientBuilder().WithScheme(scheme).WithObjects(module, existing).Build()
+			reconciler := &AIPipelinesReconciler{Client: cli, Scheme: scheme, Namespace: "redhat-ods-applications"}
+
+			desired := existing.DeepCopy()
+			desired.SetOwnerReferences(nil)
+			_, err = reconciler.reconcileMonitoringObject(ctx, module, desired, "spec")
+			require.ErrorContains(t, err, "is controlled by")
+
+			actual := &unstructured.Unstructured{}
+			actual.SetGroupVersionKind(existing.GroupVersionKind())
+			require.NoError(t, cli.Get(ctx, client.ObjectKeyFromObject(existing), actual))
+			require.EqualValues(t, owner.UID, metav1.GetControllerOf(actual).UID)
+		})
+	}
+}
+
 func TestReconcileMonitoringResourcesCreatesBothServiceMonitors(t *testing.T) {
 	const applicationsNamespace = "custom-applications"
 	const monitoringNamespace = "custom-monitoring"

@@ -32,6 +32,7 @@ ARGO_NAMESPACE="argo"
 ARGO_VERSION="v3.6.7"
 DEPLOY_EXTERNAL_ARGO=false
 MODULAR=false
+LEGACY_SERVICE_MONITOR_UID=""
 AWF_MANAGEMENT_STATE="Managed"
 DSPA_DEPLOY_WAIT_TIMEOUT="300"
 INTEGRATION_TESTS_DIR="${GIT_WORKSPACE}/tests"
@@ -116,9 +117,46 @@ deploy_argo_lite() {
   ( cd "${GIT_WORKSPACE}/.github/resources/argo-lite" && kubectl -n $OPENDATAHUB_NAMESPACE apply -k . )
 }
 
+seed_legacy_service_monitor_owner() {
+  # Keep the legacy owner live until the module adopts the existing monitor.
+  # An owner reference to a nonexistent CR could be removed by garbage collection.
+  local fixture_dir="${GIT_WORKSPACE}/.github/resources/aipipelines"
+  kubectl apply -f "${fixture_dir}/legacy-datasciencecluster-crd.yaml"
+  kubectl wait crd/datascienceclusters.datasciencecluster.opendatahub.io --for=condition=Established --timeout=60s
+  kubectl create -f "${fixture_dir}/legacy-datasciencecluster.yaml"
+  local dsc_uid
+  dsc_uid=$(kubectl get datascienceclusters.datasciencecluster.opendatahub.io default-dsc -o jsonpath='{.metadata.uid}')
+  test -n "$dsc_uid"
+
+  kubectl apply -f "${fixture_dir}/legacy-datasciencepipelines-crd.yaml"
+  kubectl wait crd/datasciencepipelines.components.platform.opendatahub.io --for=condition=Established --timeout=60s
+  kubectl create -f "${fixture_dir}/legacy-datasciencepipelines.yaml"
+  kubectl patch datasciencepipelines.components.platform.opendatahub.io default-datasciencepipelines \
+    --type=merge \
+    -p "{\"metadata\":{\"ownerReferences\":[{\"apiVersion\":\"datasciencecluster.opendatahub.io/v2\",\"kind\":\"DataScienceCluster\",\"name\":\"default-dsc\",\"uid\":\"${dsc_uid}\",\"controller\":true,\"blockOwnerDeletion\":true}]}}"
+
+  local legacy_uid
+  legacy_uid=$(kubectl get datasciencepipelines.components.platform.opendatahub.io default-datasciencepipelines -o jsonpath='{.metadata.uid}')
+  test -n "$legacy_uid"
+  kubectl -n "$OPENDATAHUB_NAMESPACE" patch servicemonitor data-science-pipelines-operator-service-monitor \
+    --type=merge \
+    -p "{\"metadata\":{\"ownerReferences\":[{\"apiVersion\":\"components.platform.opendatahub.io/v1alpha1\",\"kind\":\"DataSciencePipelines\",\"name\":\"default-datasciencepipelines\",\"uid\":\"${legacy_uid}\",\"controller\":true,\"blockOwnerDeletion\":true}]}}"
+  local monitor_owner_uid
+  monitor_owner_uid=$(kubectl -n "$OPENDATAHUB_NAMESPACE" get servicemonitor data-science-pipelines-operator-service-monitor -o jsonpath='{.metadata.ownerReferences[0].uid}')
+  if [ "$monitor_owner_uid" != "$legacy_uid" ]; then
+    echo "ServiceMonitor was not seeded with the legacy DataSciencePipelines owner" >&2
+    return 1
+  fi
+  LEGACY_SERVICE_MONITOR_UID=$(kubectl -n "$OPENDATAHUB_NAMESPACE" get servicemonitor data-science-pipelines-operator-service-monitor -o jsonpath='{.metadata.uid}')
+  test -n "$LEGACY_SERVICE_MONITOR_UID"
+}
+
 enable_aipipelines_module() {
   if [ "$MODULAR" != true ]; then
     return
+  fi
+  if [ "$TARGET" = kind ]; then
+    seed_legacy_service_monitor_owner
   fi
   # Fail on an existing singleton/handshake: these tests own their fixtures.
   kubectl wait crd/aipipelines.components.platform.opendatahub.io --for=condition=Established --timeout=60s
@@ -131,6 +169,26 @@ enable_aipipelines_module() {
   kubectl rollout status -n "$OPENDATAHUB_NAMESPACE" deployment/data-science-pipelines-operator-controller-manager --timeout=300s
   kubectl wait aipipelines/default-aipipelines --for=condition=Ready=true --timeout=300s
   kubectl wait aipipelines/default-aipipelines --for=condition=ProvisioningSucceeded=true --timeout=300s
+  if [ "$TARGET" = kind ]; then
+    kubectl wait aipipelines/default-aipipelines --for=condition=MonitoringReady=true --timeout=300s
+    kubectl wait datasciencepipelines.components.platform.opendatahub.io/default-datasciencepipelines --for=delete --timeout=60s
+    local module_uid monitor_uid monitor_owner_uid monitor_owner_kind monitor_owner_name monitor_owner_controller
+    module_uid=$(kubectl get aipipelines default-aipipelines -o jsonpath='{.metadata.uid}')
+    monitor_uid=$(kubectl -n "$OPENDATAHUB_NAMESPACE" get servicemonitor data-science-pipelines-operator-service-monitor -o jsonpath='{.metadata.uid}')
+    monitor_owner_uid=$(kubectl -n "$OPENDATAHUB_NAMESPACE" get servicemonitor data-science-pipelines-operator-service-monitor -o jsonpath='{.metadata.ownerReferences[0].uid}')
+    monitor_owner_kind=$(kubectl -n "$OPENDATAHUB_NAMESPACE" get servicemonitor data-science-pipelines-operator-service-monitor -o jsonpath='{.metadata.ownerReferences[0].kind}')
+    monitor_owner_name=$(kubectl -n "$OPENDATAHUB_NAMESPACE" get servicemonitor data-science-pipelines-operator-service-monitor -o jsonpath='{.metadata.ownerReferences[0].name}')
+    monitor_owner_controller=$(kubectl -n "$OPENDATAHUB_NAMESPACE" get servicemonitor data-science-pipelines-operator-service-monitor -o jsonpath='{.metadata.ownerReferences[0].controller}')
+    test -n "$module_uid"
+    if [ "$monitor_uid" != "$LEGACY_SERVICE_MONITOR_UID" ] ||
+       [ "$monitor_owner_uid" != "$module_uid" ] ||
+       [ "$monitor_owner_kind" != AIPipelines ] ||
+       [ "$monitor_owner_name" != default-aipipelines ] ||
+       [ "$monitor_owner_controller" != true ]; then
+      echo "ServiceMonitor was not adopted by AIPipelines/default-aipipelines" >&2
+      return 1
+    fi
+  fi
 }
 
 deploy_argo_external() {
