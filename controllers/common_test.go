@@ -490,6 +490,8 @@ func TestNoUnrestrictedDirectAPIAccess(t *testing.T) {
 						"policy %s: peer with no PodSelector is an unrestricted allow", policy.Name)
 					require.NotEmptyf(t, peer.PodSelector.MatchLabels,
 						"policy %s: PodSelector with no labels matches all pods", policy.Name)
+					require.Emptyf(t, peer.PodSelector.MatchExpressions,
+						"policy %s: PodSelector matchExpressions cannot be verified", policy.Name)
 				}
 			}
 		}
