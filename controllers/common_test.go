@@ -27,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -435,41 +436,61 @@ func TestNoUnrestrictedDirectAPIAccess(t *testing.T) {
 	require.NoError(t, reconciler.Client.List(ctx, allPolicies,
 		client.InNamespace(ingressTestNamespace)))
 
-	apiServerLabels := pipelineComponentLabels("ds-pipeline-" + ingressTestDSPAName)
+	apiServerLabels := labels.Set(pipelineComponentLabels("ds-pipeline-" + ingressTestDSPAName))
 	var apiPolicies []*networkingv1.NetworkPolicy
 	for i := range allPolicies.Items {
 		p := &allPolicies.Items[i]
-		sel := p.Spec.PodSelector.MatchLabels
-		if len(sel) == len(apiServerLabels) {
-			match := true
-			for k, v := range apiServerLabels {
-				if sel[k] != v {
-					match = false
-					break
-				}
+		// Skip policies that do not enforce Ingress.
+		enforcesIngress := false
+		for _, pt := range p.Spec.PolicyTypes {
+			if pt == networkingv1.PolicyTypeIngress {
+				enforcesIngress = true
+				break
 			}
-			if match {
-				apiPolicies = append(apiPolicies, p)
-			}
+		}
+		if !enforcesIngress {
+			continue
+		}
+		sel, err := metav1.LabelSelectorAsSelector(&p.Spec.PodSelector)
+		require.NoError(t, err)
+		if sel.Matches(apiServerLabels) {
+			apiPolicies = append(apiPolicies, p)
 		}
 	}
 	require.NotEmpty(t, apiPolicies, "no NetworkPolicy found selecting the API server pods")
 
 	for _, policy := range apiPolicies {
-		for _, port := range []int32{8888, 8887} {
-			if !policyHasPort(policy, port) {
-				continue
-			}
-			rule := ingressRuleForPort(t, policy, port)
-			require.NotEmptyf(t, rule.From,
-				"policy %s port %d: empty From grants access to all pods", policy.Name, port)
-			for _, peer := range rule.From {
-				require.Nilf(t, peer.NamespaceSelector,
-					"policy %s port %d: namespace-scoped peer grants access to entire namespaces", policy.Name, port)
-				require.NotNilf(t, peer.PodSelector,
-					"policy %s port %d: peer with no PodSelector is an unrestricted allow", policy.Name, port)
-				require.NotEmptyf(t, peer.PodSelector.MatchLabels,
-					"policy %s port %d: PodSelector with no labels matches all pods", policy.Name, port)
+		for _, rule := range policy.Spec.Ingress {
+			// A portless rule allows every port including 8888/8887.
+			require.NotEmptyf(t, rule.Ports,
+				"policy %s: portless ingress rule allows all ports", policy.Name)
+			for _, rulePort := range rule.Ports {
+				// A port entry with no port number allows all ports of that protocol.
+				require.NotNilf(t, rulePort.Port,
+					"policy %s: port entry with no port number allows all %v traffic", policy.Name, rulePort.Protocol)
+				// Named ports cannot be verified against 8888/8887.
+				require.Equalf(t, intstr.Int, rulePort.Port.Type,
+					"policy %s: named port %q cannot be verified; use an integer port", policy.Name, rulePort.Port.StrVal)
+				start := rulePort.Port.IntVal
+				end := start
+				if rulePort.EndPort != nil {
+					end = *rulePort.EndPort
+				}
+				// Only assert From restrictions for rules that cover 8888 or 8887.
+				coversDirectAPI := (start <= 8888 && 8888 <= end) || (start <= 8887 && 8887 <= end)
+				if !coversDirectAPI {
+					continue
+				}
+				require.NotEmptyf(t, rule.From,
+					"policy %s port %d-%d: empty From grants access to all pods", policy.Name, start, end)
+				for _, peer := range rule.From {
+					require.Nilf(t, peer.NamespaceSelector,
+						"policy %s: namespace-scoped peer grants access to entire namespaces", policy.Name)
+					require.NotNilf(t, peer.PodSelector,
+						"policy %s: peer with no PodSelector is an unrestricted allow", policy.Name)
+					require.NotEmptyf(t, peer.PodSelector.MatchLabels,
+						"policy %s: PodSelector with no labels matches all pods", policy.Name)
+				}
 			}
 		}
 	}
