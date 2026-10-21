@@ -63,6 +63,9 @@ func fetchTLSProfile(ctx context.Context, cli client.Client) (*tlsResult, error)
 			l.Info("config.openshift.io API not available (non-OpenShift cluster), using Intermediate TLS profile as fallback")
 		case apierrors.IsNotFound(err):
 			l.Info("APIServer resource not found, using Intermediate TLS profile as fallback")
+			// Mark OpenShift config as present so SecurityProfileWatcher still registers.
+			// Bootstrap races can return NotFound even on OpenShift clusters.
+			result.HasOpenShiftConfig = true
 		case isTransientOpenShiftAPIError(err):
 			l.Info("Transient API error reading TLS profile, using Intermediate TLS profile as fallback", "error", err)
 			// Mark OpenShift config as present so SecurityProfileWatcher still registers.

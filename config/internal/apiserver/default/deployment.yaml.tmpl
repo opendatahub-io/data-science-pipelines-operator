@@ -341,6 +341,12 @@ spec:
             {{ end }}
             - --tls-cert-file=/etc/tls/private/tls.crt
             - --tls-private-key-file=/etc/tls/private/tls.key
+            {{- if .KubeRBACProxyTLS }}
+            - --tls-min-version={{ .KubeRBACProxyTLS.MinVersion }}
+            {{- if .KubeRBACProxyTLS.CipherSuites }}
+            - --tls-cipher-suites={{ .KubeRBACProxyTLS.CipherSuites }}
+            {{- end }}
+            {{- end }}
             - --config-file=/etc/kube-rbac-proxy/config-file.yaml
             - --ignore-paths=/healthz,/apis/v1beta1/healthz
           image: {{.KubeRBACProxy}}
@@ -402,6 +408,12 @@ spec:
             {{ end }}
             - --tls-cert-file=/etc/tls/private/tls.crt
             - --tls-private-key-file=/etc/tls/private/tls.key
+            {{- if .KubeRBACProxyTLS }}
+            - --tls-min-version={{ .KubeRBACProxyTLS.MinVersion }}
+            {{- if .KubeRBACProxyTLS.CipherSuites }}
+            - --tls-cipher-suites={{ .KubeRBACProxyTLS.CipherSuites }}
+            {{- end }}
+            {{- end }}
             - --config-file=/etc/kube-rbac-proxy/metrics-config-file.yaml
             - --allow-paths=/metrics
           image: {{.KubeRBACProxy}}

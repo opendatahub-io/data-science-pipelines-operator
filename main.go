@@ -375,6 +375,7 @@ func main() {
 		MaxConcurrentReconciles: maxConcurrentReconciles,
 		WebhookAnnotations:      webhookAnnotations,
 		AllowedRegistries:       allowedRegistries,
+		HasOpenShiftConfigAPI:   hasOpenShiftConfigAPI,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DSPAParams")
 		os.Exit(1)
