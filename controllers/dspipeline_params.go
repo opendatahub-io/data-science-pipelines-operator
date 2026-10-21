@@ -36,6 +36,7 @@ import (
 	dspa "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/util"
+	configv1 "github.com/openshift/api/config/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -113,6 +114,17 @@ type DSPAParams struct {
 	ApplicationsNamespace string
 	// Use to enable tls communication between component pods.
 	PodToPodTLS bool
+
+	// KubeRBACProxyTLS holds the resolved TLS CLI flag values for all kube-rbac-proxy sidecars.
+	// Nil on non-OpenShift clusters where no TLS profile is available.
+	// Populated during ExtractParams from TLSProfileSpec and TLSAdherence.
+	KubeRBACProxyTLS *KubeRBACProxyTLSArgs
+	// TLSProfileSpec is the cluster TLS profile from the live APIServer object.
+	// Pre-set by the reconciler before ExtractParams is called.
+	TLSProfileSpec configv1.TLSProfileSpec
+	// TLSAdherence is the cluster TLS adherence policy from the live APIServer object.
+	// Pre-set by the reconciler before ExtractParams is called.
+	TLSAdherence configv1.TLSAdherencePolicy
 
 	APIServerServiceDNSName string
 	MLflow                  *dspa.MLflowConfig
@@ -1226,6 +1238,18 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	}
 
 	p.SetupOwner(dsp)
+
+	// Resolve the effective TLS configuration for kube-rbac-proxy sidecars.
+	// TLSProfileSpec and TLSAdherence are pre-set by the reconciler from the cluster state.
+	// An error here (e.g. all ciphers unsupported in a strict profile) aborts the reconcile
+	// and leaves the existing Deployments untouched.
+	if p.TLSProfileSpec.MinTLSVersion != "" {
+		tlsArgs, err := resolveKubeRBACProxyTLS(p.TLSProfileSpec, p.TLSAdherence)
+		if err != nil {
+			return fmt.Errorf("failed to resolve kube-rbac-proxy TLS configuration: %w", err)
+		}
+		p.KubeRBACProxyTLS = tlsArgs
+	}
 
 	return nil
 }

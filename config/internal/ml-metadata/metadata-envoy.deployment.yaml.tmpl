@@ -105,6 +105,12 @@ spec:
             - --config-file=/etc/kube-rbac-proxy/config-file.yaml
             - --tls-cert-file=/etc/tls/private/tls.crt
             - --tls-private-key-file=/etc/tls/private/tls.key
+            {{- if .KubeRBACProxyTLS }}
+            - --tls-min-version={{ .KubeRBACProxyTLS.MinVersion }}
+            {{- if .KubeRBACProxyTLS.CipherSuites }}
+            - --tls-cipher-suites={{ .KubeRBACProxyTLS.CipherSuites }}
+            {{- end }}
+            {{- end }}
             - --ignore-paths=/healthz,/apis/v1beta1/healthz,/metrics
           image: {{.KubeRBACProxy}}
           ports:

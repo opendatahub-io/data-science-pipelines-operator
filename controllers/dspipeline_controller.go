@@ -35,7 +35,9 @@ import (
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/util"
+	configv1 "github.com/openshift/api/config/v1"
 	routev1 "github.com/openshift/api/route/v1"
+	tlspkg "github.com/openshift/controller-runtime-common/pkg/tls"
 	"github.com/prometheus/client_golang/prometheus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -77,6 +79,8 @@ type DSPAReconciler struct {
 	// APIReader bypasses controller-runtime cache and talks directly to API server.
 	// Used for MLflow endpoint lookups so cache startup state does not affect behavior.
 	APIReader client.Reader
+	// HasOpenShiftConfigAPI enables TLS profile watch registration.
+	HasOpenShiftConfigAPI bool
 	// MLflowEndpointCacheTTL is the duration to cache the MLflow endpoint.
 	MLflowEndpointCacheTTL time.Duration
 	mlflowEndpointCache    map[string]mlflowEndpointCacheEntry
@@ -95,6 +99,36 @@ func (r *DSPAReconciler) removeExpiredMLflowCacheLocked(now time.Time) {
 			delete(r.mlflowEndpointCache, ns)
 		}
 	}
+}
+
+// fetchLiveTLSProfile fetches cluster TLS profile and adherence from APIServer once.
+// Returns zero values on non-OpenShift clusters. Errors trigger requeue.
+func (r *DSPAReconciler) fetchLiveTLSProfile(ctx context.Context) (configv1.TLSProfileSpec, configv1.TLSAdherencePolicy, error) {
+	if !r.HasOpenShiftConfigAPI {
+		return configv1.TLSProfileSpec{}, "", nil
+	}
+
+	// Fetch APIServer once to extract both profile and adherence policy
+	apiServer := &configv1.APIServer{}
+	nn := types.NamespacedName{Name: "cluster"}
+	if err := r.Client.Get(ctx, nn, apiServer); err != nil {
+		if apimeta.IsNoMatchError(err) || apierrs.IsNotFound(err) {
+			// Missing APIServer CRD — fall back to Intermediate profile, no adherence
+			return *configv1.TLSProfiles[configv1.TLSProfileIntermediateType], "", nil
+		}
+		return configv1.TLSProfileSpec{}, "", fmt.Errorf("failed to fetch APIServer: %w", err)
+	}
+
+	// Extract profile from TLSSecurityProfile
+	profile, err := tlspkg.GetTLSProfileSpec(apiServer.Spec.TLSSecurityProfile)
+	if err != nil {
+		return configv1.TLSProfileSpec{}, "", fmt.Errorf("failed to resolve TLS profile: %w", err)
+	}
+
+	// Extract adherence policy
+	adherence := apiServer.Spec.TLSAdherence
+
+	return profile, adherence, nil
 }
 
 func lookupMLflowEndpoint(ctx context.Context, reader client.Reader, namespace string, log logr.Logger) (string, error) {
@@ -301,6 +335,7 @@ func (r *DSPAReconciler) DeleteResourceIfItExists(ctx context.Context, obj clien
 //+kubebuilder:rbac:groups=authorization.k8s.io,resources=subjectaccessreviews,verbs=create
 //+kubebuilder:rbac:groups=authentication.k8s.io,resources=tokenreviews,verbs=create
 //+kubebuilder:rbac:groups=image.openshift.io,resources=imagestreamtags,verbs=get
+//+kubebuilder:rbac:groups=config.openshift.io,resources=apiservers,verbs=get;list;watch
 //+kubebuilder:rbac:groups=core,resources=events,verbs=create;patch;list
 //+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;list;watch;create;update;patch;delete
 // Pipeline tasks can create AppWrappers to submit distributed training jobs
@@ -393,6 +428,17 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 				return ctrl.Result{}, err
 			}
 		}
+
+		// Fetch TLS profile only for active (non-deleted) DSPAs
+		tlsProfile, tlsAdherence, err := r.fetchLiveTLSProfile(ctx)
+		if err != nil {
+			log.Error(err, "failed to fetch TLS profile")
+			condition := dspastatus.BuildFalseCondition(config.APIServerReady, "TLSProfileUnavailable", fmt.Sprintf("Failed to fetch TLS profile: %v", err))
+			dspaStatus.SetApiServerStatus(condition)
+			return ctrl.Result{}, err
+		}
+		params.TLSProfileSpec = tlsProfile
+		params.TLSAdherence = tlsAdherence
 	} else {
 		if controllerutil.ContainsFinalizer(dspa, finalizerName) {
 			params.Name = dspa.Name
@@ -1059,6 +1105,13 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if config.AIPipelinesModuleControllerEnabled() {
 		b = b.Watches(
 			&aipipelinesv1alpha1.AIPipelines{},
+			handler.EnqueueRequestsFromMapFunc(r.enqueueAllSupportedDSPAs),
+		)
+	}
+	// Watch APIServer for TLS profile/adherence changes → reconcile all DSPAs.
+	if r.HasOpenShiftConfigAPI {
+		b = b.Watches(
+			&configv1.APIServer{},
 			handler.EnqueueRequestsFromMapFunc(r.enqueueAllSupportedDSPAs),
 		)
 	}

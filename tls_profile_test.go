@@ -152,7 +152,9 @@ func TestFetchTLSProfile_APIServerNotFound(t *testing.T) {
 
 	result, err := fetchTLSProfile(context.Background(), cli)
 	require.NoError(t, err)
-	assert.False(t, result.HasOpenShiftConfig)
+	// NotFound during bootstrap is a transient race; treat as OpenShift cluster
+	// so SecurityProfileWatcher can recover the real profile later.
+	assert.True(t, result.HasOpenShiftConfig)
 
 	cfg := &tls.Config{}
 	for _, fn := range result.TLSOpts {
