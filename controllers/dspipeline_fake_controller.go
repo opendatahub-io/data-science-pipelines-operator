@@ -27,6 +27,7 @@ import (
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	buildv1 "github.com/openshift/api/build/v1"
+	configv1 "github.com/openshift/api/config/v1"
 	imagev1 "github.com/openshift/api/image/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/spf13/viper"
@@ -49,6 +50,7 @@ func NewFakeController() *DSPAReconciler {
 	FakeScheme := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(FakeScheme))
 	utilruntime.Must(buildv1.Install(FakeScheme))
+	utilruntime.Must(configv1.Install(FakeScheme))
 	utilruntime.Must(imagev1.Install(FakeScheme))
 	utilruntime.Must(routev1.Install(FakeScheme))
 	utilruntime.Must(dspav1.AddToScheme(FakeScheme))
