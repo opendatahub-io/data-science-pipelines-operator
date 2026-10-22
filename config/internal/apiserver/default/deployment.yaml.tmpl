@@ -210,9 +210,9 @@ spec:
             - name: HTTPS_PROXY
               value: "{{.ProxyConfig.HTTPSProxy}}"
             {{ end }}
-            {{ if and .ProxyConfig.NoProxy (or .ProxyConfig.HTTPProxy .ProxyConfig.HTTPSProxy) }}
+            {{ if and .EffectiveNoProxy (or .ProxyConfig.HTTPProxy .ProxyConfig.HTTPSProxy) }}
             - name: NO_PROXY
-              value: "{{.ProxyConfig.NoProxy}}"
+              value: "{{.EffectiveNoProxy}}"
             {{ end }}
             {{ end }}
             {{ if .APIServer.ManagedPipelines }}

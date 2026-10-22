@@ -92,6 +92,8 @@ func TestDeployCommonPolicies(t *testing.T) {
 	assertPolicySelects(t, np, pipelineComponentLabels("ds-pipeline-"+testDSPAName))
 	assertDirectAPICallers(t, np, 8888, apiServerHTTPPeers(testDSPAName))
 	assertDirectAPICallers(t, np, 8887, apiServerGRPCPeers(testDSPAName))
+	assertDefaultAPIServerEgress(t, np, testDSPAName)
+	require.Len(t, np.Spec.Egress, 5)
 
 	np = &networkingv1.NetworkPolicy{}
 	created, err = reconciler.IsResourceCreated(ctx, np, expectedEnvoyNetworkPolicyName, testNamespace)
@@ -102,10 +104,12 @@ func TestDeployCommonPolicies(t *testing.T) {
 	assertPortPresent(t, np, 8443)
 	assertIngressFrom(t, np, 9090, envoyListenerPeers(testDSPAName))
 	assertPortAbsent(t, np, 9901)
+	assertEnvoyEgress(t, np, testDSPAName, true)
 
 	driverPolicy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipeline-drivers-"+testDSPAName)
 	assertNoIngress(t, driverPolicy)
 	assertDriverRoleSelector(t, driverPolicy)
+	assertDefaultDriverEgress(t, driverPolicy, testDSPAName)
 }
 
 func TestCommonPoliciesFollowProxyFlags(t *testing.T) {
@@ -127,11 +131,14 @@ func TestCommonPoliciesFollowProxyFlags(t *testing.T) {
 	assertIngressFrom(t, apiPolicy, 8445, monitoringNamespacePeers())
 	assertDirectAPICallers(t, apiPolicy, 8888, apiServerHTTPPeers(ingressTestDSPAName))
 	assertDirectAPICallers(t, apiPolicy, 8887, apiServerGRPCPeers(ingressTestDSPAName))
+	assertDefaultAPIServerEgress(t, apiPolicy, ingressTestDSPAName)
+	require.Len(t, apiPolicy.Spec.Egress, 5)
 	envoyPolicy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipelines-envoy-"+ingressTestDSPAName)
 	assertPolicySelects(t, envoyPolicy, pipelineComponentLabels("ds-pipeline-metadata-envoy-"+ingressTestDSPAName))
 	assertPortAbsent(t, envoyPolicy, 8443)
 	assertIngressFrom(t, envoyPolicy, 9090, envoyListenerPeers(ingressTestDSPAName))
 	assertPortAbsent(t, envoyPolicy, 9901)
+	assertEnvoyEgress(t, envoyPolicy, ingressTestDSPAName, false)
 }
 
 func TestCommonPoliciesKeepMetricsPortWithoutRoute(t *testing.T) {
@@ -147,6 +154,201 @@ func TestCommonPoliciesKeepMetricsPortWithoutRoute(t *testing.T) {
 	assertPolicySelects(t, apiPolicy, pipelineComponentLabels("ds-pipeline-"+ingressTestDSPAName))
 	assertPortAbsent(t, apiPolicy, 8443)
 	assertIngressFrom(t, apiPolicy, 8445, monitoringNamespacePeers())
+	assertDefaultAPIServerEgress(t, apiPolicy, ingressTestDSPAName)
+	require.Len(t, apiPolicy.Spec.Egress, 5)
+}
+
+func TestAPIServerAdditionalEgressKeepsDefaults(t *testing.T) {
+	additional := newIngressTestDSPA(dspav1.DSPASpec{
+		APIServer: &dspav1.APIServer{},
+		NetworkPolicy: &dspav1.NetworkPolicySpec{
+			Egress: &dspav1.NetworkPolicyEgressSpec{
+				APIServer: &dspav1.WorkloadEgressSpec{
+					AdditionalRules: []networkingv1.NetworkPolicyEgressRule{tcpEgressRule(10)},
+				},
+			},
+		},
+	})
+
+	ctx, params, reconciler := CreateNewTestObjects()
+	require.NoError(t, params.ExtractParams(ctx, additional, reconciler.Client, reconciler.Log))
+	require.NoError(t, reconciler.ReconcileCommon(additional, params))
+
+	apiPolicy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipelines-"+ingressTestDSPAName)
+	assertDefaultAPIServerEgress(t, apiPolicy, ingressTestDSPAName)
+	assertEgressPortOnly(t, apiPolicy, corev1.ProtocolTCP, 10)
+	require.Len(t, apiPolicy.Spec.Egress, 6)
+
+	driverPolicy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipeline-drivers-"+ingressTestDSPAName)
+	assertDefaultDriverEgress(t, driverPolicy, ingressTestDSPAName)
+	assertEgressPortAbsent(t, driverPolicy, corev1.ProtocolTCP, 10)
+
+	proxied := newIngressTestDSPA(dspav1.DSPASpec{
+		APIServer: &dspav1.APIServer{},
+		Proxy:     &dspav1.ProxyConfig{HTTPProxy: "http://proxy.example.com:3128"},
+		WorkflowController: &dspav1.WorkflowController{
+			Deploy: true,
+		},
+	})
+	ctx, params, reconciler = CreateNewTestObjects()
+	require.NoError(t, params.ExtractParams(ctx, proxied, reconciler.Client, reconciler.Log))
+	require.NoError(t, reconciler.ReconcileCommon(proxied, params))
+	_, err := reconciler.ReconcileWorkflowController(ctx, proxied, params)
+	require.NoError(t, err)
+
+	apiPolicy = requireNetworkPolicy(t, ctx, reconciler, "ds-pipelines-"+ingressTestDSPAName)
+	assertDefaultAPIServerEgress(t, apiPolicy, ingressTestDSPAName)
+	assertEgressPortOnly(t, apiPolicy, corev1.ProtocolTCP, 3128)
+	require.Len(t, apiPolicy.Spec.Egress, 6)
+
+	driverPolicy = requireNetworkPolicy(t, ctx, reconciler, "ds-pipeline-drivers-"+ingressTestDSPAName)
+	assertDefaultDriverEgress(t, driverPolicy, ingressTestDSPAName)
+	assertEgressPortAbsent(t, driverPolicy, corev1.ProtocolTCP, 3128)
+
+	workflowPolicy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipeline-workflow-controller-"+ingressTestDSPAName)
+	assertDNSEgress(t, workflowPolicy)
+	assertKubernetesAPIEgress(t, workflowPolicy)
+	assertEgressPortOnly(t, workflowPolicy, corev1.ProtocolTCP, 3128)
+	require.Len(t, workflowPolicy.Spec.Egress, 3)
+}
+
+func TestAPIServerEgressUsesPortEmbeddedInS3Host(t *testing.T) {
+	embedded := newIngressTestDSPA(dspav1.DSPASpec{
+		APIServer: &dspav1.APIServer{},
+		ObjectStorage: &dspav1.ObjectStorage{
+			ExternalStorage: &dspav1.ExternalStorage{
+				Host:            "s3.example.com:9001",
+				Bucket:          "mlpipeline",
+				Scheme:          "http",
+				CredentialsMode: &dspav1.CredentialsMode{FromEnv: true},
+			},
+		},
+	})
+
+	ctx, params, reconciler := CreateNewTestObjects()
+	require.NoError(t, params.ExtractParams(ctx, embedded, reconciler.Client, reconciler.Log))
+	require.Empty(t, params.ObjectStorageConnection.Port)
+	require.Equal(t, "http://s3.example.com:9001", params.ObjectStorageConnection.Endpoint)
+	require.Equal(t, "9001", params.ObjectStorageEgressPort)
+	require.NoError(t, reconciler.ReconcileCommon(embedded, params))
+
+	apiPolicy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipelines-"+ingressTestDSPAName)
+	assertEgressPortOnly(t, apiPolicy, corev1.ProtocolTCP, 9001)
+	assertEgressPortOnly(t, apiPolicy, corev1.ProtocolTCP, 9000)
+	assertEgressPortOnly(t, apiPolicy, corev1.ProtocolTCP, 8333)
+	assertEgressPortAbsent(t, apiPolicy, corev1.ProtocolTCP, 80)
+}
+
+func TestAPIServerEgressIncludesCommonS3PortsWhenFromEnvHasNoPort(t *testing.T) {
+	fromEnv := newIngressTestDSPA(dspav1.DSPASpec{
+		APIServer: &dspav1.APIServer{},
+		ObjectStorage: &dspav1.ObjectStorage{
+			ExternalStorage: &dspav1.ExternalStorage{
+				Host:            "s3.amazonaws.com",
+				Bucket:          "mlpipeline",
+				Scheme:          "https",
+				CredentialsMode: &dspav1.CredentialsMode{FromEnv: true},
+			},
+		},
+	})
+
+	ctx, params, reconciler := CreateNewTestObjects()
+	require.NoError(t, params.ExtractParams(ctx, fromEnv, reconciler.Client, reconciler.Log))
+	require.Equal(t, "443", params.ObjectStorageEgressPort)
+	require.NoError(t, reconciler.ReconcileCommon(fromEnv, params))
+
+	apiPolicy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipelines-"+ingressTestDSPAName)
+	assertEgressPortOnly(t, apiPolicy, corev1.ProtocolTCP, 443)
+	assertEgressPortOnly(t, apiPolicy, corev1.ProtocolTCP, 9000)
+	assertEgressPortOnly(t, apiPolicy, corev1.ProtocolTCP, 8333)
+}
+
+// An explicit secure=false overrides scheme https for the S3 client, so the default
+// port is 80, not 443. The policy must allow the port the client actually dials.
+func TestAPIServerEgressUsesInsecureStorageDefaultPort(t *testing.T) {
+	insecure := false
+	insecureStorage := newIngressTestDSPA(dspav1.DSPASpec{
+		APIServer: &dspav1.APIServer{},
+		ObjectStorage: &dspav1.ObjectStorage{
+			ExternalStorage: &dspav1.ExternalStorage{
+				Host:            "s3.example.com",
+				Bucket:          "mlpipeline",
+				Scheme:          "https",
+				Secure:          &insecure,
+				CredentialsMode: &dspav1.CredentialsMode{FromEnv: true},
+			},
+		},
+	})
+
+	ctx, params, reconciler := CreateNewTestObjects()
+	require.NoError(t, params.ExtractParams(ctx, insecureStorage, reconciler.Client, reconciler.Log))
+	require.Equal(t, "80", params.ObjectStorageEgressPort)
+	require.NoError(t, reconciler.ReconcileCommon(insecureStorage, params))
+
+	apiPolicy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipelines-"+ingressTestDSPAName)
+	assertEgressPortOnly(t, apiPolicy, corev1.ProtocolTCP, 80)
+	assertDefaultAPIServerEgress(t, apiPolicy, ingressTestDSPAName)
+}
+
+func TestExternalDatabaseEgressUsesPortOnly(t *testing.T) {
+	dspa := newIngressTestDSPA(dspav1.DSPASpec{
+		APIServer: &dspav1.APIServer{},
+		MLMD:      &dspav1.MLMD{Deploy: true},
+	})
+	ctx, params, reconciler := CreateNewTestObjects()
+	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+	params.BuiltInDatabase = false
+	params.DBConnection.Port = "3307"
+	require.NoError(t, reconciler.ReconcileCommon(dspa, params))
+	require.NoError(t, reconciler.ReconcileMLMD(ctx, dspa, params))
+
+	apiPolicy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipelines-"+ingressTestDSPAName)
+	assertEgressPortOnly(t, apiPolicy, corev1.ProtocolTCP, 3307)
+	assertNoPortOnlyEgress(t, apiPolicy, corev1.ProtocolTCP, 3306)
+
+	mlmdPolicy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipeline-metadata-grpc-"+ingressTestDSPAName)
+	assertDNSEgress(t, mlmdPolicy)
+	assertEgressPortOnly(t, mlmdPolicy, corev1.ProtocolTCP, 3307)
+	assertNoPortOnlyEgress(t, mlmdPolicy, corev1.ProtocolTCP, 3306)
+	require.Len(t, mlmdPolicy.Spec.Egress, 2)
+}
+
+func TestMLflowEgressScopedToApplicationsNamespace(t *testing.T) {
+	for _, applicationsNamespace := range []string{"opendatahub", "redhat-ods-applications"} {
+		t.Run(applicationsNamespace, func(t *testing.T) {
+			dspa := newIngressTestDSPA(dspav1.DSPASpec{APIServer: &dspav1.APIServer{}})
+			ctx, params, reconciler := CreateNewTestObjects()
+			require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+			params.ApplicationsNamespace = applicationsNamespace
+			params.MLflowEgressPort = "8443"
+			require.NoError(t, reconciler.ReconcileCommon(dspa, params))
+
+			apiPolicy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipelines-"+ingressTestDSPAName)
+			driverPolicy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipeline-drivers-"+ingressTestDSPAName)
+			for _, policy := range []*networkingv1.NetworkPolicy{apiPolicy, driverPolicy} {
+				assertEgressToNamespacedPod(t, policy, 8443, applicationsNamespace, "mlflow")
+				assertNoPortOnlyEgress(t, policy, corev1.ProtocolTCP, 8443)
+			}
+			require.Len(t, apiPolicy.Spec.Egress, 6)
+			require.Len(t, driverPolicy.Spec.Egress, 5)
+		})
+	}
+}
+
+func TestMLflowEgressOmittedWithoutApplicationsNamespace(t *testing.T) {
+	dspa := newIngressTestDSPA(dspav1.DSPASpec{APIServer: &dspav1.APIServer{}})
+	ctx, params, reconciler := CreateNewTestObjects()
+	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+	params.ApplicationsNamespace = ""
+	params.MLflowEgressPort = "8443"
+	require.NoError(t, reconciler.ReconcileCommon(dspa, params))
+
+	apiPolicy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipelines-"+ingressTestDSPAName)
+	driverPolicy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipeline-drivers-"+ingressTestDSPAName)
+	assertEgressPortAbsent(t, apiPolicy, corev1.ProtocolTCP, 8443)
+	assertEgressPortAbsent(t, driverPolicy, corev1.ProtocolTCP, 8443)
+	assertDefaultAPIServerEgress(t, apiPolicy, ingressTestDSPAName)
+	assertDefaultDriverEgress(t, driverPolicy, ingressTestDSPAName)
 }
 
 const ingressTestDSPAName = "testdspa"
@@ -416,6 +618,177 @@ func policyHasPort(policy *networkingv1.NetworkPolicy, port int32) bool {
 		}
 	}
 	return false
+}
+
+func assertControlsIngressAndEgress(t *testing.T, policy *networkingv1.NetworkPolicy) {
+	t.Helper()
+	require.ElementsMatch(t, []networkingv1.PolicyType{
+		networkingv1.PolicyTypeIngress,
+		networkingv1.PolicyTypeEgress,
+	}, policy.Spec.PolicyTypes)
+}
+
+func assertDeniesAllEgress(t *testing.T, policy *networkingv1.NetworkPolicy) {
+	t.Helper()
+	assertControlsIngressAndEgress(t, policy)
+	require.Empty(t, policy.Spec.Egress)
+}
+
+func assertDNSEgress(t *testing.T, policy *networkingv1.NetworkPolicy) {
+	t.Helper()
+	assertControlsIngressAndEgress(t, policy)
+	assertEgressPortOnly(t, policy, corev1.ProtocolUDP, 53)
+	assertEgressPortOnly(t, policy, corev1.ProtocolTCP, 53)
+	assertEgressPortOnly(t, policy, corev1.ProtocolUDP, 5353)
+	assertEgressPortOnly(t, policy, corev1.ProtocolTCP, 5353)
+	assertEgressPortAbsent(t, policy, corev1.ProtocolTCP, 5432)
+}
+
+func assertKubernetesAPIEgress(t *testing.T, policy *networkingv1.NetworkPolicy) {
+	t.Helper()
+	assertEgressPortOnly(t, policy, corev1.ProtocolTCP, 443)
+	assertEgressPortOnly(t, policy, corev1.ProtocolTCP, 6443)
+}
+
+func assertDefaultAPIServerEgress(t *testing.T, policy *networkingv1.NetworkPolicy, name string) {
+	t.Helper()
+	assertDNSEgress(t, policy)
+	assertKubernetesAPIEgress(t, policy)
+	assertEgressToPod(t, policy, 3306, pipelineComponentLabels("mariadb-"+name))
+	assertNoPortOnlyEgress(t, policy, corev1.ProtocolTCP, 3306)
+	assertEgressPortOnly(t, policy, corev1.ProtocolTCP, 9000)
+	assertEgressPortOnly(t, policy, corev1.ProtocolTCP, 8333)
+	assertEgressToPod(t, policy, 8080, pipelineComponentLabels("ds-pipeline-metadata-grpc-"+name))
+}
+
+func assertDefaultDriverEgress(t *testing.T, policy *networkingv1.NetworkPolicy, name string) {
+	t.Helper()
+	assertDNSEgress(t, policy)
+	assertKubernetesAPIEgress(t, policy)
+	apiServerLabels := pipelineComponentLabels("ds-pipeline-" + name)
+	assertEgressToPod(t, policy, 8888, apiServerLabels)
+	assertEgressToPod(t, policy, 8887, apiServerLabels)
+	assertEgressToPod(t, policy, 8080, pipelineComponentLabels("ds-pipeline-metadata-grpc-"+name))
+	assertEgressPortAbsent(t, policy, corev1.ProtocolTCP, 3306)
+	require.Len(t, policy.Spec.Egress, 4)
+}
+
+func assertEnvoyEgress(t *testing.T, policy *networkingv1.NetworkPolicy, name string, allowKubernetesAPI bool) {
+	t.Helper()
+	assertDNSEgress(t, policy)
+	assertEgressToPod(t, policy, 8080, pipelineComponentLabels("ds-pipeline-metadata-grpc-"+name))
+	if allowKubernetesAPI {
+		assertKubernetesAPIEgress(t, policy)
+		require.Len(t, policy.Spec.Egress, 3)
+		return
+	}
+	assertEgressPortAbsent(t, policy, corev1.ProtocolTCP, 443)
+	assertEgressPortAbsent(t, policy, corev1.ProtocolTCP, 6443)
+	require.Len(t, policy.Spec.Egress, 2)
+}
+
+func assertBuiltInMLMDEgress(t *testing.T, policy *networkingv1.NetworkPolicy, name string) {
+	t.Helper()
+	assertDNSEgress(t, policy)
+	assertEgressToPod(t, policy, 3306, pipelineComponentLabels("mariadb-"+name))
+	assertNoPortOnlyEgress(t, policy, corev1.ProtocolTCP, 3306)
+	require.Len(t, policy.Spec.Egress, 2)
+}
+
+func assertEgressPortOnly(t *testing.T, policy *networkingv1.NetworkPolicy, protocol corev1.Protocol, port int32) {
+	t.Helper()
+	for _, rule := range policy.Spec.Egress {
+		if egressRuleHasPort(rule.Ports, protocol, port) && len(rule.To) == 0 {
+			return
+		}
+	}
+	require.Failf(t, "missing egress port", "%s/%d with no destination not found", protocol, port)
+}
+
+func assertEgressPortAbsent(t *testing.T, policy *networkingv1.NetworkPolicy, protocol corev1.Protocol, port int32) {
+	t.Helper()
+	for _, rule := range policy.Spec.Egress {
+		if len(rule.Ports) == 0 {
+			require.Failf(t, "unexpected unrestricted egress", "an unrestricted rule allows %s/%d", protocol, port)
+			return
+		}
+		if egressRuleHasPort(rule.Ports, protocol, port) {
+			require.Failf(t, "unexpected egress port", "%s/%d should be absent", protocol, port)
+		}
+	}
+}
+
+func assertEgressToPod(t *testing.T, policy *networkingv1.NetworkPolicy, port int32, labels map[string]string) {
+	t.Helper()
+	for _, rule := range policy.Spec.Egress {
+		if !egressRuleHasPort(rule.Ports, corev1.ProtocolTCP, port) {
+			continue
+		}
+		for _, peer := range rule.To {
+			if peer.PodSelector == nil || peer.NamespaceSelector != nil || peer.IPBlock != nil {
+				continue
+			}
+			if labelsMatch(peer.PodSelector.MatchLabels, labels) {
+				require.Empty(t, peer.PodSelector.MatchExpressions)
+				return
+			}
+		}
+	}
+	require.Failf(t, "missing egress peer", "port %d to %v not found", port, labels)
+}
+
+func assertEgressToNamespacedPod(t *testing.T, policy *networkingv1.NetworkPolicy, port int32, namespace, app string) {
+	t.Helper()
+	for _, rule := range policy.Spec.Egress {
+		if !egressRuleHasPort(rule.Ports, corev1.ProtocolTCP, port) {
+			continue
+		}
+		for _, peer := range rule.To {
+			if peer.NamespaceSelector == nil || peer.PodSelector == nil {
+				continue
+			}
+			if peer.NamespaceSelector.MatchLabels["kubernetes.io/metadata.name"] == namespace &&
+				peer.PodSelector.MatchLabels["app"] == app {
+				require.Empty(t, peer.NamespaceSelector.MatchExpressions)
+				require.Empty(t, peer.PodSelector.MatchExpressions)
+				return
+			}
+		}
+	}
+	require.Failf(t, "missing namespaced egress peer", "port %d to app=%s in namespace %s not found", port, app, namespace)
+}
+
+func assertNoPortOnlyEgress(t *testing.T, policy *networkingv1.NetworkPolicy, protocol corev1.Protocol, port int32) {
+	t.Helper()
+	for _, rule := range policy.Spec.Egress {
+		if egressRuleHasPort(rule.Ports, protocol, port) && len(rule.To) == 0 {
+			require.Failf(t, "unexpected unrestricted egress", "%s/%d has no destination", protocol, port)
+		}
+	}
+}
+
+func egressRuleHasPort(ports []networkingv1.NetworkPolicyPort, protocol corev1.Protocol, port int32) bool {
+	for _, rulePort := range ports {
+		if rulePort.Protocol == nil || *rulePort.Protocol != protocol || rulePort.Port == nil {
+			continue
+		}
+		if rulePort.Port.Type == intstr.Int && rulePort.Port.IntVal == port {
+			return true
+		}
+	}
+	return false
+}
+
+func labelsMatch(actual, expected map[string]string) bool {
+	if len(actual) != len(expected) {
+		return false
+	}
+	for key, value := range expected {
+		if actual[key] != value {
+			return false
+		}
+	}
+	return true
 }
 
 // TestNoUnrestrictedDirectAPIAccess fails if any operator-rendered ingress rule

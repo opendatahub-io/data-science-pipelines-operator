@@ -107,6 +107,10 @@ type DSPAParams struct {
 	// pipeline pods
 	CustomCABundle *dspa.CABundle
 	DSPONamespace  string
+	// ApplicationsNamespace is the platform namespace where MLflow and other platform apps are deployed.
+	// Set from APPLICATIONS_NAMESPACE, falling back to DSPO_NAMESPACE for standalone deployments that
+	// do not inject it. Used to look up the MLflow CR and to scope MLflow NetworkPolicy peers.
+	ApplicationsNamespace string
 	// Use to enable tls communication between component pods.
 	PodToPodTLS bool
 
@@ -118,6 +122,30 @@ type DSPAParams struct {
 
 	// Proxy configuration for all DSPA components
 	ProxyConfig *dspa.ProxyConfig
+
+	// BuiltInDatabase is true when the DSPA does not use an external database.
+	// MariaDB may still be copied from the spec when the database is external, so templates must use this flag.
+	BuiltInDatabase bool
+	// ProxyEgressPorts are the distinct TCP ports from spec.proxy. Empty when no proxy is configured.
+	ProxyEgressPorts []string
+	// MLflowEgressPort is the TCP port of the resolved MLflow endpoint.
+	// Empty when integration is disabled or the endpoint is not resolved yet.
+	MLflowEgressPort string
+	// ObjectStorageEgressPort is the TCP port of the effective object storage endpoint.
+	// A port written inside the host is used when the separate port field is empty.
+	ObjectStorageEgressPort string
+	// resolvedMLflowEndpoint is the tracking URL resolved during this ExtractParams call.
+	resolvedMLflowEndpoint string
+	// MLflowHostname is the hostname (without port) from the resolved MLflow endpoint, used in NO_PROXY.
+	// Empty when MLflow is disabled or unresolved.
+	MLflowHostname string
+	// EffectiveNoProxy is the API server NO_PROXY value when spec.proxy is set.
+	// It preserves user noProxy entries and appends the resolved MLflow hostname.
+	EffectiveNoProxy string
+	// APIServerAdditionalEgress is indented YAML for spec.networkPolicy.egress.apiServer.additionalRules.
+	APIServerAdditionalEgress string
+	// WorkflowControllerAdditionalEgress is indented YAML for spec.networkPolicy.egress.workflowController.additionalRules.
+	WorkflowControllerAdditionalEgress string
 
 	// CompiledPipelineSpecPatch is a JSON patch applied to all compiled pipeline specs
 	// Used for global workflow configuration like TTL strategy
@@ -753,6 +781,13 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.Name = dsp.Name
 	p.Namespace = dsp.Namespace
 	p.DSPONamespace = os.Getenv("DSPO_NAMESPACE")
+	p.ApplicationsNamespace = strings.TrimSpace(os.Getenv("APPLICATIONS_NAMESPACE"))
+	if p.ApplicationsNamespace == "" {
+		// Standalone deployments set only DSPO_NAMESPACE; APPLICATIONS_NAMESPACE is
+		// injected by the platform operator. Fall back to the operator namespace so
+		// MLflow discovery and MLflow egress peers keep working without the injection.
+		p.ApplicationsNamespace = strings.TrimSpace(p.DSPONamespace)
+	}
 	p.DSPVersion = dsp.Spec.DSPVersion
 	p.Owner = dsp
 	p.APIServer = dsp.Spec.APIServer.DeepCopy()
@@ -816,6 +851,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	}
 
 	p.ProxyConfig = dsp.Spec.Proxy
+	p.resolvedMLflowEndpoint = ""
 	p.ServiceAccountAnnotations = dsp.Spec.ServiceAccountAnnotations
 
 	// Extract CredentialsMode from ExternalStorage
@@ -866,27 +902,34 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		mlflowMode := *p.MLflow.IntegrationMode
 
 		if mlflowMode == dspa.AutoDetect {
-			apiServerReady, readinessErr := p.IsAPIServerDeploymentReady(ctx, client)
-			if readinessErr != nil {
-				log.Error(readinessErr, "failed to determine APIServer readiness. MLflow API server plugin config generation deferred.")
-			} else if !apiServerReady {
-				log.V(1).Info("APIServer deployment is not ready yet. Deferring MLflow API server plugin config generation.")
+			// Retrieve internal MLflow service endpoint for use in API Server MLflow plugin config.
+			// Endpoint resolution also feeds the MLflow egress policies and NO_PROXY, so it is
+			// deliberately decoupled from API server readiness: a reconcile while the API server
+			// Deployment is unavailable must not strip driver access to a healthy MLflow service.
+			var (
+				mlflowEndpoint string
+				err            error
+			)
+			if p.ResolveMLflowEndpoint == nil {
+				log.Info("ResolveMLflowEndpoint is not configured. Deferring MLflow API server plugin config generation.")
+			} else if p.ApplicationsNamespace == "" {
+				log.V(1).Info("Neither APPLICATIONS_NAMESPACE nor DSPO_NAMESPACE is set. Deferring MLflow API server plugin config generation.")
 			} else {
-				// Retrieve internal MLflow service endpoint for use in API Server MLflow plugin config.
-				var (
-					mlflowEndpoint string
-					err            error
-				)
-				if p.ResolveMLflowEndpoint == nil {
-					log.Info("ResolveMLflowEndpoint is not configured. Deferring MLflow API server plugin config generation.")
-				} else if p.DSPONamespace == "" {
-					log.V(1).Info("DSPO_NAMESPACE is not set. Deferring MLflow API server plugin config generation.")
+				mlflowEndpoint, err = p.ResolveMLflowEndpoint(ctx, p.ApplicationsNamespace, log)
+				if err != nil {
+					log.Error(err, "failed to retrieve MLflow internal endpoint. MLflow API server plugin will not be enabled.")
+				} else if mlflowEndpoint == "" {
+					log.V(1).Info("MLflow integration is unavailable. Skipping MLflow API server plugin config generation.")
 				} else {
-					mlflowEndpoint, err = p.ResolveMLflowEndpoint(ctx, p.DSPONamespace, log)
-					if err != nil {
-						log.Error(err, "failed to retrieve MLflow internal endpoint. MLflow API server plugin will not be enabled.")
-					} else if mlflowEndpoint == "" {
-						log.V(1).Info("MLflow integration is unavailable. Skipping MLflow API server plugin config generation.")
+					p.resolvedMLflowEndpoint = mlflowEndpoint
+
+					// The plugin config is consumed by the API server pods, so its generation
+					// waits for the API server Deployment to become available.
+					apiServerReady, readinessErr := p.IsAPIServerDeploymentReady(ctx, client)
+					if readinessErr != nil {
+						log.Error(readinessErr, "failed to determine APIServer readiness. MLflow API server plugin config generation deferred.")
+					} else if !apiServerReady {
+						log.V(1).Info("APIServer deployment is not ready yet. Deferring MLflow API server plugin config generation.")
 					} else {
 						apiServerExternalURL, routeErr := util.GetRouteHostname(ctx, p.APIServerServiceName, p.Namespace, client)
 						if routeErr != nil {
@@ -1175,6 +1218,10 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 
 	err = p.SetupObjectParams(ctx, dsp, client, log)
 	if err != nil {
+		return err
+	}
+
+	if err := p.setEgressTemplateFields(dsp); err != nil {
 		return err
 	}
 

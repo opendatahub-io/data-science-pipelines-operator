@@ -1,0 +1,65 @@
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: ds-pipeline-drivers-{{.Name}}
+  namespace: {{.Namespace}}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: pipelines.kubeflow.org/pod-role
+        operator: In
+        values:
+          - container-driver
+          - dag-driver
+  policyTypes:
+    - Ingress
+    - Egress
+  egress:
+    # Operator-generated baseline. Driver egress is not configurable.
+    # DNS. Port 53 is the Service port and 5353 is the CoreDNS target port.
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 5353
+        - protocol: TCP
+          port: 5353
+    # Kubernetes API. 443 is the Service port and 6443 is the apiserver port.
+    - ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 6443
+    - ports:
+        - protocol: TCP
+          port: 8888
+        - protocol: TCP
+          port: 8887
+      to:
+        - podSelector:
+            matchLabels:
+              app: {{ .APIServerDefaultResourceName }}
+              component: data-science-pipelines
+    - ports:
+        - protocol: TCP
+          port: {{ .MLMD.GRPC.Port }}
+      to:
+        - podSelector:
+            matchLabels:
+              app: ds-pipeline-metadata-grpc-{{ .Name }}
+              component: data-science-pipelines
+    {{ if and .MLflowEgressPort .ApplicationsNamespace }}
+    # Direct MLflow tracking. Same peer as the API server MLflow rule.
+    - ports:
+        - protocol: TCP
+          port: {{ .MLflowEgressPort }}
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .ApplicationsNamespace }}
+          podSelector:
+            matchLabels:
+              app: mlflow
+    {{ end }}
