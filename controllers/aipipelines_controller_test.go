@@ -272,6 +272,7 @@ func TestAIPipelinesReconcileUpdatesStatus(t *testing.T) {
 	updated := &aipipelinesv1alpha1.AIPipelines{}
 	require.NoError(t, k8sClient.Get(context.Background(), types.NamespacedName{Name: module.Name}, updated))
 	require.Equal(t, common.PhaseNotReady, updated.Status.Phase)
+	require.Nil(t, updated.Status.GetRelease("Kubeflow Pipelines"))
 	require.Equal(t, metav1.ConditionFalse, requireModuleCondition(t, updated.Status.Conditions, conditionTypeMonitoringReady).Status)
 	require.NoError(t, k8sClient.Get(context.Background(), client.ObjectKeyFromObject(legacy), newLegacyDataSciencePipelines()))
 	unchangedMonitor := &unstructured.Unstructured{}
@@ -287,6 +288,10 @@ func TestAIPipelinesReconcileUpdatesStatus(t *testing.T) {
 	require.Equal(t, common.PhaseReady, updated.Status.Phase)
 	require.Equal(t, metav1.ConditionTrue, requireModuleCondition(t, updated.Status.Conditions, conditionTypeMonitoringReady).Status)
 	require.Equal(t, "3.6.0", updated.Status.GetPlatformRelease())
+	componentRelease := updated.Status.GetRelease("Kubeflow Pipelines")
+	require.NotNil(t, componentRelease)
+	require.NotEmpty(t, componentRelease.Version)
+	require.Equal(t, "https://github.com/kubeflow/pipelines", componentRelease.RepoURL)
 	require.Equal(t, metav1.ConditionTrue, requireModuleCondition(t, updated.Status.Conditions, "PlatformConfigurationValid").Status)
 	require.True(t, apierrors.IsNotFound(k8sClient.Get(context.Background(), client.ObjectKeyFromObject(legacy), newLegacyDataSciencePipelines())))
 	adoptedMonitor := &unstructured.Unstructured{}

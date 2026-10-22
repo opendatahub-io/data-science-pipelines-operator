@@ -114,8 +114,17 @@ func (r *AIPipelinesReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	platformConfig := observePlatformConfig(ctx, reader)
 	desired := buildAIPipelinesStatus(module, dspo, argo, monitoring, platformConfig)
 	if desired.Phase == common.PhaseReady {
+		for _, release := range config.AIPipelinesComponentReleases() {
+			desired.SetRelease(release)
+		}
 		if err := cleanupLegacyDataSciencePipelines(ctx, r.Client); err != nil {
 			return ctrl.Result{}, fmt.Errorf("clean up legacy DataSciencePipelines after module handoff: %w", err)
+		}
+	} else {
+		for _, release := range module.Status.Releases {
+			if release.Name != common.ReleasePlatform {
+				desired.SetRelease(release)
+			}
 		}
 	}
 	// Keep reconciling after readiness so deletion or drift of optional managed
