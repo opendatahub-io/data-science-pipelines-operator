@@ -27,6 +27,7 @@ import (
 	aipipelinesv1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/aipipelines/v1alpha1"
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	argoassets "github.com/opendatahub-io/data-science-pipelines-operator/config/argo"
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/odh-platform-utilities/api/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -186,6 +187,7 @@ func (f *fixture) waitModule(state common.ManagementState, version string) {
 		if assert.NotNil(c, platformRelease, "missing status.releases[name=%s]", common.ReleasePlatform) {
 			assert.Equal(c, version, platformRelease.Version)
 		}
+		assertComponentReleases(c, module)
 		for _, kind := range []string{"Ready", "ProvisioningSucceeded", "DSPOReady", "ArgoWorkflowsControllersReady"} {
 			found := false
 			for _, condition := range contract.GetConditions() {
@@ -221,6 +223,7 @@ func (f *fixture) waitModuleCondition(kind string, status metav1.ConditionStatus
 		}
 		assert.Equal(c, module.Generation, module.Status.ObservedGeneration)
 		assert.Equal(c, release, module.Status.GetPlatformRelease())
+		assertComponentReleases(c, module)
 		found := false
 		for _, condition := range module.Status.Conditions {
 			if condition.Type == kind {
@@ -231,6 +234,15 @@ func (f *fixture) waitModuleCondition(kind string, status metav1.ConditionStatus
 		}
 		assert.True(c, found, "missing %s", kind)
 	}, deadline, pollInterval)
+}
+
+func assertComponentReleases(c *assert.CollectT, module *aipipelinesv1alpha1.AIPipelines) {
+	for _, expected := range config.AIPipelinesComponentReleases() {
+		actual := module.Status.GetRelease(expected.Name)
+		if assert.NotNil(c, actual, "missing status.releases[name=%s]", expected.Name) {
+			assert.Equal(c, expected, *actual)
+		}
+	}
 }
 
 func (f *fixture) assertSharedAssets(removed bool) {
