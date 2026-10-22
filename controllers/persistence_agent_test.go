@@ -18,12 +18,14 @@ limitations under the License.
 package controllers
 
 import (
-	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"testing"
 
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
+	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func TestDeployPersistenceAgent(t *testing.T) {
@@ -80,11 +82,69 @@ func TestDeployPersistenceAgent(t *testing.T) {
 	persistencePolicy := requireNetworkPolicy(t, ctx, reconciler, expectedPersistenceAgentName)
 	assertPolicySelects(t, persistencePolicy, pipelineComponentLabels(expectedPersistenceAgentName))
 	assertNoIngress(t, persistencePolicy)
+	assertDNSEgress(t, persistencePolicy)
+	assertKubernetesAPIEgress(t, persistencePolicy)
+	apiServerLabels := pipelineComponentLabels("ds-pipeline-" + testDSPAName)
+	assertEgressToPod(t, persistencePolicy, 8888, apiServerLabels)
+	assertEgressToPod(t, persistencePolicy, 8887, apiServerLabels)
+	require.Len(t, persistencePolicy.Spec.Egress, 3)
 
 	// Ensure readiness is handled
 	persistenceAgentReady, err := reconciler.evaluateCondition(ctx, dspa, params.PersistentAgentDefaultResourceName, config.PersistenceAgentReady)
 	assert.Equal(t, "Deploying", persistenceAgentReady.Reason)
 	assert.Nil(t, err)
+}
+
+// The persistence agent reaches the Kubernetes API through the configured proxy when
+// the API address is outside NO_PROXY, so the proxy ports must be allowed alongside
+// 443/6443. This workload has no public egress override.
+func TestPersistenceAgentEgressIncludesProxyPorts(t *testing.T) {
+	testNamespace := "testnamespace"
+	testDSPAName := "testdspa"
+	expectedPersistenceAgentName := persistenceAgentDefaultResourceNamePrefix + testDSPAName
+
+	dspa := &dspav1.DataSciencePipelinesApplication{
+		Spec: dspav1.DSPASpec{
+			PersistenceAgent: &dspav1.PersistenceAgent{
+				Deploy: true,
+			},
+			Proxy: &dspav1.ProxyConfig{
+				HTTPProxy:  "http://proxy.example.com:3128",
+				HTTPSProxy: "https://proxy.example.com:8443",
+			},
+			Database: &dspav1.Database{
+				DisableHealthCheck: false,
+				MariaDB: &dspav1.MariaDB{
+					Deploy: true,
+				},
+			},
+			ObjectStorage: &dspav1.ObjectStorage{
+				DisableHealthCheck: false,
+				Minio: &dspav1.Minio{
+					Deploy: false,
+					Image:  "someimage",
+				},
+			},
+		},
+	}
+	dspa.Namespace = testNamespace
+	dspa.Name = testDSPAName
+
+	ctx, params, reconciler := CreateNewTestObjects()
+	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+	require.NoError(t, reconciler.ReconcilePersistenceAgent(dspa, params))
+
+	persistencePolicy := requireNetworkPolicy(t, ctx, reconciler, expectedPersistenceAgentName)
+	assertPolicySelects(t, persistencePolicy, pipelineComponentLabels(expectedPersistenceAgentName))
+	assertNoIngress(t, persistencePolicy)
+	assertDNSEgress(t, persistencePolicy)
+	assertKubernetesAPIEgress(t, persistencePolicy)
+	assertEgressPortOnly(t, persistencePolicy, corev1.ProtocolTCP, 3128)
+	assertEgressPortOnly(t, persistencePolicy, corev1.ProtocolTCP, 8443)
+	apiServerLabels := pipelineComponentLabels("ds-pipeline-" + testDSPAName)
+	assertEgressToPod(t, persistencePolicy, 8888, apiServerLabels)
+	assertEgressToPod(t, persistencePolicy, 8887, apiServerLabels)
+	require.Len(t, persistencePolicy.Spec.Egress, 5)
 }
 
 func TestDontDeployPersistenceAgent(t *testing.T) {

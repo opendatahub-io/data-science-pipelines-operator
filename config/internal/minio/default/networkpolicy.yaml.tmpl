@@ -10,6 +10,9 @@ spec:
       component: data-science-pipelines
   policyTypes:
     - Ingress
+    - Egress
+  # The MinIO pod only serves data on port 9000. Its probes use that same port.
+  egress: []
   ingress:
     - ports:
         - protocol: TCP

@@ -588,10 +588,32 @@ wait_for_dspa_mlflow_plugin() {
   fi
 }
 
+verify_dspo_applications_namespace() {
+  local deployment_name="data-science-pipelines-operator-controller-manager"
+  local configured
+  echo "---------------------------------"
+  echo "Verify DSPO APPLICATIONS_NAMESPACE (${deployment_name})"
+  echo "---------------------------------"
+  # MLflow AUTODETECT resolves the platform MLflow CR via APPLICATIONS_NAMESPACE and
+  # the MLflow egress NetworkPolicy peers are scoped to it. The platform operator
+  # injects this value in managed deployments, and config/overlays/kind-tests sets it
+  # for standalone CI deployments. Fail fast instead of timing out waiting for the
+  # MLflow plugin when the value is missing or points at the wrong namespace.
+  configured="$(kubectl get deployment -n "${OPENDATAHUB_NAMESPACE}" "${deployment_name}" \
+    -o 'jsonpath={.spec.template.spec.containers[?(@.name=="manager")].env[?(@.name=="APPLICATIONS_NAMESPACE")].value}')"
+  if [ "${configured}" != "${MLFLOW_NAMESPACE}" ]; then
+    echo "APPLICATIONS_NAMESPACE on the DSPO deployment is '${configured:-<unset>}' but MLflow is deployed in '${MLFLOW_NAMESPACE}'." >&2
+    echo "Deploy DSPO with APPLICATIONS_NAMESPACE=${MLFLOW_NAMESPACE} so the MLflow CR lookup and the MLflow egress peers match." >&2
+    return 1
+  fi
+  echo "DSPO APPLICATIONS_NAMESPACE=${configured}"
+}
+
 run_tests_dspa_mlflow() {
   echo "---------------------------------"
   echo "Run DSP MLflow tests for DSPA with MLflow enabled"
   echo "---------------------------------"
+  verify_dspo_applications_namespace
   create_dspa_mlflow_namespace
   copy_mlflow_ca_bundle
   deploy_dspa_mlflow

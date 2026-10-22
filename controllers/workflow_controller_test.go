@@ -30,6 +30,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -148,6 +149,102 @@ func TestDeployWorkflowController(t *testing.T) {
 	assertPolicySelects(t, workflowPolicy, pipelineComponentLabels(expectedWorkflowControllerName))
 	assertIngressFrom(t, workflowPolicy, 9090, monitoringNamespacePeers())
 	assertPortAbsent(t, workflowPolicy, 6060)
+	assertDNSEgress(t, workflowPolicy)
+	assertKubernetesAPIEgress(t, workflowPolicy)
+	require.Len(t, workflowPolicy.Spec.Egress, 2)
+}
+
+func TestWorkflowControllerAdditionalEgressRulesRender(t *testing.T) {
+	testNamespace := "testnamespace"
+	testDSPAName := "testdspa"
+	expectedWorkflowControllerName := "ds-pipeline-workflow-controller-testdspa"
+
+	// Construct DSPASpec with a deployed WorkflowController and user-specified
+	// additional egress rules: one port-only rule and one destination-only rule.
+	dspa := &dspav1.DataSciencePipelinesApplication{
+		Spec: dspav1.DSPASpec{
+			PodToPodTLS: testutil.BoolPtr(false),
+			APIServer:   &dspav1.APIServer{},
+			WorkflowController: &dspav1.WorkflowController{
+				Deploy: true,
+			},
+			NetworkPolicy: &dspav1.NetworkPolicySpec{
+				Egress: &dspav1.NetworkPolicyEgressSpec{
+					WorkflowController: &dspav1.WorkloadEgressSpec{
+						AdditionalRules: []networkingv1.NetworkPolicyEgressRule{
+							tcpEgressRule(4242),
+							{
+								To: []networkingv1.NetworkPolicyPeer{{
+									IPBlock: &networkingv1.IPBlock{CIDR: "203.0.113.0/24"},
+								}},
+							},
+						},
+					},
+					// API server additions must not leak into the workflow controller policy.
+					APIServer: &dspav1.WorkloadEgressSpec{
+						AdditionalRules: []networkingv1.NetworkPolicyEgressRule{tcpEgressRule(5000)},
+					},
+				},
+			},
+			Database: &dspav1.Database{
+				DisableHealthCheck: false,
+				MariaDB: &dspav1.MariaDB{
+					Deploy: true,
+				},
+			},
+			MLMD: &dspav1.MLMD{Deploy: true},
+			ObjectStorage: &dspav1.ObjectStorage{
+				DisableHealthCheck: false,
+				Minio: &dspav1.Minio{
+					Deploy: false,
+					Image:  "someimage",
+				},
+			},
+		},
+	}
+
+	// Enrich DSPA with name+namespace
+	dspa.Name = testDSPAName
+	dspa.Namespace = testNamespace
+
+	// Create Context, Fake Controller and Params
+	ctx, params, reconciler := CreateNewTestObjects()
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	assert.Nil(t, err)
+
+	// Run test reconciliation
+	workflowControllerEnabled, err := reconciler.ReconcileWorkflowController(ctx, dspa, params)
+	assert.Nil(t, err)
+	assert.True(t, workflowControllerEnabled)
+
+	workflowPolicy := requireNetworkPolicy(t, ctx, reconciler, expectedWorkflowControllerName)
+	assertPolicySelects(t, workflowPolicy, pipelineComponentLabels(expectedWorkflowControllerName))
+	assertIngressFrom(t, workflowPolicy, 9090, monitoringNamespacePeers())
+
+	// Operator-generated defaults are kept: DNS and the Kubernetes API.
+	assertEgressPortOnly(t, workflowPolicy, corev1.ProtocolUDP, 53)
+	assertEgressPortOnly(t, workflowPolicy, corev1.ProtocolTCP, 53)
+	assertEgressPortOnly(t, workflowPolicy, corev1.ProtocolUDP, 5353)
+	assertEgressPortOnly(t, workflowPolicy, corev1.ProtocolTCP, 5353)
+	assertEgressPortOnly(t, workflowPolicy, corev1.ProtocolTCP, 443)
+	assertEgressPortOnly(t, workflowPolicy, corev1.ProtocolTCP, 6443)
+
+	// The user-specified port-only rule is appended after the defaults.
+	assertEgressPortOnly(t, workflowPolicy, corev1.ProtocolTCP, 4242)
+	require.Len(t, workflowPolicy.Spec.Egress, 4)
+
+	// The user-specified destination-only rule renders its IPBlock peer.
+	ipBlockRule := workflowPolicy.Spec.Egress[3]
+	require.Empty(t, ipBlockRule.Ports)
+	require.Len(t, ipBlockRule.To, 1)
+	require.NotNil(t, ipBlockRule.To[0].IPBlock)
+	require.Equal(t, "203.0.113.0/24", ipBlockRule.To[0].IPBlock.CIDR)
+
+	// API server additions do not leak into the workflow controller policy.
+	for _, rule := range workflowPolicy.Spec.Egress {
+		require.False(t, egressRuleHasPort(rule.Ports, corev1.ProtocolTCP, 5000),
+			"api server additional egress port leaked into the workflow controller policy")
+	}
 }
 
 func TestDontDeployWorkflowController(t *testing.T) {
