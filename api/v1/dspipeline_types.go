@@ -18,6 +18,7 @@ package v1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -66,6 +67,11 @@ type DSPASpec struct {
 	// Set integrationMode to DISABLED to opt out of MLflow integration.
 	// +kubebuilder:validation:Optional
 	MLflow *MLflowConfig `json:"mlflow,omitempty"`
+
+	// NetworkPolicy configures administrator overrides for operand NetworkPolicies.
+	// Omitted or empty egress lists use the operator's default outbound rules.
+	// +kubebuilder:validation:Optional
+	NetworkPolicy *NetworkPolicySpec `json:"networkPolicy,omitempty"`
 
 	// ServiceAccountAnnotations allows users to specify arbitrary annotations
 	// to be applied to DSPA-managed ServiceAccounts (ml-pipeline, pipeline-runner).
@@ -541,6 +547,42 @@ type SecretKeyValue struct {
 	// +kubebuilder:validation:Required
 	Name string `json:"name"`
 	Key  string `json:"key"`
+}
+
+// NetworkPolicySpec configures administrator overrides for operand NetworkPolicies.
+type NetworkPolicySpec struct {
+	// Egress configures outbound overrides. The API server and workflow controller
+	// accept additional rules only. The driver policy is operator-generated and has
+	// no CRD overrides.
+	// +kubebuilder:validation:Optional
+	Egress *NetworkPolicyEgressSpec `json:"egress,omitempty"`
+}
+
+// NetworkPolicyEgressSpec holds per-workload outbound overrides.
+type NetworkPolicyEgressSpec struct {
+	// APIServer appends outbound rules for the Pipelines API server.
+	// The operator-generated API server policy is the supported baseline and cannot be replaced.
+	// +kubebuilder:validation:Optional
+	APIServer *WorkloadEgressSpec `json:"apiServer,omitempty"`
+	// WorkflowController appends outbound rules for the Argo workflow controller.
+	// The operator-generated workflow controller policy is the supported baseline and
+	// cannot be replaced.
+	// +kubebuilder:validation:Optional
+	WorkflowController *WorkloadEgressSpec `json:"workflowController,omitempty"`
+}
+
+// WorkloadEgressSpec appends outbound NetworkPolicy rules for a DSPA workload.
+// The operator-generated policy for the workload is the supported baseline and cannot be replaced.
+// Use additionalRules for destinations DSPO cannot know at reconcile time, such as a
+// user-supplied pipeline spec URL on a nonstandard port.
+// A rule with neither ports nor a destination is rejected, because that shape allows every connection.
+// +kubebuilder:validation:XValidation:rule="!has(self.additionalRules) || self.additionalRules.all(r, (has(r.ports) && size(r.ports) > 0) || (has(r.to) && size(r.to) > 0))",message="each additionalRules entry must specify at least one port or one destination"
+type WorkloadEgressSpec struct {
+	// AdditionalRules is appended after the operator-generated egress list of the workload.
+	// It does not remove the defaults.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxItems=32
+	AdditionalRules []networkingv1.NetworkPolicyEgressRule `json:"additionalRules,omitempty"`
 }
 
 type ProxyConfig struct {

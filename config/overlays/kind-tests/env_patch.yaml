@@ -11,3 +11,9 @@ spec:
           env:
             - name: WEBHOOK_ANNOTATIONS
               value: '{"cert-manager.io/inject-ca-from": "opendatahub/dspa-webhook-cert"}'
+            # The platform operator injects APPLICATIONS_NAMESPACE into DSPO from
+            # DSCI in managed deployments. CI runs DSPO standalone, so mirror that
+            # here: MLflow AUTODETECT resolves the platform MLflow CR in this
+            # namespace and the MLflow egress peers are scoped to it.
+            - name: APPLICATIONS_NAMESPACE
+              value: opendatahub

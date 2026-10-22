@@ -498,15 +498,16 @@ func TestExtractParams_WithoutResourceTTL(t *testing.T) {
 	assert.Empty(t, params.CompiledPipelineSpecPatch)
 }
 
-func TestExtractParams_MLflowEndpointLookupUsesDSPONamespace(t *testing.T) {
-	t.Setenv("DSPO_NAMESPACE", "opendatahub")
+func TestExtractParams_MLflowEndpointLookupUsesApplicationsNamespace(t *testing.T) {
+	t.Setenv("DSPO_NAMESPACE", "operator-namespace")
+	t.Setenv("APPLICATIONS_NAMESPACE", "opendatahub")
 
 	ctx, params, reconciler := CreateNewTestObjects()
 
 	var lookupNamespace string
 	params.ResolveMLflowEndpoint = func(ctx context.Context, ns string, log logr.Logger) (string, error) {
 		lookupNamespace = ns
-		return "https://mlflow.opendatahub.svc.cluster.local/mlflow", nil
+		return "https://mlflow.opendatahub.svc:8443/mlflow", nil
 	}
 
 	dspa := testutil.CreateEmptyDSPA()
@@ -533,12 +534,17 @@ func TestExtractParams_MLflowEndpointLookupUsesDSPONamespace(t *testing.T) {
 	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
 	require.NoError(t, err)
 	require.Equal(t, "opendatahub", lookupNamespace)
+	require.Equal(t, "opendatahub", params.ApplicationsNamespace)
+	require.Equal(t, "8443", params.MLflowEgressPort)
+	require.Equal(t, "mlflow.opendatahub.svc", params.MLflowHostname)
+	require.Empty(t, params.EffectiveNoProxy)
 	require.NotEmpty(t, params.APIServerPluginsJson)
 	require.True(t, params.GrantMlflowWorkloadRBAC)
 }
 
 func TestExtractParams_MLflowPluginConfigUsesServiceWhenRouteUnavailable(t *testing.T) {
 	t.Setenv("DSPO_NAMESPACE", "opendatahub")
+	t.Setenv("APPLICATIONS_NAMESPACE", "opendatahub")
 
 	ctx, params, reconciler := CreateNewTestObjects()
 
@@ -580,8 +586,9 @@ func TestExtractParams_MLflowPluginConfigUsesServiceWhenRouteUnavailable(t *test
 	require.Equal(t, "http://ds-pipeline-testdspa.test-dspa-mlflow.svc.cluster.local:8888", settings["kfpBaseURL"])
 }
 
-func TestExtractParams_MLflowEndpointLookupSkippedWhenDSPONamespaceUnset(t *testing.T) {
+func TestExtractParams_MLflowEndpointLookupSkippedWhenNamespacesUnset(t *testing.T) {
 	t.Setenv("DSPO_NAMESPACE", "")
+	t.Setenv("APPLICATIONS_NAMESPACE", "")
 
 	ctx, params, reconciler := CreateNewTestObjects()
 
@@ -610,8 +617,121 @@ func TestExtractParams_MLflowEndpointLookupSkippedWhenDSPONamespaceUnset(t *test
 	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
 	require.NoError(t, err)
 	require.False(t, lookupCalled)
+	require.Empty(t, params.ApplicationsNamespace)
 	require.Empty(t, params.APIServerPluginsJson)
 	require.False(t, params.GrantMlflowWorkloadRBAC)
+}
+
+// Standalone deployments set only DSPO_NAMESPACE; the MLflow lookup must fall back
+// to the operator namespace when APPLICATIONS_NAMESPACE is not injected.
+func TestExtractParams_MLflowEndpointLookupFallsBackToDSPONamespace(t *testing.T) {
+	t.Setenv("DSPO_NAMESPACE", "operator-namespace")
+	t.Setenv("APPLICATIONS_NAMESPACE", "")
+
+	ctx, params, reconciler := CreateNewTestObjects()
+
+	var lookupNamespace string
+	params.ResolveMLflowEndpoint = func(ctx context.Context, ns string, log logr.Logger) (string, error) {
+		lookupNamespace = ns
+		return "https://mlflow.operator-namespace.svc:8443/mlflow", nil
+	}
+
+	dspa := testutil.CreateEmptyDSPA()
+	dspa.Namespace = "test-dspa-mlflow"
+	dspa.Spec.APIServer = &dspav1.APIServer{Deploy: true}
+	dspa.Spec.PodToPodTLS = testutil.BoolPtr(false)
+
+	deploy := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Name: "ds-pipeline-testdspa", Namespace: "test-dspa-mlflow"},
+		Status: appsv1.DeploymentStatus{
+			Conditions: []appsv1.DeploymentCondition{{
+				Type:   appsv1.DeploymentAvailable,
+				Status: corev1.ConditionTrue,
+			}},
+		},
+	}
+	route := &routev1.Route{
+		ObjectMeta: metav1.ObjectMeta{Name: "ds-pipeline-testdspa", Namespace: "test-dspa-mlflow"},
+		Spec:       routev1.RouteSpec{Host: "dsp-api.example.com"},
+	}
+	require.NoError(t, reconciler.Client.Create(ctx, deploy))
+	require.NoError(t, reconciler.Client.Create(ctx, route))
+
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	require.NoError(t, err)
+	require.Equal(t, "operator-namespace", lookupNamespace)
+	require.Equal(t, "operator-namespace", params.ApplicationsNamespace)
+	require.Equal(t, "8443", params.MLflowEgressPort)
+	require.Equal(t, "mlflow.operator-namespace.svc", params.MLflowHostname)
+	require.NotEmpty(t, params.APIServerPluginsJson)
+	require.True(t, params.GrantMlflowWorkloadRBAC)
+}
+
+// APPLICATIONS_NAMESPACE takes priority over the DSPO_NAMESPACE fallback.
+func TestExtractParams_MLflowEndpointLookupPrefersApplicationsNamespace(t *testing.T) {
+	t.Setenv("DSPO_NAMESPACE", "operator-namespace")
+	t.Setenv("APPLICATIONS_NAMESPACE", "opendatahub")
+
+	ctx, params, reconciler := CreateNewTestObjects()
+
+	var lookupNamespace string
+	params.ResolveMLflowEndpoint = func(ctx context.Context, ns string, log logr.Logger) (string, error) {
+		lookupNamespace = ns
+		return "https://mlflow.opendatahub.svc:8443/mlflow", nil
+	}
+
+	dspa := testutil.CreateEmptyDSPA()
+	dspa.Namespace = "test-dspa-mlflow"
+	dspa.Spec.APIServer = &dspav1.APIServer{Deploy: true}
+	dspa.Spec.PodToPodTLS = testutil.BoolPtr(false)
+
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	require.NoError(t, err)
+	require.Equal(t, "opendatahub", lookupNamespace)
+	require.Equal(t, "opendatahub", params.ApplicationsNamespace)
+}
+
+// The MLflow endpoint must resolve for egress policies even while the API server
+// Deployment is unavailable, so common-policy reconciliation does not strip driver
+// access to a healthy MLflow service. Only plugin config generation is deferred.
+func TestExtractParams_MLflowEndpointResolvedWhileAPIServerUnavailable(t *testing.T) {
+	t.Setenv("DSPO_NAMESPACE", "operator-namespace")
+	t.Setenv("APPLICATIONS_NAMESPACE", "opendatahub")
+
+	ctx, params, reconciler := CreateNewTestObjects()
+
+	params.ResolveMLflowEndpoint = func(ctx context.Context, ns string, log logr.Logger) (string, error) {
+		return "https://mlflow.opendatahub.svc:8443/mlflow", nil
+	}
+
+	dspa := testutil.CreateEmptyDSPA()
+	dspa.Namespace = "test-dspa-mlflow"
+	dspa.Spec.APIServer = &dspav1.APIServer{Deploy: true}
+	dspa.Spec.PodToPodTLS = testutil.BoolPtr(false)
+
+	// No API server Deployment exists, so readiness is false.
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	require.NoError(t, err)
+	require.Equal(t, "8443", params.MLflowEgressPort)
+	require.Equal(t, "mlflow.opendatahub.svc", params.MLflowHostname)
+	require.Empty(t, params.APIServerPluginsJson)
+	require.False(t, params.GrantMlflowWorkloadRBAC)
+
+	// The resolved endpoint must still drive the MLflow egress rules in both the
+	// API server and driver policies rendered during the downtime reconcile.
+	proxied := testutil.CreateEmptyDSPA()
+	proxied.Spec.Proxy = &dspav1.ProxyConfig{HTTPProxy: "http://proxy.example.com:3128"}
+
+	params2 := &DSPAParams{ResolveMLflowEndpoint: params.ResolveMLflowEndpoint}
+	require.NoError(t, params2.ExtractParams(ctx, proxied, reconciler.Client, reconciler.Log))
+	require.Equal(t, "8443", params2.MLflowEgressPort)
+	require.Contains(t, params2.EffectiveNoProxy, "mlflow.opendatahub.svc")
+	require.NoError(t, reconciler.ReconcileCommon(proxied, params2))
+
+	apiPolicy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipelines-testdspa")
+	driverPolicy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipeline-drivers-testdspa")
+	assertEgressToNamespacedPod(t, apiPolicy, 8443, "opendatahub", "mlflow")
+	assertEgressToNamespacedPod(t, driverPolicy, 8443, "opendatahub", "mlflow")
 }
 
 func testSchemeWithMlflowApps(t *testing.T) *runtime.Scheme {

@@ -185,6 +185,8 @@ func TestDeployDatabase(t *testing.T) {
 
 	mariadbPolicy := requireNetworkPolicy(t, ctx, reconciler, expectedDatabaseName)
 	assertPolicySelects(t, mariadbPolicy, pipelineComponentLabels(expectedDatabaseName))
+	assertPortPresent(t, mariadbPolicy, 3306)
+	assertDeniesAllEgress(t, mariadbPolicy)
 }
 
 func TestDontDeployDatabase(t *testing.T) {

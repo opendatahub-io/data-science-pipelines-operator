@@ -10,6 +10,7 @@ spec:
       component: data-science-pipelines
   policyTypes:
     - Ingress
+    - Egress
   ingress:
     - ports:
         - protocol: TCP
@@ -27,3 +28,28 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: opendatahub-monitoring
+  egress:
+    # DNS. Port 53 is the Service port and 5353 is the CoreDNS target port.
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 5353
+        - protocol: TCP
+          port: 5353
+    # Kubernetes API. 443 is the Service port and 6443 is the apiserver port.
+    - ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 6443
+    {{ range .ProxyEgressPorts }}
+    - ports:
+        - protocol: TCP
+          port: {{ . }}
+    {{ end }}
+    {{ if .WorkflowControllerAdditionalEgress }}
+{{ .WorkflowControllerAdditionalEgress }}
+    {{ end }}
