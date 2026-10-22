@@ -19,6 +19,8 @@ limitations under the License.
 package controllers
 
 import (
+	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -28,7 +30,14 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 )
 
 // intermediateProfile is the hardened Intermediate TLS profile used as the safe fallback.
@@ -114,7 +123,7 @@ func TestResolveKubeRBACProxyTLS_NoOpinion_BadProfileIgnored(t *testing.T) {
 // --- profileToRBACProxyArgs ---
 
 func TestProfileToRBACProxyArgs_IntermediateProfile(t *testing.T) {
-	args, err := profileToRBACProxyArgs(intermediateProfile, false)
+	args, err := profileToRBACProxyArgs(intermediateProfile)
 	require.NoError(t, err)
 	assert.Equal(t, "VersionTLS12", args.MinVersion)
 	assert.NotEmpty(t, args.CipherSuites, "Intermediate profile should produce cipher suites")
@@ -126,7 +135,7 @@ func TestProfileToRBACProxyArgs_IntermediateProfile(t *testing.T) {
 
 func TestProfileToRBACProxyArgs_ModernProfile_NoCiphers(t *testing.T) {
 	// TLS 1.3: cipher flag must be omitted (CipherSuites empty).
-	args, err := profileToRBACProxyArgs(modernProfile, false)
+	args, err := profileToRBACProxyArgs(modernProfile)
 	require.NoError(t, err)
 	assert.Equal(t, "VersionTLS13", args.MinVersion)
 	assert.Empty(t, args.CipherSuites, "TLS 1.3 must not set cipher suites")
@@ -137,33 +146,21 @@ func TestProfileToRBACProxyArgs_AllCiphersUnsupported_ReturnsError(t *testing.T)
 		MinTLSVersion: configv1.VersionTLS12,
 		Ciphers:       []string{"BOGUS_CIPHER_1", "BOGUS_CIPHER_2"},
 	}
-	_, err := profileToRBACProxyArgs(profile, false)
+	_, err := profileToRBACProxyArgs(profile)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "all 2 ciphers")
 }
 
-func TestProfileToRBACProxyArgs_SomeCiphersUnsupported_NonStrictDropsUnsupported(t *testing.T) {
+func TestProfileToRBACProxyArgs_SomeCiphersUnsupported_ReturnsError(t *testing.T) {
 	profile := configv1.TLSProfileSpec{
 		MinTLSVersion: configv1.VersionTLS12,
 		Ciphers:       []string{"ECDHE-RSA-AES128-GCM-SHA256", "BOGUS_CIPHER"},
 	}
-	// Non-strict mode (false): silently drops unsupported ciphers
-	args, err := profileToRBACProxyArgs(profile, false)
-	require.NoError(t, err)
-	assert.NotEmpty(t, args.CipherSuites)
-	assert.NotContains(t, args.CipherSuites, "BOGUS_CIPHER")
-}
-
-func TestProfileToRBACProxyArgs_SomeCiphersUnsupported_StrictRejectsAll(t *testing.T) {
-	profile := configv1.TLSProfileSpec{
-		MinTLSVersion: configv1.VersionTLS12,
-		Ciphers:       []string{"ECDHE-RSA-AES128-GCM-SHA256", "BOGUS_CIPHER"},
-	}
-	// Strict mode (true): rejects the entire profile if any cipher is unsupported
-	_, err := profileToRBACProxyArgs(profile, true)
+	// Fail-closed: rejects the entire profile if any cipher is unsupported
+	_, err := profileToRBACProxyArgs(profile)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "StrictAllComponents adherence")
 	assert.Contains(t, err.Error(), "unsupported ciphers")
+	assert.Contains(t, err.Error(), "BOGUS_CIPHER")
 }
 
 func TestProfileToRBACProxyArgs_EmptyCiphers_NoFlag(t *testing.T) {
@@ -171,7 +168,7 @@ func TestProfileToRBACProxyArgs_EmptyCiphers_NoFlag(t *testing.T) {
 		MinTLSVersion: configv1.VersionTLS12,
 		Ciphers:       []string{},
 	}
-	args, err := profileToRBACProxyArgs(profile, false)
+	args, err := profileToRBACProxyArgs(profile)
 	require.NoError(t, err)
 	assert.Empty(t, args.CipherSuites)
 }
@@ -429,6 +426,101 @@ func TestResolveKubeRBACProxyTLS_EmptyAdherence_TreatsAsNoOpinion(t *testing.T) 
 	require.NoError(t, err)
 	assert.Equal(t, string(intermediateProfile.MinTLSVersion), args.MinVersion)
 	assert.NotEmpty(t, args.CipherSuites)
+}
+
+// --- fetchLiveTLSProfile: shared-helper mapping ---
+
+// newFetchLiveTLSClient builds a fake client serving config.openshift.io with
+// the optional APIServer object and Get interceptor.
+func newFetchLiveTLSClient(t *testing.T, interceptors interceptor.Funcs, objs ...client.Object) client.Client {
+	t.Helper()
+	scheme := runtime.NewScheme()
+	require.NoError(t, configv1.Install(scheme))
+	return fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).WithInterceptorFuncs(interceptors).Build()
+}
+
+func TestFetchLiveTLSProfile_Ready(t *testing.T) {
+	apiServer := &configv1.APIServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: configv1.APIServerSpec{
+			TLSSecurityProfile: &configv1.TLSSecurityProfile{
+				Type: configv1.TLSProfileModernType,
+			},
+			TLSAdherence: configv1.TLSAdherencePolicyStrictAllComponents,
+		},
+	}
+	reconciler := &DSPAReconciler{
+		Client:                newFetchLiveTLSClient(t, interceptor.Funcs{}, apiServer),
+		HasOpenShiftConfigAPI: true,
+	}
+
+	profile, adherence, err := reconciler.fetchLiveTLSProfile(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, *configv1.TLSProfiles[configv1.TLSProfileModernType], profile)
+	assert.Equal(t, configv1.TLSAdherencePolicyStrictAllComponents, adherence)
+}
+
+func TestFetchLiveTLSProfile_APIServerMissing_FallsBackToIntermediate(t *testing.T) {
+	reconciler := &DSPAReconciler{
+		Client:                newFetchLiveTLSClient(t, interceptor.Funcs{}),
+		HasOpenShiftConfigAPI: true,
+	}
+
+	profile, adherence, err := reconciler.fetchLiveTLSProfile(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, *configv1.TLSProfiles[configv1.TLSProfileIntermediateType], profile)
+	assert.Equal(t, configv1.TLSAdherencePolicyNoOpinion, adherence)
+}
+
+func TestFetchLiveTLSProfile_TransientError_RequeuesWithBackoff(t *testing.T) {
+	// Transient API errors must surface as errors so Reconcile returns them
+	// and controller-runtime requeues with exponential backoff.
+	reconciler := &DSPAReconciler{
+		Client: newFetchLiveTLSClient(t, interceptor.Funcs{
+			Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
+				return apierrors.NewServiceUnavailable("apiserver restarting")
+			},
+		}),
+		HasOpenShiftConfigAPI: true,
+	}
+
+	profile, adherence, err := reconciler.fetchLiveTLSProfile(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "transient API error fetching APIServer")
+	assert.Empty(t, profile.MinTLSVersion, "no profile may be guessed on transient errors")
+	assert.Empty(t, adherence)
+}
+
+func TestFetchLiveTLSProfile_HardError_RequeuesWithBackoff(t *testing.T) {
+	reconciler := &DSPAReconciler{
+		Client: newFetchLiveTLSClient(t, interceptor.Funcs{
+			Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
+				return apierrors.NewForbidden(schema.GroupResource{Group: "config.openshift.io", Resource: "apiservers"}, "cluster", errors.New("denied"))
+			},
+		}),
+		HasOpenShiftConfigAPI: true,
+	}
+
+	_, _, err := reconciler.fetchLiveTLSProfile(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), `failed to get APIServer "cluster"`)
+}
+
+func TestFetchLiveTLSProfile_NonOpenShift_SkipsFetch(t *testing.T) {
+	// With HasOpenShiftConfigAPI=false the reconciler must not hit the API at all.
+	reconciler := &DSPAReconciler{
+		Client: newFetchLiveTLSClient(t, interceptor.Funcs{
+			Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
+				return errors.New("fetch must be skipped on non-OpenShift clusters")
+			},
+		}),
+		HasOpenShiftConfigAPI: false,
+	}
+
+	profile, adherence, err := reconciler.fetchLiveTLSProfile(context.Background())
+	require.NoError(t, err)
+	assert.Empty(t, profile.MinTLSVersion)
+	assert.Empty(t, adherence)
 }
 
 // Live APIServer fetch → both Deployment PodTemplates is covered by

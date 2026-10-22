@@ -37,7 +37,6 @@ import (
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/util"
 	configv1 "github.com/openshift/api/config/v1"
 	routev1 "github.com/openshift/api/route/v1"
-	tlspkg "github.com/openshift/controller-runtime-common/pkg/tls"
 	"github.com/prometheus/client_golang/prometheus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -101,34 +100,32 @@ func (r *DSPAReconciler) removeExpiredMLflowCacheLocked(now time.Time) {
 	}
 }
 
-// fetchLiveTLSProfile fetches cluster TLS profile and adherence from APIServer once.
-// Returns zero values on non-OpenShift clusters. Errors trigger requeue.
+// fetchLiveTLSProfile fetches the cluster TLS profile and adherence policy from
+// the live APIServer object via the shared cluster TLS fetch. Returns zero
+// values on non-OpenShift clusters. A missing config API or APIServer object
+// falls back to the Intermediate profile; every other API error (transient
+// errors included) is returned so the reconcile requeues with backoff.
 func (r *DSPAReconciler) fetchLiveTLSProfile(ctx context.Context) (configv1.TLSProfileSpec, configv1.TLSAdherencePolicy, error) {
 	if !r.HasOpenShiftConfigAPI {
 		return configv1.TLSProfileSpec{}, "", nil
 	}
 
-	// Fetch APIServer once to extract both profile and adherence policy
-	apiServer := &configv1.APIServer{}
-	nn := types.NamespacedName{Name: "cluster"}
-	if err := r.Client.Get(ctx, nn, apiServer); err != nil {
-		if apimeta.IsNoMatchError(err) || apierrs.IsNotFound(err) {
-			// Missing APIServer CRD — fall back to Intermediate profile, no adherence
-			return *configv1.TLSProfiles[configv1.TLSProfileIntermediateType], "", nil
-		}
-		return configv1.TLSProfileSpec{}, "", fmt.Errorf("failed to fetch APIServer: %w", err)
-	}
-
-	// Extract profile from TLSSecurityProfile
-	profile, err := tlspkg.GetTLSProfileSpec(apiServer.Spec.TLSSecurityProfile)
+	fetch, err := util.FetchClusterTLSConfig(ctx, r.Client)
 	if err != nil {
-		return configv1.TLSProfileSpec{}, "", fmt.Errorf("failed to resolve TLS profile: %w", err)
+		return configv1.TLSProfileSpec{}, "", err
 	}
 
-	// Extract adherence policy
-	adherence := apiServer.Spec.TLSAdherence
-
-	return profile, adherence, nil
+	switch fetch.State {
+	case util.TLSFetchReady:
+		return fetch.ProfileSpec, fetch.Adherence, nil
+	case util.TLSFetchConfigUnavailable, util.TLSFetchMissing:
+		// Missing APIServer CRD or cluster object — fall back to Intermediate profile, no adherence
+		return *configv1.TLSProfiles[configv1.TLSProfileIntermediateType], "", nil
+	case util.TLSFetchTransient:
+		// Posture unknown — requeue with backoff instead of guessing a profile.
+		return configv1.TLSProfileSpec{}, "", fmt.Errorf("transient API error fetching APIServer: %w", fetch.Err)
+	}
+	return configv1.TLSProfileSpec{}, "", fmt.Errorf("unexpected TLS fetch state: %d", fetch.State)
 }
 
 func lookupMLflowEndpoint(ctx context.Context, reader client.Reader, namespace string, log logr.Logger) (string, error) {
