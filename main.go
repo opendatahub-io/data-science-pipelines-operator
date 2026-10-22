@@ -243,28 +243,12 @@ func main() {
 	tlsOpts := tlsResult.TLSOpts
 	profile := tlsResult.ProfileSpec
 	hasOpenShiftConfigAPI := tlsResult.HasOpenShiftConfig
-
-	// Fetch the TLS adherence policy (only meaningful on OpenShift clusters with the config API)
-	tlsAdherenceFetched := false
-	var tlsAdherence configv1.TLSAdherencePolicy
-	if hasOpenShiftConfigAPI {
-		var adherenceErr error
-		tlsAdherence, adherenceErr = tlspkg.FetchAPIServerTLSAdherencePolicy(bootstrapCtx, bootstrapClient)
-		if adherenceErr != nil {
-			switch classifyTLSAdherenceFetchError(adherenceErr) {
-			case tlsAdherenceFetchRetry:
-				// On a confirmed OpenShift cluster (hasOpenShiftConfigAPI=true) NotFound/NoMatch is a
-				// transient race between the two reads; transient API errors self-heal via the watcher.
-				setupLog.Info("TLS adherence policy lookup unavailable, watcher will retry", "error", adherenceErr)
-				tlsAdherenceFetched = true
-			case tlsAdherenceFetchFatal:
-				setupLog.Error(adherenceErr, "unable to fetch TLS adherence policy")
-				os.Exit(1)
-			}
-		} else {
-			tlsAdherenceFetched = true
-		}
-	}
+	// The adherence policy is read from the same APIServer object as the
+	// profile. When it could not be determined (APIServer object missing or
+	// transient API error) it defaults to NoOpinion and the
+	// SecurityProfileWatcher triggers a reload once the real value is seen.
+	tlsAdherence := tlsResult.Adherence
+	tlsAdherenceFetched := tlsResult.AdherenceFetched
 
 	mgrOpts := ctrl.Options{
 		Scheme: scheme,

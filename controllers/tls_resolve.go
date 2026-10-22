@@ -49,25 +49,25 @@ func resolveKubeRBACProxyTLS(profile configv1.TLSProfileSpec, adherence configv1
 		return intermediateRBACProxyArgs()
 	case configv1.TLSAdherencePolicyStrictAllComponents:
 		// Strict adherence — use the configured profile, rejecting any unsupported ciphers.
-		return profileToRBACProxyArgs(profile, true)
+		return profileToRBACProxyArgs(profile)
 	default:
 		// Unknown adherence — treat as strict (fail-closed).
-		return profileToRBACProxyArgs(profile, true)
+		return profileToRBACProxyArgs(profile)
 	}
 }
 
 // intermediateRBACProxyArgs returns Intermediate profile args as fallback.
 // Used for missing/zero profiles (including on StrictAllComponents clusters) and
-// for NoOpinion/Legacy. Always strict so an unsupported Intermediate cipher fails
-// closed rather than being silently dropped.
+// for NoOpinion/Legacy. An unsupported Intermediate cipher fails closed rather
+// than being silently dropped.
 func intermediateRBACProxyArgs() (*KubeRBACProxyTLSArgs, error) {
 	intermediate := *configv1.TLSProfiles[configv1.TLSProfileIntermediateType]
-	return profileToRBACProxyArgs(intermediate, true)
+	return profileToRBACProxyArgs(intermediate)
 }
 
 // profileToRBACProxyArgs converts TLSProfileSpec to CLI flag values.
-// Rejects unsupported ciphers if strict; filters silently otherwise.
-func profileToRBACProxyArgs(profile configv1.TLSProfileSpec, strict bool) (*KubeRBACProxyTLSArgs, error) {
+// Fails closed: rejects any profile containing unsupported ciphers.
+func profileToRBACProxyArgs(profile configv1.TLSProfileSpec) (*KubeRBACProxyTLSArgs, error) {
 	args := &KubeRBACProxyTLSArgs{
 		MinVersion: string(profile.MinTLSVersion),
 	}
@@ -85,9 +85,9 @@ func profileToRBACProxyArgs(profile configv1.TLSProfileSpec, strict bool) (*Kube
 			return nil, fmt.Errorf("all %d ciphers in TLS profile are unsupported by Go: %v",
 				len(profile.Ciphers), unsupported)
 		}
-		// Strict mode: reject profiles with unsupported ciphers.
-		if strict && len(unsupported) > 0 {
-			return nil, fmt.Errorf("under StrictAllComponents adherence, cannot use TLS profile with unsupported ciphers: %v (unsupported: %v)",
+		// Fail closed: reject profiles with any unsupported ciphers.
+		if len(unsupported) > 0 {
+			return nil, fmt.Errorf("cannot use TLS profile with unsupported ciphers: %v (unsupported: %v)",
 				profile.Ciphers, unsupported)
 		}
 		args.CipherSuites = strings.Join(ianaNames, ",")
