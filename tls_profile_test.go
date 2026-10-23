@@ -206,3 +206,42 @@ func TestFetchTLSProfile_AllCiphersUnsupported(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "all 2 ciphers in TLS profile are unsupported by Go")
 }
+
+func TestProxyTLSConfig(t *testing.T) {
+	tests := []struct {
+		name         string
+		profile      configv1.TLSProfileSpec
+		minVersion   string
+		cipherSuites string
+	}{
+		{
+			name:         "intermediate",
+			profile:      *configv1.TLSProfiles[configv1.TLSProfileIntermediateType],
+			minVersion:   "VersionTLS12",
+			cipherSuites: "TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384,TLS_CHACHA20_POLY1305_SHA256,TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
+		},
+		{
+			name:         "modern",
+			profile:      *configv1.TLSProfiles[configv1.TLSProfileModernType],
+			minVersion:   "VersionTLS13",
+			cipherSuites: "TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384,TLS_CHACHA20_POLY1305_SHA256",
+		},
+		{
+			name: "custom",
+			profile: configv1.TLSProfileSpec{
+				MinTLSVersion: configv1.VersionTLS12,
+				Ciphers:       []string{"ECDHE-RSA-AES128-GCM-SHA256"},
+			},
+			minVersion:   "VersionTLS12",
+			cipherSuites: "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			minVersion, cipherSuites := proxyTLSConfig(tt.profile)
+			assert.Equal(t, tt.minVersion, minVersion)
+			assert.Equal(t, tt.cipherSuites, cipherSuites)
+		})
+	}
+}
