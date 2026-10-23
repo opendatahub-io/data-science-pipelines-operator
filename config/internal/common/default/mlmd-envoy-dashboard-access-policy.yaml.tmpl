@@ -9,15 +9,52 @@ spec:
       app: ds-pipeline-metadata-envoy-{{ .Name }}
       component: data-science-pipelines
   ingress:
+    {{ if and .MLMD .MLMD.Envoy .MLMD.Envoy.DeployRoute }}
+    # Authenticated kube-rbac-proxy, used by the dashboard and the Route.
+    # Port-only so cluster pods and the OpenShift router can reach it.
     - ports:
         - protocol: TCP
           port: 8443
+    {{ end }}
+    # Direct Envoy listener. No login check. Admin port 9901 is not allowed.
     - ports:
         - protocol: TCP
           port: 9090
       from:
         - podSelector:
             matchLabels:
+              app: {{.APIServerDefaultResourceName}}
               component: data-science-pipelines
+        - podSelector:
+            matchLabels:
+              pipelines.kubeflow.org/v2_component: "true"
   policyTypes:
     - Ingress
+    - Egress
+  egress:
+    # DNS. Port 53 is the Service port and 5353 is the CoreDNS target port.
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 5353
+        - protocol: TCP
+          port: 5353
+    - ports:
+        - protocol: TCP
+          port: {{ .MLMD.GRPC.Port }}
+      to:
+        - podSelector:
+            matchLabels:
+              app: ds-pipeline-metadata-grpc-{{ .Name }}
+              component: data-science-pipelines
+    {{ if and .MLMD .MLMD.Envoy .MLMD.Envoy.DeployRoute }}
+    # Kubernetes API. 443 is the Service port and 6443 is the apiserver port.
+    - ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 6443
+    {{ end }}

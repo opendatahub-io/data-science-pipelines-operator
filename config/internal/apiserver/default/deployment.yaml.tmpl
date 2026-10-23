@@ -113,18 +113,23 @@ spec:
               value: "ds-pipeline-visualizationserver"
             - name: ML_PIPELINE_VISUALIZATIONSERVER_SERVICE_PORT
               value: "8888"
+            {{ if .ObjectStorageConnection.CredentialsSecret }}
             - name: OBJECTSTORECONFIG_CREDENTIALSSECRET
               value: "{{.ObjectStorageConnection.CredentialsSecret.SecretName}}"
             - name: OBJECTSTORECONFIG_CREDENTIALSACCESSKEYKEY
               value: "{{.ObjectStorageConnection.CredentialsSecret.AccessKey}}"
             - name: OBJECTSTORECONFIG_CREDENTIALSSECRETKEYKEY
               value: "{{.ObjectStorageConnection.CredentialsSecret.SecretKey}}"
+            {{ end }}
             - name: DEFAULTPIPELINERUNNERSERVICEACCOUNT
               value: "pipeline-runner-{{.Name}}"
             - name: ALLOWEDSERVICEACCOUNTS
               value: "pipeline-runner-{{.Name}}"
             - name: OBJECTSTORECONFIG_BUCKETNAME
               value: "{{.ObjectStorageConnection.Bucket}}"
+            - name: OBJECTSTORECONFIG_REGION
+              value: "{{.ObjectStorageConnection.Region}}"
+            {{ if .ObjectStorageConnection.CredentialsSecret }}
             - name: OBJECTSTORECONFIG_ACCESSKEY
               valueFrom:
                 secretKeyRef:
@@ -135,6 +140,7 @@ spec:
                 secretKeyRef:
                   key: "{{.ObjectStorageConnection.CredentialsSecret.SecretKey}}"
                   name: "{{.ObjectStorageConnection.CredentialsSecret.SecretName}}"
+            {{ end }}
             - name: OBJECTSTORECONFIG_SECURE
               value: "{{.ObjectStorageConnection.Secure}}"
             {{ if .ObjectStorageConnection.BasePath }}
@@ -204,9 +210,9 @@ spec:
             - name: HTTPS_PROXY
               value: "{{.ProxyConfig.HTTPSProxy}}"
             {{ end }}
-            {{ if and .ProxyConfig.NoProxy (or .ProxyConfig.HTTPProxy .ProxyConfig.HTTPSProxy) }}
+            {{ if and .EffectiveNoProxy (or .ProxyConfig.HTTPProxy .ProxyConfig.HTTPSProxy) }}
             - name: NO_PROXY
-              value: "{{.ProxyConfig.NoProxy}}"
+              value: "{{.EffectiveNoProxy}}"
             {{ end }}
             {{ end }}
             {{ if .APIServer.ManagedPipelines }}
@@ -238,6 +244,18 @@ spec:
               name: http
             - containerPort: 8887
               name: grpc
+          # Allow slow initialization before liveness checks can restart the API server.
+          startupProbe:
+            httpGet:
+              path: /apis/v1beta1/healthz
+              port: http
+              {{ if .PodToPodTLS }}
+              scheme: HTTPS
+              {{ end }}
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 24
           livenessProbe:
             httpGet:
               path: /apis/v1beta1/healthz
@@ -323,8 +341,14 @@ spec:
             {{ end }}
             - --tls-cert-file=/etc/tls/private/tls.crt
             - --tls-private-key-file=/etc/tls/private/tls.key
+            {{- if .KubeRBACProxyTLS }}
+            - --tls-min-version={{ .KubeRBACProxyTLS.MinVersion }}
+            {{- if .KubeRBACProxyTLS.CipherSuites }}
+            - --tls-cipher-suites={{ .KubeRBACProxyTLS.CipherSuites }}
+            {{- end }}
+            {{- end }}
             - --config-file=/etc/kube-rbac-proxy/config-file.yaml
-            - --ignore-paths=/healthz,/apis/v1beta1/healthz,/metrics
+            - --ignore-paths=/healthz,/apis/v1beta1/healthz
           image: {{.KubeRBACProxy}}
           ports:
             - containerPort: 8443
@@ -368,6 +392,72 @@ spec:
               name: ca-bundle
             {{ end }}
         {{ end }}
+        - name: kube-rbac-proxy-metrics
+          args:
+            - --secure-listen-address=0.0.0.0:8445
+            - --proxy-endpoints-port=8446
+            {{ if .PodToPodTLS }}
+            - --upstream=https://{{.APIServerServiceDNSName}}:8888
+            {{ if .CustomCABundle }}
+            - --upstream-ca-file={{ .PiplinesCABundleMountPath }}
+            {{ else }}
+            - --upstream-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
+            {{ end }}
+            {{ else }}
+            - --upstream=http://localhost:8888
+            {{ end }}
+            - --tls-cert-file=/etc/tls/private/tls.crt
+            - --tls-private-key-file=/etc/tls/private/tls.key
+            {{- if .KubeRBACProxyTLS }}
+            - --tls-min-version={{ .KubeRBACProxyTLS.MinVersion }}
+            {{- if .KubeRBACProxyTLS.CipherSuites }}
+            - --tls-cipher-suites={{ .KubeRBACProxyTLS.CipherSuites }}
+            {{- end }}
+            {{- end }}
+            - --config-file=/etc/kube-rbac-proxy/metrics-config-file.yaml
+            - --allow-paths=/metrics
+          image: {{.KubeRBACProxy}}
+          ports:
+            - containerPort: 8445
+              name: prom-metrics
+            - containerPort: 8446
+              name: prom-health
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: prom-health
+              scheme: HTTPS
+            initialDelaySeconds: 30
+            timeoutSeconds: 1
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: prom-health
+              scheme: HTTPS
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          resources:
+            limits:
+              cpu: 100m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          volumeMounts:
+            - mountPath: /etc/tls/private
+              name: proxy-tls
+            - mountPath: /etc/kube-rbac-proxy
+              name: proxy-config
+            {{ if .CustomCABundle }}
+            - mountPath: {{ .CustomCABundleRootMountPath  }}
+              name: ca-bundle
+            {{ end }}
       {{ if .APIServer.ResourceClaims }}
       resourceClaims:
       {{ range .APIServer.ResourceClaims }}

@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -160,7 +161,7 @@ func (r *AIPipelinesReconciler) reconcileMonitoringObject(
 	}
 
 	controller := metav1.GetControllerOf(current)
-	if controller != nil && controller.UID != module.UID {
+	if controller != nil && controller.UID != module.UID && !r.isLegacyCoreServiceMonitorOwner(current, controller) {
 		return false, fmt.Errorf(
 			"%s %q is controlled by %s %q with UID %q",
 			desired.GetKind(), current.GetName(), controller.Kind, controller.Name, controller.UID,
@@ -190,4 +191,20 @@ func (r *AIPipelinesReconciler) reconcileMonitoringObject(
 		return false, fmt.Errorf("update AIPipelines %s: %w", desired.GetKind(), err)
 	}
 	return true, nil
+}
+
+// isLegacyCoreServiceMonitorOwner permits the in-place handoff from the
+// pre-modular DataSciencePipelines component. Other monitoring objects and
+// owners must keep the normal controller ownership protection.
+func (r *AIPipelinesReconciler) isLegacyCoreServiceMonitorOwner(current *unstructured.Unstructured, owner *metav1.OwnerReference) bool {
+	if current.GetAPIVersion() != "monitoring.coreos.com/v1" ||
+		current.GetKind() != "ServiceMonitor" ||
+		current.GetName() != monitoringassets.CoreServiceMonitorName ||
+		current.GetNamespace() != r.Namespace ||
+		owner.Kind != legacyDataSciencePipelinesKind ||
+		owner.Name != legacyDataSciencePipelinesName {
+		return false
+	}
+	groupVersion, err := schema.ParseGroupVersion(owner.APIVersion)
+	return err == nil && groupVersion.Group == legacyDataSciencePipelinesGroup
 }

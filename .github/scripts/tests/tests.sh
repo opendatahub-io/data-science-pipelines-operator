@@ -18,10 +18,13 @@ SKIP_CLEANUP=false
 SETUP_ONLY=false
 K8SAPISERVERHOST=""
 DSPA_NAMESPACE="test-dspa"
+DSPA_NAME="test-dspa"
 DSPA_EXTERNAL_NAMESPACE="dspa-ext"
+DSPA_EXTERNAL_NAME="dspa-ext"
 DSPA_K8S_NAMESPACE="test-k8s-dspa"
+DSPA_K8S_NAME="test-k8s-dspa"
 DSPA_MLFLOW_NAMESPACE="test-dspa-mlflow"
-MINIO_NAMESPACE="test-minio"
+RUSTFS_NAMESPACE="test-rustfs"
 MARIADB_NAMESPACE="test-mariadb"
 PYPISERVER_NAMESPACE="test-pypiserver"
 CERT_MANAGER_NAMESPACE="cert-manager"
@@ -29,6 +32,7 @@ ARGO_NAMESPACE="argo"
 ARGO_VERSION="v3.6.7"
 DEPLOY_EXTERNAL_ARGO=false
 MODULAR=false
+LEGACY_SERVICE_MONITOR_UID=""
 AWF_MANAGEMENT_STATE="Managed"
 DSPA_DEPLOY_WAIT_TIMEOUT="300"
 INTEGRATION_TESTS_DIR="${GIT_WORKSPACE}/tests"
@@ -113,9 +117,46 @@ deploy_argo_lite() {
   ( cd "${GIT_WORKSPACE}/.github/resources/argo-lite" && kubectl -n $OPENDATAHUB_NAMESPACE apply -k . )
 }
 
+seed_legacy_service_monitor_owner() {
+  # Keep the legacy owner live until the module adopts the existing monitor.
+  # An owner reference to a nonexistent CR could be removed by garbage collection.
+  local fixture_dir="${GIT_WORKSPACE}/.github/resources/aipipelines"
+  kubectl apply -f "${fixture_dir}/legacy-datasciencecluster-crd.yaml"
+  kubectl wait crd/datascienceclusters.datasciencecluster.opendatahub.io --for=condition=Established --timeout=60s
+  kubectl create -f "${fixture_dir}/legacy-datasciencecluster.yaml"
+  local dsc_uid
+  dsc_uid=$(kubectl get datascienceclusters.datasciencecluster.opendatahub.io default-dsc -o jsonpath='{.metadata.uid}')
+  test -n "$dsc_uid"
+
+  kubectl apply -f "${fixture_dir}/legacy-datasciencepipelines-crd.yaml"
+  kubectl wait crd/datasciencepipelines.components.platform.opendatahub.io --for=condition=Established --timeout=60s
+  kubectl create -f "${fixture_dir}/legacy-datasciencepipelines.yaml"
+  kubectl patch datasciencepipelines.components.platform.opendatahub.io default-datasciencepipelines \
+    --type=merge \
+    -p "{\"metadata\":{\"ownerReferences\":[{\"apiVersion\":\"datasciencecluster.opendatahub.io/v2\",\"kind\":\"DataScienceCluster\",\"name\":\"default-dsc\",\"uid\":\"${dsc_uid}\",\"controller\":true,\"blockOwnerDeletion\":true}]}}"
+
+  local legacy_uid
+  legacy_uid=$(kubectl get datasciencepipelines.components.platform.opendatahub.io default-datasciencepipelines -o jsonpath='{.metadata.uid}')
+  test -n "$legacy_uid"
+  kubectl -n "$OPENDATAHUB_NAMESPACE" patch servicemonitor data-science-pipelines-operator-service-monitor \
+    --type=merge \
+    -p "{\"metadata\":{\"ownerReferences\":[{\"apiVersion\":\"components.platform.opendatahub.io/v1alpha1\",\"kind\":\"DataSciencePipelines\",\"name\":\"default-datasciencepipelines\",\"uid\":\"${legacy_uid}\",\"controller\":true,\"blockOwnerDeletion\":true}]}}"
+  local monitor_owner_uid
+  monitor_owner_uid=$(kubectl -n "$OPENDATAHUB_NAMESPACE" get servicemonitor data-science-pipelines-operator-service-monitor -o jsonpath='{.metadata.ownerReferences[0].uid}')
+  if [ "$monitor_owner_uid" != "$legacy_uid" ]; then
+    echo "ServiceMonitor was not seeded with the legacy DataSciencePipelines owner" >&2
+    return 1
+  fi
+  LEGACY_SERVICE_MONITOR_UID=$(kubectl -n "$OPENDATAHUB_NAMESPACE" get servicemonitor data-science-pipelines-operator-service-monitor -o jsonpath='{.metadata.uid}')
+  test -n "$LEGACY_SERVICE_MONITOR_UID"
+}
+
 enable_aipipelines_module() {
   if [ "$MODULAR" != true ]; then
     return
+  fi
+  if [ "$TARGET" = kind ]; then
+    seed_legacy_service_monitor_owner
   fi
   # Fail on an existing singleton/handshake: these tests own their fixtures.
   kubectl wait crd/aipipelines.components.platform.opendatahub.io --for=condition=Established --timeout=60s
@@ -128,6 +169,26 @@ enable_aipipelines_module() {
   kubectl rollout status -n "$OPENDATAHUB_NAMESPACE" deployment/data-science-pipelines-operator-controller-manager --timeout=300s
   kubectl wait aipipelines/default-aipipelines --for=condition=Ready=true --timeout=300s
   kubectl wait aipipelines/default-aipipelines --for=condition=ProvisioningSucceeded=true --timeout=300s
+  if [ "$TARGET" = kind ]; then
+    kubectl wait aipipelines/default-aipipelines --for=condition=MonitoringReady=true --timeout=300s
+    kubectl wait datasciencepipelines.components.platform.opendatahub.io/default-datasciencepipelines --for=delete --timeout=60s
+    local module_uid monitor_uid monitor_owner_uid monitor_owner_kind monitor_owner_name monitor_owner_controller
+    module_uid=$(kubectl get aipipelines default-aipipelines -o jsonpath='{.metadata.uid}')
+    monitor_uid=$(kubectl -n "$OPENDATAHUB_NAMESPACE" get servicemonitor data-science-pipelines-operator-service-monitor -o jsonpath='{.metadata.uid}')
+    monitor_owner_uid=$(kubectl -n "$OPENDATAHUB_NAMESPACE" get servicemonitor data-science-pipelines-operator-service-monitor -o jsonpath='{.metadata.ownerReferences[0].uid}')
+    monitor_owner_kind=$(kubectl -n "$OPENDATAHUB_NAMESPACE" get servicemonitor data-science-pipelines-operator-service-monitor -o jsonpath='{.metadata.ownerReferences[0].kind}')
+    monitor_owner_name=$(kubectl -n "$OPENDATAHUB_NAMESPACE" get servicemonitor data-science-pipelines-operator-service-monitor -o jsonpath='{.metadata.ownerReferences[0].name}')
+    monitor_owner_controller=$(kubectl -n "$OPENDATAHUB_NAMESPACE" get servicemonitor data-science-pipelines-operator-service-monitor -o jsonpath='{.metadata.ownerReferences[0].controller}')
+    test -n "$module_uid"
+    if [ "$monitor_uid" != "$LEGACY_SERVICE_MONITOR_UID" ] ||
+       [ "$monitor_owner_uid" != "$module_uid" ] ||
+       [ "$monitor_owner_kind" != AIPipelines ] ||
+       [ "$monitor_owner_name" != default-aipipelines ] ||
+       [ "$monitor_owner_controller" != true ]; then
+      echo "ServiceMonitor was not adopted by AIPipelines/default-aipipelines" >&2
+      return 1
+    fi
+  fi
 }
 
 deploy_argo_external() {
@@ -189,15 +250,19 @@ deploy_dspo_kind() {
   ( cd $GIT_WORKSPACE && make deploy-kind -e IMG="$IMG" )
 }
 
-deploy_minio() {
+deploy_rustfs() {
+  local fixture_path="${GIT_WORKSPACE}/.github/resources/rustfs"
+  if [ "${1:-}" = "kind" ]; then
+    fixture_path="${fixture_path}/kind"
+  fi
   echo "---------------------------------"
-  echo "Create Minio Namespace"
+  echo "Create RustFS Namespace"
   echo "---------------------------------"
-  kubectl create namespace $MINIO_NAMESPACE
+  kubectl create namespace $RUSTFS_NAMESPACE
   echo "---------------------------------"
-  echo "Deploy Minio"
+  echo "Deploy RustFS S3 fixture"
   echo "---------------------------------"
-  ( cd "${GIT_WORKSPACE}/.github/resources/minio" && kubectl -n $MINIO_NAMESPACE apply -k . )
+  kubectl -n "$RUSTFS_NAMESPACE" apply -k "$fixture_path"
 }
 
 deploy_mariadb() {
@@ -304,10 +369,10 @@ wait_for_dspo_redeploy() {
 
 wait_for_dependencies() {
   echo "---------------------------------"
-  echo "Wait for Dependencies (Minio, Mariadb, Pypi server)"
+  echo "Wait for Dependencies (RustFS, Mariadb, Pypi server)"
   echo "---------------------------------"
   kubectl wait -n $MARIADB_NAMESPACE --timeout=60s --for=condition=Available=true deployment mariadb
-  kubectl wait -n $MINIO_NAMESPACE --timeout=60s --for=condition=Available=true deployment minio
+  kubectl wait -n $RUSTFS_NAMESPACE --timeout=300s --for=condition=Available=true deployment rustfs
   kubectl wait -n $PYPISERVER_NAMESPACE --timeout=60s --for=condition=Available=true deployment pypi-server
 }
 
@@ -399,9 +464,9 @@ copy_mlflow_ca_bundle() {
     --dry-run=client -o yaml | kubectl apply -f -
 }
 
-apply_mariadb_minio_secrets_configmaps_external_namespace() {
+apply_mariadb_rustfs_secrets_configmaps_external_namespace() {
   echo "---------------------------------"
-  echo "Apply MariaDB and Minio Secrets and Configmaps in the External Namespace"
+  echo "Apply MariaDB and RustFS Secrets and Configmaps in the External Namespace"
   echo "---------------------------------"
   ( cd "${GIT_WORKSPACE}/.github/resources/external-pre-reqs" && kubectl -n $DSPA_EXTERNAL_NAMESPACE apply -k . )
 }
@@ -441,7 +506,7 @@ run_tests_dspa_external_connections() {
   echo "---------------------------------"
   echo "Run tests for DSPA with External Connections"
   echo "---------------------------------"
-  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_EXTERNAL_NAMESPACE} DSPAPATH=${DSPA_EXTERNAL_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} MINIONAMESPACE=${MINIO_NAMESPACE} INTTEST_AWF_MANAGEMENT_STATE=${AWF_MANAGEMENT_STATE} INTTEST_SKIP_DEPLOY=${SKIP_DEPLOY} INTTEST_SKIP_CLEANUP=${SKIP_CLEANUP})
+  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_EXTERNAL_NAMESPACE} DSPAPATH=${DSPA_EXTERNAL_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} OBJECTSTORAGENAMESPACE=${RUSTFS_NAMESPACE} INTTEST_AWF_MANAGEMENT_STATE=${AWF_MANAGEMENT_STATE} INTTEST_SKIP_DEPLOY=${SKIP_DEPLOY} INTTEST_SKIP_CLEANUP=${SKIP_CLEANUP})
 }
 
 run_tests_dspa_k8s() {
@@ -523,10 +588,32 @@ wait_for_dspa_mlflow_plugin() {
   fi
 }
 
+verify_dspo_applications_namespace() {
+  local deployment_name="data-science-pipelines-operator-controller-manager"
+  local configured
+  echo "---------------------------------"
+  echo "Verify DSPO APPLICATIONS_NAMESPACE (${deployment_name})"
+  echo "---------------------------------"
+  # MLflow AUTODETECT resolves the platform MLflow CR via APPLICATIONS_NAMESPACE and
+  # the MLflow egress NetworkPolicy peers are scoped to it. The platform operator
+  # injects this value in managed deployments, and config/overlays/kind-tests sets it
+  # for standalone CI deployments. Fail fast instead of timing out waiting for the
+  # MLflow plugin when the value is missing or points at the wrong namespace.
+  configured="$(kubectl get deployment -n "${OPENDATAHUB_NAMESPACE}" "${deployment_name}" \
+    -o 'jsonpath={.spec.template.spec.containers[?(@.name=="manager")].env[?(@.name=="APPLICATIONS_NAMESPACE")].value}')"
+  if [ "${configured}" != "${MLFLOW_NAMESPACE}" ]; then
+    echo "APPLICATIONS_NAMESPACE on the DSPO deployment is '${configured:-<unset>}' but MLflow is deployed in '${MLFLOW_NAMESPACE}'." >&2
+    echo "Deploy DSPO with APPLICATIONS_NAMESPACE=${MLFLOW_NAMESPACE} so the MLflow CR lookup and the MLflow egress peers match." >&2
+    return 1
+  fi
+  echo "DSPO APPLICATIONS_NAMESPACE=${configured}"
+}
+
 run_tests_dspa_mlflow() {
   echo "---------------------------------"
   echo "Run DSP MLflow tests for DSPA with MLflow enabled"
   echo "---------------------------------"
+  verify_dspo_applications_namespace
   create_dspa_mlflow_namespace
   copy_mlflow_ca_bundle
   deploy_dspa_mlflow
@@ -564,7 +651,7 @@ remove_namespace_created_for_rhoai() {
   kubectl delete projects $DSPA_NAMESPACE --now || true
   kubectl delete projects $DSPA_EXTERNAL_NAMESPACE --now || true
   kubectl delete projects $DSPA_K8S_NAMESPACE --now || true
-  kubectl delete projects $MINIO_NAMESPACE --now || true
+  kubectl delete projects $RUSTFS_NAMESPACE --now || true
   kubectl delete projects $MARIADB_NAMESPACE --now || true
   kubectl delete projects $PYPISERVER_NAMESPACE --now || true
 }
@@ -576,7 +663,7 @@ setup_kind_requirements() {
   deploy_argo_lite
   deploy_dspo_kind
   enable_aipipelines_module
-  deploy_minio
+  deploy_rustfs kind
   deploy_mariadb
   deploy_pypi_server
   deploy_cert_manager
@@ -588,8 +675,13 @@ setup_kind_requirements() {
   create_namespace_dspa_external_connections
   create_dspa_k8s_namespace
   create_dspa_mlflow_namespace
-  apply_mariadb_minio_secrets_configmaps_external_namespace
-  configure_kind_service_ca "$DSPA_EXTERNAL_NAMESPACE" "dspa-ext"
+  apply_mariadb_rustfs_secrets_configmaps_external_namespace
+  # Kind has no OpenShift service-ca. Mint the proxy TLS secrets the always-on
+  # kube-rbac-proxy-metrics sidecar mounts (ds-pipelines-proxy-tls-<dspa>).
+  configure_kind_service_ca "$DSPA_NAMESPACE" "$DSPA_NAME"
+  configure_kind_service_ca "$DSPA_EXTERNAL_NAMESPACE" "$DSPA_EXTERNAL_NAME"
+  configure_kind_service_ca "$DSPA_K8S_NAMESPACE" "$DSPA_K8S_NAME"
+  configure_kind_service_ca "$DSPA_MLFLOW_NAMESPACE" "$DSPA_MLFLOW_NAME"
   apply_pip_server_configmap
 }
 
@@ -599,7 +691,7 @@ setup_openshift_ci_requirements() {
   deploy_argo_lite
   deploy_dspo
   enable_aipipelines_module
-  deploy_minio
+  deploy_rustfs
   deploy_mariadb
   deploy_pypi_server
   wait_for_dspo_dependencies
@@ -610,12 +702,12 @@ setup_openshift_ci_requirements() {
   create_namespace_dspa_external_connections
   create_dspa_k8s_namespace
   create_dspa_mlflow_namespace
-  apply_mariadb_minio_secrets_configmaps_external_namespace
+  apply_mariadb_rustfs_secrets_configmaps_external_namespace
   apply_pip_server_configmap
 }
 
 setup_rhoai_requirements() {
-  deploy_minio
+  deploy_rustfs
   deploy_mariadb
   deploy_pypi_server
   wait_for_dependencies
@@ -625,7 +717,7 @@ setup_rhoai_requirements() {
   create_namespace_dspa_external_connections
   create_dspa_k8s_namespace
   create_dspa_mlflow_namespace
-  apply_mariadb_minio_secrets_configmaps_external_namespace
+  apply_mariadb_rustfs_secrets_configmaps_external_namespace
   apply_pip_server_configmap
 }
 

@@ -5,7 +5,6 @@ package main
 import (
 	"context"
 	"crypto/tls"
-	"errors"
 	"testing"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -15,73 +14,29 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 )
 
-func TestClassifyTLSAdherenceFetchError(t *testing.T) {
-	tests := []struct {
-		name   string
-		err    error
-		action tlsAdherenceFetchAction
-	}{
-		{
-			name:   "not found",
-			err:    apierrors.NewNotFound(schema.GroupResource{Group: "config.openshift.io", Resource: "apiservers"}, "cluster"),
-			action: tlsAdherenceFetchRetry,
-		},
-		{
-			name:   "internal error",
-			err:    apierrors.NewInternalError(errors.New("apiserver unavailable")),
-			action: tlsAdherenceFetchRetry,
-		},
-		{
-			name:   "deadline exceeded",
-			err:    context.DeadlineExceeded,
-			action: tlsAdherenceFetchRetry,
-		},
-		{
-			name:   "timeout",
-			err:    apierrors.NewTimeoutError("timed out", 0),
-			action: tlsAdherenceFetchRetry,
-		},
-		{
-			name:   "forbidden",
-			err:    apierrors.NewForbidden(schema.GroupResource{Group: "config.openshift.io", Resource: "apiservers"}, "cluster", errors.New("denied")),
-			action: tlsAdherenceFetchFatal,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.action, classifyTLSAdherenceFetchError(tt.err))
-		})
-	}
+// newTLSTestClient builds a fake client serving config.openshift.io with the
+// optional APIServer object and Get interceptor.
+func newTLSTestClient(t *testing.T, objs ...client.Object) *fake.ClientBuilder {
+	t.Helper()
+	scheme := runtime.NewScheme()
+	require.NoError(t, configv1.Install(scheme))
+	return fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...)
 }
 
-func TestIsTransientOpenShiftAPIError(t *testing.T) {
-	tests := []struct {
-		name      string
-		err       error
-		transient bool
-	}{
-		{name: "internal error", err: apierrors.NewInternalError(errors.New("apiserver unavailable")), transient: false},
-		{name: "deadline exceeded", err: context.DeadlineExceeded, transient: true},
-		{name: "timeout", err: apierrors.NewTimeoutError("timed out", 0), transient: true},
-		{name: "forbidden", err: apierrors.NewForbidden(schema.GroupResource{Group: "config.openshift.io", Resource: "apiservers"}, "cluster", errors.New("denied")), transient: false},
-		{name: "not found", err: apierrors.NewNotFound(schema.GroupResource{Group: "config.openshift.io", Resource: "apiservers"}, "cluster"), transient: false},
+func applyTLSOpts(result *tlsResult) *tls.Config {
+	cfg := &tls.Config{}
+	for _, fn := range result.TLSOpts {
+		fn(cfg)
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.transient, isTransientOpenShiftAPIError(tt.err))
-		})
-	}
+	return cfg
 }
 
 func TestFetchTLSProfile_IntermediateProfile(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, configv1.Install(scheme))
-
 	apiServer := &configv1.APIServer{
 		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
 		Spec: configv1.APIServerSpec{
@@ -90,26 +45,21 @@ func TestFetchTLSProfile_IntermediateProfile(t *testing.T) {
 			},
 		},
 	}
-	cli := fake.NewClientBuilder().WithScheme(scheme).WithObjects(apiServer).Build()
+	cli := newTLSTestClient(t, apiServer).Build()
 
 	result, err := fetchTLSProfile(context.Background(), cli)
 	require.NoError(t, err)
 	assert.True(t, result.HasOpenShiftConfig)
+	assert.True(t, result.AdherenceFetched)
 	assert.NotEmpty(t, result.TLSOpts)
 
-	cfg := &tls.Config{}
-	for _, fn := range result.TLSOpts {
-		fn(cfg)
-	}
+	cfg := applyTLSOpts(result)
 	assert.Equal(t, uint16(tls.VersionTLS12), cfg.MinVersion)
 	assert.NotEmpty(t, cfg.CipherSuites)
 	assert.Equal(t, []string{"h2", "http/1.1"}, cfg.NextProtos)
 }
 
 func TestFetchTLSProfile_ModernProfile(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, configv1.Install(scheme))
-
 	apiServer := &configv1.APIServer{
 		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
 		Spec: configv1.APIServerSpec{
@@ -118,18 +68,34 @@ func TestFetchTLSProfile_ModernProfile(t *testing.T) {
 			},
 		},
 	}
-	cli := fake.NewClientBuilder().WithScheme(scheme).WithObjects(apiServer).Build()
+	cli := newTLSTestClient(t, apiServer).Build()
 
 	result, err := fetchTLSProfile(context.Background(), cli)
 	require.NoError(t, err)
 	assert.True(t, result.HasOpenShiftConfig)
 
-	cfg := &tls.Config{}
-	for _, fn := range result.TLSOpts {
-		fn(cfg)
-	}
+	cfg := applyTLSOpts(result)
 	assert.Equal(t, uint16(tls.VersionTLS13), cfg.MinVersion)
 	assert.Equal(t, []string{"h2", "http/1.1"}, cfg.NextProtos)
+}
+
+func TestFetchTLSProfile_AdherenceReadFromSameObject(t *testing.T) {
+	apiServer := &configv1.APIServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: configv1.APIServerSpec{
+			TLSSecurityProfile: &configv1.TLSSecurityProfile{
+				Type: configv1.TLSProfileIntermediateType,
+			},
+			TLSAdherence: configv1.TLSAdherencePolicyStrictAllComponents,
+		},
+	}
+	cli := newTLSTestClient(t, apiServer).Build()
+
+	result, err := fetchTLSProfile(context.Background(), cli)
+	require.NoError(t, err)
+	assert.True(t, result.HasOpenShiftConfig)
+	assert.True(t, result.AdherenceFetched)
+	assert.Equal(t, configv1.TLSAdherencePolicyStrictAllComponents, result.Adherence)
 }
 
 func TestFetchTLSProfile_UnrecognizedError(t *testing.T) {
@@ -145,47 +111,69 @@ func TestFetchTLSProfile_UnrecognizedError(t *testing.T) {
 }
 
 func TestFetchTLSProfile_APIServerNotFound(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, configv1.Install(scheme))
-
-	cli := fake.NewClientBuilder().WithScheme(scheme).Build()
+	cli := newTLSTestClient(t).Build()
 
 	result, err := fetchTLSProfile(context.Background(), cli)
 	require.NoError(t, err)
-	assert.False(t, result.HasOpenShiftConfig)
+	// NotFound on a served config API is a bootstrap race: the watcher must
+	// still register so the real profile is picked up once the object exists.
+	assert.True(t, result.HasOpenShiftConfig)
+	assert.True(t, result.AdherenceFetched)
+	assert.Equal(t, configv1.TLSAdherencePolicyNoOpinion, result.Adherence)
 
-	cfg := &tls.Config{}
-	for _, fn := range result.TLSOpts {
-		fn(cfg)
-	}
+	cfg := applyTLSOpts(result)
 	assert.Equal(t, uint16(tls.VersionTLS12), cfg.MinVersion)
 	assert.NotEmpty(t, cfg.CipherSuites)
 	assert.Equal(t, []string{"h2", "http/1.1"}, cfg.NextProtos)
 }
 
-func TestFetchTLSProfile_NextProtosAlwaysSet(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, configv1.Install(scheme))
+func TestFetchTLSProfile_TransientError(t *testing.T) {
+	// Transient API errors fall back to Intermediate and keep the watcher
+	// registered so the operator self-heals when the API recovers.
+	cli := newTLSTestClient(t).WithInterceptorFuncs(interceptor.Funcs{
+		Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
+			return apierrors.NewServiceUnavailable("apiserver restarting")
+		},
+	}).Build()
 
+	result, err := fetchTLSProfile(context.Background(), cli)
+	require.NoError(t, err)
+	assert.True(t, result.HasOpenShiftConfig)
+	assert.True(t, result.AdherenceFetched)
+	assert.Equal(t, configv1.TLSAdherencePolicyNoOpinion, result.Adherence)
+
+	cfg := applyTLSOpts(result)
+	assert.Equal(t, uint16(tls.VersionTLS12), cfg.MinVersion)
+	assert.NotEmpty(t, cfg.CipherSuites)
+	assert.Equal(t, []string{"h2", "http/1.1"}, cfg.NextProtos)
+}
+
+func TestFetchTLSProfile_HardErrorFailsStartup(t *testing.T) {
+	cli := newTLSTestClient(t).WithInterceptorFuncs(interceptor.Funcs{
+		Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
+			return apierrors.NewForbidden(schema.GroupResource{Group: "config.openshift.io", Resource: "apiservers"}, "cluster", assert.AnError)
+		},
+	}).Build()
+
+	_, err := fetchTLSProfile(context.Background(), cli)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to fetch TLS profile")
+}
+
+func TestFetchTLSProfile_NextProtosAlwaysSet(t *testing.T) {
 	apiServer := &configv1.APIServer{
 		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
 	}
-	cli := fake.NewClientBuilder().WithScheme(scheme).WithObjects(apiServer).Build()
+	cli := newTLSTestClient(t, apiServer).Build()
 
 	result, err := fetchTLSProfile(context.Background(), cli)
 	require.NoError(t, err)
 
-	cfg := &tls.Config{}
-	for _, fn := range result.TLSOpts {
-		fn(cfg)
-	}
+	cfg := applyTLSOpts(result)
 	assert.Equal(t, []string{"h2", "http/1.1"}, cfg.NextProtos)
 }
 
 func TestFetchTLSProfile_AllCiphersUnsupported(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, configv1.Install(scheme))
-
 	apiServer := &configv1.APIServer{
 		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
 		Spec: configv1.APIServerSpec{
@@ -200,7 +188,7 @@ func TestFetchTLSProfile_AllCiphersUnsupported(t *testing.T) {
 			},
 		},
 	}
-	cli := fake.NewClientBuilder().WithScheme(scheme).WithObjects(apiServer).Build()
+	cli := newTLSTestClient(t, apiServer).Build()
 
 	_, err := fetchTLSProfile(context.Background(), cli)
 	require.Error(t, err)

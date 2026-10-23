@@ -18,10 +18,15 @@ package v1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
+
+// DisableManagedPipelinesAnnotation is a persistent opt-out that can be set
+// before upgrading to an operator that enables managed pipelines by default.
+const DisableManagedPipelinesAnnotation = "datasciencepipelinesapplications.opendatahub.io/disable-managed-pipelines"
 
 type DSPASpec struct {
 	// DS Pipelines API Server configuration.
@@ -62,6 +67,17 @@ type DSPASpec struct {
 	// Set integrationMode to DISABLED to opt out of MLflow integration.
 	// +kubebuilder:validation:Optional
 	MLflow *MLflowConfig `json:"mlflow,omitempty"`
+
+	// NetworkPolicy configures administrator overrides for operand NetworkPolicies.
+	// Omitted or empty egress lists use the operator's default outbound rules.
+	// +kubebuilder:validation:Optional
+	NetworkPolicy *NetworkPolicySpec `json:"networkPolicy,omitempty"`
+
+	// ServiceAccountAnnotations allows users to specify arbitrary annotations
+	// to be applied to DSPA-managed ServiceAccounts (ml-pipeline, pipeline-runner).
+	// Typically used for IRSA/Workload Identity configurations (e.g., eks.amazonaws.com/role-arn).
+	// +kubebuilder:validation:Optional
+	ServiceAccountAnnotations map[string]string `json:"serviceAccountAnnotations,omitempty"`
 }
 
 // +kubebuilder:validation:Pattern=`^(Managed|Removed)$`
@@ -92,6 +108,11 @@ type ManagedPipeline struct {
 // MANAGED_PIPELINES_UPLOAD_TAGS (managed=true and rhoai-version from DSPO platform version). The same tag env is set on the ds-pipeline-api-server container.
 // Init writes <name>.yaml per pipeline and managed-pipelines.json on the volume.
 type ManagedPipelinesSpec struct {
+	// Enabled controls managed pipeline compilation and uploads. Defaults to true when omitted.
+	// Set to false to disable managed pipelines. The disable-managed-pipelines annotation
+	// set to "true" overrides this field; remove that annotation before re-enabling.
+	// +kubebuilder:validation:Optional
+	Enabled *bool `json:"enabled,omitempty"`
 	// Container image for the init-managed-pipelines step (pipelines-components). Optional: when omitted, empty (""), or whitespace-only, DSPO uses operator config Images.PipelinesComponents
 	// (populated from IMAGES_PIPELINES_COMPONENTS in params.env / dspo-config). Set explicitly only to override the operator default for this DSPA.
 	// +kubebuilder:validation:Optional
@@ -150,6 +171,13 @@ type APIServer struct {
 	// Driver image used during pipeline execution.
 	ArgoDriverImage string `json:"argoDriverImage,omitempty"`
 	// Configures managed pipelines compiled and uploaded via an init container.
+	// The operator enables all bundled pipelines when omitted or null, including for existing DSPAs on upgrade.
+	// To disable after upgrading, set managedPipelines.enabled to false.
+	// To opt out before upgrading, set the annotation
+	// datasciencepipelinesapplications.opendatahub.io/disable-managed-pipelines: "true"
+	// The annotation overrides this configuration, including enabled: true.
+	// +kubebuilder:validation:Optional
+	// +nullable
 	ManagedPipelines *ManagedPipelinesSpec `json:"managedPipelines,omitempty"`
 	// Specify custom Pod resource requirements for this component.
 	Resources *ResourceRequirements `json:"resources,omitempty"`
@@ -372,6 +400,7 @@ type ObjectStorage struct {
 	// Enable DS Pipelines Operator management of Minio. Setting Deploy to false disables operator reconciliation.
 	*Minio           `json:"minio,omitempty"`
 	*ExternalStorage `json:"externalStorage,omitempty"`
+	// True when credential mode is set to fromEnv
 	// Default: false
 	// +kubebuilder:default:=false
 	// +kubebuilder:validation:Optional
@@ -485,6 +514,7 @@ type Resources struct {
 	Memory resource.Quantity `json:"memory,omitempty"`
 }
 
+// +kubebuilder:validation:XValidation:rule="has(self.s3CredentialsSecret) || (has(self.credentialsMode) && self.credentialsMode.fromEnv)",message="s3CredentialsSecret is required unless credentialsMode.fromEnv is true"
 type ExternalStorage struct {
 	// +kubebuilder:validation:Required
 	Host   string `json:"host"`
@@ -494,12 +524,14 @@ type ExternalStorage struct {
 	Region string `json:"region"`
 	// Subpath where objects should be stored for this DSPA
 	// +kubebuilder:validation:Optional
-	BasePath            string `json:"basePath"`
-	*S3CredentialSecret `json:"s3CredentialsSecret"`
+	BasePath string `json:"basePath"`
+	// +kubebuilder:validation:Optional
+	*S3CredentialSecret `json:"s3CredentialsSecret,omitempty"`
 	// +kubebuilder:validation:Optional
 	Secure *bool `json:"secure"`
 	// +kubebuilder:validation:Optional
-	Port string `json:"port"`
+	Port             string `json:"port"`
+	*CredentialsMode `json:"credentialsMode,omitempty"`
 }
 
 type S3CredentialSecret struct {
@@ -515,6 +547,42 @@ type SecretKeyValue struct {
 	// +kubebuilder:validation:Required
 	Name string `json:"name"`
 	Key  string `json:"key"`
+}
+
+// NetworkPolicySpec configures administrator overrides for operand NetworkPolicies.
+type NetworkPolicySpec struct {
+	// Egress configures outbound overrides. The API server and workflow controller
+	// accept additional rules only. The driver policy is operator-generated and has
+	// no CRD overrides.
+	// +kubebuilder:validation:Optional
+	Egress *NetworkPolicyEgressSpec `json:"egress,omitempty"`
+}
+
+// NetworkPolicyEgressSpec holds per-workload outbound overrides.
+type NetworkPolicyEgressSpec struct {
+	// APIServer appends outbound rules for the Pipelines API server.
+	// The operator-generated API server policy is the supported baseline and cannot be replaced.
+	// +kubebuilder:validation:Optional
+	APIServer *WorkloadEgressSpec `json:"apiServer,omitempty"`
+	// WorkflowController appends outbound rules for the Argo workflow controller.
+	// The operator-generated workflow controller policy is the supported baseline and
+	// cannot be replaced.
+	// +kubebuilder:validation:Optional
+	WorkflowController *WorkloadEgressSpec `json:"workflowController,omitempty"`
+}
+
+// WorkloadEgressSpec appends outbound NetworkPolicy rules for a DSPA workload.
+// The operator-generated policy for the workload is the supported baseline and cannot be replaced.
+// Use additionalRules for destinations DSPO cannot know at reconcile time, such as a
+// user-supplied pipeline spec URL on a nonstandard port.
+// A rule with neither ports nor a destination is rejected, because that shape allows every connection.
+// +kubebuilder:validation:XValidation:rule="!has(self.additionalRules) || self.additionalRules.all(r, (has(r.ports) && size(r.ports) > 0) || (has(r.to) && size(r.to) > 0))",message="each additionalRules entry must specify at least one port or one destination"
+type WorkloadEgressSpec struct {
+	// AdditionalRules is appended after the operator-generated egress list of the workload.
+	// It does not remove the defaults.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxItems=32
+	AdditionalRules []networkingv1.NetworkPolicyEgressRule `json:"additionalRules,omitempty"`
 }
 
 type ProxyConfig struct {
@@ -533,6 +601,23 @@ type ProxyConfig struct {
 	// If unset, a safe default for in-cluster traffic is set.
 	// +kubebuilder:validation:Optional
 	NoProxy string `json:"noProxy,omitempty"`
+}
+
+type CredentialsMode struct {
+	// FromEnv indicates whether object storage credentials should be obtained from
+	// environment variables (e.g., via IRSA, Workload Identity) rather than from a Kubernetes secret.
+	// When true, credentials are expected to be provided via the environment (projected service account tokens).
+	// When false or omitted, credentials are retrieved from the configured Kubernetes secret.
+	// Default: false
+	// +kubebuilder:default:=false
+	// +kubebuilder:validation:Optional
+	FromEnv bool `json:"fromEnv"`
+}
+
+// IsFromEnv returns true if credentials should be obtained from environment variables.
+// Returns false if CredentialsMode is nil or FromEnv is false.
+func (c *CredentialsMode) IsFromEnv() bool {
+	return c != nil && c.FromEnv
 }
 
 type DSPAStatus struct {
@@ -583,6 +668,16 @@ type DataSciencePipelinesApplication struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	Spec              DSPASpec   `json:"spec,omitempty"`
 	Status            DSPAStatus `json:"status,omitempty"`
+}
+
+// ManagedPipelinesEnabled resolves the spec, operator default, and annotation opt-out without
+// modifying the stored managed-pipeline configuration.
+func (d *DataSciencePipelinesApplication) ManagedPipelinesEnabled() bool {
+	if d.Spec.APIServer == nil || d.Annotations[DisableManagedPipelinesAnnotation] == "true" {
+		return false
+	}
+	managed := d.Spec.APIServer.ManagedPipelines
+	return managed == nil || managed.Enabled == nil || *managed.Enabled
 }
 
 //+kubebuilder:object:root=true

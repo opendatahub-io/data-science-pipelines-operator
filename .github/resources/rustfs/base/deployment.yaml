@@ -1,0 +1,76 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: rustfs
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rustfs
+  template:
+    metadata:
+      labels:
+        app: rustfs
+    spec:
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: rustfs
+        - name: rustfs-certs
+          secret:
+            secretName: rustfs-certs
+            items:
+              - key: public.crt
+                path: rustfs_cert.pem
+              - key: private.key
+                path: rustfs_key.pem
+            defaultMode: 420
+      containers:
+        - resources:
+            limits:
+              cpu: "1"
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          name: rustfs
+          env:
+            - name: RUSTFS_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rustfs
+                  key: accesskey
+            - name: RUSTFS_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rustfs
+                  key: secretkey
+            - name: RUSTFS_VOLUMES
+              value: /data
+            - name: RUSTFS_ADDRESS
+              value: "0.0.0.0:9000"
+            - name: RUSTFS_CONSOLE_ADDRESS
+              value: "0.0.0.0:9001"
+            - name: RUSTFS_TLS_PATH
+              value: /opt/tls
+            - name: RUSTFS_OBS_LOG_DIRECTORY
+              value: /data/logs
+          ports:
+            - containerPort: 9000
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 9000
+              scheme: HTTPS
+            periodSeconds: 5
+            timeoutSeconds: 5
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: rustfs-certs
+              mountPath: /opt/tls
+              readOnly: true
+          image: 'docker.io/rustfs/rustfs:1.0.1@sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c'
+  strategy:
+    type: Recreate

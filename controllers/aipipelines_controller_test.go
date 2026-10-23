@@ -203,10 +203,22 @@ func TestAIPipelinesReconcileUpdatesStatus(t *testing.T) {
 	scheme.AddKnownTypeWithName(legacyDataSciencePipelinesGVK, &unstructured.Unstructured{})
 	module := newTestAIPipelines(common.Managed)
 	legacy := newLegacyDataSciencePipelines()
+	legacy.SetUID("legacy-uid")
 	legacy.SetOwnerReferences([]metav1.OwnerReference{{
 		APIVersion: "datasciencecluster.opendatahub.io/v2",
 		Kind:       "DataScienceCluster",
 		Name:       "default-dsc",
+	}})
+	legacyMonitor, err := monitoringassets.CoreServiceMonitor("opendatahub")
+	require.NoError(t, err)
+	legacyMonitor.SetUID("monitor-uid")
+	isController := true
+	legacyMonitor.SetOwnerReferences([]metav1.OwnerReference{{
+		APIVersion: legacyDataSciencePipelinesGVK.GroupVersion().String(),
+		Kind:       legacyDataSciencePipelinesKind,
+		Name:       legacyDataSciencePipelinesName,
+		UID:        legacy.GetUID(),
+		Controller: &isController,
 	}})
 	dspoDeployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{Name: dspoDeploymentName, Namespace: "opendatahub", Generation: 1},
@@ -222,7 +234,7 @@ func TestAIPipelinesReconcileUpdatesStatus(t *testing.T) {
 	k8sClient := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithStatusSubresource(&aipipelinesv1alpha1.AIPipelines{}).
-		WithObjects(module, dspoDeployment, platformConfig, legacy).
+		WithObjects(module, dspoDeployment, platformConfig, legacy, legacyMonitor).
 		Build()
 	assets, err := argoassets.Objects("opendatahub")
 	require.NoError(t, err)
@@ -247,22 +259,46 @@ func TestAIPipelinesReconcileUpdatesStatus(t *testing.T) {
 	}
 	setArgoCRDsEstablished(t, context.Background(), k8sClient, "opendatahub", metav1.ConditionTrue)
 	reconciler := &AIPipelinesReconciler{
-		Client: k8sClient, APIReader: k8sClient, Scheme: scheme,
+		Client: &failCoreServiceMonitorUpdateOnceClient{Client: k8sClient}, APIReader: k8sClient, Scheme: scheme,
 		Namespace: "opendatahub", MonitoringNamespace: "odh-monitoring",
 	}
 
-	result, err := reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{
+	request := ctrl.Request{NamespacedName: types.NamespacedName{
 		Name: aipipelinesv1alpha1.AIPipelinesInstanceName,
-	}})
-	require.NoError(t, err)
-	require.Equal(t, config.DefaultRequeueTime, result.RequeueAfter)
+	}}
+	_, err = reconciler.Reconcile(context.Background(), request)
+	require.ErrorContains(t, err, "injected ServiceMonitor update failure")
 
 	updated := &aipipelinesv1alpha1.AIPipelines{}
 	require.NoError(t, k8sClient.Get(context.Background(), types.NamespacedName{Name: module.Name}, updated))
+	require.Equal(t, common.PhaseNotReady, updated.Status.Phase)
+	require.Nil(t, updated.Status.GetRelease("Kubeflow Pipelines"))
+	require.Equal(t, metav1.ConditionFalse, requireModuleCondition(t, updated.Status.Conditions, conditionTypeMonitoringReady).Status)
+	require.NoError(t, k8sClient.Get(context.Background(), client.ObjectKeyFromObject(legacy), newLegacyDataSciencePipelines()))
+	unchangedMonitor := &unstructured.Unstructured{}
+	unchangedMonitor.SetGroupVersionKind(legacyMonitor.GroupVersionKind())
+	require.NoError(t, k8sClient.Get(context.Background(), client.ObjectKeyFromObject(legacyMonitor), unchangedMonitor))
+	require.Equal(t, legacy.GetUID(), metav1.GetControllerOf(unchangedMonitor).UID)
+
+	result, err := reconciler.Reconcile(context.Background(), request)
+	require.NoError(t, err)
+	require.Equal(t, config.DefaultRequeueTime, result.RequeueAfter)
+
+	require.NoError(t, k8sClient.Get(context.Background(), types.NamespacedName{Name: module.Name}, updated))
 	require.Equal(t, common.PhaseReady, updated.Status.Phase)
+	require.Equal(t, metav1.ConditionTrue, requireModuleCondition(t, updated.Status.Conditions, conditionTypeMonitoringReady).Status)
 	require.Equal(t, "3.6.0", updated.Status.GetPlatformRelease())
+	componentRelease := updated.Status.GetRelease("Kubeflow Pipelines")
+	require.NotNil(t, componentRelease)
+	require.NotEmpty(t, componentRelease.Version)
+	require.Equal(t, "https://github.com/kubeflow/pipelines", componentRelease.RepoURL)
 	require.Equal(t, metav1.ConditionTrue, requireModuleCondition(t, updated.Status.Conditions, "PlatformConfigurationValid").Status)
 	require.True(t, apierrors.IsNotFound(k8sClient.Get(context.Background(), client.ObjectKeyFromObject(legacy), newLegacyDataSciencePipelines())))
+	adoptedMonitor := &unstructured.Unstructured{}
+	adoptedMonitor.SetGroupVersionKind(legacyMonitor.GroupVersionKind())
+	require.NoError(t, k8sClient.Get(context.Background(), client.ObjectKeyFromObject(legacyMonitor), adoptedMonitor))
+	require.Equal(t, legacyMonitor.GetUID(), adoptedMonitor.GetUID())
+	require.True(t, metav1.IsControlledBy(adoptedMonitor, module))
 
 	require.NoError(t, k8sClient.Get(context.Background(), client.ObjectKeyFromObject(platformConfig), platformConfig))
 	platformConfig.Data[platformVersionKey] = "3.7.0"
@@ -471,6 +507,24 @@ type prometheusRuleCreateNotFoundClient struct {
 
 type clusterRoleBindingCreateForbiddenClient struct {
 	client.Client
+}
+
+type failCoreServiceMonitorUpdateOnceClient struct {
+	client.Client
+	failed bool
+}
+
+func (c *failCoreServiceMonitorUpdateOnceClient) Update(
+	ctx context.Context,
+	object client.Object,
+	opts ...client.UpdateOption,
+) error {
+	if !c.failed && object.GetObjectKind().GroupVersionKind().Kind == "ServiceMonitor" &&
+		object.GetName() == monitoringassets.CoreServiceMonitorName {
+		c.failed = true
+		return errors.New("injected ServiceMonitor update failure")
+	}
+	return c.Client.Update(ctx, object, opts...)
 }
 
 func (c *clusterRoleBindingCreateForbiddenClient) Create(

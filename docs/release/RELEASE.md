@@ -17,7 +17,21 @@ DSPO and DSP versioning is tied together
 > Note: In main branch all images should point to `latest` and not any specific versions, as `main` is rapidly moving,
 > it is likely to quickly become incompatible with any specific tags/shas that are hardcoded.
 
-For release notes: upgrading DSPO may cause a **one-time** API server pod rollout for DSPAs that use `managedPipelines`, because `configHash` reflects resolved params (including defaulted pipelines-components image), not only the CR spec.
+For release notes: upgrading DSPO enables managed pipelines by default, including for existing DSPAs that omitted `spec.apiServer.managedPipelines` and previously had the feature disabled. On reconciliation, adding the managed-pipelines init container, volume, and API server configuration changes the pod template and triggers an API server pod rollout. DSPAs already using managed pipelines may also have a **one-time** rollout because `configHash` reflects resolved params (including the defaulted pipelines-components image), not only the CR spec.
+
+To keep managed pipelines disabled, add the following annotation to each affected DSPA **before upgrading**:
+
+```yaml
+metadata:
+  annotations:
+    datasciencepipelinesapplications.opendatahub.io/disable-managed-pipelines: "true"
+```
+
+This annotation prevents managed-pipeline enablement; other upgrade changes may still trigger a rollout. After upgrading, `spec.apiServer.managedPipelines.enabled: false` also disables the feature. The annotation takes precedence over `enabled: true` and must be removed before re-enabling managed pipelines through the spec.
+
+Rollback caveat: older DSPO versions do not recognize `spec.apiServer.managedPipelines.enabled` or the `disable-managed-pipelines` annotation, and they enable managed pipelines only when the `managedPipelines` object is present. If an admin disables the feature with `enabled: false` and the operator is rolled back while that object remains, managed pipelines are re-enabled and imported again. To keep managed pipelines disabled across a rollback, remove the `managedPipelines` object and set the annotation to `"true"`: the older operator disables the feature because the object is absent, while the current operator keeps it disabled because of the annotation.
+
+For release notes: operand egress NetworkPolicies allow the API server outbound HTTPS on port 443 by default. Uploading or launching a pipeline from a server that is not on port 443 requires `spec.networkPolicy.egress.apiServer.additionalRules` for that port.
 
 ## Release pre-requisites
 

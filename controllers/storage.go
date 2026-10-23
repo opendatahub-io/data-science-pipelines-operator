@@ -46,8 +46,12 @@ var minioTemplates = []string{
 	"minio/default/service.yaml.tmpl",
 	"minio/default/service.minioservice.yaml.tmpl",
 	"minio/default/minio-sa.yaml.tmpl",
+	"minio/default/networkpolicy.yaml.tmpl",
 	storageRoute,
 }
+
+// ErrObjectStoreSkipped indicates an object storage health check was skipped due to environment-based credentials
+var ErrObjectStoreSkipped = errors.New("object storage health check skipped: using environment-based credentials (IRSA/Workload Identity)")
 
 func joinHostPort(host, port string) (string, error) {
 	if host == "" {
@@ -219,10 +223,20 @@ var ConnectAndQueryObjStore = func(
 func (r *DSPAReconciler) isObjectStorageAccessible(ctx context.Context, dsp *dspav1.DataSciencePipelinesApplication,
 	params *DSPAParams) (bool, error) {
 	log := r.Log.WithValues("namespace", dsp.Namespace).WithValues("dspa_name", dsp.Name)
+
+	// Skip health check if explicitly disabled
 	if params.ObjectStorageHealthCheckDisabled(dsp) {
 		infoMessage := "Object Storage health check disabled, assuming object store is available and ready."
 		log.V(1).Info(infoMessage)
-		return true, nil
+		return true, ErrObjectStoreSkipped
+	}
+
+	// Skip health check when using environment-based credentials (IRSA, Workload Identity)
+	// The operator itself doesn't have the IAM role; only the workload pods do
+	if params.CredentialsMode.IsFromEnv() {
+		infoMessage := "Object Storage authentication via environment credentials (IRSA/Workload Identity); skipping operator health check. Workload pods will authenticate at runtime."
+		log.V(1).Info(infoMessage)
+		return true, ErrObjectStoreSkipped
 	}
 
 	log.Info("Performing Object Storage Health Check")

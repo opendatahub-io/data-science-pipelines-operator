@@ -9,12 +9,18 @@ on:
 jobs:
   precommit:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
       PRE_COMMIT_HOME: ~/.cache/pre-commit
     steps:
       - uses: actions/checkout@v3
       - name: Set up Go
         uses: ./.github/actions/setup-go
+      - name: Check AIPipelines release metadata
+        run: >-
+          go test ./controllers/config --tags=test_unit
+          -run '^TestAIPipelinesComponentReleasesMatchManifest$' -count=1
       - name: Install golangci-lint
         run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
       - name: Set up Python

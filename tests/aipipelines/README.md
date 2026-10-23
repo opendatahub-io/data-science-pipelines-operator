@@ -10,7 +10,8 @@ existing DSP integration suite when run with `tests.sh --kind --modular`.
 | --- | --- | --- |
 | Deployment health, API reachability, user flows | Existing `make integrationtest` / `tests.sh` modular path on the `test-dspa` DSPA | Modular Kind CI after `enable_aipipelines_module`. |
 | Webhook behavior | `tests/webhook_test.go` rejects immutable PipelineVersion updates | Modular Kind integration suite. |
-| Module status (`observedGeneration`, Ready, ProvisioningSucceeded, platform release) | `TestAIPipelinesLifecycle/reports_live_module_status` via `waitModule` | Modular Kind CI (`make aipipelines-e2e-test`). |
+| Module status (`observedGeneration`, Ready, ProvisioningSucceeded, platform and component releases) | `TestAIPipelinesLifecycle/reports_live_module_status` via `waitModule`; release retention while NotReady via `waitModuleCondition` | Modular Kind CI (`make aipipelines-e2e-test`). |
+| Legacy component handoff | `tests.sh --kind --modular` creates a DSC-owned legacy DataSciencePipelines CR, assigns the core ServiceMonitor to it, then checks legacy CR deletion, AIPipelines ownership, unchanged ServiceMonitor UID, and `MonitoringReady=True` | Modular Kind CI; simulates the ownership state without a full product upgrade. |
 | Argo `managementState` Managed → Removed → Managed | `TestAIPipelinesLifecycle/projects_management_state` on integration DSPA; metrics Service name `ds-pipeline-workflow-controller-metrics-<dspa>` | Modular Kind CI. |
 | Module deletion and shared-resource cleanup | `TestAIPipelinesLifecycle/finalizes_module_resources` (cleanup finalizer, shared assets, CRDs retained, integration DSPA still Ready) | Modular Kind CI. |
 | DSPA finalizer / owned resource GC | Existing `make integrationtest` suite | Not duplicated in module lifecycle suite. |

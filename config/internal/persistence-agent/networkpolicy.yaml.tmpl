@@ -1,0 +1,45 @@
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: {{.PersistentAgentDefaultResourceName}}
+  namespace: {{.Namespace}}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{.PersistentAgentDefaultResourceName}}
+      component: data-science-pipelines
+  policyTypes:
+    - Ingress
+    - Egress
+  egress:
+    # DNS. Port 53 is the Service port and 5353 is the CoreDNS target port.
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 5353
+        - protocol: TCP
+          port: 5353
+    # Kubernetes API. 443 is the Service port and 6443 is the apiserver port.
+    - ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 6443
+    {{ range .ProxyEgressPorts }}
+    - ports:
+        - protocol: TCP
+          port: {{ . }}
+    {{ end }}
+    - ports:
+        - protocol: TCP
+          port: 8888
+        - protocol: TCP
+          port: 8887
+      to:
+        - podSelector:
+            matchLabels:
+              app: {{ .APIServerDefaultResourceName }}
+              component: data-science-pipelines

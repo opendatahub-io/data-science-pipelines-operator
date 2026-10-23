@@ -31,11 +31,11 @@ spec:
   objectStorage:
     externalStorage:
       bucket: mlpipeline
-      host: minio.test-minio.svc.cluster.local
+      host: rustfs.test-rustfs.svc.cluster.local
       port: "9000"
       region: us-east-2
       s3CredentialsSecret:
         accessKey: accesskey
         secretKey: secretkey
-        secretName: minio
+        secretName: rustfs
       scheme: https

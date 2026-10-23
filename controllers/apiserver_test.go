@@ -34,9 +34,11 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
@@ -369,6 +371,7 @@ func TestDeployAPIServerWithoutManagedPipelines(t *testing.T) {
 	}
 	dspa.Name = testDSPAName
 	dspa.Namespace = testNamespace
+	dspa.Annotations = map[string]string{dspav1.DisableManagedPipelinesAnnotation: "true"}
 
 	ctx, params, reconciler := CreateNewTestObjects()
 	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
@@ -679,6 +682,7 @@ func TestExtractParams_ManagedPipelinesFailsWhenEnvVarEmpty(t *testing.T) {
 
 func TestExtractParams_ManagedPipelinesFailsWhenImageUnsetAndNotInOperatorConfig(t *testing.T) {
 	t.Cleanup(func() { viper.Reset() })
+	viper.Set(config.PipelinesComponentsImagePath, config.DefaultImageValue)
 
 	dspa := testutil.CreateDSPAWithManagedPipelines("", nil, nil)
 	dspa.Name = "dspa"
@@ -712,6 +716,7 @@ func TestExtractParams_ManagedPipelinesWhitespaceImageTreatedAsOmitted(t *testin
 
 func TestExtractParams_ManagedPipelinesWhitespaceOnlyFailsWithoutOperatorConfig(t *testing.T) {
 	t.Cleanup(func() { viper.Reset() })
+	viper.Set(config.PipelinesComponentsImagePath, config.DefaultImageValue)
 
 	dspa := testutil.CreateDSPAWithManagedPipelines("   ", nil, nil)
 	dspa.Name = "dspa"
@@ -735,6 +740,7 @@ func TestReconcile_SetsAPIServerNotReadyOnExtractParamsErrors(t *testing.T) {
 		{
 			name: "managed_pipelines_image_unset",
 			prepareDSPA: func(_ *testing.T) *dspav1.DataSciencePipelinesApplication {
+				viper.Set(config.PipelinesComponentsImagePath, config.DefaultImageValue)
 				d := testutil.CreateDSPAWithManagedPipelines("", nil, nil)
 				d.Name = "dspa-mp-status"
 				d.Namespace = "testnamespace"
@@ -1062,6 +1068,7 @@ func TestExtractParams_ManagedPipelineImageEnvVarsNilWithoutManagedPipelines(t *
 	dspa.Namespace = "ns"
 	dspa.Spec.APIServer = &dspav1.APIServer{Deploy: true}
 	dspa.Spec.APIServer.ManagedPipelines = nil
+	dspa.Annotations = map[string]string{dspav1.DisableManagedPipelinesAnnotation: "true"}
 
 	ctx, params, reconciler := CreateNewTestObjects()
 	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
@@ -1234,6 +1241,74 @@ func TestReconcileAPIServer_ConfigHashIdempotent(t *testing.T) {
 		"hash should be identical across reconciles with the same input")
 }
 
+func TestAPIServerDeploymentTemplate_StartupProbe(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		tls    bool
+		scheme corev1.URIScheme
+	}{
+		{name: "HTTP", scheme: corev1.URISchemeHTTP},
+		{name: "HTTPS", tls: true, scheme: corev1.URISchemeHTTPS},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, params, reconciler := CreateNewTestObjects()
+			dspa := testutil.CreateEmptyDSPA()
+			dspa.Spec.APIServer.Deploy = true
+			require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+			params.PodToPodTLS = tc.tls
+
+			src, err := config.PathTemplateSource(reconciler.TemplatesPath+"apiserver/default/deployment.yaml.tmpl", params)
+			require.NoError(t, err)
+			objs, err := src.Parse()
+			require.NoError(t, err)
+			require.Len(t, objs, 1)
+
+			deployment := &appsv1.Deployment{}
+			require.NoError(t, reconciler.Scheme.Convert(&objs[0], deployment, nil))
+			container := getDSPipelineAPIServerContainer(deployment)
+			require.NotNil(t, container)
+			require.NotNil(t, container.StartupProbe)
+			probe := container.StartupProbe
+			require.NotNil(t, probe.HTTPGet)
+			assert.Equal(t, "/apis/v1beta1/healthz", probe.HTTPGet.Path)
+			assert.Equal(t, "http", probe.HTTPGet.Port.StrVal)
+			// HTTP is the Kubernetes default when scheme is omitted.
+			if probe.HTTPGet.Scheme != "" {
+				assert.Equal(t, tc.scheme, probe.HTTPGet.Scheme)
+			} else {
+				assert.Equal(t, corev1.URISchemeHTTP, tc.scheme)
+			}
+			assert.Equal(t, int32(120), probe.PeriodSeconds*probe.FailureThreshold)
+			require.NotNil(t, container.LivenessProbe)
+			assert.Equal(t, container.LivenessProbe.HTTPGet, probe.HTTPGet)
+			require.NotNil(t, container.ReadinessProbe)
+			assert.Equal(t, container.ReadinessProbe.HTTPGet, probe.HTTPGet)
+		})
+	}
+}
+
+func TestAPIServerDeploymentTemplate_IncludesObjectStoreRegion(t *testing.T) {
+	ctx, params, reconciler := CreateNewTestObjects()
+	dspa := testutil.CreateEmptyDSPA()
+	dspa.Spec.APIServer.Deploy = true
+
+	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+	params.ObjectStorageConnection.Region = "ap-southeast-1"
+	require.NoError(t, reconciler.ReconcileAPIServer(ctx, dspa, params))
+
+	deployment := &appsv1.Deployment{}
+	require.NoError(t, reconciler.Client.Get(ctx, types.NamespacedName{
+		Name:      params.APIServerDefaultResourceName,
+		Namespace: dspa.Namespace,
+	}, deployment))
+
+	apiServerContainer := getDSPipelineAPIServerContainer(deployment)
+	require.NotNil(t, apiServerContainer)
+	region, found := getEnvValue(t, apiServerContainer, "OBJECTSTORECONFIG_REGION")
+	require.True(t, found)
+	assert.Equal(t, "ap-southeast-1", region)
+}
+
 func TestManagedPipelineSampleEntry_VersionNameIsPlatformVersionOnly(t *testing.T) {
 	const platformVersion = "rhoai-3.5-ea.2"
 
@@ -1331,4 +1406,280 @@ func TestManagedPipelineSampleEntry_VersionNameIsPlatformVersionOnly(t *testing.
 		assert.Equal(t, platformVersion, out.Pipelines[1]["versionName"],
 			"managed pipeline versionName should be the platform version only")
 	})
+}
+
+func TestReconcileAPIServer_ServiceAccountAnnotations(t *testing.T) {
+	testNamespace := "testnamespace"
+	testDSPAName := "testdspa"
+
+	tests := []struct {
+		name                      string
+		serviceAccountAnnotations map[string]string
+		expectedAnnotations       map[string]string
+	}{
+		{
+			name:                      "no annotations configured",
+			serviceAccountAnnotations: nil,
+			expectedAnnotations:       nil,
+		},
+		{
+			name: "IRSA annotation configured",
+			serviceAccountAnnotations: map[string]string{
+				"eks.amazonaws.com/role-arn": "arn:aws:iam::123456789012:role/my-role",
+			},
+			expectedAnnotations: map[string]string{
+				"eks.amazonaws.com/role-arn": "arn:aws:iam::123456789012:role/my-role",
+			},
+		},
+		{
+			name: "multiple annotations configured",
+			serviceAccountAnnotations: map[string]string{
+				"eks.amazonaws.com/role-arn":               "arn:aws:iam::123456789012:role/my-role",
+				"eks.amazonaws.com/sts-regional-endpoints": "regional",
+			},
+			expectedAnnotations: map[string]string{
+				"eks.amazonaws.com/role-arn":               "arn:aws:iam::123456789012:role/my-role",
+				"eks.amazonaws.com/sts-regional-endpoints": "regional",
+			},
+		},
+		{
+			name: "annotation key containing YAML control characters is escaped",
+			serviceAccountAnnotations: map[string]string{
+				"example.com/key:\n  labels:\n    injected": "value",
+			},
+			expectedAnnotations: map[string]string{
+				"example.com/key:\n  labels:\n    injected": "value",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create DSPA with ServiceAccountAnnotations
+			dspa := &dspav1.DataSciencePipelinesApplication{
+				Spec: dspav1.DSPASpec{
+					PodToPodTLS:               testutil.BoolPtr(false),
+					ServiceAccountAnnotations: tt.serviceAccountAnnotations,
+					APIServer: &dspav1.APIServer{
+						Deploy: true,
+					},
+					MLMD: &dspav1.MLMD{
+						Deploy: true,
+					},
+					Database: &dspav1.Database{
+						DisableHealthCheck: false,
+						MariaDB: &dspav1.MariaDB{
+							Deploy: false,
+						},
+					},
+					ObjectStorage: &dspav1.ObjectStorage{
+						DisableHealthCheck: false,
+						Minio: &dspav1.Minio{
+							Deploy: false,
+							Image:  "testimage-Minio:test",
+						},
+					},
+				},
+			}
+			dspa.Namespace = testNamespace
+			dspa.Name = testDSPAName
+
+			// Create test context and reconciler
+			ctx, params, reconciler := CreateNewTestObjects()
+			err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+			require.NoError(t, err)
+
+			// Run reconciliation
+			err = reconciler.ReconcileAPIServer(ctx, dspa, params)
+			require.NoError(t, err)
+
+			// Verify ml-pipeline ServiceAccount annotations
+			mlPipelineSA := &corev1.ServiceAccount{}
+			namespacedName := types.NamespacedName{
+				Name:      "ds-pipeline-" + testDSPAName,
+				Namespace: testNamespace,
+			}
+			err = reconciler.Client.Get(ctx, namespacedName, mlPipelineSA)
+			require.NoError(t, err)
+
+			// Filter out system annotations added by manifestival
+			filterSystemAnnotations := func(annotations map[string]string) map[string]string {
+				filtered := make(map[string]string)
+				for k, v := range annotations {
+					if k != "kubectl.kubernetes.io/last-applied-configuration" && k != "manifestival" {
+						filtered[k] = v
+					}
+				}
+				return filtered
+			}
+
+			mlPipelineUserAnnotations := filterSystemAnnotations(mlPipelineSA.Annotations)
+			if tt.expectedAnnotations == nil {
+				assert.Empty(t, mlPipelineUserAnnotations, "expected no user-defined annotations")
+			} else {
+				for key, expectedValue := range tt.expectedAnnotations {
+					actualValue, ok := mlPipelineUserAnnotations[key]
+					assert.True(t, ok, "expected annotation %s not found", key)
+					assert.Equal(t, expectedValue, actualValue, "annotation %s has wrong value", key)
+				}
+			}
+
+			// Verify pipeline-runner ServiceAccount annotations
+			pipelineRunnerSA := &corev1.ServiceAccount{}
+			namespacedName = types.NamespacedName{
+				Name:      "pipeline-runner-" + testDSPAName,
+				Namespace: testNamespace,
+			}
+			err = reconciler.Client.Get(ctx, namespacedName, pipelineRunnerSA)
+			require.NoError(t, err)
+
+			pipelineRunnerUserAnnotations := filterSystemAnnotations(pipelineRunnerSA.Annotations)
+			if tt.expectedAnnotations == nil {
+				assert.Empty(t, pipelineRunnerUserAnnotations, "expected no user-defined annotations")
+			} else {
+				for key, expectedValue := range tt.expectedAnnotations {
+					actualValue, ok := pipelineRunnerUserAnnotations[key]
+					assert.True(t, ok, "expected annotation %s not found", key)
+					assert.Equal(t, expectedValue, actualValue, "annotation %s has wrong value", key)
+				}
+			}
+		})
+	}
+}
+
+func TestAPIServerMetricsUseAuthenticatedProxy(t *testing.T) {
+	testNamespace := "testnamespace"
+	testDSPAName := "testdspa"
+	dspa := &dspav1.DataSciencePipelinesApplication{
+		ObjectMeta: metav1.ObjectMeta{Name: testDSPAName, Namespace: testNamespace},
+		Spec: dspav1.DSPASpec{
+			PodToPodTLS: testutil.BoolPtr(false),
+			APIServer: &dspav1.APIServer{
+				Deploy:      true,
+				EnableRoute: true,
+			},
+			Database:      &dspav1.Database{MariaDB: &dspav1.MariaDB{Deploy: true}},
+			ObjectStorage: &dspav1.ObjectStorage{Minio: &dspav1.Minio{Deploy: false, Image: "someimage"}},
+		},
+	}
+
+	ctx, params, reconciler := CreateNewTestObjects()
+	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+	require.NoError(t, reconciler.ReconcileAPIServer(ctx, dspa, params))
+
+	monitor := &unstructured.Unstructured{}
+	monitor.SetGroupVersionKind(serviceMonitorGVK())
+	require.NoError(t, reconciler.Get(ctx, types.NamespacedName{
+		Name:      apiServerDefaultResourceNamePrefix + testDSPAName,
+		Namespace: testNamespace,
+	}, monitor))
+	endpoints, found, err := unstructured.NestedSlice(monitor.Object, "spec", "endpoints")
+	require.NoError(t, err)
+	require.True(t, found)
+	require.Len(t, endpoints, 1)
+	endpoint := endpoints[0].(map[string]interface{})
+	require.Equal(t, "prom-metrics", endpoint["port"])
+	require.Equal(t, "https", endpoint["scheme"])
+	require.Equal(t, "/metrics", endpoint["path"])
+	require.Equal(t, "/var/run/secrets/kubernetes.io/serviceaccount/token", endpoint["bearerTokenFile"])
+	tlsConfig := endpoint["tlsConfig"].(map[string]interface{})
+	require.Equal(t, "ds-pipeline-testdspa.testnamespace.svc", tlsConfig["serverName"])
+
+	caConfigMap := &corev1.ConfigMap{}
+	require.NoError(t, reconciler.Get(ctx, types.NamespacedName{
+		Name:      "ds-pipeline-proxy-ca-" + testDSPAName,
+		Namespace: testNamespace,
+	}, caConfigMap))
+	require.Equal(t, "true", caConfigMap.Annotations["service.beta.openshift.io/inject-cabundle"])
+
+	role := &rbacv1.Role{}
+	require.NoError(t, reconciler.Get(ctx, types.NamespacedName{
+		Name:      "ds-pipeline-metrics-" + testDSPAName,
+		Namespace: testNamespace,
+	}, role))
+	require.Equal(t, []rbacv1.PolicyRule{{
+		APIGroups:     []string{"datasciencepipelinesapplications.opendatahub.io"},
+		Resources:     []string{"datasciencepipelinesapplications/metrics"},
+		ResourceNames: []string{testDSPAName},
+		Verbs:         []string{"get"},
+	}}, role.Rules)
+
+	binding := &rbacv1.RoleBinding{}
+	require.NoError(t, reconciler.Get(ctx, types.NamespacedName{
+		Name:      "ds-pipeline-metrics-" + testDSPAName,
+		Namespace: testNamespace,
+	}, binding))
+	require.Equal(t, []rbacv1.Subject{
+		{Kind: "ServiceAccount", Name: "prometheus-k8s", Namespace: "openshift-monitoring"},
+		{Kind: "ServiceAccount", Name: "prometheus-user-workload", Namespace: "openshift-user-workload-monitoring"},
+		{Kind: "ServiceAccount", Name: "prometheus", Namespace: "redhat-ods-monitoring"},
+		{Kind: "ServiceAccount", Name: "data-science-monitoringstack-prometheus", Namespace: "redhat-ods-monitoring"},
+		{Kind: "ServiceAccount", Name: "prometheus", Namespace: "opendatahub-monitoring"},
+	}, binding.Subjects)
+
+	deployment := &appsv1.Deployment{}
+	require.NoError(t, reconciler.Get(ctx, types.NamespacedName{
+		Name:      apiServerDefaultResourceNamePrefix + testDSPAName,
+		Namespace: testNamespace,
+	}, deployment))
+	var proxyArgs []string
+	var prometheusProxyArgs []string
+	for _, container := range deployment.Spec.Template.Spec.Containers {
+		if container.Name == "kube-rbac-proxy" {
+			proxyArgs = container.Args
+		}
+		if container.Name == "kube-rbac-proxy-metrics" {
+			prometheusProxyArgs = container.Args
+		}
+	}
+	require.NotEmpty(t, proxyArgs)
+	require.Contains(t, proxyArgs, "--ignore-paths=/healthz,/apis/v1beta1/healthz")
+	require.NotContains(t, strings.Join(proxyArgs, " "), "/metrics")
+	require.NotEmpty(t, prometheusProxyArgs)
+	require.Contains(t, prometheusProxyArgs, "--allow-paths=/metrics")
+	require.Contains(t, prometheusProxyArgs, "--secure-listen-address=0.0.0.0:8445")
+
+	dspa.Spec.APIServer.EnableRoute = false
+	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+	require.NoError(t, reconciler.ReconcileAPIServer(ctx, dspa, params))
+	require.NoError(t, reconciler.Get(ctx, types.NamespacedName{
+		Name:      apiServerDefaultResourceNamePrefix + testDSPAName,
+		Namespace: testNamespace,
+	}, monitor))
+	endpoints, found, err = unstructured.NestedSlice(monitor.Object, "spec", "endpoints")
+	require.NoError(t, err)
+	require.True(t, found)
+	require.Equal(t, "prom-metrics", endpoints[0].(map[string]interface{})["port"])
+	require.NoError(t, reconciler.Get(ctx, types.NamespacedName{
+		Name:      "ds-pipeline-metrics-" + testDSPAName,
+		Namespace: testNamespace,
+	}, &rbacv1.Role{}))
+	require.NoError(t, reconciler.Get(ctx, types.NamespacedName{
+		Name:      "ds-pipeline-metrics-" + testDSPAName,
+		Namespace: testNamespace,
+	}, &rbacv1.RoleBinding{}))
+	require.NoError(t, reconciler.Get(ctx, types.NamespacedName{
+		Name:      "ds-pipeline-proxy-ca-" + testDSPAName,
+		Namespace: testNamespace,
+	}, &corev1.ConfigMap{}))
+
+	require.NoError(t, reconciler.Get(ctx, types.NamespacedName{
+		Name:      apiServerDefaultResourceNamePrefix + testDSPAName,
+		Namespace: testNamespace,
+	}, deployment))
+	var hasDashboardProxy, hasMetricsProxy bool
+	for _, container := range deployment.Spec.Template.Spec.Containers {
+		if container.Name == "kube-rbac-proxy" {
+			hasDashboardProxy = true
+		}
+		if container.Name == "kube-rbac-proxy-metrics" {
+			hasMetricsProxy = true
+		}
+	}
+	require.False(t, hasDashboardProxy)
+	require.True(t, hasMetricsProxy)
+}
+
+func serviceMonitorGVK() schema.GroupVersionKind {
+	return schema.GroupVersionKind{Group: "monitoring.coreos.com", Version: "v1", Kind: "ServiceMonitor"}
 }

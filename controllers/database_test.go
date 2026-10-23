@@ -182,6 +182,11 @@ func TestDeployDatabase(t *testing.T) {
 	created, err = reconciler.IsResourceCreated(ctx, deployment, expectedDatabaseName, testNamespace)
 	assert.True(t, created)
 	assert.Nil(t, err)
+
+	mariadbPolicy := requireNetworkPolicy(t, ctx, reconciler, expectedDatabaseName)
+	assertPolicySelects(t, mariadbPolicy, pipelineComponentLabels(expectedDatabaseName))
+	assertPortPresent(t, mariadbPolicy, 3306)
+	assertDeniesAllEgress(t, mariadbPolicy)
 }
 
 func TestDontDeployDatabase(t *testing.T) {

@@ -36,6 +36,7 @@ import (
 	dspa "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/util"
+	configv1 "github.com/openshift/api/config/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -73,6 +74,7 @@ type DSPAParams struct {
 	WorkflowControllerDefaultResourceName string
 	MariaDB                               *dspa.MariaDB
 	Minio                                 *dspa.Minio
+	MinioExternalRoute                    bool
 	MLMD                                  *dspa.MLMD
 	MlmdProxyDefaultResourceName          string
 	MlmdGrpcCertificateContents           string
@@ -84,6 +86,8 @@ type DSPAParams struct {
 	WebhookAnnotations                    map[string]string
 	DBConnection
 	ObjectStorageConnection
+	CredentialsMode           *dspa.CredentialsMode
+	ServiceAccountAnnotations map[string]string
 
 	// TLS
 	// The CA bundle path used by API server
@@ -104,8 +108,23 @@ type DSPAParams struct {
 	// pipeline pods
 	CustomCABundle *dspa.CABundle
 	DSPONamespace  string
+	// ApplicationsNamespace is the platform namespace where MLflow and other platform apps are deployed.
+	// Set from APPLICATIONS_NAMESPACE, falling back to DSPO_NAMESPACE for standalone deployments that
+	// do not inject it. Used to look up the MLflow CR and to scope MLflow NetworkPolicy peers.
+	ApplicationsNamespace string
 	// Use to enable tls communication between component pods.
 	PodToPodTLS bool
+
+	// KubeRBACProxyTLS holds the resolved TLS CLI flag values for all kube-rbac-proxy sidecars.
+	// Nil on non-OpenShift clusters where no TLS profile is available.
+	// Populated during ExtractParams from TLSProfileSpec and TLSAdherence.
+	KubeRBACProxyTLS *KubeRBACProxyTLSArgs
+	// TLSProfileSpec is the cluster TLS profile from the live APIServer object.
+	// Pre-set by the reconciler before ExtractParams is called.
+	TLSProfileSpec configv1.TLSProfileSpec
+	// TLSAdherence is the cluster TLS adherence policy from the live APIServer object.
+	// Pre-set by the reconciler before ExtractParams is called.
+	TLSAdherence configv1.TLSAdherencePolicy
 
 	APIServerServiceDNSName string
 	MLflow                  *dspa.MLflowConfig
@@ -115,6 +134,30 @@ type DSPAParams struct {
 
 	// Proxy configuration for all DSPA components
 	ProxyConfig *dspa.ProxyConfig
+
+	// BuiltInDatabase is true when the DSPA does not use an external database.
+	// MariaDB may still be copied from the spec when the database is external, so templates must use this flag.
+	BuiltInDatabase bool
+	// ProxyEgressPorts are the distinct TCP ports from spec.proxy. Empty when no proxy is configured.
+	ProxyEgressPorts []string
+	// MLflowEgressPort is the TCP port of the resolved MLflow endpoint.
+	// Empty when integration is disabled or the endpoint is not resolved yet.
+	MLflowEgressPort string
+	// ObjectStorageEgressPort is the TCP port of the effective object storage endpoint.
+	// A port written inside the host is used when the separate port field is empty.
+	ObjectStorageEgressPort string
+	// resolvedMLflowEndpoint is the tracking URL resolved during this ExtractParams call.
+	resolvedMLflowEndpoint string
+	// MLflowHostname is the hostname (without port) from the resolved MLflow endpoint, used in NO_PROXY.
+	// Empty when MLflow is disabled or unresolved.
+	MLflowHostname string
+	// EffectiveNoProxy is the API server NO_PROXY value when spec.proxy is set.
+	// It preserves user noProxy entries and appends the resolved MLflow hostname.
+	EffectiveNoProxy string
+	// APIServerAdditionalEgress is indented YAML for spec.networkPolicy.egress.apiServer.additionalRules.
+	APIServerAdditionalEgress string
+	// WorkflowControllerAdditionalEgress is indented YAML for spec.networkPolicy.egress.workflowController.additionalRules.
+	WorkflowControllerAdditionalEgress string
 
 	// CompiledPipelineSpecPatch is a JSON patch applied to all compiled pipeline specs
 	// Used for global workflow configuration like TTL strategy
@@ -209,10 +252,15 @@ func (p *DSPAParams) UsingExternalStorage(dsp *dspa.DataSciencePipelinesApplicat
 	return false
 }
 
-// ObjectStorageHealthCheckDisabled will return the value if the Object Storage has disableHealthCheck specified in the CR, otherwise false.
+// ObjectStorageHealthCheckDisabled will return the value if the Object Storage has disableHealthCheck specified in the CR,
+// OR if credentialsMode is set to FromEnv, otherwise false.
 func (p *DSPAParams) ObjectStorageHealthCheckDisabled(dsp *dspa.DataSciencePipelinesApplication) bool {
 	if dsp.Spec.ObjectStorage != nil {
-		return dsp.Spec.ObjectStorage.DisableHealthCheck
+		var credentialsMode *dspa.CredentialsMode
+		if dsp.Spec.ObjectStorage.ExternalStorage != nil {
+			credentialsMode = dsp.Spec.ObjectStorage.ExternalStorage.CredentialsMode
+		}
+		return dsp.Spec.ObjectStorage.DisableHealthCheck || credentialsMode.IsFromEnv()
 	}
 	return false
 }
@@ -461,21 +509,28 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 
 		// Port can be empty, which is fine.
 		p.ObjectStorageConnection.Port = dsp.Spec.ObjectStorage.ExternalStorage.Port
-		p.ObjectStorageConnection.CredentialsSecret = dsp.Spec.ObjectStorage.ExternalStorage.S3CredentialSecret
 
-		// Retrieve ObjStore Creds from specified secret.  Ignore error if the secret simply doesn't exist (will be created later)
-		accesskey, err := p.RetrieveSecret(ctx, client, p.ObjectStorageConnection.CredentialsSecret.SecretName, p.ObjectStorageConnection.CredentialsSecret.AccessKey, log)
-		if err != nil && !apierrs.IsNotFound(err) {
-			log.Error(err, "Unexpected error encountered while fetching Object Storage Secret")
-			return err
+		// Retrieve ObjStore Creds from specified secret, unless auth values set by env vars (p.EnvAuth = true)
+		// Ignore error if the secret simply doesn't exist (will be created later)
+		if !p.CredentialsMode.IsFromEnv() {
+			if dsp.Spec.ObjectStorage.ExternalStorage.S3CredentialSecret == nil {
+				return fmt.Errorf("s3CredentialsSecret is required unless credentialsMode.fromEnv is true")
+			}
+			p.ObjectStorageConnection.CredentialsSecret = dsp.Spec.ObjectStorage.ExternalStorage.S3CredentialSecret
+
+			accesskey, err := p.RetrieveSecret(ctx, client, p.ObjectStorageConnection.CredentialsSecret.SecretName, p.ObjectStorageConnection.CredentialsSecret.AccessKey, log)
+			if err != nil && !apierrs.IsNotFound(err) {
+				log.Error(err, "Unexpected error encountered while fetching Object Storage Secret")
+				return err
+			}
+			secretkey, err := p.RetrieveSecret(ctx, client, p.ObjectStorageConnection.CredentialsSecret.SecretName, p.ObjectStorageConnection.CredentialsSecret.SecretKey, log)
+			if err != nil && !apierrs.IsNotFound(err) {
+				log.Error(err, "Unexpected error encountered while fetching Object Storage Secret")
+				return err
+			}
+			p.ObjectStorageConnection.AccessKeyID = accesskey
+			p.ObjectStorageConnection.SecretAccessKey = secretkey
 		}
-		secretkey, err := p.RetrieveSecret(ctx, client, p.ObjectStorageConnection.CredentialsSecret.SecretName, p.ObjectStorageConnection.CredentialsSecret.SecretKey, log)
-		if err != nil && !apierrs.IsNotFound(err) {
-			log.Error(err, "Unexpected error encountered while fetching Object Storage Secret")
-			return err
-		}
-		p.ObjectStorageConnection.AccessKeyID = accesskey
-		p.ObjectStorageConnection.SecretAccessKey = secretkey
 	} else {
 		if p.Minio == nil {
 			return fmt.Errorf("either [spec.objectStorage.minio] or [spec.objectStorage.externalStorage] " +
@@ -553,11 +608,14 @@ func (p *DSPAParams) SetupObjectParams(ctx context.Context, dsp *dspa.DataScienc
 
 	p.ObjectStorageConnection.Endpoint = endpoint
 
-	if p.ObjectStorageConnection.AccessKeyID == "" || p.ObjectStorageConnection.SecretAccessKey == "" {
-		return fmt.Errorf("object storage password from secret [%s] for keys [%s, %s] was not "+
-			"successfully retrieved, ensure that the secret with this key exist",
-			p.ObjectStorageConnection.CredentialsSecret.SecretName,
-			p.ObjectStorageConnection.CredentialsSecret.AccessKey, p.ObjectStorageConnection.CredentialsSecret.SecretKey)
+	// Only validate credentials are present if not using environment-based auth (IRSA, Workload Identity, etc.)
+	if !p.CredentialsMode.IsFromEnv() {
+		if p.ObjectStorageConnection.AccessKeyID == "" || p.ObjectStorageConnection.SecretAccessKey == "" {
+			return fmt.Errorf("object storage password from secret [%s] for keys [%s, %s] was not "+
+				"successfully retrieved, ensure that the secret with this key exist",
+				p.ObjectStorageConnection.CredentialsSecret.SecretName,
+				p.ObjectStorageConnection.CredentialsSecret.AccessKey, p.ObjectStorageConnection.CredentialsSecret.SecretKey)
+		}
 	}
 	return nil
 
@@ -735,9 +793,24 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.Name = dsp.Name
 	p.Namespace = dsp.Namespace
 	p.DSPONamespace = os.Getenv("DSPO_NAMESPACE")
+	p.ApplicationsNamespace = strings.TrimSpace(os.Getenv("APPLICATIONS_NAMESPACE"))
+	if p.ApplicationsNamespace == "" {
+		// Standalone deployments set only DSPO_NAMESPACE; APPLICATIONS_NAMESPACE is
+		// injected by the platform operator. Fall back to the operator namespace so
+		// MLflow discovery and MLflow egress peers keep working without the injection.
+		p.ApplicationsNamespace = strings.TrimSpace(p.DSPONamespace)
+	}
 	p.DSPVersion = dsp.Spec.DSPVersion
 	p.Owner = dsp
 	p.APIServer = dsp.Spec.APIServer.DeepCopy()
+	if p.APIServer != nil {
+		if !dsp.ManagedPipelinesEnabled() {
+			p.APIServer.ManagedPipelines = nil
+		} else if p.APIServer.ManagedPipelines == nil {
+			// Default only the copy used to render workloads, never the stored DSPA.
+			p.APIServer.ManagedPipelines = &dspa.ManagedPipelinesSpec{}
+		}
+	}
 	p.PlatformVersion = config.ResolvedPlatformVersion()
 	if p.ResolvePlatformVersion != nil {
 		platformVersion, err := p.ResolvePlatformVersion(ctx)
@@ -757,6 +830,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.PersistentAgentDefaultResourceName = persistenceAgentDefaultResourceNamePrefix + dsp.Name
 	p.MariaDB = dsp.Spec.Database.MariaDB.DeepCopy()
 	p.Minio = dsp.Spec.ObjectStorage.Minio.DeepCopy()
+	p.MinioExternalRoute = p.ExternalRouteEnabled(dsp)
 	p.KubeRBACProxy = config.ResolveImage(config.KubeRBACProxyImagePath)
 	p.MLMD = dsp.Spec.MLMD.DeepCopy()
 	p.MlmdProxyDefaultResourceName = mlmdProxyDefaultResourceNamePrefix + dsp.Name
@@ -789,6 +863,14 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	}
 
 	p.ProxyConfig = dsp.Spec.Proxy
+	p.resolvedMLflowEndpoint = ""
+	p.ServiceAccountAnnotations = dsp.Spec.ServiceAccountAnnotations
+
+	// Extract CredentialsMode from ExternalStorage
+	externalObjectStorageEnabled := dsp.Spec.ObjectStorage != nil && dsp.Spec.ObjectStorage.ExternalStorage != nil
+	if externalObjectStorageEnabled && dsp.Spec.ObjectStorage.ExternalStorage.CredentialsMode != nil {
+		p.CredentialsMode = dsp.Spec.ObjectStorage.ExternalStorage.CredentialsMode
+	}
 
 	log := loggr.WithValues("namespace", p.Namespace).WithValues("dspa_name", p.Name)
 
@@ -832,27 +914,34 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		mlflowMode := *p.MLflow.IntegrationMode
 
 		if mlflowMode == dspa.AutoDetect {
-			apiServerReady, readinessErr := p.IsAPIServerDeploymentReady(ctx, client)
-			if readinessErr != nil {
-				log.Error(readinessErr, "failed to determine APIServer readiness. MLflow API server plugin config generation deferred.")
-			} else if !apiServerReady {
-				log.V(1).Info("APIServer deployment is not ready yet. Deferring MLflow API server plugin config generation.")
+			// Retrieve internal MLflow service endpoint for use in API Server MLflow plugin config.
+			// Endpoint resolution also feeds the MLflow egress policies and NO_PROXY, so it is
+			// deliberately decoupled from API server readiness: a reconcile while the API server
+			// Deployment is unavailable must not strip driver access to a healthy MLflow service.
+			var (
+				mlflowEndpoint string
+				err            error
+			)
+			if p.ResolveMLflowEndpoint == nil {
+				log.Info("ResolveMLflowEndpoint is not configured. Deferring MLflow API server plugin config generation.")
+			} else if p.ApplicationsNamespace == "" {
+				log.V(1).Info("Neither APPLICATIONS_NAMESPACE nor DSPO_NAMESPACE is set. Deferring MLflow API server plugin config generation.")
 			} else {
-				// Retrieve internal MLflow service endpoint for use in API Server MLflow plugin config.
-				var (
-					mlflowEndpoint string
-					err            error
-				)
-				if p.ResolveMLflowEndpoint == nil {
-					log.Info("ResolveMLflowEndpoint is not configured. Deferring MLflow API server plugin config generation.")
-				} else if p.DSPONamespace == "" {
-					log.V(1).Info("DSPO_NAMESPACE is not set. Deferring MLflow API server plugin config generation.")
+				mlflowEndpoint, err = p.ResolveMLflowEndpoint(ctx, p.ApplicationsNamespace, log)
+				if err != nil {
+					log.Error(err, "failed to retrieve MLflow internal endpoint. MLflow API server plugin will not be enabled.")
+				} else if mlflowEndpoint == "" {
+					log.V(1).Info("MLflow integration is unavailable. Skipping MLflow API server plugin config generation.")
 				} else {
-					mlflowEndpoint, err = p.ResolveMLflowEndpoint(ctx, p.DSPONamespace, log)
-					if err != nil {
-						log.Error(err, "failed to retrieve MLflow internal endpoint. MLflow API server plugin will not be enabled.")
-					} else if mlflowEndpoint == "" {
-						log.V(1).Info("MLflow integration is unavailable. Skipping MLflow API server plugin config generation.")
+					p.resolvedMLflowEndpoint = mlflowEndpoint
+
+					// The plugin config is consumed by the API server pods, so its generation
+					// waits for the API server Deployment to become available.
+					apiServerReady, readinessErr := p.IsAPIServerDeploymentReady(ctx, client)
+					if readinessErr != nil {
+						log.Error(readinessErr, "failed to determine APIServer readiness. MLflow API server plugin config generation deferred.")
+					} else if !apiServerReady {
+						log.V(1).Info("APIServer deployment is not ready yet. Deferring MLflow API server plugin config generation.")
 					} else {
 						apiServerExternalURL, routeErr := util.GetRouteHostname(ctx, p.APIServerServiceName, p.Namespace, client)
 						if routeErr != nil {
@@ -1144,7 +1233,23 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		return err
 	}
 
+	if err := p.setEgressTemplateFields(dsp); err != nil {
+		return err
+	}
+
 	p.SetupOwner(dsp)
+
+	// Resolve the effective TLS configuration for kube-rbac-proxy sidecars.
+	// TLSProfileSpec and TLSAdherence are pre-set by the reconciler from the cluster state.
+	// An error here (e.g. all ciphers unsupported in a strict profile) aborts the reconcile
+	// and leaves the existing Deployments untouched.
+	if p.TLSProfileSpec.MinTLSVersion != "" {
+		tlsArgs, err := resolveKubeRBACProxyTLS(p.TLSProfileSpec, p.TLSAdherence)
+		if err != nil {
+			return fmt.Errorf("failed to resolve kube-rbac-proxy TLS configuration: %w", err)
+		}
+		p.KubeRBACProxyTLS = tlsArgs
+	}
 
 	return nil
 }

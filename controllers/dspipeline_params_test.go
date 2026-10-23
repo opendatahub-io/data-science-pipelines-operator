@@ -498,15 +498,16 @@ func TestExtractParams_WithoutResourceTTL(t *testing.T) {
 	assert.Empty(t, params.CompiledPipelineSpecPatch)
 }
 
-func TestExtractParams_MLflowEndpointLookupUsesDSPONamespace(t *testing.T) {
-	t.Setenv("DSPO_NAMESPACE", "opendatahub")
+func TestExtractParams_MLflowEndpointLookupUsesApplicationsNamespace(t *testing.T) {
+	t.Setenv("DSPO_NAMESPACE", "operator-namespace")
+	t.Setenv("APPLICATIONS_NAMESPACE", "opendatahub")
 
 	ctx, params, reconciler := CreateNewTestObjects()
 
 	var lookupNamespace string
 	params.ResolveMLflowEndpoint = func(ctx context.Context, ns string, log logr.Logger) (string, error) {
 		lookupNamespace = ns
-		return "https://mlflow.opendatahub.svc.cluster.local/mlflow", nil
+		return "https://mlflow.opendatahub.svc:8443/mlflow", nil
 	}
 
 	dspa := testutil.CreateEmptyDSPA()
@@ -533,12 +534,17 @@ func TestExtractParams_MLflowEndpointLookupUsesDSPONamespace(t *testing.T) {
 	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
 	require.NoError(t, err)
 	require.Equal(t, "opendatahub", lookupNamespace)
+	require.Equal(t, "opendatahub", params.ApplicationsNamespace)
+	require.Equal(t, "8443", params.MLflowEgressPort)
+	require.Equal(t, "mlflow.opendatahub.svc", params.MLflowHostname)
+	require.Empty(t, params.EffectiveNoProxy)
 	require.NotEmpty(t, params.APIServerPluginsJson)
 	require.True(t, params.GrantMlflowWorkloadRBAC)
 }
 
 func TestExtractParams_MLflowPluginConfigUsesServiceWhenRouteUnavailable(t *testing.T) {
 	t.Setenv("DSPO_NAMESPACE", "opendatahub")
+	t.Setenv("APPLICATIONS_NAMESPACE", "opendatahub")
 
 	ctx, params, reconciler := CreateNewTestObjects()
 
@@ -580,8 +586,9 @@ func TestExtractParams_MLflowPluginConfigUsesServiceWhenRouteUnavailable(t *test
 	require.Equal(t, "http://ds-pipeline-testdspa.test-dspa-mlflow.svc.cluster.local:8888", settings["kfpBaseURL"])
 }
 
-func TestExtractParams_MLflowEndpointLookupSkippedWhenDSPONamespaceUnset(t *testing.T) {
+func TestExtractParams_MLflowEndpointLookupSkippedWhenNamespacesUnset(t *testing.T) {
 	t.Setenv("DSPO_NAMESPACE", "")
+	t.Setenv("APPLICATIONS_NAMESPACE", "")
 
 	ctx, params, reconciler := CreateNewTestObjects()
 
@@ -610,8 +617,121 @@ func TestExtractParams_MLflowEndpointLookupSkippedWhenDSPONamespaceUnset(t *test
 	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
 	require.NoError(t, err)
 	require.False(t, lookupCalled)
+	require.Empty(t, params.ApplicationsNamespace)
 	require.Empty(t, params.APIServerPluginsJson)
 	require.False(t, params.GrantMlflowWorkloadRBAC)
+}
+
+// Standalone deployments set only DSPO_NAMESPACE; the MLflow lookup must fall back
+// to the operator namespace when APPLICATIONS_NAMESPACE is not injected.
+func TestExtractParams_MLflowEndpointLookupFallsBackToDSPONamespace(t *testing.T) {
+	t.Setenv("DSPO_NAMESPACE", "operator-namespace")
+	t.Setenv("APPLICATIONS_NAMESPACE", "")
+
+	ctx, params, reconciler := CreateNewTestObjects()
+
+	var lookupNamespace string
+	params.ResolveMLflowEndpoint = func(ctx context.Context, ns string, log logr.Logger) (string, error) {
+		lookupNamespace = ns
+		return "https://mlflow.operator-namespace.svc:8443/mlflow", nil
+	}
+
+	dspa := testutil.CreateEmptyDSPA()
+	dspa.Namespace = "test-dspa-mlflow"
+	dspa.Spec.APIServer = &dspav1.APIServer{Deploy: true}
+	dspa.Spec.PodToPodTLS = testutil.BoolPtr(false)
+
+	deploy := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Name: "ds-pipeline-testdspa", Namespace: "test-dspa-mlflow"},
+		Status: appsv1.DeploymentStatus{
+			Conditions: []appsv1.DeploymentCondition{{
+				Type:   appsv1.DeploymentAvailable,
+				Status: corev1.ConditionTrue,
+			}},
+		},
+	}
+	route := &routev1.Route{
+		ObjectMeta: metav1.ObjectMeta{Name: "ds-pipeline-testdspa", Namespace: "test-dspa-mlflow"},
+		Spec:       routev1.RouteSpec{Host: "dsp-api.example.com"},
+	}
+	require.NoError(t, reconciler.Client.Create(ctx, deploy))
+	require.NoError(t, reconciler.Client.Create(ctx, route))
+
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	require.NoError(t, err)
+	require.Equal(t, "operator-namespace", lookupNamespace)
+	require.Equal(t, "operator-namespace", params.ApplicationsNamespace)
+	require.Equal(t, "8443", params.MLflowEgressPort)
+	require.Equal(t, "mlflow.operator-namespace.svc", params.MLflowHostname)
+	require.NotEmpty(t, params.APIServerPluginsJson)
+	require.True(t, params.GrantMlflowWorkloadRBAC)
+}
+
+// APPLICATIONS_NAMESPACE takes priority over the DSPO_NAMESPACE fallback.
+func TestExtractParams_MLflowEndpointLookupPrefersApplicationsNamespace(t *testing.T) {
+	t.Setenv("DSPO_NAMESPACE", "operator-namespace")
+	t.Setenv("APPLICATIONS_NAMESPACE", "opendatahub")
+
+	ctx, params, reconciler := CreateNewTestObjects()
+
+	var lookupNamespace string
+	params.ResolveMLflowEndpoint = func(ctx context.Context, ns string, log logr.Logger) (string, error) {
+		lookupNamespace = ns
+		return "https://mlflow.opendatahub.svc:8443/mlflow", nil
+	}
+
+	dspa := testutil.CreateEmptyDSPA()
+	dspa.Namespace = "test-dspa-mlflow"
+	dspa.Spec.APIServer = &dspav1.APIServer{Deploy: true}
+	dspa.Spec.PodToPodTLS = testutil.BoolPtr(false)
+
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	require.NoError(t, err)
+	require.Equal(t, "opendatahub", lookupNamespace)
+	require.Equal(t, "opendatahub", params.ApplicationsNamespace)
+}
+
+// The MLflow endpoint must resolve for egress policies even while the API server
+// Deployment is unavailable, so common-policy reconciliation does not strip driver
+// access to a healthy MLflow service. Only plugin config generation is deferred.
+func TestExtractParams_MLflowEndpointResolvedWhileAPIServerUnavailable(t *testing.T) {
+	t.Setenv("DSPO_NAMESPACE", "operator-namespace")
+	t.Setenv("APPLICATIONS_NAMESPACE", "opendatahub")
+
+	ctx, params, reconciler := CreateNewTestObjects()
+
+	params.ResolveMLflowEndpoint = func(ctx context.Context, ns string, log logr.Logger) (string, error) {
+		return "https://mlflow.opendatahub.svc:8443/mlflow", nil
+	}
+
+	dspa := testutil.CreateEmptyDSPA()
+	dspa.Namespace = "test-dspa-mlflow"
+	dspa.Spec.APIServer = &dspav1.APIServer{Deploy: true}
+	dspa.Spec.PodToPodTLS = testutil.BoolPtr(false)
+
+	// No API server Deployment exists, so readiness is false.
+	err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+	require.NoError(t, err)
+	require.Equal(t, "8443", params.MLflowEgressPort)
+	require.Equal(t, "mlflow.opendatahub.svc", params.MLflowHostname)
+	require.Empty(t, params.APIServerPluginsJson)
+	require.False(t, params.GrantMlflowWorkloadRBAC)
+
+	// The resolved endpoint must still drive the MLflow egress rules in both the
+	// API server and driver policies rendered during the downtime reconcile.
+	proxied := testutil.CreateEmptyDSPA()
+	proxied.Spec.Proxy = &dspav1.ProxyConfig{HTTPProxy: "http://proxy.example.com:3128"}
+
+	params2 := &DSPAParams{ResolveMLflowEndpoint: params.ResolveMLflowEndpoint}
+	require.NoError(t, params2.ExtractParams(ctx, proxied, reconciler.Client, reconciler.Log))
+	require.Equal(t, "8443", params2.MLflowEgressPort)
+	require.Contains(t, params2.EffectiveNoProxy, "mlflow.opendatahub.svc")
+	require.NoError(t, reconciler.ReconcileCommon(proxied, params2))
+
+	apiPolicy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipelines-testdspa")
+	driverPolicy := requireNetworkPolicy(t, ctx, reconciler, "ds-pipeline-drivers-testdspa")
+	assertEgressToNamespacedPod(t, apiPolicy, 8443, "opendatahub", "mlflow")
+	assertEgressToNamespacedPod(t, driverPolicy, 8443, "opendatahub", "mlflow")
 }
 
 func testSchemeWithMlflowApps(t *testing.T) *runtime.Scheme {
@@ -928,4 +1048,210 @@ func TestPasswordGen_NoPanic(t *testing.T) {
 	assert.NotPanics(t, func() {
 		passwordGen(16)
 	}, "passwordGen should not panic under normal conditions")
+}
+
+func TestExtractParams_CredentialsFromEnv(t *testing.T) {
+	tests := []struct {
+		name               string
+		credentialsFromEnv bool
+		expectedFromEnv    *bool
+	}{
+		{
+			name:               "credentialsFromEnv set to true",
+			credentialsFromEnv: true,
+			expectedFromEnv:    testutil.BoolPtr(true),
+		},
+		{
+			name:               "credentialsFromEnv set to false",
+			credentialsFromEnv: false,
+			expectedFromEnv:    testutil.BoolPtr(false),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dspa := testutil.CreateEmptyDSPA()
+			dspa.Spec.ObjectStorage = &dspav1.ObjectStorage{
+				ExternalStorage: &dspav1.ExternalStorage{
+					Host:   "s3.amazonaws.com",
+					Bucket: "my-bucket",
+					Scheme: "https",
+					S3CredentialSecret: &dspav1.S3CredentialSecret{
+						SecretName: "aws-connection-creds",
+						AccessKey:  "AWS_ACCESS_KEY_ID",
+						SecretKey:  "AWS_SECRET_ACCESS_KEY",
+					},
+					CredentialsMode: &dspav1.CredentialsMode{
+						FromEnv: tt.credentialsFromEnv,
+					},
+				},
+			}
+
+			ctx, params, client := CreateNewTestObjects()
+
+			// Create the secret when credentialsFromEnv is false
+			if !tt.credentialsFromEnv {
+				secret := &corev1.Secret{}
+				secret.Name = "aws-connection-creds"
+				secret.Namespace = dspa.Namespace
+				secret.Data = map[string][]byte{
+					"AWS_ACCESS_KEY_ID":     []byte("test-access-key"),
+					"AWS_SECRET_ACCESS_KEY": []byte("test-secret-key"),
+				}
+				err := client.Client.Create(ctx, secret)
+				require.NoError(t, err)
+			}
+
+			err := params.ExtractParams(ctx, dspa, client.Client, client.Log)
+			require.NoError(t, err)
+
+			require.NotNil(t, params.CredentialsMode)
+			assert.Equal(t, *tt.expectedFromEnv, params.CredentialsMode.FromEnv)
+		})
+	}
+}
+
+func TestExtractParams_ExternalStorageRequiresCredentialsSecret(t *testing.T) {
+	dspa := testutil.CreateEmptyDSPA()
+	dspa.Spec.ObjectStorage = &dspav1.ObjectStorage{
+		ExternalStorage: &dspav1.ExternalStorage{
+			Host:   "s3.amazonaws.com",
+			Bucket: "my-bucket",
+			Scheme: "https",
+			CredentialsMode: &dspav1.CredentialsMode{
+				FromEnv: false,
+			},
+		},
+	}
+
+	ctx, params, client := CreateNewTestObjects()
+	err := params.ExtractParams(ctx, dspa, client.Client, client.Log)
+	require.EqualError(t, err, "s3CredentialsSecret is required unless credentialsMode.fromEnv is true")
+}
+
+func TestSetupObjectParams_CredentialsFromEnv(t *testing.T) {
+	tests := []struct {
+		name                 string
+		credentialsFromEnv   bool
+		shouldRetrieveSecret bool
+	}{
+		{
+			name:                 "credentialsFromEnv true - skip secret retrieval",
+			credentialsFromEnv:   true,
+			shouldRetrieveSecret: false,
+		},
+		{
+			name:                 "credentialsFromEnv false - retrieve from secret",
+			credentialsFromEnv:   false,
+			shouldRetrieveSecret: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dspa := testutil.CreateEmptyDSPA()
+			dspa.Spec.ObjectStorage = &dspav1.ObjectStorage{
+				ExternalStorage: &dspav1.ExternalStorage{
+					Host:   "s3.amazonaws.com",
+					Bucket: "my-bucket",
+					Scheme: "https",
+					S3CredentialSecret: &dspav1.S3CredentialSecret{
+						SecretName: "aws-connection-my-storage",
+						AccessKey:  "AWS_ACCESS_KEY_ID",
+						SecretKey:  "AWS_SECRET_ACCESS_KEY",
+					},
+					CredentialsMode: &dspav1.CredentialsMode{
+						FromEnv: tt.credentialsFromEnv,
+					},
+				},
+			}
+
+			ctx, params, client := CreateNewTestObjects()
+
+			// Create the secret only if we expect retrieval
+			if tt.shouldRetrieveSecret {
+				secret := &corev1.Secret{}
+				secret.Name = "aws-connection-my-storage"
+				secret.Namespace = dspa.Namespace
+				secret.Data = map[string][]byte{
+					"AWS_ACCESS_KEY_ID":     []byte("test-access-key"),
+					"AWS_SECRET_ACCESS_KEY": []byte("test-secret-key"),
+				}
+				err := client.Client.Create(ctx, secret)
+				require.NoError(t, err)
+			}
+
+			err := params.ExtractParams(ctx, dspa, client.Client, client.Log)
+			require.NoError(t, err)
+
+			// Verify FromEnv was set correctly
+			require.NotNil(t, params.CredentialsMode)
+			assert.Equal(t, tt.credentialsFromEnv, params.CredentialsMode.FromEnv)
+
+			// SetupObjectParams should be called during ExtractParams
+			// When credentialsFromEnv is true, AccessKeyID and SecretAccessKey should be empty
+			// When credentialsFromEnv is false, they should be populated from the secret
+			if tt.shouldRetrieveSecret {
+				assert.NotEmpty(t, params.ObjectStorageConnection.AccessKeyID, "expected secret to be retrieved")
+				assert.NotEmpty(t, params.ObjectStorageConnection.SecretAccessKey, "expected secret to be retrieved")
+			} else {
+				assert.Empty(t, params.ObjectStorageConnection.AccessKeyID, "expected no secret retrieval")
+				assert.Empty(t, params.ObjectStorageConnection.SecretAccessKey, "expected no secret retrieval")
+			}
+		})
+	}
+}
+
+func TestExtractParams_ServiceAccountAnnotations(t *testing.T) {
+	tests := []struct {
+		name                      string
+		serviceAccountAnnotations map[string]string
+		expected                  map[string]string
+	}{
+		{
+			name:                      "nil annotations",
+			serviceAccountAnnotations: nil,
+			expected:                  nil,
+		},
+		{
+			name:                      "empty annotations",
+			serviceAccountAnnotations: map[string]string{},
+			expected:                  map[string]string{},
+		},
+		{
+			name: "single IRSA annotation",
+			serviceAccountAnnotations: map[string]string{
+				"eks.amazonaws.com/role-arn": "arn:aws:iam::123456789012:role/my-role",
+			},
+			expected: map[string]string{
+				"eks.amazonaws.com/role-arn": "arn:aws:iam::123456789012:role/my-role",
+			},
+		},
+		{
+			name: "multiple annotations",
+			serviceAccountAnnotations: map[string]string{
+				"eks.amazonaws.com/role-arn":               "arn:aws:iam::123456789012:role/my-role",
+				"eks.amazonaws.com/sts-regional-endpoints": "regional",
+				"custom.annotation/foo":                    "bar",
+			},
+			expected: map[string]string{
+				"eks.amazonaws.com/role-arn":               "arn:aws:iam::123456789012:role/my-role",
+				"eks.amazonaws.com/sts-regional-endpoints": "regional",
+				"custom.annotation/foo":                    "bar",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dspa := testutil.CreateEmptyDSPA()
+			dspa.Spec.ServiceAccountAnnotations = tt.serviceAccountAnnotations
+
+			ctx, params, client := CreateNewTestObjects()
+			err := params.ExtractParams(ctx, dspa, client.Client, client.Log)
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.expected, params.ServiceAccountAnnotations)
+		})
+	}
 }

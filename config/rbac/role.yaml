@@ -220,6 +220,14 @@ rules:
   - delete
   - get
 - apiGroups:
+  - config.openshift.io
+  resources:
+  - apiservers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - datasciencepipelinesapplications.opendatahub.io
   resources:
   - datasciencepipelinesapplications
@@ -238,6 +246,12 @@ rules:
   - datasciencepipelinesapplications/finalizers
   verbs:
   - update
+- apiGroups:
+  - datasciencepipelinesapplications.opendatahub.io
+  resources:
+  - datasciencepipelinesapplications/metrics
+  verbs:
+  - get
 - apiGroups:
   - datasciencepipelinesapplications.opendatahub.io
   resources:

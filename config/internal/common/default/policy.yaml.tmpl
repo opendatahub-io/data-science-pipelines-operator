@@ -10,37 +10,53 @@ spec:
       component: data-science-pipelines
   policyTypes:
     - Ingress
+    - Egress
   ingress:
-    # Match all sources for the proxy endpoint
+    {{ if and .APIServer .APIServer.EnableRoute }}
+    # Authenticated kube-rbac-proxy. Port-only so any cluster pod and the
+    # OpenShift router can reach it. The router commonly uses host networking,
+    # so a pod or namespace selector is not portable.
     - ports:
         - protocol: TCP
           port: 8443
-    # The components that are permitted to directly communicate with API Server
-    # Note: all other external traffic should go through the proxy
+    {{ end }}
+    {{ if .APIServer }}
+    # Prometheus-only kube-rbac-proxy. Restricted to monitoring namespaces.
     - ports:
         - protocol: TCP
-          port: 8888
-        - protocol: TCP
-          port: 8887
+          port: 8445
       from:
         - namespaceSelector:
             matchLabels:
-              name: openshift-user-workload-monitoring
+              kubernetes.io/metadata.name: openshift-monitoring
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-user-workload-monitoring
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: redhat-ods-monitoring
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: opendatahub-monitoring
+    {{ end }}
+    # Direct API HTTP. No login check, so only the persistence agent and KFP
+    # runtime pods (v2_component, shared by drivers and executors) may connect.
+    - ports:
+        - protocol: TCP
+          port: 8888
+      from:
         - podSelector:
             matchLabels:
-              app: ds-pipeline-{{.Name}}
+              app: ds-pipeline-persistenceagent-{{.Name}}
               component: data-science-pipelines
         - podSelector:
             matchLabels:
-              app: mariadb-{{.Name}}
-              component: data-science-pipelines
-        - podSelector:
-            matchLabels:
-              app: minio-{{.Name}}
-              component: data-science-pipelines
+              pipelines.kubeflow.org/v2_component: "true"
+    # Direct API gRPC. Same callers as 8888, plus the scheduled-workflow controller.
+    - ports:
+        - protocol: TCP
+          port: 8887
+      from:
         - podSelector:
             matchLabels:
               app: ds-pipeline-persistenceagent-{{.Name}}
@@ -51,15 +67,81 @@ spec:
               component: data-science-pipelines
         - podSelector:
             matchLabels:
-              app: ds-pipeline-metadata-envoy-{{.Name}}
+              pipelines.kubeflow.org/v2_component: "true"
+  egress:
+    # Operator-generated baseline. API server replacement rules are not supported.
+    # DNS. Port 53 is the Service port and 5353 is the CoreDNS target port.
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 5353
+        - protocol: TCP
+          port: 5353
+    # Kubernetes API. 443 is the Service port and 6443 is the apiserver port.
+    - ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 6443
+    {{ if .BuiltInDatabase }}
+    - ports:
+        - protocol: TCP
+          port: {{ .DBConnection.Port }}
+      to:
+        - podSelector:
+            matchLabels:
+              app: mariadb-{{ .Name }}
               component: data-science-pipelines
+    {{ else }}
+    # External MySQL is allowed by destination port only.
+    - ports:
+        - protocol: TCP
+          port: {{ .DBConnection.Port }}
+    {{ end }}
+    # S3-compatible storage may be external. Always allow AWS S3 (443), MinIO (9000),
+    # and SeaweedFS (8333) so credentialsMode.fromEnv still works without a resolved port.
+    # Also allow the resolved endpoint port when it is not one of those defaults.
+    - ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 9000
+        - protocol: TCP
+          port: 8333
+        {{ if and .ObjectStorageEgressPort (ne .ObjectStorageEgressPort "443") (ne .ObjectStorageEgressPort "9000") (ne .ObjectStorageEgressPort "8333") }}
+        - protocol: TCP
+          port: {{ .ObjectStorageEgressPort }}
+        {{ end }}
+    - ports:
+        - protocol: TCP
+          port: {{ .MLMD.GRPC.Port }}
+      to:
         - podSelector:
             matchLabels:
-              app: ds-pipeline-metadata-grpc-{{.Name}}
+              app: ds-pipeline-metadata-grpc-{{ .Name }}
               component: data-science-pipelines
-        - podSelector:
+    {{ range .ProxyEgressPorts }}
+    - ports:
+        - protocol: TCP
+          port: {{ . }}
+    {{ end }}
+    {{ if and .MLflowEgressPort .ApplicationsNamespace }}
+    # Direct MLflow tracking. The Service selects pods labeled app: mlflow in the
+    # applications namespace. Port-only 8443 is not used; that would allow any address.
+    - ports:
+        - protocol: TCP
+          port: {{ .MLflowEgressPort }}
+      to:
+        - namespaceSelector:
             matchLabels:
-              pipelines.kubeflow.org/v2_component: 'true'
-        - podSelector:
+              kubernetes.io/metadata.name: {{ .ApplicationsNamespace }}
+          podSelector:
             matchLabels:
-              opendatahub.io/workbenches: 'true'
+              app: mlflow
+    {{ end }}
+    {{ if .APIServerAdditionalEgress }}
+{{ .APIServerAdditionalEgress }}
+    {{ end }}

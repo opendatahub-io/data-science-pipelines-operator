@@ -35,6 +35,7 @@ import (
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/util"
+	configv1 "github.com/openshift/api/config/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/prometheus/client_golang/prometheus"
 	appsv1 "k8s.io/api/apps/v1"
@@ -77,6 +78,8 @@ type DSPAReconciler struct {
 	// APIReader bypasses controller-runtime cache and talks directly to API server.
 	// Used for MLflow endpoint lookups so cache startup state does not affect behavior.
 	APIReader client.Reader
+	// HasOpenShiftConfigAPI enables TLS profile watch registration.
+	HasOpenShiftConfigAPI bool
 	// MLflowEndpointCacheTTL is the duration to cache the MLflow endpoint.
 	MLflowEndpointCacheTTL time.Duration
 	mlflowEndpointCache    map[string]mlflowEndpointCacheEntry
@@ -95,6 +98,34 @@ func (r *DSPAReconciler) removeExpiredMLflowCacheLocked(now time.Time) {
 			delete(r.mlflowEndpointCache, ns)
 		}
 	}
+}
+
+// fetchLiveTLSProfile fetches the cluster TLS profile and adherence policy from
+// the live APIServer object via the shared cluster TLS fetch. Returns zero
+// values on non-OpenShift clusters. A missing config API or APIServer object
+// falls back to the Intermediate profile; every other API error (transient
+// errors included) is returned so the reconcile requeues with backoff.
+func (r *DSPAReconciler) fetchLiveTLSProfile(ctx context.Context) (configv1.TLSProfileSpec, configv1.TLSAdherencePolicy, error) {
+	if !r.HasOpenShiftConfigAPI {
+		return configv1.TLSProfileSpec{}, "", nil
+	}
+
+	fetch, err := util.FetchClusterTLSConfig(ctx, r.Client)
+	if err != nil {
+		return configv1.TLSProfileSpec{}, "", err
+	}
+
+	switch fetch.State {
+	case util.TLSFetchReady:
+		return fetch.ProfileSpec, fetch.Adherence, nil
+	case util.TLSFetchConfigUnavailable, util.TLSFetchMissing:
+		// Missing APIServer CRD or cluster object — fall back to Intermediate profile, no adherence
+		return *configv1.TLSProfiles[configv1.TLSProfileIntermediateType], "", nil
+	case util.TLSFetchTransient:
+		// Posture unknown — requeue with backoff instead of guessing a profile.
+		return configv1.TLSProfileSpec{}, "", fmt.Errorf("transient API error fetching APIServer: %w", fetch.Err)
+	}
+	return configv1.TLSProfileSpec{}, "", fmt.Errorf("unexpected TLS fetch state: %d", fetch.State)
 }
 
 func lookupMLflowEndpoint(ctx context.Context, reader client.Reader, namespace string, log logr.Logger) (string, error) {
@@ -275,6 +306,10 @@ func (r *DSPAReconciler) DeleteResourceIfItExists(ctx context.Context, obj clien
 
 //+kubebuilder:rbac:groups=datasciencepipelinesapplications.opendatahub.io,resources=datasciencepipelinesapplications,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=datasciencepipelinesapplications.opendatahub.io,resources=datasciencepipelinesapplications/api,verbs=get;list;watch;create;update;patch;delete
+// Prometheus scrapes /metrics through kube-rbac-proxy, which checks this DSPA
+// subresource. The operator must hold get so it can grant that permission on
+// the namespaced ds-pipeline-metrics Role.
+//+kubebuilder:rbac:groups=datasciencepipelinesapplications.opendatahub.io,resources=datasciencepipelinesapplications/metrics,verbs=get
 //+kubebuilder:rbac:groups=datasciencepipelinesapplications.opendatahub.io,resources=datasciencepipelinesapplications/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=datasciencepipelinesapplications.opendatahub.io,resources=datasciencepipelinesapplications/finalizers,verbs=update
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
@@ -297,6 +332,7 @@ func (r *DSPAReconciler) DeleteResourceIfItExists(ctx context.Context, obj clien
 //+kubebuilder:rbac:groups=authorization.k8s.io,resources=subjectaccessreviews,verbs=create
 //+kubebuilder:rbac:groups=authentication.k8s.io,resources=tokenreviews,verbs=create
 //+kubebuilder:rbac:groups=image.openshift.io,resources=imagestreamtags,verbs=get
+//+kubebuilder:rbac:groups=config.openshift.io,resources=apiservers,verbs=get;list;watch
 //+kubebuilder:rbac:groups=core,resources=events,verbs=create;patch;list
 //+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;list;watch;create;update;patch;delete
 // Pipeline tasks can create AppWrappers to submit distributed training jobs
@@ -389,11 +425,25 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 				return ctrl.Result{}, err
 			}
 		}
+
+		// Fetch TLS profile only for active (non-deleted) DSPAs
+		tlsProfile, tlsAdherence, err := r.fetchLiveTLSProfile(ctx)
+		if err != nil {
+			log.Error(err, "failed to fetch TLS profile")
+			condition := dspastatus.BuildFalseCondition(config.APIServerReady, "TLSProfileUnavailable", fmt.Sprintf("Failed to fetch TLS profile: %v", err))
+			dspaStatus.SetApiServerStatus(condition)
+			return ctrl.Result{}, err
+		}
+		params.TLSProfileSpec = tlsProfile
+		params.TLSAdherence = tlsAdherence
 	} else {
 		if controllerutil.ContainsFinalizer(dspa, finalizerName) {
 			params.Name = dspa.Name
 			params.Namespace = dspa.Namespace
 			params.DSPONamespace = os.Getenv("DSPO_NAMESPACE")
+			if err := r.deleteAPIServerMetricsResources(ctx, dspa); err != nil {
+				return ctrl.Result{}, err
+			}
 			if err := r.cleanUpResources(params); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -453,7 +503,9 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	objStoreAvailable, err := r.isObjectStorageAccessible(ctx, dspa, params)
-	if err != nil {
+	if errors.Is(err, ErrObjectStoreSkipped) {
+		dspaStatus.SetObjStoreReadinessSkipped("Object Store connectivity verification skipped due to CredentialsMode")
+	} else if err != nil {
 		dspaStatus.SetObjStoreNotReady(err, config.FailingToDeploy)
 	} else {
 		dspaStatus.SetObjStoreReady()
@@ -600,7 +652,7 @@ func (r *DSPAReconciler) validateManagedPipelines(
 	dspaStatus dspastatus.DSPAStatus,
 	log logr.Logger,
 ) (bool, bool, error) {
-	if dspa.Spec.APIServer == nil {
+	if !dspa.ManagedPipelinesEnabled() {
 		dspaStatus.SetManagedPipelineNotApplicable()
 		return true, false, nil
 	}
@@ -1050,6 +1102,13 @@ func (r *DSPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if config.AIPipelinesModuleControllerEnabled() {
 		b = b.Watches(
 			&aipipelinesv1alpha1.AIPipelines{},
+			handler.EnqueueRequestsFromMapFunc(r.enqueueAllSupportedDSPAs),
+		)
+	}
+	// Watch APIServer for TLS profile/adherence changes → reconcile all DSPAs.
+	if r.HasOpenShiftConfigAPI {
+		b = b.Watches(
+			&configv1.APIServer{},
 			handler.EnqueueRequestsFromMapFunc(r.enqueueAllSupportedDSPAs),
 		)
 	}
