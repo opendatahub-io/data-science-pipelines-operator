@@ -220,6 +220,13 @@ spec:
             - name: MANAGED_PIPELINES_UPLOAD_TAGS
               value: "{{ .ManagedPipelinesUploadTags }}"
             {{ end }}
+            {{ if .APIServer.PipelineTaskPVCDefaultStorageClass }}
+            # Default StorageClass for PVCs created by pipeline CreatePVC tasks
+            # that omit their storage class. Unset falls back to the Kubernetes
+            # cluster default StorageClass.
+            - name: DEFAULT_PVC_STORAGE_CLASS
+              value: {{ printf "%q" .APIServer.PipelineTaskPVCDefaultStorageClass }}
+            {{ end }}
           image: {{.APIServer.Image}}
           # imagePullPolicy: default - https://kubernetes.io/docs/concepts/containers/images/#imagepullpolicy-defaulting
           name: ds-pipeline-api-server

@@ -40,6 +40,10 @@ spec:
     customServerConfigMap:
       name: configmapname
       key: keyname
+    # default StorageClass for PVCs created by pipeline CreatePVC tasks
+    # that omit their storage class; unset falls back to the Kubernetes
+    # cluster default StorageClass
+    pipelineTaskPVCDefaultStorageClass: nonDefaultSC
   persistenceAgent:
     deploy: true
     image: quay.io/modh/odh-ml-pipelines-persistenceagent-container:v1.18.0-8

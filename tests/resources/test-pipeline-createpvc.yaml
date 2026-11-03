@@ -1,0 +1,139 @@
+# PIPELINE DEFINITION
+# Name: test-pipeline-createpvc
+# Hand-written compiled IR exercising the three CreatePVC storage-class cases
+# of RHOAIENG-101484: omitted class, explicit named class, explicit empty
+# class (opt-out). No consumer tasks: createpvc driver tasks succeed even
+# when the PVC stays Pending.
+components:
+  comp-createpvc-empty:
+    executorLabel: exec-createpvc-empty
+    inputDefinitions:
+      parameters:
+        access_modes:
+          parameterType: LIST
+        pvc_name_suffix:
+          parameterType: STRING
+        size:
+          parameterType: STRING
+        storage_class_name:
+          isOptional: true
+          parameterType: STRING
+    outputDefinitions:
+      parameters:
+        name:
+          parameterType: STRING
+  comp-createpvc-explicit:
+    executorLabel: exec-createpvc-explicit
+    inputDefinitions:
+      parameters:
+        access_modes:
+          parameterType: LIST
+        pvc_name_suffix:
+          parameterType: STRING
+        size:
+          parameterType: STRING
+        storage_class_name:
+          isOptional: true
+          parameterType: STRING
+    outputDefinitions:
+      parameters:
+        name:
+          parameterType: STRING
+  comp-createpvc-omitted:
+    executorLabel: exec-createpvc-omitted
+    inputDefinitions:
+      parameters:
+        access_modes:
+          parameterType: LIST
+        pvc_name_suffix:
+          parameterType: STRING
+        size:
+          parameterType: STRING
+        storage_class_name:
+          isOptional: true
+          parameterType: STRING
+    outputDefinitions:
+      parameters:
+        name:
+          parameterType: STRING
+deploymentSpec:
+  executors:
+    exec-createpvc-empty:
+      container:
+        image: argostub/createpvc
+    exec-createpvc-explicit:
+      container:
+        image: argostub/createpvc
+    exec-createpvc-omitted:
+      container:
+        image: argostub/createpvc
+pipelineInfo:
+  name: test-pipeline-createpvc
+root:
+  dag:
+    tasks:
+      createpvc-empty:
+        cachingOptions:
+          enableCache: false
+        componentRef:
+          name: comp-createpvc-empty
+        inputs:
+          parameters:
+            access_modes:
+              runtimeValue:
+                constant:
+                - ReadWriteOnce
+            pvc_name_suffix:
+              runtimeValue:
+                constant: -sc-empty
+            size:
+              runtimeValue:
+                constant: 1Gi
+            storage_class_name:
+              runtimeValue:
+                constant: ''
+        taskInfo:
+          name: createpvc-empty
+      createpvc-explicit:
+        cachingOptions:
+          enableCache: false
+        componentRef:
+          name: comp-createpvc-explicit
+        inputs:
+          parameters:
+            access_modes:
+              runtimeValue:
+                constant:
+                - ReadWriteOnce
+            pvc_name_suffix:
+              runtimeValue:
+                constant: -sc-explicit
+            size:
+              runtimeValue:
+                constant: 1Gi
+            storage_class_name:
+              runtimeValue:
+                constant: dspa-task-pvc-sc-explicit
+        taskInfo:
+          name: createpvc-explicit
+      createpvc-omitted:
+        cachingOptions:
+          enableCache: false
+        componentRef:
+          name: comp-createpvc-omitted
+        inputs:
+          parameters:
+            access_modes:
+              runtimeValue:
+                constant:
+                - ReadWriteOnce
+            pvc_name_suffix:
+              runtimeValue:
+                constant: -sc-omitted
+            size:
+              runtimeValue:
+                constant: 1Gi
+        taskInfo:
+          name: createpvc-omitted
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.11.0
