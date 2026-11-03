@@ -250,6 +250,17 @@ func main() {
 	tlsAdherence := tlsResult.Adherence
 	tlsAdherenceFetched := tlsResult.AdherenceFetched
 
+	// Gate the profile callbacks on the adherence policy. NoOpinion and
+	// LegacyAdheringComponentsOnly keep the manager listener defaults (ALPN
+	// only); StrictAllComponents and unknown values apply the profile.
+	if hasOpenShiftConfigAPI {
+		var adherenceKnown bool
+		tlsOpts, adherenceKnown = tlsOptsForAdherence(tlsResult, tlsAdherence)
+		if !adherenceKnown {
+			setupLog.Info("unknown TLS adherence policy, treating as StrictAllComponents", "adherence", tlsAdherence)
+		}
+	}
+
 	mgrOpts := ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{

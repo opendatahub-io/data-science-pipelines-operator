@@ -192,5 +192,191 @@ func TestFetchTLSProfile_AllCiphersUnsupported(t *testing.T) {
 
 	_, err := fetchTLSProfile(context.Background(), cli)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "all 2 ciphers in TLS profile are unsupported by Go")
+	assert.Contains(t, err.Error(), "all 2 ciphers in TLS profile are unusable by this Go runtime")
+}
+
+func TestFetchTLSProfile_InvalidMinVersion(t *testing.T) {
+	apiServer := &configv1.APIServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: configv1.APIServerSpec{
+			TLSSecurityProfile: &configv1.TLSSecurityProfile{
+				Type: configv1.TLSProfileCustomType,
+				Custom: &configv1.CustomTLSProfile{
+					TLSProfileSpec: configv1.TLSProfileSpec{
+						MinTLSVersion: "VersionTLS99",
+						Ciphers:       []string{"ECDHE-RSA-AES128-GCM-SHA256"},
+					},
+				},
+			},
+		},
+	}
+	cli := newTLSTestClient(t, apiServer).Build()
+
+	_, err := fetchTLSProfile(context.Background(), cli)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), `invalid TLS profile minimum version "VersionTLS99"`)
+}
+
+func TestFetchTLSProfile_RestrictedCustomProfile(t *testing.T) {
+	apiServer := &configv1.APIServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: configv1.APIServerSpec{
+			TLSSecurityProfile: &configv1.TLSSecurityProfile{
+				Type: configv1.TLSProfileCustomType,
+				Custom: &configv1.CustomTLSProfile{
+					TLSProfileSpec: configv1.TLSProfileSpec{
+						MinTLSVersion: configv1.VersionTLS12,
+						Ciphers:       []string{"ECDHE-RSA-AES128-GCM-SHA256"},
+					},
+				},
+			},
+		},
+	}
+	cli := newTLSTestClient(t, apiServer).Build()
+
+	result, err := fetchTLSProfile(context.Background(), cli)
+	require.NoError(t, err)
+
+	cfg := applyTLSOpts(result)
+	assert.Equal(t, uint16(tls.VersionTLS12), cfg.MinVersion)
+	require.Len(t, cfg.CipherSuites, 1)
+	assert.Equal(t, tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, cfg.CipherSuites[0])
+	assert.Equal(t, []string{"h2", "http/1.1"}, cfg.NextProtos)
+}
+
+func TestFetchTLSProfile_NilProfileResolvesIntermediate(t *testing.T) {
+	apiServer := &configv1.APIServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+	}
+	cli := newTLSTestClient(t, apiServer).Build()
+
+	result, err := fetchTLSProfile(context.Background(), cli)
+	require.NoError(t, err)
+	assert.True(t, result.HasOpenShiftConfig)
+
+	cfg := applyTLSOpts(result)
+	assert.Equal(t, uint16(tls.VersionTLS12), cfg.MinVersion)
+	assert.NotEmpty(t, cfg.CipherSuites)
+}
+
+func TestFetchTLSProfile_TLS13CipherInTLS12Profile(t *testing.T) {
+	// TLS 1.3-only suites in a TLS <=1.2 list are unusable for that minimum
+	// version: they are filtered, and the usable suites still apply.
+	apiServer := &configv1.APIServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: configv1.APIServerSpec{
+			TLSSecurityProfile: &configv1.TLSSecurityProfile{
+				Type: configv1.TLSProfileCustomType,
+				Custom: &configv1.CustomTLSProfile{
+					TLSProfileSpec: configv1.TLSProfileSpec{
+						MinTLSVersion: configv1.VersionTLS12,
+						Ciphers:       []string{"TLS_AES_128_GCM_SHA256", "ECDHE-RSA-AES128-GCM-SHA256"},
+					},
+				},
+			},
+		},
+	}
+	cli := newTLSTestClient(t, apiServer).Build()
+
+	result, err := fetchTLSProfile(context.Background(), cli)
+	require.NoError(t, err)
+
+	cfg := applyTLSOpts(result)
+	assert.Equal(t, uint16(tls.VersionTLS12), cfg.MinVersion)
+	require.Len(t, cfg.CipherSuites, 1)
+	assert.Equal(t, tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, cfg.CipherSuites[0])
+}
+
+func TestFetchTLSProfile_TLS13AllCiphersUnsupported(t *testing.T) {
+	apiServer := &configv1.APIServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: configv1.APIServerSpec{
+			TLSSecurityProfile: &configv1.TLSSecurityProfile{
+				Type: configv1.TLSProfileCustomType,
+				Custom: &configv1.CustomTLSProfile{
+					TLSProfileSpec: configv1.TLSProfileSpec{
+						MinTLSVersion: configv1.VersionTLS12,
+						Ciphers:       []string{"TLS_AES_128_GCM_SHA256", "TLS_AES_256_GCM_SHA384", "TLS_CHACHA20_POLY1305_SHA256"},
+					},
+				},
+			},
+		},
+	}
+	cli := newTLSTestClient(t, apiServer).Build()
+
+	_, err := fetchTLSProfile(context.Background(), cli)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "all 3 ciphers in TLS profile are unusable by this Go runtime")
+}
+
+func TestTLSAdherenceApplies(t *testing.T) {
+	cases := []struct {
+		adherence configv1.TLSAdherencePolicy
+		applies   bool
+		known     bool
+	}{
+		{configv1.TLSAdherencePolicyNoOpinion, false, true},
+		{configv1.TLSAdherencePolicyLegacyAdheringComponentsOnly, false, true},
+		{configv1.TLSAdherencePolicyStrictAllComponents, true, true},
+		{configv1.TLSAdherencePolicy("Banana"), true, false},
+	}
+	for _, tc := range cases {
+		applies, known := tlsAdherenceApplies(tc.adherence)
+		assert.Equal(t, tc.applies, applies, "applies for %q", tc.adherence)
+		assert.Equal(t, tc.known, known, "known for %q", tc.adherence)
+	}
+}
+
+func TestTLSConfigForAdherence(t *testing.T) {
+	apiServer := &configv1.APIServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: configv1.APIServerSpec{
+			TLSSecurityProfile: &configv1.TLSSecurityProfile{
+				Type: configv1.TLSProfileCustomType,
+				Custom: &configv1.CustomTLSProfile{
+					TLSProfileSpec: configv1.TLSProfileSpec{
+						MinTLSVersion: configv1.VersionTLS12,
+						Ciphers:       []string{"ECDHE-RSA-AES128-GCM-SHA256"},
+					},
+				},
+			},
+			TLSAdherence: configv1.TLSAdherencePolicyStrictAllComponents,
+		},
+	}
+	cli := newTLSTestClient(t, apiServer).Build()
+
+	result, err := fetchTLSProfile(context.Background(), cli)
+	require.NoError(t, err)
+
+	apply := func(opts []func(*tls.Config)) *tls.Config {
+		cfg := &tls.Config{}
+		for _, fn := range opts {
+			fn(cfg)
+		}
+		return cfg
+	}
+
+	// NoOpinion and Legacy preserve the manager defaults: ALPN only.
+	for _, adherence := range []configv1.TLSAdherencePolicy{configv1.TLSAdherencePolicyNoOpinion, configv1.TLSAdherencePolicyLegacyAdheringComponentsOnly} {
+		opts, known := tlsOptsForAdherence(result, adherence)
+		assert.True(t, known)
+		cfg := apply(opts)
+		assert.Equal(t, []string{"h2", "http/1.1"}, cfg.NextProtos)
+		assert.Equal(t, uint16(0), cfg.MinVersion)
+		assert.Empty(t, cfg.CipherSuites)
+	}
+
+	// Strict and unknown values apply the profile.
+	for _, adherence := range []configv1.TLSAdherencePolicy{configv1.TLSAdherencePolicyStrictAllComponents, configv1.TLSAdherencePolicy("Banana")} {
+		opts, known := tlsOptsForAdherence(result, adherence)
+		if adherence == configv1.TLSAdherencePolicy("Banana") {
+			assert.False(t, known)
+		} else {
+			assert.True(t, known)
+		}
+		cfg := apply(opts)
+		assert.Equal(t, uint16(tls.VersionTLS12), cfg.MinVersion)
+		assert.Equal(t, []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256}, cfg.CipherSuites)
+		assert.Equal(t, []string{"h2", "http/1.1"}, cfg.NextProtos)
+	}
 }
