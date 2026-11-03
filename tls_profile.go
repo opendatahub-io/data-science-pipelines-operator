@@ -131,7 +131,7 @@ func newTLSConfigFromProfile(profile configv1.TLSProfileSpec) (func(*tls.Config)
 
 	return func(c *tls.Config) {
 		c.MinVersion = minVersion
-		if minVersion != tls.VersionTLS13 {
+		if minVersion != tls.VersionTLS13 && len(cipherSuites) > 0 {
 			c.CipherSuites = cipherSuites
 		}
 	}, unsupported, nil
