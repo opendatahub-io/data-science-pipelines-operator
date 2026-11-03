@@ -309,6 +309,33 @@ func TestFetchTLSProfile_TLS13AllCiphersUnsupported(t *testing.T) {
 	assert.Contains(t, err.Error(), "all 3 ciphers in TLS profile are unusable by this Go runtime")
 }
 
+func TestFetchTLSProfile_EmptyCipherListKeepsGoDefaults(t *testing.T) {
+	// A Custom TLS 1.2 profile with no ciphers must leave CipherSuites nil
+	// so Go's default suites apply; an empty non-nil slice would disable
+	// TLS 1.2 negotiation entirely.
+	apiServer := &configv1.APIServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: configv1.APIServerSpec{
+			TLSSecurityProfile: &configv1.TLSSecurityProfile{
+				Type: configv1.TLSProfileCustomType,
+				Custom: &configv1.CustomTLSProfile{
+					TLSProfileSpec: configv1.TLSProfileSpec{
+						MinTLSVersion: configv1.VersionTLS12,
+					},
+				},
+			},
+		},
+	}
+	cli := newTLSTestClient(t, apiServer).Build()
+
+	result, err := fetchTLSProfile(context.Background(), cli)
+	require.NoError(t, err)
+
+	cfg := applyTLSOpts(result)
+	assert.Equal(t, uint16(tls.VersionTLS12), cfg.MinVersion)
+	assert.Nil(t, cfg.CipherSuites)
+}
+
 func TestTLSAdherenceApplies(t *testing.T) {
 	cases := []struct {
 		adherence configv1.TLSAdherencePolicy
