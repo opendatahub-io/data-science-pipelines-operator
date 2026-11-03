@@ -259,6 +259,15 @@ type APIServer struct {
 	// +kubebuilder:validation:Pattern=`^(?:(\d+(?:\.\d+)?h))?(?:(\d+(?:\.\d+)?m))?(?:(\d+(?:\.\d+)?s))?$`
 	// +kubebuilder:validation:MinLength=2
 	ResourceTTL *metav1.Duration `json:"resourceTTL,omitempty"`
+
+	// PipelineTaskPVCDefaultStorageClass is the default StorageClass used for PVCs
+	// created by pipeline CreatePVC tasks that omit their storage class. It does not
+	// affect MariaDB, Minio, or workspace PVCs. When a pipeline task supplies an
+	// explicit storage class (including an empty string, which opts out of defaulting),
+	// that value takes precedence. When unset or empty, PVCs without a task-supplied
+	// storage class fall back to the Kubernetes cluster default StorageClass.
+	// +kubebuilder:validation:Optional
+	PipelineTaskPVCDefaultStorageClass string `json:"pipelineTaskPVCDefaultStorageClass,omitempty"`
 }
 
 type APIServerWorkspace struct {
