@@ -20,7 +20,10 @@ package util
 
 import (
 	"context"
+	cryptotls "crypto/tls"
 	"errors"
+	"net"
+	"syscall"
 	"testing"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -42,12 +45,15 @@ func TestIsTransientOpenShiftAPIError(t *testing.T) {
 		err       error
 		transient bool
 	}{
-		{name: "internal error", err: apierrors.NewInternalError(errors.New("apiserver unavailable")), transient: false},
+		{name: "internal error", err: apierrors.NewInternalError(errors.New("etcd leader election")), transient: true},
+		{name: "connection refused", err: &net.OpError{Op: "dial", Err: syscall.ECONNREFUSED}, transient: true},
 		{name: "deadline exceeded", err: context.DeadlineExceeded, transient: true},
 		{name: "timeout", err: apierrors.NewTimeoutError("timed out", 0), transient: true},
 		{name: "service unavailable", err: apierrors.NewServiceUnavailable("apiserver restarting"), transient: true},
 		{name: "too many requests", err: apierrors.NewTooManyRequestsError("throttled"), transient: true},
 		{name: "forbidden", err: apierrors.NewForbidden(schema.GroupResource{Group: "config.openshift.io", Resource: "apiservers"}, "cluster", errors.New("denied")), transient: false},
+		{name: "bad request", err: apierrors.NewBadRequest("invalid request"), transient: false},
+		{name: "invalid", err: apierrors.NewInvalid(schema.GroupKind{Group: "config.openshift.io", Kind: "APIServer"}, "cluster", nil), transient: false},
 		{name: "not found", err: apierrors.NewNotFound(schema.GroupResource{Group: "config.openshift.io", Resource: "apiservers"}, "cluster"), transient: false},
 		{name: "nil error", err: nil, transient: false},
 	}
@@ -55,6 +61,89 @@ func TestIsTransientOpenShiftAPIError(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.transient, IsTransientOpenShiftAPIError(tt.err))
+		})
+	}
+}
+
+func TestProhibitedTLSCipherNames(t *testing.T) {
+	tests := []struct {
+		name       string
+		cipher     string
+		wantReject bool
+	}{
+		{name: "RC4 IANA", cipher: "TLS_RSA_WITH_RC4_128_SHA", wantReject: true},
+		{name: "unsupported RC4 OpenSSL alias", cipher: "RC4-MD5", wantReject: true},
+		{name: "3DES OpenSSL", cipher: "DES-CBC3-SHA", wantReject: true},
+		{name: "SHA-1 CBC IANA", cipher: "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA", wantReject: true},
+		{name: "SHA-1 CBC OpenSSL", cipher: "ECDHE-RSA-AES128-SHA", wantReject: true},
+		{name: "SHA-256 CBC IANA", cipher: "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256"},
+		{name: "SHA-256 CBC OpenSSL", cipher: "ECDHE-RSA-AES128-SHA256"},
+		{name: "safe GCM", cipher: "ECDHE-RSA-AES128-GCM-SHA256"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rejected := ProhibitedTLSCipherNames([]string{tt.cipher})
+			if tt.wantReject {
+				assert.Equal(t, []string{tt.cipher}, rejected)
+				return
+			}
+			assert.Empty(t, rejected)
+		})
+	}
+}
+
+func TestHasTLS12CapableCurveIDs(t *testing.T) {
+	tests := []struct {
+		name   string
+		curves []cryptotls.CurveID
+		want   bool
+	}{
+		{name: "X25519", curves: []cryptotls.CurveID{cryptotls.X25519}, want: true},
+		{name: "classical and hybrid", curves: []cryptotls.CurveID{cryptotls.X25519MLKEM768, cryptotls.CurveP256}, want: true},
+		{name: "hybrid only", curves: []cryptotls.CurveID{cryptotls.X25519MLKEM768, cryptotls.SecP256r1MLKEM768}, want: false},
+		{name: "unclassified curve fails closed", curves: []cryptotls.CurveID{cryptotls.CurveID(12345)}, want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, HasTLS12CapableCurveIDs(tt.curves))
+		})
+	}
+}
+
+func TestHasStaticRSAKeyExchangeCipherNames(t *testing.T) {
+	tests := []struct {
+		name    string
+		ciphers []string
+		want    bool
+	}{
+		{name: "static RSA", ciphers: []string{"TLS_RSA_WITH_AES_128_GCM_SHA256"}, want: true},
+		{name: "ECDHE", ciphers: []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"}, want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, HasStaticRSAKeyExchangeCipherNames(tt.ciphers))
+		})
+	}
+}
+
+func TestHasHTTP2CompatibleCipherNames(t *testing.T) {
+	tests := []struct {
+		name    string
+		ciphers []string
+		want    bool
+	}{
+		{name: "ECDHE RSA AES-128-GCM", ciphers: []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"}, want: true},
+		{name: "ECDHE ECDSA AES-128-GCM", ciphers: []string{"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256"}, want: true},
+		{name: "AES-256-GCM only", ciphers: []string{"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"}, want: false},
+		{name: "static RSA AES-128-GCM", ciphers: []string{"TLS_RSA_WITH_AES_128_GCM_SHA256"}, want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, HasHTTP2CompatibleCipherNames(tt.ciphers))
 		})
 	}
 }
@@ -86,8 +175,30 @@ func TestFetchClusterTLSConfig_Ready(t *testing.T) {
 
 	assert.Equal(t, TLSFetchReady, fetch.State)
 	assert.Equal(t, *configv1.TLSProfiles[configv1.TLSProfileModernType], fetch.ProfileSpec)
+	assert.Equal(t, configv1.TLSProfileModernType, fetch.ProfileType)
 	assert.Equal(t, configv1.TLSAdherencePolicyStrictAllComponents, fetch.Adherence)
 	assert.NoError(t, fetch.Err)
+}
+
+func TestFetchClusterTLSConfig_CustomProfileType(t *testing.T) {
+	apiServer := &configv1.APIServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: configv1.APIServerSpec{
+			TLSSecurityProfile: &configv1.TLSSecurityProfile{
+				Type: configv1.TLSProfileCustomType,
+				Custom: &configv1.CustomTLSProfile{TLSProfileSpec: configv1.TLSProfileSpec{
+					MinTLSVersion: configv1.VersionTLS12,
+				}},
+			},
+		},
+	}
+	cli := newTLSFakeClient(t, apiServer).Build()
+
+	fetch, err := FetchClusterTLSConfig(context.Background(), cli)
+	require.NoError(t, err)
+	require.NotNil(t, fetch)
+	assert.Equal(t, TLSFetchReady, fetch.State)
+	assert.Equal(t, configv1.TLSProfileCustomType, fetch.ProfileType)
 }
 
 func TestFetchClusterTLSConfig_Ready_DefaultsToIntermediateWhenProfileUnset(t *testing.T) {
@@ -165,9 +276,7 @@ func TestFetchClusterTLSConfig_HardError(t *testing.T) {
 	assert.True(t, apierrors.IsForbidden(err), "hard errors must preserve the API error for callers, got: %v", err)
 }
 
-func TestFetchClusterTLSConfig_InternalErrorIsHard(t *testing.T) {
-	// InternalError is intentionally NOT transient: HTTP 500 on the profile
-	// GET means the posture is unknown, so Intermediate fallback would be a guess.
+func TestFetchClusterTLSConfig_InternalErrorIsTransient(t *testing.T) {
 	cli := newTLSFakeClient(t).WithInterceptorFuncs(interceptor.Funcs{
 		Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
 			return apierrors.NewInternalError(errors.New("apiserver unavailable"))
@@ -175,9 +284,10 @@ func TestFetchClusterTLSConfig_InternalErrorIsHard(t *testing.T) {
 	}).Build()
 
 	fetch, err := FetchClusterTLSConfig(context.Background(), cli)
-	require.Error(t, err)
-	assert.Nil(t, fetch)
-	assert.True(t, apierrors.IsInternalError(err))
+	require.NoError(t, err)
+	require.NotNil(t, fetch)
+	assert.Equal(t, TLSFetchTransient, fetch.State)
+	assert.True(t, apierrors.IsInternalError(fetch.Err))
 }
 
 func TestFetchClusterTLSConfig_InvalidProfile(t *testing.T) {

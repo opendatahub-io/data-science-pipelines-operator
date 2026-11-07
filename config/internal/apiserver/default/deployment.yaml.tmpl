@@ -232,6 +232,12 @@ spec:
             - --tlsCertPath=/etc/tls/private/tls.crt
             - --tlsCertKeyPath=/etc/tls/private/tls.key
             {{ end }}
+            {{- if .APIServerTLS }}
+            - --tlsMinVersion={{ .APIServerTLS.MinVersion }}
+            {{- if .APIServerTLS.CipherSuites }}
+            - --tlsCipherSuites={{ .APIServerTLS.CipherSuites }}
+            {{- end }}
+            {{- end }}
             {{ if eq .APIServer.PipelineStore "kubernetes" }}
             - --pipelinesStoreKubernetes=true
             - --disableWebhook=true
@@ -346,6 +352,10 @@ spec:
             {{- if .KubeRBACProxyTLS.CipherSuites }}
             - --tls-cipher-suites={{ .KubeRBACProxyTLS.CipherSuites }}
             {{- end }}
+            {{- if .KubeRBACProxyTLS.CurvePreferences }}
+            # Requires a kube-rbac-proxy image with curve preferences support (RHOAIENG-97595).
+            - --tls-curve-preferences={{ .KubeRBACProxyTLS.CurvePreferences }}
+            {{- end }}
             {{- end }}
             - --config-file=/etc/kube-rbac-proxy/config-file.yaml
             - --ignore-paths=/healthz,/apis/v1beta1/healthz
@@ -412,6 +422,10 @@ spec:
             - --tls-min-version={{ .KubeRBACProxyTLS.MinVersion }}
             {{- if .KubeRBACProxyTLS.CipherSuites }}
             - --tls-cipher-suites={{ .KubeRBACProxyTLS.CipherSuites }}
+            {{- end }}
+            {{- if .KubeRBACProxyTLS.CurvePreferences }}
+            # Requires a kube-rbac-proxy image with curve preferences support (RHOAIENG-97595).
+            - --tls-curve-preferences={{ .KubeRBACProxyTLS.CurvePreferences }}
             {{- end }}
             {{- end }}
             - --config-file=/etc/kube-rbac-proxy/metrics-config-file.yaml

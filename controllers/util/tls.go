@@ -18,14 +18,19 @@ package util
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
+	"net"
+	"strings"
 
 	configv1 "github.com/openshift/api/config/v1"
 	tlspkg "github.com/openshift/controller-runtime-common/pkg/tls"
+	libgocrypto "github.com/openshift/library-go/pkg/crypto"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/types"
+	utilnet "k8s.io/apimachinery/pkg/util/net"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -55,23 +60,126 @@ type TLSFetchResult struct {
 	State TLSFetchState
 	// ProfileSpec is the TLS profile resolved from the cluster APIServer object.
 	ProfileSpec configv1.TLSProfileSpec
+	ProfileType configv1.TLSProfileType
 	// Adherence is the TLS adherence policy read from the same object.
 	Adherence configv1.TLSAdherencePolicy
 	// Err is the underlying API error for non-Ready states; nil when Ready.
 	Err error
 }
 
-// IsTransientOpenShiftAPIError reports API errors that are safe to retry while
-// cluster TLS posture is still unknown. Matches the TLS Error Handling Contract:
-// ServiceUnavailable, Timeout, ServerTimeout, TooManyRequests, DeadlineExceeded.
-// InternalError is intentionally omitted: HTTP 500 on the profile GET means the
-// posture is unknown, so Intermediate fallback would be a guess.
+func ProhibitedTLSCipherNames(ciphers []string) []string {
+	insecureIDs := make(map[uint16]struct{})
+	runtimeSuites := append(tls.CipherSuites(), tls.InsecureCipherSuites()...)
+	for _, suite := range runtimeSuites {
+		if isProhibitedTLSCipherName(suite.Name) {
+			insecureIDs[suite.ID] = struct{}{}
+		}
+	}
+
+	var rejected []string
+	for _, cipher := range ciphers {
+		name := strings.TrimSpace(cipher)
+		originalName := strings.ToUpper(name)
+		switch originalName {
+		case "RC4-SHA":
+			name = "TLS_RSA_WITH_RC4_128_SHA"
+		case "ECDHE-RSA-RC4-SHA":
+			name = "TLS_ECDHE_RSA_WITH_RC4_128_SHA"
+		case "ECDHE-ECDSA-RC4-SHA":
+			name = "TLS_ECDHE_ECDSA_WITH_RC4_128_SHA"
+		}
+		id, err := libgocrypto.CipherSuite(name)
+		if err != nil {
+			ianaNames := libgocrypto.OpenSSLToIANACipherSuites([]string{name})
+			if len(ianaNames) != 1 {
+				if isProhibitedTLSCipherName(originalName) {
+					rejected = append(rejected, cipher)
+				}
+				continue
+			}
+			id, err = libgocrypto.CipherSuite(ianaNames[0])
+			if err != nil {
+				if isProhibitedTLSCipherName(ianaNames[0]) {
+					rejected = append(rejected, cipher)
+				}
+				continue
+			}
+		}
+		if _, ok := insecureIDs[id]; ok {
+			rejected = append(rejected, cipher)
+		}
+	}
+	return rejected
+}
+
+// HasTLS12CapableCurveIDs reports whether the configured groups include a
+// curve usable by TLS 1.2. The ML-KEM hybrid groups are TLS 1.3-only; keeping
+// the classical allowlist shared prevents manager and operand checks drifting.
+func HasTLS12CapableCurveIDs(curveIDs []tls.CurveID) bool {
+	for _, id := range curveIDs {
+		switch id {
+		case tls.X25519, tls.CurveP256, tls.CurveP384, tls.CurveP521:
+			return true
+		}
+	}
+	return false
+}
+
+// HasStaticRSAKeyExchangeCipherNames reports whether a canonical IANA cipher
+// list contains a static RSA key exchange suite, which can complete TLS 1.2
+// without an elliptic curve.
+func HasStaticRSAKeyExchangeCipherNames(cipherNames []string) bool {
+	for _, name := range cipherNames {
+		if strings.HasPrefix(name, "TLS_RSA_WITH") {
+			return true
+		}
+	}
+	return false
+}
+
+// HasHTTP2CompatibleCipherNames reports whether a canonical IANA cipher list
+// contains one of the AES-128-GCM ECDHE suites required by net/http for HTTP/2.
+func HasHTTP2CompatibleCipherNames(cipherNames []string) bool {
+	for _, name := range cipherNames {
+		if name == "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256" ||
+			name == "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256" {
+			return true
+		}
+	}
+	return false
+}
+
+func isProhibitedTLSCipherName(name string) bool {
+	name = strings.ToUpper(name)
+	return strings.Contains(name, "RC4") || strings.Contains(name, "3DES") ||
+		strings.Contains(name, "CBC3") || strings.HasSuffix(name, "_CBC_SHA") ||
+		strings.HasSuffix(name, "-SHA")
+}
+
+// IsTransientOpenShiftAPIError reports API and connection errors that are safe
+// to retry while cluster TLS posture is still unknown.
 func IsTransientOpenShiftAPIError(err error) bool {
-	return apierrors.IsServiceUnavailable(err) ||
+	// Explicitly transient API statuses first.
+	if apierrors.IsServiceUnavailable(err) ||
 		apierrors.IsTimeout(err) ||
 		apierrors.IsServerTimeout(err) ||
 		apierrors.IsTooManyRequests(err) ||
-		errors.Is(err, context.DeadlineExceeded)
+		apierrors.IsInternalError(err) ||
+		errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	// Reject other API-status errors before checking transport predicates.
+	var statusErr *apierrors.StatusError
+	if errors.As(err, &statusErr) {
+		return false
+	}
+	// Transport-level errors for non-API-status failures.
+	var netErr net.Error
+	return utilnet.IsConnectionRefused(err) ||
+		utilnet.IsConnectionReset(err) ||
+		utilnet.IsProbableEOF(err) ||
+		utilnet.IsHTTP2ConnectionLost(err) ||
+		(errors.As(err, &netErr) && netErr.Timeout())
 }
 
 // FetchClusterTLSConfig reads the cluster APIServer object once and resolves
@@ -104,10 +212,15 @@ func FetchClusterTLSConfig(ctx context.Context, cli client.Client) (*TLSFetchRes
 	if err != nil {
 		return nil, fmt.Errorf("failed to get TLS profile from APIServer %q: %w", tlspkg.APIServerName, err)
 	}
+	profileType := configv1.TLSProfileIntermediateType
+	if apiServer.Spec.TLSSecurityProfile != nil && apiServer.Spec.TLSSecurityProfile.Type != "" {
+		profileType = apiServer.Spec.TLSSecurityProfile.Type
+	}
 
 	return &TLSFetchResult{
 		State:       TLSFetchReady,
 		ProfileSpec: profileSpec,
+		ProfileType: profileType,
 		Adherence:   apiServer.Spec.TLSAdherence,
 	}, nil
 }
