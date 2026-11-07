@@ -166,8 +166,11 @@ var platformRelatedImages = map[string]string{
 	MariaDBImagePath:                "RELATED_IMAGE_DSP_MARIADB_IMAGE",
 	MlmdEnvoyImagePath:              "RELATED_IMAGE_DSP_PROXYV2_IMAGE",
 	MlmdGRPCImagePath:               "RELATED_IMAGE_ODH_MLMD_GRPC_SERVER_IMAGE",
-	KubeRBACProxyImagePath:          "RELATED_IMAGE_ODH_KUBE_RBAC_PROXY_IMAGE",
-	PipelinesComponentsImagePath:    "RELATED_IMAGE_ODH_PIPELINES_COMPONENTS_IMAGE",
+	// KubeRBACProxyImagePath: when the cluster TLS profile contains Groups,
+	// the projected --tls-curve-preferences flag requires an image built
+	// from the ODH fork of kube-rbac-proxy (RHOAIENG-97595).
+	KubeRBACProxyImagePath:       "RELATED_IMAGE_ODH_KUBE_RBAC_PROXY_IMAGE",
+	PipelinesComponentsImagePath: "RELATED_IMAGE_ODH_PIPELINES_COMPONENTS_IMAGE",
 }
 
 // DSPA Status Condition Types

@@ -5,13 +5,21 @@ The scripts found in this folder contain tools utilized for performing a DSP rel
 ### Params Generation
 This tool will generate a new `params.env` file based on the upcoming DSP tags. 
 
-If images in Red Hat registry have also been updated (e.g. security fixes) without changes to tag version, then the newer 
-digests will be used. The following command will generate the `params.env`: 
+If a tag-resolved image is rebuilt without changing its tag, the generated `params.env` records the current digest; images pinned by digest in the script (MLMD Envoy, MariaDB) keep their recorded digest. The following
+command generates the `params.env` with the compatible ODH kube-rbac-proxy version:
+
+Before writing the file, the selected kube-rbac-proxy image is verified: the script runs
+the image's `--help` through podman or docker (`--network=none`) and fails when it does not
+support the TLS flags the operator projects into proxy sidecars (`--tls-min-version`,
+`--tls-cipher-suites`, `--tls-curve-preferences`). Verification is required: generation
+fails when no container runtime is available. To explicitly accept the risk of an
+unverified image, pass `--skip-proxy-verification`.
+v3.5.0 and older lack `--tls-curve-preferences`; use v3.6.0 or later.
 
 **Pre-condition**: All DSP/DSPO images should have been build with tag <DSP_TAG>
 ```
 python release.py params --tag v1.2.0 --out_file params.env \
-    --override="kube-rbac-proxy=registry.redhat.io/openshift4/ose-kube-rbac-proxy-rhel9@<digest>"
+    --kube-rbac-proxy v3.6.0
 ```
 
 See `--help` for more options like specifying tags for images not tied to DSP (ubi, mariadb, kube-rbac-proxy, etc.)

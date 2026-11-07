@@ -103,7 +103,7 @@ func (suite *IntegrationTestSuite) TestDSPADeployment() {
 
 		for _, deployment := range deployments {
 			t.Run(fmt.Sprintf("should have a ready %s deployment", deployment), func(t *testing.T) {
-				testUtil.TestForSuccessfulDeployment(t, suite.Ctx, suite.DSPANamespace, deployment, suite.Clientmgr.k8sClient)
+				testUtil.TestForSuccessfulDeployment(t, suite.Ctx, suite.DSPANamespace, deployment, suite.Clientmgr.k8sClient, DeployTimeout)
 			})
 		}
 		for _, deployment := range skippedDeployments {

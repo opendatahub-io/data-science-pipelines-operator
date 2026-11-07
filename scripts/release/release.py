@@ -24,8 +24,13 @@ def main():
                         help="ubi-micro version tag in rh registry")
     parser_params.add_argument("--mariadb", dest="mariadb_tag", default="1",
                         help="mariadb version tag in rh registry")
-    parser_params.add_argument("--kube-rbac-proxy", dest="kube_rbac_proxy_tag", default="v4.17",
-                        help="kube-rbac-proxy version tag in rh registry")
+    parser_params.add_argument("--kube-rbac-proxy", dest="kube_rbac_proxy_tag", default="v3.6.0",
+                        help="ODH kube-rbac-proxy version tag in Quay")
+    parser_params.add_argument("--skip-proxy-verification", dest="skip_proxy_verification",
+                               action="store_true", default=False,
+                               help="Skip the kube-rbac-proxy TLS flag verification. This "
+                                    "explicitly accepts the risk that the selected image "
+                                    "cannot serve the TLS flags the operator projects.")
 
     parser_params.add_argument("--override", dest="overrides",
                                help="Override an env var with a manually submitted digest "

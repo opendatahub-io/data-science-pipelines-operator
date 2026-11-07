@@ -110,6 +110,10 @@ spec:
             {{- if .KubeRBACProxyTLS.CipherSuites }}
             - --tls-cipher-suites={{ .KubeRBACProxyTLS.CipherSuites }}
             {{- end }}
+            {{- if .KubeRBACProxyTLS.CurvePreferences }}
+            # Requires a kube-rbac-proxy image with curve preferences support (RHOAIENG-97595).
+            - --tls-curve-preferences={{ .KubeRBACProxyTLS.CurvePreferences }}
+            {{- end }}
             {{- end }}
             - --ignore-paths=/healthz,/apis/v1beta1/healthz,/metrics
           image: {{.KubeRBACProxy}}
