@@ -105,27 +105,27 @@ func (r *DSPAReconciler) removeExpiredMLflowCacheLocked(now time.Time) {
 // values on non-OpenShift clusters. A missing config API or APIServer object
 // falls back to the Intermediate profile; every other API error (transient
 // errors included) is returned so the reconcile requeues with backoff.
-func (r *DSPAReconciler) fetchLiveTLSProfile(ctx context.Context) (configv1.TLSProfileSpec, configv1.TLSAdherencePolicy, error) {
+func (r *DSPAReconciler) fetchLiveTLSProfile(ctx context.Context) (configv1.TLSProfileSpec, configv1.TLSProfileType, configv1.TLSAdherencePolicy, error) {
 	if !r.HasOpenShiftConfigAPI {
-		return configv1.TLSProfileSpec{}, "", nil
+		return configv1.TLSProfileSpec{}, "", "", nil
 	}
 
 	fetch, err := util.FetchClusterTLSConfig(ctx, r.Client)
 	if err != nil {
-		return configv1.TLSProfileSpec{}, "", err
+		return configv1.TLSProfileSpec{}, "", "", err
 	}
 
 	switch fetch.State {
 	case util.TLSFetchReady:
-		return fetch.ProfileSpec, fetch.Adherence, nil
+		return fetch.ProfileSpec, fetch.ProfileType, fetch.Adherence, nil
 	case util.TLSFetchConfigUnavailable, util.TLSFetchMissing:
 		// Missing APIServer CRD or cluster object — fall back to Intermediate profile, no adherence
-		return *configv1.TLSProfiles[configv1.TLSProfileIntermediateType], "", nil
+		return *configv1.TLSProfiles[configv1.TLSProfileIntermediateType], configv1.TLSProfileIntermediateType, "", nil
 	case util.TLSFetchTransient:
 		// Posture unknown — requeue with backoff instead of guessing a profile.
-		return configv1.TLSProfileSpec{}, "", fmt.Errorf("transient API error fetching APIServer: %w", fetch.Err)
+		return configv1.TLSProfileSpec{}, "", "", fmt.Errorf("transient API error fetching APIServer: %w", fetch.Err)
 	}
-	return configv1.TLSProfileSpec{}, "", fmt.Errorf("unexpected TLS fetch state: %d", fetch.State)
+	return configv1.TLSProfileSpec{}, "", "", fmt.Errorf("unexpected TLS fetch state: %d", fetch.State)
 }
 
 func lookupMLflowEndpoint(ctx context.Context, reader client.Reader, namespace string, log logr.Logger) (string, error) {
@@ -427,7 +427,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 
 		// Fetch TLS profile only for active (non-deleted) DSPAs
-		tlsProfile, tlsAdherence, err := r.fetchLiveTLSProfile(ctx)
+		tlsProfile, tlsProfileType, tlsAdherence, err := r.fetchLiveTLSProfile(ctx)
 		if err != nil {
 			log.Error(err, "failed to fetch TLS profile")
 			condition := dspastatus.BuildFalseCondition(config.APIServerReady, "TLSProfileUnavailable", fmt.Sprintf("Failed to fetch TLS profile: %v", err))
@@ -435,6 +435,7 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			return ctrl.Result{}, err
 		}
 		params.TLSProfileSpec = tlsProfile
+		params.TLSProfileType = tlsProfileType
 		params.TLSAdherence = tlsAdherence
 	} else {
 		if controllerutil.ContainsFinalizer(dspa, finalizerName) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"strings"
 
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/util"
 	configv1 "github.com/openshift/api/config/v1"
@@ -19,6 +20,7 @@ type tlsResult struct {
 	// callback applied so the manager listener defaults are preserved.
 	NextProtosOpt      func(*tls.Config)
 	ProfileSpec        configv1.TLSProfileSpec
+	ProfileType        configv1.TLSProfileType
 	HasOpenShiftConfig bool
 	// Adherence is the TLS adherence policy read from the same APIServer
 	// object as the profile. It is NoOpinion (the zero value) whenever it
@@ -44,7 +46,10 @@ type tlsResult struct {
 //     running Go runtime: hard error, startup fails.
 func fetchTLSProfile(ctx context.Context, cli client.Client) (*tlsResult, error) {
 	l := logf.FromContext(ctx).WithName("tls-profile")
-	result := &tlsResult{NextProtosOpt: setNextProtos}
+	result := &tlsResult{
+		NextProtosOpt: setNextProtos,
+		ProfileType:   configv1.TLSProfileIntermediateType,
+	}
 
 	fetch, err := util.FetchClusterTLSConfig(ctx, cli)
 	if err != nil {
@@ -58,6 +63,7 @@ func fetchTLSProfile(ctx context.Context, cli client.Client) (*tlsResult, error)
 		result.Adherence = fetch.Adherence
 		result.AdherenceFetched = true
 		profile = fetch.ProfileSpec
+		result.ProfileType = fetch.ProfileType
 	case util.TLSFetchConfigUnavailable:
 		l.Info("config.openshift.io API not available (non-OpenShift cluster), using Intermediate TLS profile as fallback")
 		profile = intermediateFallbackProfile()
@@ -76,6 +82,11 @@ func fetchTLSProfile(ctx context.Context, cli client.Client) (*tlsResult, error)
 		result.AdherenceFetched = true
 		profile = intermediateFallbackProfile()
 	}
+	if enforced, _ := tlsAdherenceApplies(result.Adherence); enforced && result.ProfileType == configv1.TLSProfileCustomType {
+		if rejected := util.ProhibitedTLSCipherNames(profile.Ciphers); len(rejected) > 0 {
+			return nil, fmt.Errorf("Custom TLS profile contains prohibited cipher suites: %v", rejected)
+		}
+	}
 
 	tlsConfigFn, unsupportedCiphers, err := newTLSConfigFromProfile(profile)
 	if err != nil {
@@ -84,7 +95,39 @@ func fetchTLSProfile(ctx context.Context, cli client.Client) (*tlsResult, error)
 	if len(unsupportedCiphers) > 0 {
 		l.Info("some ciphers from TLS profile are unusable by this Go runtime", "unsupported", unsupportedCiphers)
 	}
+	curvePreferences, unsupportedGroups := libgocrypto.TLSGroupsToCurveIDs(profile.Groups)
+	if len(unsupportedGroups) > 0 {
+		l.Info("some groups from TLS profile are not supported by Go", "unsupported", unsupportedGroups)
+	}
+	// Group validation only applies under adherence policies that enforce
+	// the cluster profile; non-enforcing policies preserve the manager
+	// listener defaults, so a group list that cannot be served must not
+	// prevent the operator from starting. Like the shared framework/tls
+	// resolver, only compile-time support is validated: runtime restrictions
+	// (for example GODEBUG tlsmlkem disabling hybrid groups) are applied by
+	// crypto/tls itself, and a group excluded that way fails handshakes
+	// rather than this startup check.
+	if enforced, _ := tlsAdherenceApplies(result.Adherence); enforced && len(profile.Groups) > 0 {
+		if len(curvePreferences) == 0 {
+			return nil, fmt.Errorf("all %d groups in TLS profile are unsupported by Go: %v",
+				len(profile.Groups), unsupportedGroups)
+		}
+		// Hybrid ML-KEM groups only negotiate TLS 1.3; a group list with no
+		// TLS 1.2-capable group below a TLS 1.3 minimum leaves TLS 1.2
+		// clients unable to complete a handshake, unless a static RSA key
+		// exchange cipher is configured (it needs no curve).
+		if profile.MinTLSVersion != configv1.VersionTLS13 && !hasTLS12Group(curvePreferences) && !hasStaticRSAKeyExchange(profile.Ciphers) {
+			return nil, fmt.Errorf(
+				"TLS profile with minimum %s has no groups usable for TLS 1.2: %v",
+				profile.MinTLSVersion, profile.Groups)
+		}
+	}
 	result.TLSOpts = append(result.TLSOpts, tlsConfigFn)
+	if len(profile.Groups) > 0 {
+		result.TLSOpts = append(result.TLSOpts, func(c *tls.Config) {
+			c.CurvePreferences = curvePreferences
+		})
+	}
 	result.ProfileSpec = profile
 	result.TLSOpts = append(result.TLSOpts, result.NextProtosOpt)
 
@@ -95,6 +138,43 @@ func fetchTLSProfile(ctx context.Context, cli client.Client) (*tlsResult, error)
 // the safe fallback whenever the cluster TLS posture cannot be determined.
 func intermediateFallbackProfile() configv1.TLSProfileSpec {
 	return *configv1.TLSProfiles[configv1.TLSProfileIntermediateType]
+}
+
+// hasTLS12Group reports whether at least one curve supports TLS 1.2
+// negotiation. Hybrid ML-KEM groups (X25519MLKEM768, SecP256r1MLKEM768) are
+// TLS 1.3-only; classical curves (X25519, P-256, P-384, P-521) work for
+// both TLS 1.2 and TLS 1.3.
+func hasTLS12Group(curves []tls.CurveID) bool {
+	for _, c := range curves {
+		switch c {
+		case tls.X25519, tls.CurveP256, tls.CurveP384, tls.CurveP521:
+			return true
+		}
+	}
+	return false
+}
+
+// hasStaticRSAKeyExchange reports whether any cipher the runtime can
+// negotiate from the profile uses static RSA key exchange, which completes
+// TLS 1.2 handshakes without an elliptic curve (with an RSA certificate).
+// Runtime crypto-policy restrictions can additionally exclude these suites;
+// validation stays permissive here because rejecting a usable profile
+// prevents startup, while an unusable one only affects handshakes.
+func hasStaticRSAKeyExchange(ciphers []string) bool {
+	ids, _ := runtimeCipherSuites(ciphers, true)
+	runtimeSuites := make(map[uint16]*tls.CipherSuite)
+	for _, suite := range tls.CipherSuites() {
+		runtimeSuites[suite.ID] = suite
+	}
+	for _, suite := range tls.InsecureCipherSuites() {
+		runtimeSuites[suite.ID] = suite
+	}
+	for _, id := range ids {
+		if suite, ok := runtimeSuites[id]; ok && strings.HasPrefix(suite.Name, "TLS_RSA_WITH") {
+			return true
+		}
+	}
+	return false
 }
 
 func setNextProtos(c *tls.Config) {

@@ -119,9 +119,15 @@ type DSPAParams struct {
 	// Nil on non-OpenShift clusters where no TLS profile is available.
 	// Populated during ExtractParams from TLSProfileSpec and TLSAdherence.
 	KubeRBACProxyTLS *KubeRBACProxyTLSArgs
+	// APIServerTLS holds the resolved TLS flag values for the API server and
+	// webhook operands. Nil on non-OpenShift clusters and under adherence
+	// policies (NoOpinion, LegacyAdheringComponentsOnly) that preserve the
+	// operand's serving defaults.
+	APIServerTLS *APIServerTLSArgs
 	// TLSProfileSpec is the cluster TLS profile from the live APIServer object.
 	// Pre-set by the reconciler before ExtractParams is called.
 	TLSProfileSpec configv1.TLSProfileSpec
+	TLSProfileType configv1.TLSProfileType
 	// TLSAdherence is the cluster TLS adherence policy from the live APIServer object.
 	// Pre-set by the reconciler before ExtractParams is called.
 	TLSAdherence configv1.TLSAdherencePolicy
@@ -1243,12 +1249,32 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	// TLSProfileSpec and TLSAdherence are pre-set by the reconciler from the cluster state.
 	// An error here (e.g. all ciphers unsupported in a strict profile) aborts the reconcile
 	// and leaves the existing Deployments untouched.
-	if p.TLSProfileSpec.MinTLSVersion != "" {
-		tlsArgs, err := resolveKubeRBACProxyTLS(p.TLSProfileSpec, p.TLSAdherence)
+	switch {
+	case p.TLSProfileSpec.MinTLSVersion == "" && len(p.TLSProfileSpec.Ciphers) == 0 && len(p.TLSProfileSpec.Groups) == 0:
+		// Non-OpenShift clusters carry no cluster profile; operands keep
+		// their serving defaults.
+	case p.TLSProfileSpec.MinTLSVersion == "" &&
+		p.TLSAdherence != configv1.TLSAdherencePolicyNoOpinion &&
+		p.TLSAdherence != configv1.TLSAdherencePolicyLegacyAdheringComponentsOnly:
+		// A partially populated profile must not silently bypass TLS
+		// resolution and leave operand defaults in place. Under non-enforcing
+		// adherence the resolvers fall back to Intermediate anyway, so a
+		// partial profile is inert there and must not block reconciliation.
+		return fmt.Errorf("cluster TLS profile is missing a minimum version: %+v", p.TLSProfileSpec)
+	default:
+		tlsArgs, err := resolveKubeRBACProxyTLS(p.TLSProfileSpec, p.TLSProfileType, p.TLSAdherence)
 		if err != nil {
 			return fmt.Errorf("failed to resolve kube-rbac-proxy TLS configuration: %w", err)
 		}
 		p.KubeRBACProxyTLS = tlsArgs
+
+		// Resolve the operand TLS configuration. A nil result (NoOpinion or
+		// Legacy adherence) preserves the operand's serving defaults.
+		operandTLS, err := resolveAPIServerTLS(p.TLSProfileSpec, p.TLSProfileType, p.TLSAdherence)
+		if err != nil {
+			return fmt.Errorf("failed to resolve API server TLS configuration: %w", err)
+		}
+		p.APIServerTLS = operandTLS
 	}
 
 	return nil

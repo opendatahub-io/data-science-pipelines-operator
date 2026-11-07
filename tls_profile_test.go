@@ -77,6 +77,149 @@ func TestFetchTLSProfile_ModernProfile(t *testing.T) {
 	cfg := applyTLSOpts(result)
 	assert.Equal(t, uint16(tls.VersionTLS13), cfg.MinVersion)
 	assert.Equal(t, []string{"h2", "http/1.1"}, cfg.NextProtos)
+	assert.Equal(t, []tls.CurveID{
+		tls.X25519MLKEM768,
+		tls.X25519,
+		tls.CurveP256,
+		tls.CurveP384,
+	}, cfg.CurvePreferences)
+}
+
+func TestFetchTLSProfile_CustomSHA256CBCAllowedUnderStrict(t *testing.T) {
+	// SHA-256 CBC suites are runtime-supported and not prohibited; only RC4,
+	// 3DES, and SHA-1 CBC suites are rejected in Custom profiles.
+	for _, cipher := range []string{
+		"TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256",
+		"ECDHE-RSA-AES128-SHA256",
+	} {
+		t.Run(cipher, func(t *testing.T) {
+			apiServer := &configv1.APIServer{
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+				Spec: configv1.APIServerSpec{
+					TLSSecurityProfile: &configv1.TLSSecurityProfile{
+						Type: configv1.TLSProfileCustomType,
+						Custom: &configv1.CustomTLSProfile{TLSProfileSpec: configv1.TLSProfileSpec{
+							MinTLSVersion: configv1.VersionTLS12,
+							Ciphers:       []string{"ECDHE-RSA-AES128-GCM-SHA256", cipher},
+						}},
+					},
+					TLSAdherence: configv1.TLSAdherencePolicyStrictAllComponents,
+				},
+			}
+			cli := newTLSTestClient(t, apiServer).Build()
+
+			result, err := fetchTLSProfile(context.Background(), cli)
+			require.NoError(t, err)
+			require.NotNil(t, result)
+		})
+	}
+}
+
+func TestFetchTLSProfile_CustomInsecureCiphersIgnoredWithoutStrict(t *testing.T) {
+	apiServer := &configv1.APIServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: configv1.APIServerSpec{
+			TLSSecurityProfile: &configv1.TLSSecurityProfile{
+				Type: configv1.TLSProfileCustomType,
+				Custom: &configv1.CustomTLSProfile{TLSProfileSpec: configv1.TLSProfileSpec{
+					MinTLSVersion: configv1.VersionTLS12,
+					Ciphers:       []string{"ECDHE-RSA-AES128-SHA256"},
+				}},
+			},
+		},
+	}
+	cli := newTLSTestClient(t, apiServer).Build()
+
+	result, err := fetchTLSProfile(context.Background(), cli)
+	require.NoError(t, err)
+	assert.Equal(t, configv1.TLSProfileCustomType, result.ProfileType)
+
+	opts, known := tlsOptsForAdherence(result, configv1.TLSAdherencePolicyNoOpinion)
+	assert.True(t, known)
+	cfg := &tls.Config{}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+	assert.Equal(t, []string{"h2", "http/1.1"}, cfg.NextProtos)
+	assert.Empty(t, cfg.CipherSuites)
+}
+
+func TestFetchTLSProfile_OldProfileIsNotTreatedAsCustom(t *testing.T) {
+	apiServer := &configv1.APIServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: configv1.APIServerSpec{
+			TLSSecurityProfile: &configv1.TLSSecurityProfile{Type: configv1.TLSProfileOldType},
+			TLSAdherence:       configv1.TLSAdherencePolicyStrictAllComponents,
+		},
+	}
+	cli := newTLSTestClient(t, apiServer).Build()
+
+	result, err := fetchTLSProfile(context.Background(), cli)
+	require.NoError(t, err)
+	assert.Equal(t, configv1.TLSProfileOldType, result.ProfileType)
+	assert.Equal(t, uint16(tls.VersionTLS10), applyTLSOpts(result).MinVersion)
+}
+
+func TestFetchTLSProfile_NoGroupsPreservesGoDefaults(t *testing.T) {
+	apiServer := &configv1.APIServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: configv1.APIServerSpec{
+			TLSSecurityProfile: &configv1.TLSSecurityProfile{
+				Type: configv1.TLSProfileCustomType,
+				Custom: &configv1.CustomTLSProfile{TLSProfileSpec: configv1.TLSProfileSpec{
+					MinTLSVersion: configv1.VersionTLS12,
+				}},
+			},
+		},
+	}
+	cli := newTLSTestClient(t, apiServer).Build()
+
+	result, err := fetchTLSProfile(context.Background(), cli)
+	require.NoError(t, err)
+	assert.Empty(t, applyTLSOpts(result).CurvePreferences)
+}
+
+func TestFetchTLSProfile_GroupsSetCurvePreferences(t *testing.T) {
+	profile := configv1.TLSProfileSpec{
+		MinTLSVersion: configv1.VersionTLS12,
+		Groups:        []configv1.TLSGroup{configv1.TLSGroupSecP256r1, configv1.TLSGroupX25519},
+	}
+	apiServer := &configv1.APIServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: configv1.APIServerSpec{
+			TLSSecurityProfile: &configv1.TLSSecurityProfile{
+				Type:   configv1.TLSProfileCustomType,
+				Custom: &configv1.CustomTLSProfile{TLSProfileSpec: profile},
+			},
+		},
+	}
+	cli := newTLSTestClient(t, apiServer).Build()
+
+	result, err := fetchTLSProfile(context.Background(), cli)
+	require.NoError(t, err)
+	cfg := applyTLSOpts(result)
+	assert.Equal(t, []tls.CurveID{tls.CurveP256, tls.X25519}, cfg.CurvePreferences)
+}
+
+func TestFetchTLSProfile_AllGroupsUnsupported(t *testing.T) {
+	apiServer := &configv1.APIServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: configv1.APIServerSpec{
+			TLSSecurityProfile: &configv1.TLSSecurityProfile{
+				Type: configv1.TLSProfileCustomType,
+				Custom: &configv1.CustomTLSProfile{TLSProfileSpec: configv1.TLSProfileSpec{
+					MinTLSVersion: configv1.VersionTLS12,
+					Groups:        []configv1.TLSGroup{"NOT_A_GROUP"},
+				}},
+			},
+			TLSAdherence: configv1.TLSAdherencePolicyStrictAllComponents,
+		},
+	}
+	cli := newTLSTestClient(t, apiServer).Build()
+
+	_, err := fetchTLSProfile(context.Background(), cli)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "all 1 groups in TLS profile are unsupported by Go")
 }
 
 func TestFetchTLSProfile_AdherenceReadFromSameObject(t *testing.T) {
@@ -406,4 +549,97 @@ func TestTLSConfigForAdherence(t *testing.T) {
 		assert.Equal(t, []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256}, cfg.CipherSuites)
 		assert.Equal(t, []string{"h2", "http/1.1"}, cfg.NextProtos)
 	}
+}
+
+func TestFetchTLSProfile_NoOpinionSkipsAllUnsupportedGroups(t *testing.T) {
+	// Non-enforcing adherence policies preserve the manager listener
+	// defaults, so a group list that cannot be served must not prevent
+	// the operator from starting — including an entirely unsupported one.
+	apiServer := &configv1.APIServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: configv1.APIServerSpec{
+			TLSSecurityProfile: &configv1.TLSSecurityProfile{
+				Type: configv1.TLSProfileCustomType,
+				Custom: &configv1.CustomTLSProfile{TLSProfileSpec: configv1.TLSProfileSpec{
+					MinTLSVersion: configv1.VersionTLS13,
+					Groups:        []configv1.TLSGroup{configv1.TLSGroupX25519MLKEM768},
+				}},
+			},
+		},
+	}
+	cli := newTLSTestClient(t, apiServer).Build()
+
+	_, err := fetchTLSProfile(context.Background(), cli)
+	require.NoError(t, err)
+}
+
+func TestFetchTLSProfile_GroupValidationSkippedUnderNoOpinion(t *testing.T) {
+	// Non-enforcing adherence policies preserve the manager listener
+	// defaults, so a group list that cannot be served must not prevent
+	// the operator from starting.
+	apiServer := &configv1.APIServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: configv1.APIServerSpec{
+			TLSSecurityProfile: &configv1.TLSSecurityProfile{
+				Type: configv1.TLSProfileCustomType,
+				Custom: &configv1.CustomTLSProfile{TLSProfileSpec: configv1.TLSProfileSpec{
+					MinTLSVersion: configv1.VersionTLS12,
+					Groups:        []configv1.TLSGroup{configv1.TLSGroupX25519MLKEM768},
+				}},
+			},
+		},
+	}
+	cli := newTLSTestClient(t, apiServer).Build()
+
+	_, err := fetchTLSProfile(context.Background(), cli)
+	require.NoError(t, err)
+}
+
+func TestFetchTLSProfile_NoTLS12GroupUnderStrict(t *testing.T) {
+	apiServer := &configv1.APIServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: configv1.APIServerSpec{
+			TLSSecurityProfile: &configv1.TLSSecurityProfile{
+				Type: configv1.TLSProfileCustomType,
+				Custom: &configv1.CustomTLSProfile{TLSProfileSpec: configv1.TLSProfileSpec{
+					MinTLSVersion: configv1.VersionTLS12,
+					Groups:        []configv1.TLSGroup{configv1.TLSGroupX25519MLKEM768},
+					Ciphers:       []string{"ECDHE-RSA-AES128-GCM-SHA256"},
+				}},
+			},
+			TLSAdherence: configv1.TLSAdherencePolicyStrictAllComponents,
+		},
+	}
+	cli := newTLSTestClient(t, apiServer).Build()
+
+	_, err := fetchTLSProfile(context.Background(), cli)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no groups usable for TLS 1.2")
+}
+
+func TestFetchTLSProfile_StaticRSACipherNeedsNoGroup(t *testing.T) {
+	// Static RSA key exchange completes TLS 1.2 handshakes without an
+	// elliptic curve, so the TLS 1.2 group requirement does not apply.
+	apiServer := &configv1.APIServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: configv1.APIServerSpec{
+			TLSSecurityProfile: &configv1.TLSSecurityProfile{
+				Type: configv1.TLSProfileCustomType,
+				Custom: &configv1.CustomTLSProfile{TLSProfileSpec: configv1.TLSProfileSpec{
+					MinTLSVersion: configv1.VersionTLS12,
+					Groups:        []configv1.TLSGroup{configv1.TLSGroupX25519MLKEM768},
+					Ciphers:       []string{"TLS_RSA_WITH_AES_128_GCM_SHA256"},
+				}},
+			},
+			TLSAdherence: configv1.TLSAdherencePolicyStrictAllComponents,
+		},
+	}
+	cli := newTLSTestClient(t, apiServer).Build()
+
+	result, err := fetchTLSProfile(context.Background(), cli)
+	require.NoError(t, err)
+	cfg := applyTLSOpts(result)
+	assert.Equal(t, uint16(tls.VersionTLS12), cfg.MinVersion)
+	require.Len(t, cfg.CipherSuites, 1)
+	assert.Equal(t, tls.TLS_RSA_WITH_AES_128_GCM_SHA256, cfg.CipherSuites[0])
 }

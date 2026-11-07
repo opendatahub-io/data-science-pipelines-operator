@@ -11,7 +11,7 @@ configMapGenerator:
   - name: dspo-parameters
     behavior: merge
     literals:
-      - kube-rbac-proxy=registry.k8s.io/kubebuilder/kube-rbac-proxy:v0.16.0
+      - kube-rbac-proxy=quay.io/opendatahub/odh-kube-rbac-proxy:v3.6.0
 patchesStrategicMerge:
   - img_patch.yaml
   - res_patch.yaml
