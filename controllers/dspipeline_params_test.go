@@ -28,7 +28,9 @@ import (
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/testutil"
 	mlflowv1 "github.com/opendatahub-io/mlflow-operator/api/v1"
+	configv1 "github.com/openshift/api/config/v1"
 	routev1 "github.com/openshift/api/route/v1"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -1252,6 +1254,50 @@ func TestExtractParams_ServiceAccountAnnotations(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Equal(t, tt.expected, params.ServiceAccountAnnotations)
+		})
+	}
+}
+
+func TestExtractParams_PartialTLSProfileAdherenceGating(t *testing.T) {
+	partial := configv1.TLSProfileSpec{
+		Ciphers: []string{"ECDHE-RSA-AES128-GCM-SHA256"},
+	}
+	for _, tc := range []struct {
+		name      string
+		adherence configv1.TLSAdherencePolicy
+		wantErr   bool
+	}{
+		{name: "NoOpinion does not block reconciliation", adherence: configv1.TLSAdherencePolicyNoOpinion},
+		{name: "Legacy does not block reconciliation", adherence: configv1.TLSAdherencePolicyLegacyAdheringComponentsOnly},
+		{name: "Strict rejects the partial profile", adherence: configv1.TLSAdherencePolicyStrictAllComponents, wantErr: true},
+		{name: "unknown adherence fails closed", adherence: configv1.TLSAdherencePolicy("FuturePolicy"), wantErr: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Cleanup(func() { viper.Reset() })
+			viper.Set("Images.PipelinesComponents", "quay.io/opendatahub/odh-pipelines-components:odh-stable")
+
+			dspa := testutil.CreateDSPAWithManagedPipelines("my-img:tag", nil, nil)
+			dspa.Name = "dspa"
+			dspa.Namespace = "ns"
+
+			_, params, reconciler := CreateNewTestObjects()
+			params.TLSProfileSpec = partial
+			params.TLSAdherence = tc.adherence
+			ctx := context.Background()
+
+			err := params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log)
+			if tc.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "missing a minimum version")
+				return
+			}
+			require.NoError(t, err)
+			// Under non-enforcing adherence the API server operand keeps its
+			// serving defaults (nil args); the kube-rbac-proxy resolver
+			// applies its hardened Intermediate fallback instead.
+			assert.Nil(t, params.APIServerTLS)
+			require.NotNil(t, params.KubeRBACProxyTLS)
+			assert.Equal(t, configv1.VersionTLS12, configv1.TLSProtocolVersion(params.KubeRBACProxyTLS.MinVersion))
 		})
 	}
 }

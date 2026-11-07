@@ -20,19 +20,19 @@ require (
 	github.com/opendatahub-io/mlflow-operator/api v0.0.0-20260331183147-5f8991ebee1a
 	github.com/opendatahub-io/odh-platform-utilities v0.3.0
 	github.com/opendatahub-io/operator-chaos v0.0.0-20260525094355-9e6ac9668b9a
-	github.com/openshift/api v0.0.0-20260331162130-f7b3bd900c75
+	github.com/openshift/api v0.0.0-20260805215214-cfb63858e9d7
 	github.com/openshift/controller-runtime-common v0.0.0-20260428152732-64ee174f5e2e
-	github.com/openshift/library-go v0.0.0-20260213153706-03f1709971c5
+	github.com/openshift/library-go v0.0.0-20260807194649-ee0a87843dda
 	github.com/prometheus/client_golang v1.23.2
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/zap v1.27.1
-	golang.org/x/net v0.55.0
-	k8s.io/api v0.36.0
-	k8s.io/apiextensions-apiserver v0.36.0
-	k8s.io/apimachinery v0.36.0
-	k8s.io/client-go v0.36.0
-	k8s.io/utils v0.0.0-20260319190234-28399d86e0b5
+	golang.org/x/net v0.55.1-0.20260602153038-42abb857022c
+	k8s.io/api v0.36.2
+	k8s.io/apiextensions-apiserver v0.36.2
+	k8s.io/apimachinery v0.36.2
+	k8s.io/client-go v0.36.2
+	k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3
 	sigs.k8s.io/controller-runtime v0.24.1
 	sigs.k8s.io/kustomize/api v0.21.1
 	sigs.k8s.io/kustomize/kyaml v0.21.1
@@ -150,12 +150,12 @@ require (
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiserver v0.36.0 // indirect
+	k8s.io/apiserver v0.36.2 // indirect
 	k8s.io/cli-runtime v0.35.3 // indirect
-	k8s.io/component-base v0.36.0 // indirect
+	k8s.io/component-base v0.36.2 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
-	k8s.io/kube-openapi v0.0.0-20260414162039-ec9c827d403f // indirect
-	k8s.io/streaming v0.36.0 // indirect
+	k8s.io/kube-openapi v0.0.0-20260519202549-bbf5c5577288 // indirect
+	k8s.io/streaming v0.36.2 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.34.0 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
@@ -169,7 +169,7 @@ replace (
 	github.com/openshift/api v0.0.0-20231118005202-0f638a8a4705 => github.com/openshift/api v0.0.0-20231118005202-0f638a8a4705
 	go.opentelemetry.io/contrib v0.20.0 => go.opentelemetry.io/contrib v0.44.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.35.1 => go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.44.0
-	golang.org/x/net => golang.org/x/net v0.55.0
+	golang.org/x/net => golang.org/x/net v0.55.1-0.20260602153038-42abb857022c
 	google.golang.org/genproto => google.golang.org/genproto v0.0.0-20230526161137-0005af68ea54
 )
 

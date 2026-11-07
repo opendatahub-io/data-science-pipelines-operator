@@ -49,7 +49,7 @@ var modernProfile = *configv1.TLSProfiles[configv1.TLSProfileModernType]
 // --- resolveKubeRBACProxyTLS ---
 
 func TestResolveKubeRBACProxyTLS_NoOpinion_UsesIntermediate(t *testing.T) {
-	args, err := resolveKubeRBACProxyTLS(modernProfile, configv1.TLSAdherencePolicyNoOpinion)
+	args, err := resolveKubeRBACProxyTLS(modernProfile, configv1.TLSProfileModernType, configv1.TLSAdherencePolicyNoOpinion)
 	require.NoError(t, err)
 	// NoOpinion must always fall back to Intermediate, ignoring the supplied profile.
 	assert.Equal(t, string(intermediateProfile.MinTLSVersion), args.MinVersion)
@@ -57,14 +57,14 @@ func TestResolveKubeRBACProxyTLS_NoOpinion_UsesIntermediate(t *testing.T) {
 }
 
 func TestResolveKubeRBACProxyTLS_LegacyAdhering_UsesIntermediate(t *testing.T) {
-	args, err := resolveKubeRBACProxyTLS(modernProfile, configv1.TLSAdherencePolicyLegacyAdheringComponentsOnly)
+	args, err := resolveKubeRBACProxyTLS(modernProfile, configv1.TLSProfileModernType, configv1.TLSAdherencePolicyLegacyAdheringComponentsOnly)
 	require.NoError(t, err)
 	assert.Equal(t, string(intermediateProfile.MinTLSVersion), args.MinVersion)
 	assert.NotEmpty(t, args.CipherSuites)
 }
 
 func TestResolveKubeRBACProxyTLS_StrictAllComponents_UsesProfile(t *testing.T) {
-	args, err := resolveKubeRBACProxyTLS(intermediateProfile, configv1.TLSAdherencePolicyStrictAllComponents)
+	args, err := resolveKubeRBACProxyTLS(intermediateProfile, configv1.TLSProfileIntermediateType, configv1.TLSAdherencePolicyStrictAllComponents)
 	require.NoError(t, err)
 	assert.Equal(t, string(intermediateProfile.MinTLSVersion), args.MinVersion)
 	assert.NotEmpty(t, args.CipherSuites)
@@ -76,7 +76,7 @@ func TestResolveKubeRBACProxyTLS_UnknownAdherence_TreatedAsStrict(t *testing.T) 
 		MinTLSVersion: configv1.VersionTLS13,
 		Ciphers:       []string{"TLS_AES_128_GCM_SHA256"},
 	}
-	args, err := resolveKubeRBACProxyTLS(tls13Profile, configv1.TLSAdherencePolicy("SomeFuturePolicy"))
+	args, err := resolveKubeRBACProxyTLS(tls13Profile, configv1.TLSProfileCustomType, configv1.TLSAdherencePolicy("SomeFuturePolicy"))
 	require.NoError(t, err)
 	assert.Equal(t, "VersionTLS13", args.MinVersion)
 	assert.Empty(t, args.CipherSuites, "strict path with TLS 1.3 must not emit ciphers")
@@ -84,7 +84,7 @@ func TestResolveKubeRBACProxyTLS_UnknownAdherence_TreatedAsStrict(t *testing.T) 
 
 func TestResolveKubeRBACProxyTLS_ZeroProfile_UsesIntermediate(t *testing.T) {
 	// A zero-value TLSProfileSpec (empty MinTLSVersion) must fall back to Intermediate.
-	args, err := resolveKubeRBACProxyTLS(configv1.TLSProfileSpec{}, configv1.TLSAdherencePolicyStrictAllComponents)
+	args, err := resolveKubeRBACProxyTLS(configv1.TLSProfileSpec{}, configv1.TLSProfileIntermediateType, configv1.TLSAdherencePolicyStrictAllComponents)
 	require.NoError(t, err)
 	assert.Equal(t, string(intermediateProfile.MinTLSVersion), args.MinVersion)
 	assert.NotEmpty(t, args.CipherSuites)
@@ -92,7 +92,7 @@ func TestResolveKubeRBACProxyTLS_ZeroProfile_UsesIntermediate(t *testing.T) {
 
 func TestResolveKubeRBACProxyTLS_StrictAllComponents_TLS13_NoCiphers(t *testing.T) {
 	// Strict + TLS 1.3 profile: cipher flag must be omitted.
-	args, err := resolveKubeRBACProxyTLS(modernProfile, configv1.TLSAdherencePolicyStrictAllComponents)
+	args, err := resolveKubeRBACProxyTLS(modernProfile, configv1.TLSProfileModernType, configv1.TLSAdherencePolicyStrictAllComponents)
 	require.NoError(t, err)
 	assert.Equal(t, "VersionTLS13", args.MinVersion)
 	assert.Empty(t, args.CipherSuites, "TLS 1.3 must not set cipher suites even under strict adherence")
@@ -104,9 +104,19 @@ func TestResolveKubeRBACProxyTLS_StrictAllComponents_InvalidProfile_ReturnsError
 		MinTLSVersion: configv1.VersionTLS12,
 		Ciphers:       []string{"BOGUS_CIPHER_1", "BOGUS_CIPHER_2"},
 	}
-	_, err := resolveKubeRBACProxyTLS(badProfile, configv1.TLSAdherencePolicyStrictAllComponents)
+	_, err := resolveKubeRBACProxyTLS(badProfile, configv1.TLSProfileCustomType, configv1.TLSAdherencePolicyStrictAllComponents)
 	require.Error(t, err, "invalid strict profile must fail reconciliation")
 	assert.Contains(t, err.Error(), "all 2 ciphers")
+}
+
+func TestResolveKubeRBACProxyTLS_StrictAllComponents_AllGroupsUnsupported_ReturnsError(t *testing.T) {
+	badProfile := configv1.TLSProfileSpec{
+		MinTLSVersion: configv1.VersionTLS12,
+		Groups:        []configv1.TLSGroup{"NOT_A_GROUP"},
+	}
+	_, err := resolveKubeRBACProxyTLS(badProfile, configv1.TLSProfileCustomType, configv1.TLSAdherencePolicyStrictAllComponents)
+	require.Error(t, err, "all-unusable strict groups must fail reconciliation")
+	assert.Contains(t, err.Error(), "all 1 groups in TLS profile are unsupported by Go")
 }
 
 func TestResolveKubeRBACProxyTLS_NoOpinion_BadProfileIgnored(t *testing.T) {
@@ -115,9 +125,94 @@ func TestResolveKubeRBACProxyTLS_NoOpinion_BadProfileIgnored(t *testing.T) {
 		MinTLSVersion: configv1.VersionTLS12,
 		Ciphers:       []string{"BOGUS_CIPHER_1"},
 	}
-	args, err := resolveKubeRBACProxyTLS(badProfile, configv1.TLSAdherencePolicyNoOpinion)
+	args, err := resolveKubeRBACProxyTLS(badProfile, configv1.TLSProfileCustomType, configv1.TLSAdherencePolicyNoOpinion)
 	require.NoError(t, err, "NoOpinion must fall back to Intermediate, never error on bad profile")
 	assert.Equal(t, string(intermediateProfile.MinTLSVersion), args.MinVersion)
+}
+
+func TestResolveKubeRBACProxyTLS_CustomProfileRejectsInsecureCiphers(t *testing.T) {
+	tests := []struct {
+		name    string
+		ciphers []string
+	}{
+		{name: "RC4 IANA", ciphers: []string{"TLS_RSA_WITH_RC4_128_SHA"}},
+		{name: "RC4 OpenSSL", ciphers: []string{"RC4-SHA"}},
+		{name: "3DES IANA", ciphers: []string{"TLS_RSA_WITH_3DES_EDE_CBC_SHA"}},
+		{name: "3DES OpenSSL", ciphers: []string{"DES-CBC3-SHA"}},
+		{name: "SHA-1 CBC IANA", ciphers: []string{"TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA"}},
+		{name: "SHA-1 CBC OpenSSL", ciphers: []string{"ECDHE-RSA-AES128-SHA"}},
+		{name: "SHA-1 CBC static RSA", ciphers: []string{"TLS_RSA_WITH_AES_128_CBC_SHA"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			profile := configv1.TLSProfileSpec{
+				MinTLSVersion: configv1.VersionTLS12,
+				Ciphers:       tt.ciphers,
+			}
+			args, err := resolveKubeRBACProxyTLS(profile, configv1.TLSProfileCustomType, configv1.TLSAdherencePolicyStrictAllComponents)
+			require.Error(t, err)
+			assert.Nil(t, args)
+			assert.Contains(t, err.Error(), "prohibited cipher suites")
+		})
+	}
+}
+
+func TestResolveKubeRBACProxyTLS_CustomProfileAllowsSHA256CBC(t *testing.T) {
+	// SHA-256 CBC suites are runtime-supported and not in the prohibited set
+	// (RC4, 3DES, SHA-1 CBC). A list mixing them with an AES-128-GCM suite
+	// resolves; a SHA-256 CBC-only list is rejected by the HTTP/2 capability
+	// check, not the prohibited-cipher check.
+	tests := []struct {
+		name       string
+		ciphers    []string
+		wantErrSub string
+	}{
+		{
+			name: "mixed GCM and SHA-256 CBC IANA",
+			ciphers: []string{
+				"ECDHE-RSA-AES128-GCM-SHA256",
+				"TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256",
+			},
+		},
+		{
+			name: "mixed GCM and SHA-256 CBC OpenSSL",
+			ciphers: []string{
+				"ECDHE-RSA-AES128-GCM-SHA256",
+				"ECDHE-RSA-AES128-SHA256",
+			},
+		},
+		{
+			name:       "SHA-256 CBC only fails the HTTP/2 check",
+			ciphers:    []string{"TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256"},
+			wantErrSub: "cannot serve HTTP/2",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			profile := configv1.TLSProfileSpec{
+				MinTLSVersion: configv1.VersionTLS12,
+				Ciphers:       tt.ciphers,
+			}
+			args, err := resolveKubeRBACProxyTLS(profile, configv1.TLSProfileCustomType, configv1.TLSAdherencePolicyStrictAllComponents)
+			if tt.wantErrSub != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErrSub)
+				return
+			}
+			require.NoError(t, err)
+			assert.Contains(t, args.CipherSuites, "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256")
+		})
+	}
+}
+
+func TestResolveKubeRBACProxyTLS_OldProfilePreservesDocumentedLegacyCiphers(t *testing.T) {
+	oldProfile := *configv1.TLSProfiles[configv1.TLSProfileOldType]
+	args, err := resolveKubeRBACProxyTLS(oldProfile, configv1.TLSProfileOldType, configv1.TLSAdherencePolicyStrictAllComponents)
+	require.NoError(t, err)
+	assert.Contains(t, args.CipherSuites, "TLS_RSA_WITH_3DES_EDE_CBC_SHA")
+	assert.Contains(t, args.CipherSuites, "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA")
 }
 
 // --- profileToRBACProxyArgs ---
@@ -171,6 +266,81 @@ func TestProfileToRBACProxyArgs_EmptyCiphers_NoFlag(t *testing.T) {
 	args, err := profileToRBACProxyArgs(profile)
 	require.NoError(t, err)
 	assert.Empty(t, args.CipherSuites)
+}
+
+func TestProfileToRBACProxyArgs_HTTP2CipherValidation(t *testing.T) {
+	tests := []struct {
+		name       string
+		minVersion configv1.TLSProtocolVersion
+		ciphers    []string
+		wantError  bool
+	}{
+		{
+			name:       "TLS 1.2 AES-256-only ciphers fail",
+			minVersion: configv1.VersionTLS12,
+			ciphers:    []string{"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"},
+			wantError:  true,
+		},
+		{
+			name:       "TLS 1.2 AES-128-GCM cipher passes",
+			minVersion: configv1.VersionTLS12,
+			ciphers:    []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
+		},
+		{
+			name:       "empty ciphers pass",
+			minVersion: configv1.VersionTLS12,
+		},
+		{
+			name:       "TLS 1.3 passes",
+			minVersion: configv1.VersionTLS13,
+			ciphers:    []string{"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			profile := configv1.TLSProfileSpec{
+				MinTLSVersion: tt.minVersion,
+				Ciphers:       tt.ciphers,
+			}
+			args, err := profileToRBACProxyArgs(profile)
+			if tt.wantError {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "TLS profile with minimum version \"VersionTLS12\"")
+				assert.Contains(t, err.Error(), "kube-rbac-proxy cannot serve HTTP/2 with that cipher list")
+				assert.Nil(t, args)
+				return
+			}
+			require.NoError(t, err)
+			require.NotNil(t, args)
+		})
+	}
+}
+
+func TestProfileToRBACProxyArgs_GroupsBecomeNumericIDs(t *testing.T) {
+	profile := configv1.TLSProfileSpec{
+		MinTLSVersion: configv1.VersionTLS12,
+		Groups: []configv1.TLSGroup{
+			configv1.TLSGroupSecP256r1,
+			configv1.TLSGroupSecP384r1,
+			configv1.TLSGroupSecP521r1,
+			configv1.TLSGroupX25519,
+			configv1.TLSGroupX25519MLKEM768,
+		},
+	}
+	args, err := profileToRBACProxyArgs(profile)
+	require.NoError(t, err)
+	assert.Equal(t, "23,24,25,29,4588", args.CurvePreferences)
+}
+
+func TestProfileToRBACProxyArgs_AllGroupsUnsupported_ReturnsError(t *testing.T) {
+	profile := configv1.TLSProfileSpec{
+		MinTLSVersion: configv1.VersionTLS12,
+		Groups:        []configv1.TLSGroup{"NOT_A_GROUP"},
+	}
+	_, err := profileToRBACProxyArgs(profile)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "all 1 groups in TLS profile are unsupported by Go")
 }
 
 // --- cipherNamesToIANA ---
@@ -286,6 +456,7 @@ func TestAPIServerDeploymentTemplate_TLSFlagsPresent(t *testing.T) {
 
 	// Pre-set TLS profile before ExtractParams so the resolver runs.
 	params.TLSProfileSpec = intermediateProfile
+	params.TLSProfileSpec.Groups = []configv1.TLSGroup{configv1.TLSGroupSecP256r1, configv1.TLSGroupX25519}
 	params.TLSAdherence = configv1.TLSAdherencePolicyStrictAllComponents
 
 	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
@@ -310,6 +481,8 @@ func TestAPIServerDeploymentTemplate_TLSFlagsPresent(t *testing.T) {
 			}
 		}
 		assert.True(t, found, "container %q must have --tls-cipher-suites flag", containerName)
+		assert.Contains(t, args, "--tls-curve-preferences=23,29",
+			"container %q must have numeric curve preferences", containerName)
 	}
 }
 
@@ -354,6 +527,7 @@ func TestMLMetadataEnvoyDeploymentTemplate_TLSFlagsPresent(t *testing.T) {
 
 	// Pre-set TLS profile before ExtractParams so the resolver runs.
 	params.TLSProfileSpec = intermediateProfile
+	params.TLSProfileSpec.Groups = []configv1.TLSGroup{configv1.TLSGroupSecP256r1, configv1.TLSGroupX25519}
 	params.TLSAdherence = configv1.TLSAdherencePolicyStrictAllComponents
 
 	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
@@ -378,6 +552,7 @@ func TestMLMetadataEnvoyDeploymentTemplate_TLSFlagsPresent(t *testing.T) {
 		}
 	}
 	assert.True(t, found, "kube-rbac-proxy must have --tls-cipher-suites flag")
+	assert.Contains(t, args, "--tls-curve-preferences=23,29")
 }
 
 func TestAPIServerDeploymentTemplate_NoTLSProfile_FlagsAbsent(t *testing.T) {
@@ -410,7 +585,7 @@ func TestAPIServerDeploymentTemplate_NoTLSProfile_FlagsAbsent(t *testing.T) {
 func TestResolveKubeRBACProxyTLS_ZeroProfileFromFetchFallback_UsesIntermediate(t *testing.T) {
 	// Zero profile falls back to Intermediate regardless of adherence.
 	zeroProfile := configv1.TLSProfileSpec{}
-	args, err := resolveKubeRBACProxyTLS(zeroProfile, configv1.TLSAdherencePolicyStrictAllComponents)
+	args, err := resolveKubeRBACProxyTLS(zeroProfile, configv1.TLSProfileIntermediateType, configv1.TLSAdherencePolicyStrictAllComponents)
 	require.NoError(t, err)
 	assert.Equal(t, string(intermediateProfile.MinTLSVersion), args.MinVersion)
 	assert.NotEmpty(t, args.CipherSuites)
@@ -422,7 +597,7 @@ func TestResolveKubeRBACProxyTLS_EmptyAdherence_TreatsAsNoOpinion(t *testing.T) 
 		MinTLSVersion: configv1.VersionTLS13,
 		Ciphers:       []string{"TLS_AES_128_GCM_SHA256"},
 	}
-	args, err := resolveKubeRBACProxyTLS(tls13Profile, configv1.TLSAdherencePolicy(""))
+	args, err := resolveKubeRBACProxyTLS(tls13Profile, configv1.TLSProfileCustomType, configv1.TLSAdherencePolicy(""))
 	require.NoError(t, err)
 	assert.Equal(t, string(intermediateProfile.MinTLSVersion), args.MinVersion)
 	assert.NotEmpty(t, args.CipherSuites)
@@ -454,9 +629,10 @@ func TestFetchLiveTLSProfile_Ready(t *testing.T) {
 		HasOpenShiftConfigAPI: true,
 	}
 
-	profile, adherence, err := reconciler.fetchLiveTLSProfile(context.Background())
+	profile, profileType, adherence, err := reconciler.fetchLiveTLSProfile(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, *configv1.TLSProfiles[configv1.TLSProfileModernType], profile)
+	assert.Equal(t, configv1.TLSProfileModernType, profileType)
 	assert.Equal(t, configv1.TLSAdherencePolicyStrictAllComponents, adherence)
 }
 
@@ -466,9 +642,10 @@ func TestFetchLiveTLSProfile_APIServerMissing_FallsBackToIntermediate(t *testing
 		HasOpenShiftConfigAPI: true,
 	}
 
-	profile, adherence, err := reconciler.fetchLiveTLSProfile(context.Background())
+	profile, profileType, adherence, err := reconciler.fetchLiveTLSProfile(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, *configv1.TLSProfiles[configv1.TLSProfileIntermediateType], profile)
+	assert.Equal(t, configv1.TLSProfileIntermediateType, profileType)
 	assert.Equal(t, configv1.TLSAdherencePolicyNoOpinion, adherence)
 }
 
@@ -484,10 +661,11 @@ func TestFetchLiveTLSProfile_TransientError_RequeuesWithBackoff(t *testing.T) {
 		HasOpenShiftConfigAPI: true,
 	}
 
-	profile, adherence, err := reconciler.fetchLiveTLSProfile(context.Background())
+	profile, profileType, adherence, err := reconciler.fetchLiveTLSProfile(context.Background())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "transient API error fetching APIServer")
 	assert.Empty(t, profile.MinTLSVersion, "no profile may be guessed on transient errors")
+	assert.Empty(t, profileType)
 	assert.Empty(t, adherence)
 }
 
@@ -501,7 +679,7 @@ func TestFetchLiveTLSProfile_HardError_RequeuesWithBackoff(t *testing.T) {
 		HasOpenShiftConfigAPI: true,
 	}
 
-	_, _, err := reconciler.fetchLiveTLSProfile(context.Background())
+	_, _, _, err := reconciler.fetchLiveTLSProfile(context.Background())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), `failed to get APIServer "cluster"`)
 }
@@ -517,11 +695,281 @@ func TestFetchLiveTLSProfile_NonOpenShift_SkipsFetch(t *testing.T) {
 		HasOpenShiftConfigAPI: false,
 	}
 
-	profile, adherence, err := reconciler.fetchLiveTLSProfile(context.Background())
+	profile, profileType, adherence, err := reconciler.fetchLiveTLSProfile(context.Background())
 	require.NoError(t, err)
 	assert.Empty(t, profile.MinTLSVersion)
+	assert.Empty(t, profileType)
 	assert.Empty(t, adherence)
 }
 
 // Live APIServer fetch → both Deployment PodTemplates is covered by
 // TestReconcile_AppliesTLSProfileAndAdherenceToBothDeployments in tls_workload_test.go.
+
+// --- resolveAPIServerTLS ---
+
+func TestResolveAPIServerTLS_NoOpinion_PreservesOperandDefaults(t *testing.T) {
+	args, err := resolveAPIServerTLS(modernProfile, configv1.TLSProfileModernType, configv1.TLSAdherencePolicyNoOpinion)
+	require.NoError(t, err)
+	assert.Nil(t, args, "NoOpinion must leave the operand unconfigured")
+}
+
+func TestResolveAPIServerTLS_Legacy_PreservesOperandDefaults(t *testing.T) {
+	args, err := resolveAPIServerTLS(intermediateProfile, configv1.TLSProfileIntermediateType, configv1.TLSAdherencePolicyLegacyAdheringComponentsOnly)
+	require.NoError(t, err)
+	assert.Nil(t, args, "Legacy adherence must leave the operand unconfigured")
+}
+
+func TestResolveAPIServerTLS_Strict_UsesProfile(t *testing.T) {
+	args, err := resolveAPIServerTLS(intermediateProfile, configv1.TLSProfileIntermediateType, configv1.TLSAdherencePolicyStrictAllComponents)
+	require.NoError(t, err)
+	require.NotNil(t, args)
+	assert.Equal(t, string(intermediateProfile.MinTLSVersion), args.MinVersion)
+	assert.NotEmpty(t, args.CipherSuites)
+}
+
+func TestResolveAPIServerTLS_UnknownAdherence_TreatedAsStrict(t *testing.T) {
+	args, err := resolveAPIServerTLS(modernProfile, configv1.TLSProfileModernType, configv1.TLSAdherencePolicy("SomeFuturePolicy"))
+	require.NoError(t, err)
+	require.NotNil(t, args)
+	assert.Equal(t, "VersionTLS13", args.MinVersion)
+	assert.Empty(t, args.CipherSuites)
+}
+
+func TestResolveAPIServerTLS_ZeroProfile_UsesIntermediate(t *testing.T) {
+	args, err := resolveAPIServerTLS(configv1.TLSProfileSpec{}, configv1.TLSProfileIntermediateType, configv1.TLSAdherencePolicyStrictAllComponents)
+	require.NoError(t, err)
+	require.NotNil(t, args)
+	assert.Equal(t, string(intermediateProfile.MinTLSVersion), args.MinVersion)
+	assert.NotEmpty(t, args.CipherSuites)
+}
+
+func TestResolveAPIServerTLS_Strict_TLS13_NoCiphers(t *testing.T) {
+	args, err := resolveAPIServerTLS(modernProfile, configv1.TLSProfileModernType, configv1.TLSAdherencePolicyStrictAllComponents)
+	require.NoError(t, err)
+	require.NotNil(t, args)
+	assert.Equal(t, "VersionTLS13", args.MinVersion)
+	assert.Empty(t, args.CipherSuites, "TLS 1.3 must not emit a cipher flag")
+}
+
+func TestResolveAPIServerTLS_Strict_OldProfile_FailsClosed(t *testing.T) {
+	// The operand only accepts VersionTLS12/VersionTLS13. Old (TLS 1.0) under
+	// Strict must fail the reconcile rather than silently downgrade to TLS 1.2.
+	oldProfile := configv1.TLSProfileSpec{
+		MinTLSVersion: configv1.VersionTLS10,
+		Ciphers:       []string{"TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA"},
+	}
+	_, err := resolveAPIServerTLS(oldProfile, configv1.TLSProfileOldType, configv1.TLSAdherencePolicyStrictAllComponents)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "does not support minimum TLS version")
+}
+
+func TestResolveAPIServerTLS_Strict_AllCiphersUnsupported_ReturnsError(t *testing.T) {
+	profile := configv1.TLSProfileSpec{
+		MinTLSVersion: configv1.VersionTLS12,
+		Ciphers:       []string{"ECDHE-INVALID-CIPHER-1"},
+	}
+	_, err := resolveAPIServerTLS(profile, configv1.TLSProfileCustomType, configv1.TLSAdherencePolicyStrictAllComponents)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unsupported")
+}
+
+func TestResolveAPIServerTLS_CustomProfileAllowsSHA256CBC(t *testing.T) {
+	// SHA-256 CBC suites are runtime-supported and not prohibited; only RC4,
+	// 3DES, and SHA-1 CBC suites are rejected in Custom profiles.
+	for _, cipher := range []string{
+		"TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256",
+		"ECDHE-RSA-AES128-SHA256",
+	} {
+		t.Run(cipher, func(t *testing.T) {
+			profile := configv1.TLSProfileSpec{
+				MinTLSVersion: configv1.VersionTLS12,
+				Ciphers:       []string{"ECDHE-RSA-AES128-GCM-SHA256", cipher},
+			}
+			args, err := resolveAPIServerTLS(profile, configv1.TLSProfileCustomType, configv1.TLSAdherencePolicyStrictAllComponents)
+			require.NoError(t, err)
+			assert.Contains(t, args.CipherSuites, "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256")
+		})
+	}
+}
+
+func TestProfileToRBACProxyArgs_HybridOnlyGroupsBelowTLS13Rejected(t *testing.T) {
+	// Hybrid ML-KEM groups only negotiate TLS 1.3: below a TLS 1.3 minimum
+	// the projection must reject a group list with no TLS 1.2-capable curve.
+	profile := configv1.TLSProfileSpec{
+		MinTLSVersion: configv1.VersionTLS12,
+		Ciphers:       []string{"ECDHE-RSA-AES128-GCM-SHA256"},
+		Groups:        []configv1.TLSGroup{"X25519MLKEM768"},
+	}
+	args, err := resolveKubeRBACProxyTLS(profile, configv1.TLSProfileCustomType, configv1.TLSAdherencePolicyStrictAllComponents)
+	require.Error(t, err)
+	assert.Nil(t, args)
+	assert.Contains(t, err.Error(), "no groups usable for TLS 1.2")
+
+	// A static RSA key exchange cipher needs no curve, so the same group
+	// list is allowed when one is configured.
+	profile.Ciphers = []string{"ECDHE-RSA-AES128-GCM-SHA256", "TLS_RSA_WITH_AES_128_GCM_SHA256"}
+	args, err = resolveKubeRBACProxyTLS(profile, configv1.TLSProfileCustomType, configv1.TLSAdherencePolicyStrictAllComponents)
+	require.NoError(t, err)
+	assert.Contains(t, args.CurvePreferences, "4588")
+
+	// The check must also apply to profiles without ciphers: no ciphers
+	// means no static RSA exception, so the hybrid-only list still rejects.
+	profile.Ciphers = nil
+	args, err = resolveKubeRBACProxyTLS(profile, configv1.TLSProfileCustomType, configv1.TLSAdherencePolicyStrictAllComponents)
+	require.Error(t, err)
+	assert.Nil(t, args)
+	assert.Contains(t, err.Error(), "no groups usable for TLS 1.2")
+}
+
+func TestProfileToAPIServerArgs_EmptyCiphers_NoFlag(t *testing.T) {
+	// A TLS 1.2 profile with no ciphers must leave CipherSuites empty so the
+	// flag is omitted and the operand applies Go's default suites.
+	args, err := profileToAPIServerArgs(configv1.TLSProfileSpec{MinTLSVersion: configv1.VersionTLS12})
+	require.NoError(t, err)
+	assert.Equal(t, "VersionTLS12", args.MinVersion)
+	assert.Empty(t, args.CipherSuites)
+}
+
+// --- operand template projection ---
+
+func renderTemplate(t *testing.T, reconciler *DSPAReconciler, params *DSPAParams, tmplPath string) unstructured.Unstructured {
+	t.Helper()
+	src, err := config.PathTemplateSource(reconciler.TemplatesPath+tmplPath, params)
+	require.NoError(t, err)
+	objs, err := src.Parse()
+	require.NoError(t, err)
+	require.Len(t, objs, 1)
+	return objs[0]
+}
+
+func assertOperandTLSArgs(t *testing.T, obj unstructured.Unstructured, containerName string, wantMinVersion string, wantCiphers string) {
+	t.Helper()
+	args := getContainerArgs(t, obj, containerName)
+	if wantMinVersion == "" {
+		for _, a := range args {
+			assert.False(t, strings.HasPrefix(a, "--tlsMinVersion"),
+				"container %q must NOT have TLS version flag, got: %s", containerName, a)
+			assert.False(t, strings.HasPrefix(a, "--tlsCipherSuites"),
+				"container %q must NOT have cipher suites flag, got: %s", containerName, a)
+		}
+		return
+	}
+	assert.Contains(t, args, "--tlsMinVersion="+wantMinVersion,
+		"container %q must have --tlsMinVersion=%s", containerName, wantMinVersion)
+	foundCipher := false
+	for _, a := range args {
+		if strings.HasPrefix(a, "--tlsCipherSuites=") {
+			foundCipher = true
+			if wantCiphers == "" {
+				t.Errorf("container %q must NOT have --tlsCipherSuites, got: %s", containerName, a)
+			} else {
+				assert.Equal(t, "--tlsCipherSuites="+wantCiphers, a)
+			}
+		}
+	}
+	if wantCiphers != "" {
+		assert.True(t, foundCipher, "container %q must have --tlsCipherSuites", containerName)
+	}
+}
+
+func TestOperandTemplates_StrictIntermediate_FlagsPresent(t *testing.T) {
+	ctx, params, reconciler := CreateNewTestObjects()
+	dspa := dspaWithRoute()
+	dspa.Name = "testdspa"
+	dspa.Namespace = "testnamespace"
+
+	params.TLSProfileSpec = intermediateProfile
+	params.TLSAdherence = configv1.TLSAdherencePolicyStrictAllComponents
+
+	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+	require.NotNil(t, params.APIServerTLS)
+	assert.Equal(t, "VersionTLS12", params.APIServerTLS.MinVersion)
+
+	apiDep := renderTemplate(t, reconciler, params, "apiserver/default/deployment.yaml.tmpl")
+	assertOperandTLSArgs(t, apiDep, "ds-pipeline-api-server", "VersionTLS12", params.APIServerTLS.CipherSuites)
+
+	webhookDep := renderTemplate(t, reconciler, params, "webhook/deployment.yaml.tmpl")
+	assertOperandTLSArgs(t, webhookDep, "ds-pipeline-webhook", "VersionTLS12", params.APIServerTLS.CipherSuites)
+}
+
+func TestOperandTemplates_NoOpinion_FlagsAbsent(t *testing.T) {
+	ctx, params, reconciler := CreateNewTestObjects()
+	dspa := dspaWithRoute()
+	dspa.Name = "testdspa"
+	dspa.Namespace = "testnamespace"
+
+	params.TLSProfileSpec = intermediateProfile
+	params.TLSAdherence = configv1.TLSAdherencePolicyNoOpinion
+
+	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+	require.Nil(t, params.APIServerTLS, "NoOpinion must leave the operand unconfigured")
+
+	apiDep := renderTemplate(t, reconciler, params, "apiserver/default/deployment.yaml.tmpl")
+	assertOperandTLSArgs(t, apiDep, "ds-pipeline-api-server", "", "")
+
+	webhookDep := renderTemplate(t, reconciler, params, "webhook/deployment.yaml.tmpl")
+	assertOperandTLSArgs(t, webhookDep, "ds-pipeline-webhook", "", "")
+}
+
+func TestOperandTemplates_StrictTLS13_NoCipherFlag(t *testing.T) {
+	ctx, params, reconciler := CreateNewTestObjects()
+	dspa := dspaWithRoute()
+	dspa.Name = "testdspa"
+	dspa.Namespace = "testnamespace"
+
+	params.TLSProfileSpec = modernProfile
+	params.TLSAdherence = configv1.TLSAdherencePolicyStrictAllComponents
+
+	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+	require.NotNil(t, params.APIServerTLS)
+	assert.Empty(t, params.APIServerTLS.CipherSuites)
+
+	apiDep := renderTemplate(t, reconciler, params, "apiserver/default/deployment.yaml.tmpl")
+	assertOperandTLSArgs(t, apiDep, "ds-pipeline-api-server", "VersionTLS13", "")
+
+	webhookDep := renderTemplate(t, reconciler, params, "webhook/deployment.yaml.tmpl")
+	assertOperandTLSArgs(t, webhookDep, "ds-pipeline-webhook", "VersionTLS13", "")
+}
+
+func TestOperandTemplates_StrictCustom_OpenSSLCiphersConverted(t *testing.T) {
+	ctx, params, reconciler := CreateNewTestObjects()
+	dspa := dspaWithRoute()
+	dspa.Name = "testdspa"
+	dspa.Namespace = "testnamespace"
+
+	params.TLSProfileSpec = configv1.TLSProfileSpec{
+		MinTLSVersion: configv1.VersionTLS12,
+		Ciphers:       []string{"ECDHE-RSA-AES128-GCM-SHA256"},
+	}
+	params.TLSAdherence = configv1.TLSAdherencePolicyStrictAllComponents
+
+	require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+	require.NotNil(t, params.APIServerTLS)
+	assert.Equal(t, "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", params.APIServerTLS.CipherSuites)
+
+	apiDep := renderTemplate(t, reconciler, params, "apiserver/default/deployment.yaml.tmpl")
+	assertOperandTLSArgs(t, apiDep, "ds-pipeline-api-server", "VersionTLS12", "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256")
+}
+
+func TestProfileToAPIServerArgs_NoHTTP2Cipher_ReturnsError(t *testing.T) {
+	// The operand advertises h2 on its HTTP and webhook surfaces; a TLS 1.2
+	// list without an AES-128-GCM suite cannot serve HTTP/2 and must be
+	// rejected rather than deployed broken.
+	profile := configv1.TLSProfileSpec{
+		MinTLSVersion: configv1.VersionTLS12,
+		Ciphers:       []string{"ECDHE-RSA-AES256-GCM-SHA384"},
+	}
+	_, err := profileToAPIServerArgs(profile)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "HTTP/2-required AES-128-GCM cipher suite")
+}
+
+func TestProfileToAPIServerArgs_HTTP2CipherAccepted(t *testing.T) {
+	profile := configv1.TLSProfileSpec{
+		MinTLSVersion: configv1.VersionTLS12,
+		Ciphers:       []string{"ECDHE-RSA-AES256-GCM-SHA384", "ECDHE-RSA-AES128-GCM-SHA256"},
+	}
+	args, err := profileToAPIServerArgs(profile)
+	require.NoError(t, err)
+	assert.Equal(t, "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", args.CipherSuites)
+}

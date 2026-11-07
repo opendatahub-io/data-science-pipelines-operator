@@ -33,6 +33,12 @@ spec:
             - --webhookTLSCertPath=/etc/webhook/certs/tls.crt
             - --webhookTLSKeyPath=/etc/webhook/certs/tls.key
             - --globalKubernetesWebhookMode=true
+            {{- if .APIServerTLS }}
+            - --tlsMinVersion={{ .APIServerTLS.MinVersion }}
+            {{- if .APIServerTLS.CipherSuites }}
+            - --tlsCipherSuites={{ .APIServerTLS.CipherSuites }}
+            {{- end }}
+            {{- end }}
           ports:
             - containerPort: 8443
               name: webhook

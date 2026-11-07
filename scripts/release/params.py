@@ -1,3 +1,5 @@
+import shutil
+import subprocess
 import sys
 
 import requests
@@ -36,7 +38,6 @@ TAGGED_REPOS = {
 STATIC_REPOS = {
     "IMAGES_MLMDENVOY": "registry.redhat.io/openshift-service-mesh/proxyv2-rhel8@sha256:b30d60cd458133430d4c92bf84911e03cecd02f60e88a58d1c6c003543cf833a",
     "IMAGES_MARIADB": "registry.redhat.io/rhel8/mariadb-103@sha256:f0ee0d27bb784e289f7d88cc8ee0e085ca70e88a5d126562105542f259a1ac01",
-    "kube-rbac-proxy": "registry.redhat.io/openshift4/ose-kube-rbac-proxy-rhel9@sha256:784c4667a867abdbec6d31a4bbde52676a0f37f8e448eaae37568a46fcdeace7",
 }
 
 OTHER_OPTIONS = {
@@ -84,6 +85,61 @@ def fetch_images(repos, overrides, lines, org, tag):
             lines.append(f"{image_env_var}=quay.io/{org}/{image_repo_with_digest}")
 
 
+# The operator projects these flags into kube-rbac-proxy sidecar arguments
+# under enforcing adherence; an image that does not recognize a flag exits
+# and the sidecar crash-loops.
+REQUIRED_KUBE_RBAC_PROXY_TLS_FLAGS = (
+    "--tls-min-version",
+    "--tls-cipher-suites",
+    "--tls-curve-preferences",
+)
+
+
+def verify_kube_rbac_proxy_tls_flags(image_ref, skip=False):
+    """Verify the selected kube-rbac-proxy image supports the TLS flags the
+    operator projects into its sidecars, by running the image's --help.
+    Verification is required before a release is generated; it can only be
+    bypassed through the explicit --skip-proxy-verification flag."""
+    if skip:
+        print("WARNING: kube-rbac-proxy TLS flag verification skipped by "
+              f"--skip-proxy-verification for {image_ref}; this explicitly "
+              "accepts the risk of an image that cannot serve the projected "
+              "TLS arguments.", file=sys.stderr)
+        return
+    runtime = next((r for r in ("podman", "docker") if shutil.which(r)), None)
+    if runtime is None:
+        print("ERROR: no container runtime (podman or docker) found; the "
+              "kube-rbac-proxy image cannot be verified. The verification "
+              "must run before a release is generated, because an image "
+              "without the projected TLS flags crash-loops proxy sidecars. "
+              "Install a container runtime, or explicitly accept the risk "
+              "with --skip-proxy-verification.", file=sys.stderr)
+        exit(1)
+    # S603: list-form invocation without a shell; the only variable input is
+    # the image reference selected by the release engineer.
+    result = subprocess.run(  # noqa: S603
+        [runtime, "run", "--rm", "--network=none", "--platform", "linux/amd64",
+         image_ref, "--help"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        print(f"ERROR: could not run {image_ref} with --help "
+              f"(exit {result.returncode}): {result.stderr.strip()}", file=sys.stderr)
+        exit(1)
+    help_text = result.stdout + result.stderr
+    missing = [f for f in REQUIRED_KUBE_RBAC_PROXY_TLS_FLAGS if f not in help_text]
+    if missing:
+        print(f"ERROR: kube-rbac-proxy image {image_ref} does not support required TLS "
+              f"flags: {', '.join(missing)}. The operator projects these flags into "
+              "proxy sidecars and an unknown flag crash-loops the sidecar. Use an "
+              "image that supports them (odh-kube-rbac-proxy v3.6.0 or later).",
+              file=sys.stderr)
+        exit(1)
+    print(f"Verified kube-rbac-proxy image {image_ref} supports the projected TLS flags.")
+
+
 def static_vars(values, overrides, lines):
     for var in values:
         if var in overrides:
@@ -105,8 +161,8 @@ def generate_params(args):
             entry = override.split('=')
             if len(entry) != 2:
                 print("--override values must be of the form var=digest,\n"
-                      "e.g: kube-rbac-proxy=registry.redhat.io/openshift4/ose-kube-rbac-proxy-rhel9"
-                      "@sha256:784c4667a867abdbec6d31a4bbde52676a0f37f8e448eaae37568a46fcdeace7", file=sys.stderr)
+                      "e.g: kube-rbac-proxy=quay.io/opendatahub/odh-kube-rbac-proxy"
+                      "@sha256:fd4d1d59dbba435a4c6315fcb18493c6a887bdb205491b5355e5ce6342ae4ad2", file=sys.stderr)
                 exit(1)
             overrides[entry[0]] = entry[1]
 
@@ -119,6 +175,18 @@ def generate_params(args):
         fetch_images(target_repo, overrides, env_var_lines, quay_org, target_tag)
 
     static_vars(STATIC_REPOS, overrides, env_var_lines)
+    fetch_images(
+        {"kube-rbac-proxy": "odh-kube-rbac-proxy"},
+        overrides,
+        env_var_lines,
+        ODH_QUAY_ORG,
+        args.kube_rbac_proxy_tag,
+    )
+    proxy_ref = next(
+        line.split("=", 1)[1] for line in env_var_lines
+        if line.startswith("kube-rbac-proxy=")
+    )
+    verify_kube_rbac_proxy_tls_flags(proxy_ref, skip=args.skip_proxy_verification)
     static_vars(OTHER_OPTIONS, overrides, env_var_lines)
 
     with open(file_out, 'w') as f:
