@@ -8,22 +8,22 @@ on:
 permissions:
   contents: read
 
-# Pinned shared runner: api-contract-tests v1.0.0.
-# Upgrade guidance: https://github.com/red-hat-data-services/api-contract-tests/blob/main/docs/releasing.md
+# Shared runner: api-contract-tests @latest (tracks the newest release).
+# Release guidance: https://github.com/red-hat-data-services/api-contract-tests/blob/main/docs/releasing.md
 # Scope, exclusions, and enforce mode: https://redhat.atlassian.net/browse/RHOAIENG-103184
 # Initial baseline source: refs/heads/stable (selected release line for this onboarding,
 # resolved 2026-11-09) at 3e9d7f61f5437ccb481f2e03875ed553f462fc74.
 # Moving the baseline requires approval from someone other than the author.
 jobs:
   crd-contract:
-    uses: red-hat-data-services/api-contract-tests/.github/workflows/provider-crd-check.yml@v1.0.0
+    uses: red-hat-data-services/api-contract-tests/.github/workflows/provider-crd-check.yml@latest
     with:
       crd-glob: config/crd/bases/*.yaml
       baseline-refs: 3e9d7f61f5437ccb481f2e03875ed553f462fc74
       mode: enforce
 
   contract-coverage:
-    uses: red-hat-data-services/api-contract-tests/.github/workflows/provider-coverage-check.yml@v1.0.0
+    uses: red-hat-data-services/api-contract-tests/.github/workflows/provider-coverage-check.yml@latest
     with:
       # CRD-only repository: no OpenAPI descriptor is needed.
       crd-globs: config/crd/bases/*.yaml
