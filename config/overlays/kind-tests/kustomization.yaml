@@ -5,6 +5,8 @@ resources:
   - ../../base
   - ../../argo
   - ../../prometheus
+  - webhook/cert-issuer.yaml
+  - webhook/certificate.yaml
 generatorOptions:
   disableNameSuffixHash: true
 configMapGenerator:
@@ -22,3 +24,19 @@ images:
   - name: controller
     newName: quay.io/opendatahub/data-science-pipelines-operator
     newTag: main
+replacements:
+  - source:
+      kind: Certificate
+      name: dspa-webhook-cert
+      fieldPath: metadata.namespace
+    targets:
+      - select:
+          kind: Certificate
+          name: dspa-webhook-cert
+        fieldPaths:
+          - spec.dnsNames.1
+          - spec.dnsNames.2
+          - spec.dnsNames.3
+        options:
+          delimiter: '.'
+          index: 1

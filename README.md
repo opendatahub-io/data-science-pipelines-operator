@@ -548,6 +548,14 @@ podman build . -f backend/Dockerfile -t quay.io/your_repo/dsp-apiserver:sometag
 > make podman-build BUILDER_ARCH=arm64 TARGETARCH=arm64 IMG=quay.io/your_repo/data-science-pipelines-operator:tag
 > ```
 
+**To deploy DSPO on Kind:**
+
+Install cert-manager and wait for its deployments to become available before running
+`make deploy-kind OPERATOR_NS=<namespace> IMG=<operator-image>`.
+The Kind overlay includes the webhook Issuer and Certificate and derives the certificate
+DNS names from `OPERATOR_NS`. Both webhook configurations use the operator pod's namespace
+for CA injection. No separate webhook certificate fixture is needed.
+
 **To run the tests:**
 
 Execute `make test` or `make unittest` or `make functest` based on the level of testing as mentioned below:

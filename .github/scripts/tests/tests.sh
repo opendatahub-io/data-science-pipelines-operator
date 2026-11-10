@@ -481,13 +481,6 @@ apply_pip_server_configmap() {
   done
 }
 
-apply_webhook_certs() {
-  echo "---------------------------------"
-  echo "Apply Webhook Certs"
-  echo "---------------------------------"
-  ( cd "${GIT_WORKSPACE}/.github/resources/webhook" && kubectl -n $OPENDATAHUB_NAMESPACE apply -k . )
-}
-
 run_tests() {
   echo "---------------------------------"
   echo "Run tests"
@@ -513,13 +506,6 @@ run_tests_dspa_k8s() {
   echo "---------------------------------"
   echo "Run tests for DSPA with Kubernetes Pipeline Storage"
   echo "---------------------------------"
-  if [ "$TARGET" = "kind" ]; then
-    echo "Detected kind target: deploying cert-manager"
-    deploy_cert_manager
-    echo "Waiting for Cert Manager pods to be ready"
-    kubectl wait -n $CERT_MANAGER_NAMESPACE --timeout=90s --for=condition=Ready pods --all
-    apply_webhook_certs
-  fi
   ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_K8S_NAMESPACE} DSPAPATH=${DSPA_K8S_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} INTTEST_AWF_MANAGEMENT_STATE=${AWF_MANAGEMENT_STATE} INTTEST_SKIP_DEPLOY=${SKIP_DEPLOY} INTTEST_SKIP_CLEANUP=${SKIP_CLEANUP})
 }
 
@@ -660,13 +646,14 @@ setup_kind_requirements() {
   apply_crd
   build_image
   create_opendatahub_namespace
+  # The Kind overlay includes cert-manager Issuer and Certificate resources.
+  deploy_cert_manager
   deploy_argo_lite
   deploy_dspo_kind
   enable_aipipelines_module
   deploy_rustfs kind
   deploy_mariadb
   deploy_pypi_server
-  deploy_cert_manager
   wait_for_dspo_dependencies
   wait_for_dependencies
   verify_mariadb_requires_tls
