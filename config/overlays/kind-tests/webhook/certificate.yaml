@@ -2,15 +2,15 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: dspa-webhook-cert
-  namespace: opendatahub
 spec:
   commonName: dspa-webhook-cert
   isCA: false
+  # The Kind overlay derives the namespace segment from metadata.namespace.
   dnsNames:
   - ds-pipelines-webhook
-  - ds-pipelines-webhook.opendatahub
-  - ds-pipelines-webhook.opendatahub.svc
-  - ds-pipelines-webhook.opendatahub.svc.cluster.local
+  - ds-pipelines-webhook.NAMESPACE
+  - ds-pipelines-webhook.NAMESPACE.svc
+  - ds-pipelines-webhook.NAMESPACE.svc.cluster.local
   issuerRef:
     kind: Issuer
     name: dspa-webhook-selfsigned-issuer
