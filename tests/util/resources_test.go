@@ -31,6 +31,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 )
 
+// TestWaitForDeploymentAvailable covers readiness transitions, missing deployments,
+// timeout diagnostics, API errors, and cancellation.
 func TestWaitForDeploymentAvailable(t *testing.T) {
 	available := appsv1.DeploymentCondition{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionTrue, Reason: "AnyAvailableReason"}
 	unavailable := appsv1.DeploymentCondition{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionFalse, Reason: "MinimumReplicasAvailable"}
@@ -115,6 +117,8 @@ func TestWaitForDeploymentAvailable(t *testing.T) {
 	}
 }
 
+// TestWaitForDeploymentAvailableBoundsAPIRequest verifies that the deployment
+// wait timeout also bounds a blocked Kubernetes API request.
 func TestWaitForDeploymentAvailableBoundsAPIRequest(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
