@@ -33,6 +33,8 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+// TestWebhookCertificateUsesOperatorNamespace verifies that the Kind overlay
+// renders webhook certificates and CA-injection settings for the operator namespace.
 func TestWebhookCertificateUsesOperatorNamespace(t *testing.T) {
 	for _, namespace := range []string{"opendatahub", "rhods"} {
 		t.Run(namespace, func(t *testing.T) {

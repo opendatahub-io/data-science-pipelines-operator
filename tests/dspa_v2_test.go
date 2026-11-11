@@ -29,6 +29,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// TestDSPADeployment verifies the expected pod count and deployment availability
+// for the configured storage, database, and Argo management settings.
 func (suite *IntegrationTestSuite) TestDSPADeployment() {
 	podCount := 8
 	if suite.DSPA.Spec.ObjectStorage.ExternalStorage != nil {
