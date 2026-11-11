@@ -167,13 +167,12 @@ func (suite *IntegrationTestSuite) TestDSPADeploymentWithK8sNativeApi() {
 	suite.T().Run("should verify webhook pod is running in DSPO namespace", func(t *testing.T) {
 		timeout := 120 * time.Second
 		interval := 2 * time.Second
-		dspoNamespace := "opendatahub"
 		webhookName := "ds-pipelines-webhook"
 
 		require.Eventually(t, func() bool {
 			podList := &corev1.PodList{}
 			err := suite.Clientmgr.k8sClient.List(suite.Ctx, podList,
-				client.InNamespace(dspoNamespace),
+				client.InNamespace(suite.OperatorNamespace),
 				client.MatchingLabels{
 					"app": webhookName,
 				},

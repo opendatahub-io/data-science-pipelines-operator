@@ -66,8 +66,10 @@ var (
 	k8sApiServerHost                        string
 	DSPAPath                                string
 	DSPANamespace                           string
+	OperatorNamespace                       string
 	ObjectStorageNamespace                  string
 	ArgoWorkflowsControllersManagementState string
+	VerifyKindWebhookTLS                    bool
 	skipDeploy                              bool
 	skipCleanup                             bool
 	PortforwardLocalPort                    int
@@ -111,6 +113,7 @@ type IntegrationTestSuite struct {
 	Clientmgr                               ClientManager
 	Ctx                                     context.Context
 	DSPANamespace                           string
+	OperatorNamespace                       string
 	ObjectStorageNamespace                  string
 	ArgoWorkflowsControllersManagementState string
 	DSPA                                    *dspav1.DataSciencePipelinesApplication
@@ -161,6 +164,8 @@ func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", DefaultKubeConfigPath, "The path to the kubeconfig.")
 	flag.StringVar(&k8sApiServerHost, "k8sApiServerHost", Defaultk8sApiServerHost, "The k8s cluster api server host.")
 	flag.StringVar(&DSPAPath, "DSPAPath", DefaultDSPAPath, "The DSP resource file to deploy for testing.")
+	flag.StringVar(&OperatorNamespace, "operatorNamespace", "opendatahub", "The namespace where DSPO and its webhook run.")
+	flag.BoolVar(&VerifyKindWebhookTLS, "verifyKindWebhookTLS", false, "Verify Kind cert-manager webhook annotations and CA injection.")
 	flag.StringVar(&DSPANamespace, "DSPANamespace", DefaultDSPANamespace, "The namespace to deploy DSPA.")
 	flag.StringVar(&ObjectStorageNamespace, "ObjectStorageNamespace", DefaultObjectStorageNamespace, "The namespace where the external S3 object store is deployed.")
 	flag.StringVar(&ObjectStorageNamespace, "MinioNamespace", DefaultObjectStorageNamespace, "Deprecated alias for ObjectStorageNamespace.")
@@ -215,6 +220,7 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 	DSPA = testUtil.GetDSPAFromPath(suite.T(), clientmgr.mfopts, DSPAPath)
 
 	suite.DSPANamespace = DSPANamespace
+	suite.OperatorNamespace = OperatorNamespace
 	suite.ObjectStorageNamespace = ObjectStorageNamespace
 	suite.ArgoWorkflowsControllersManagementState = ArgoWorkflowsControllersManagementState
 	suite.DSPA = DSPA

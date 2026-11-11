@@ -19,10 +19,8 @@ limitations under the License.
 package kindtests_test
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -113,9 +111,9 @@ func TestWebhookCertificateUsesOperatorNamespace(t *testing.T) {
 			}
 			require.NotEqual(t, -1, namespaceIndex)
 			require.Greater(t, annotationsIndex, namespaceIndex, "Kubernetes expands only preceding variables")
-			var annotations map[string]string
-			require.NoError(t, json.Unmarshal([]byte(strings.ReplaceAll(annotationsValue, "$(DSPO_NAMESPACE)", namespace)), &annotations))
-			require.Equal(t, namespace+"/"+certificate.GetName(), annotations["cert-manager.io/inject-ca-from"])
+			// The placeholder must remain in the manifest: kubelet expands it at
+			// startup. TestKindWebhookTLS checks the resulting live annotation.
+			require.JSONEq(t, `{"cert-manager.io/inject-ca-from":"$(DSPO_NAMESPACE)/dspa-webhook-cert"}`, annotationsValue)
 		})
 	}
 }

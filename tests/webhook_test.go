@@ -19,9 +19,12 @@ limitations under the License.
 package integration
 
 import (
+	"context"
 	"strings"
 
 	mf "github.com/manifestival/manifestival"
+	testUtil "github.com/opendatahub-io/data-science-pipelines-operator/tests/util"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -65,4 +68,17 @@ func (suite *IntegrationTestSuite) TestPipelineVersionAdmission() {
 	err = suite.Clientmgr.k8sClient.Update(suite.Ctx, version)
 	require.Error(suite.T(), err)
 	require.Contains(suite.T(), strings.ToLower(err.Error()), "immutable", "expected webhook rejection, not a network or RBAC failure")
+}
+
+// TestKindWebhookTLS observes the actual operator output after kubelet expansion
+// and waits for cert-manager to inject the matching certificate authority.
+func (suite *IntegrationTestSuite) TestKindWebhookTLS() {
+	if !VerifyKindWebhookTLS || suite.DSPA.Spec.APIServer.PipelineStore != "kubernetes" {
+		suite.T().Skip("Kind webhook TLS verification is enabled for Kind Kubernetes-store tests")
+	}
+	ctx, cancel := context.WithTimeout(suite.Ctx, DeployTimeout)
+	defer cancel()
+	require.EventuallyWithT(suite.T(), func(collect *assert.CollectT) {
+		require.NoError(collect, testUtil.CheckKindWebhookTLS(ctx, suite.Clientmgr.k8sClient, suite.OperatorNamespace))
+	}, DeployTimeout, PollInterval)
 }

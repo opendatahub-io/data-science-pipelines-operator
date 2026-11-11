@@ -18,6 +18,8 @@ package testUtil
 import (
 	"context"
 	"errors"
+	"os"
+	"os/exec"
 	"testing"
 	"time"
 
@@ -25,6 +27,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -135,4 +138,117 @@ func TestWaitForDeploymentAvailableBoundsAPIRequest(t *testing.T) {
 	err := WaitForDeploymentAvailable(ctx, kubernetesClient, "test-k8s-dspa", "scheduledworkflow", 20*time.Millisecond, time.Millisecond)
 	require.ErrorIs(t, err, context.DeadlineExceeded)
 	require.Contains(t, err.Error(), "test-k8s-dspa/scheduledworkflow")
+}
+
+// TestForDeploymentAbsenceUsesStatus verifies that condition reasons cannot
+// turn an unavailable deployment into an available one.
+func TestForDeploymentAbsenceUsesStatus(t *testing.T) {
+	for _, status := range []corev1.ConditionStatus{corev1.ConditionFalse, corev1.ConditionUnknown} {
+		t.Run(string(status), func(t *testing.T) {
+			deployment := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{Name: "workflow-controller", Namespace: "test-dspa"},
+				Status: appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{{
+					Type: appsv1.DeploymentAvailable, Status: status, Reason: "MinimumReplicasAvailable",
+				}}},
+			}
+			kubernetesClient := fake.NewClientBuilder().WithObjects(deployment).Build()
+			TestForDeploymentAbsence(t, context.Background(), "test-dspa", deployment.Name, kubernetesClient)
+		})
+	}
+}
+
+// TestForDeploymentAbsenceRejectsAvailable verifies that Available=True fails
+// the absence assertion regardless of the condition reason.
+// A subprocess isolates the expected testing.T failure from the parent test.
+func TestForDeploymentAbsenceRejectsAvailable(t *testing.T) {
+	const childProcess = "DSPO_TEST_AVAILABLE_DEPLOYMENT"
+	if os.Getenv(childProcess) == "1" {
+		deployment := &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{Name: "workflow-controller", Namespace: "test-dspa"},
+			Status: appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{{
+				Type: appsv1.DeploymentAvailable, Status: corev1.ConditionTrue, Reason: "AnyAvailableReason",
+			}}},
+		}
+		kubernetesClient := fake.NewClientBuilder().WithObjects(deployment).Build()
+		TestForDeploymentAbsence(t, context.Background(), "test-dspa", deployment.Name, kubernetesClient)
+		return
+	}
+	executable, err := os.Executable()
+	require.NoError(t, err)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	command := exec.CommandContext(ctx, executable, "-test.run=^TestForDeploymentAbsenceRejectsAvailable$")
+	command.Env = append(os.Environ(), childProcess+"=1")
+	output, err := command.CombinedOutput()
+	var exitError *exec.ExitError
+	require.ErrorAs(t, err, &exitError, "an available deployment must fail the absence assertion: %s", output)
+	require.Equal(t, 1, exitError.ExitCode(), "%s", output)
+	require.Contains(t, string(output), "Should be false", "expected the absence assertion to reject availability, not an unrelated failure")
+}
+
+// TestWaitForInterruptsPolling verifies cancellation interrupts a polling delay
+// and remains distinguishable from a deadline expiration.
+func TestWaitForInterruptsPolling(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	firstCheck := make(chan struct{}, 1)
+	result := make(chan error, 1)
+	go func() {
+		result <- WaitFor(ctx, 2*time.Second, 2*time.Second, func() (bool, error) {
+			select {
+			case firstCheck <- struct{}{}:
+			default:
+			}
+			return false, nil
+		})
+	}()
+	select {
+	case <-firstCheck:
+	case <-time.After(time.Second):
+		t.Fatal("wait did not check the condition immediately")
+	}
+	cancel()
+	select {
+	case err := <-result:
+		require.ErrorIs(t, err, context.Canceled)
+	case <-time.After(time.Second):
+		t.Fatal("cancellation did not interrupt the polling interval")
+	}
+}
+
+// TestWaitForDeadlineAndCanceledContext covers a deadline shorter than the
+// interval and cancellation before the first condition check.
+func TestWaitForDeadlineAndCanceledContext(t *testing.T) {
+	t.Run("zero timeout", func(t *testing.T) {
+		err := WaitFor(context.Background(), 0, time.Millisecond, func() (bool, error) {
+			t.Error("an expired wait must not call the condition")
+			return true, nil
+		})
+		require.ErrorIs(t, err, context.DeadlineExceeded)
+	})
+	t.Run("deadline shorter than interval", func(t *testing.T) {
+		result := make(chan error, 1)
+		go func() {
+			result <- WaitFor(context.Background(), 20*time.Millisecond, 5*time.Second, func() (bool, error) {
+				return false, nil
+			})
+		}()
+		// Allow generous scheduling slack while remaining well below the
+		// polling interval: the right error alone does not prove a bound.
+		select {
+		case err := <-result:
+			require.ErrorIs(t, err, context.DeadlineExceeded)
+		case <-time.After(time.Second):
+			t.Fatal("deadline did not interrupt the polling interval")
+		}
+	})
+	t.Run("already canceled", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		err := WaitFor(ctx, time.Second, time.Millisecond, func() (bool, error) {
+			t.Error("a canceled wait must not call the condition")
+			return true, nil
+		})
+		require.ErrorIs(t, err, context.Canceled)
+	})
 }
