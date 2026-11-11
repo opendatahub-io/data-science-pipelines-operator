@@ -51,7 +51,8 @@ DSP_TESTS_IMAGE="${DSP_TESTS_IMAGE:-quay.io/opendatahub/ds-pipelines-tests:${DSP
 TESTS_SCRIPT_DIR="${GIT_WORKSPACE}/.github/scripts/tests"
 CONFIG_DIR="${GIT_WORKSPACE}/config"
 RESOURCES_DIR_CRD="${GIT_WORKSPACE}/.github/resources"
-OPENDATAHUB_NAMESPACE="opendatahub"
+OPERATOR_NS="${OPERATOR_NS:-opendatahub}"
+OPENDATAHUB_NAMESPACE="$OPERATOR_NS"
 RESOURCES_DIR_PYPI="${GIT_WORKSPACE}/.github/resources/pypiserver/base"
 ENDPOINT_TYPE="service"
 DSPO_IMAGE_REF="${DSPO_IMAGE_REF:-}"
@@ -93,7 +94,7 @@ build_image() {
 
 create_opendatahub_namespace() {
   echo "---------------------------------"
-  echo "Create opendatahub namespace"
+  echo "Create operator namespace: $OPERATOR_NS"
   echo "---------------------------------"
   kubectl get namespace $OPENDATAHUB_NAMESPACE >/dev/null 2>&1 || \
   kubectl create namespace $OPENDATAHUB_NAMESPACE
@@ -114,7 +115,10 @@ deploy_argo_lite() {
   echo "---------------------------------"
   echo "Deploy Argo Lite"
   echo "---------------------------------"
-  ( cd "${GIT_WORKSPACE}/.github/resources/argo-lite" && kubectl -n $OPENDATAHUB_NAMESPACE apply -k . )
+  ( cd "$GIT_WORKSPACE" && make kustomize )
+  ( cd "${GIT_WORKSPACE}/.github/resources/argo-lite" && \
+    "${GIT_WORKSPACE}/bin/kustomize" edit set namespace "$OPERATOR_NS" && \
+    kubectl apply -k . )
 }
 
 seed_legacy_service_monitor_owner() {
@@ -160,7 +164,12 @@ enable_aipipelines_module() {
   fi
   # Fail on an existing singleton/handshake: these tests own their fixtures.
   kubectl wait crd/aipipelines.components.platform.opendatahub.io --for=condition=Established --timeout=60s
-  ( cd "${GIT_WORKSPACE}/.github/resources/aipipelines" && kubectl create -k . )
+  ( cd "$GIT_WORKSPACE" && make kustomize )
+  # Only the handshake ConfigMap is namespaced; AIPipelines is cluster-scoped.
+  ( cd "${GIT_WORKSPACE}/.github/resources/aipipelines" && \
+    "${GIT_WORKSPACE}/bin/kustomize" edit add patch --kind ConfigMap --name odh-aipipelines-config \
+      --patch "[{\"op\":\"replace\",\"path\":\"/metadata/namespace\",\"value\":\"${OPERATOR_NS}\"}]" && \
+    kubectl create -k . )
   kubectl set env -n "$OPENDATAHUB_NAMESPACE" deployment/data-science-pipelines-operator-controller-manager \
     DSPO_ENABLEAIPIPELINESMODULECONTROLLER=true \
     APPLICATIONS_NAMESPACE="$OPENDATAHUB_NAMESPACE" \
@@ -238,7 +247,7 @@ deploy_dspo() {
   echo "---------------------------------"
   echo "Deploying DSPO: $IMG"
   echo "---------------------------------"
-  ( cd $GIT_WORKSPACE && make deploy -e IMG="$IMG" )
+  ( cd $GIT_WORKSPACE && make deploy -e IMG="$IMG" OPERATOR_NS="$OPERATOR_NS" )
 }
 
 deploy_dspo_kind() {
@@ -247,7 +256,7 @@ deploy_dspo_kind() {
   echo "Push DSPO Image and Deploying DSPO on Kind: $IMG"
   echo "---------------------------------"
   ( cd $GIT_WORKSPACE && make podman-push -e IMG="$IMG" )
-  ( cd $GIT_WORKSPACE && make deploy-kind -e IMG="$IMG" )
+  ( cd $GIT_WORKSPACE && make deploy-kind -e IMG="$IMG" OPERATOR_NS="$OPERATOR_NS" )
 }
 
 deploy_rustfs() {
@@ -485,28 +494,32 @@ run_tests() {
   echo "---------------------------------"
   echo "Run tests"
   echo "---------------------------------"
-  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_NAMESPACE} DSPAPATH=${DSPA_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} INTTEST_AWF_MANAGEMENT_STATE=${AWF_MANAGEMENT_STATE} INTTEST_SKIP_DEPLOY=${SKIP_DEPLOY} INTTEST_SKIP_CLEANUP=${SKIP_CLEANUP} )
+  ( cd $GIT_WORKSPACE && make integrationtest OPERATOR_NS="$OPERATOR_NS" K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_NAMESPACE} DSPAPATH=${DSPA_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} INTTEST_AWF_MANAGEMENT_STATE=${AWF_MANAGEMENT_STATE} INTTEST_SKIP_DEPLOY=${SKIP_DEPLOY} INTTEST_SKIP_CLEANUP=${SKIP_CLEANUP} )
 }
 
 run_tests_external_argo() {
   echo "---------------------------------"
   echo "Run tests"
   echo "---------------------------------"
-  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_NAMESPACE} DSPAPATH=${DSPA_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} INTTEST_AWF_MANAGEMENT_STATE=${AWF_MANAGEMENT_STATE} INTTEST_SKIP_DEPLOY=${SKIP_DEPLOY} INTTEST_SKIP_CLEANUP=${SKIP_CLEANUP} )
+  ( cd $GIT_WORKSPACE && make integrationtest OPERATOR_NS="$OPERATOR_NS" K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_NAMESPACE} DSPAPATH=${DSPA_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} INTTEST_AWF_MANAGEMENT_STATE=${AWF_MANAGEMENT_STATE} INTTEST_SKIP_DEPLOY=${SKIP_DEPLOY} INTTEST_SKIP_CLEANUP=${SKIP_CLEANUP} )
 }
 
 run_tests_dspa_external_connections() {
   echo "---------------------------------"
   echo "Run tests for DSPA with External Connections"
   echo "---------------------------------"
-  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_EXTERNAL_NAMESPACE} DSPAPATH=${DSPA_EXTERNAL_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} OBJECTSTORAGENAMESPACE=${RUSTFS_NAMESPACE} INTTEST_AWF_MANAGEMENT_STATE=${AWF_MANAGEMENT_STATE} INTTEST_SKIP_DEPLOY=${SKIP_DEPLOY} INTTEST_SKIP_CLEANUP=${SKIP_CLEANUP})
+  ( cd $GIT_WORKSPACE && make integrationtest OPERATOR_NS="$OPERATOR_NS" K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_EXTERNAL_NAMESPACE} DSPAPATH=${DSPA_EXTERNAL_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} OBJECTSTORAGENAMESPACE=${RUSTFS_NAMESPACE} INTTEST_AWF_MANAGEMENT_STATE=${AWF_MANAGEMENT_STATE} INTTEST_SKIP_DEPLOY=${SKIP_DEPLOY} INTTEST_SKIP_CLEANUP=${SKIP_CLEANUP})
 }
 
 run_tests_dspa_k8s() {
   echo "---------------------------------"
   echo "Run tests for DSPA with Kubernetes Pipeline Storage"
   echo "---------------------------------"
-  ( cd $GIT_WORKSPACE && make integrationtest K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_K8S_NAMESPACE} DSPAPATH=${DSPA_K8S_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} INTTEST_AWF_MANAGEMENT_STATE=${AWF_MANAGEMENT_STATE} INTTEST_SKIP_DEPLOY=${SKIP_DEPLOY} INTTEST_SKIP_CLEANUP=${SKIP_CLEANUP})
+  local verify_kind_webhook_tls=false
+  if [ "$TARGET" = "kind" ]; then
+    verify_kind_webhook_tls=true
+  fi
+  ( cd $GIT_WORKSPACE && make integrationtest INTTEST_VERIFY_KIND_WEBHOOK_TLS="$verify_kind_webhook_tls" OPERATOR_NS="$OPERATOR_NS" K8SAPISERVERHOST=${K8SAPISERVERHOST} DSPANAMESPACE=${DSPA_K8S_NAMESPACE} DSPAPATH=${DSPA_K8S_PATH} ENDPOINT_TYPE=${ENDPOINT_TYPE} INTTEST_AWF_MANAGEMENT_STATE=${AWF_MANAGEMENT_STATE} INTTEST_SKIP_DEPLOY=${SKIP_DEPLOY} INTTEST_SKIP_CLEANUP=${SKIP_CLEANUP})
 }
 
 deploy_dspa_mlflow() {
@@ -627,7 +640,7 @@ undeploy_kind_resources() {
   echo "---------------------------------"
   echo "Clean up resources created for testing on kind"
   echo "---------------------------------"
-  ( cd $GIT_WORKSPACE && make undeploy-kind )
+  ( cd $GIT_WORKSPACE && make undeploy-kind OPERATOR_NS="$OPERATOR_NS" )
 }
 
 remove_namespace_created_for_rhoai() {

@@ -61,9 +61,34 @@ Replace `username` with your quay user
 export REGISTRY_ADDRESS=quay.io/username
 ```
 
+## Operator namespace
+
+Set `OPERATOR_NS` to use a namespace other than the default `opendatahub`:
+
+```bash
+export OPERATOR_NS=rhods
+```
+
+The script uses it for the operator, Argo fixtures, the modular platform ConfigMap,
+deployment waits, cleanup, and Go integration tests. For direct execution, pass `OPERATOR_NS=rhods` to
+`make deploy-kind` and `make integrationtest`, or `-operatorNamespace=rhods` to
+the Go integration suite.
+
+The Kind setup installs cert-manager before `deploy-kind`; the
+`config/overlays/kind-tests` overlay owns the webhook Issuer and Certificate.
+The Kind Kubernetes-store suite checks the actual webhook annotations and CA
+bundles. When invoking `make integrationtest` directly against Kind, enable that
+check with `INTTEST_VERIFY_KIND_WEBHOOK_TLS=true` (Go flag:
+`-verifyKindWebhookTLS=true`). Leave it disabled for OpenShift/RHOAI.
+
+The Kind integration workflow runs legacy mode in `opendatahub` and modular mode
+in `rhods`. These jobs exercise namespace propagation through deployment, platform
+configuration, webhook discovery, and CA injection on a running cluster. MLflow
+tests run in the legacy job.
+
 ## Run the test
 ```bash
-sh .github/scripts/tests/tests.sh --kind
+bash .github/scripts/tests/tests.sh --kind
 ```
 
 # Debug a test using GoLand

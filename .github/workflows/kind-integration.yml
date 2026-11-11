@@ -44,6 +44,8 @@ jobs:
       fail-fast: false
       matrix:
         test-mode: [legacy, modular]
+    env:
+      OPERATOR_NS: ${{ matrix.test-mode == 'modular' && 'rhods' || 'opendatahub' }}
     timeout-minutes: ${{ matrix.test-mode == 'modular' && 120 || 90 }}
     concurrency:
       group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-${{ matrix.test-mode }}
@@ -127,8 +129,8 @@ jobs:
           ))
         working-directory: ${{ github.workspace }}/.github/scripts/tests
         run: |
-          ./collect_logs.sh --dspa-ns test-dspa --dspo-ns opendatahub
-          ./collect_logs.sh --dspa-ns dspa-ext --dspo-ns opendatahub
-          ./collect_logs.sh --dspa-ns test-k8s-dspa --dspo-ns opendatahub
-          ./collect_logs.sh --dspa-ns test-dspa-mlflow --dspo-ns opendatahub
+          ./collect_logs.sh --dspa-ns test-dspa --dspo-ns "$OPERATOR_NS"
+          ./collect_logs.sh --dspa-ns dspa-ext --dspo-ns "$OPERATOR_NS"
+          ./collect_logs.sh --dspa-ns test-k8s-dspa --dspo-ns "$OPERATOR_NS"
+          ./collect_logs.sh --dspa-ns test-dspa-mlflow --dspo-ns "$OPERATOR_NS"
           exit 1
