@@ -208,7 +208,9 @@ func (suite *IntegrationTestSuite) uploadCreatePVCPipeline(t *testing.T) string 
 // runCreatePVCPipeline creates a run of the CreatePVC pipeline and waits for
 // that specific run's completion. The shared WaitForPipelineRunCompletion
 // helper observes the state of an arbitrary run, which can pass or fail on a
-// stale run in a reused namespace, so this wait is scoped to the run ID.
+// stale run in a reused namespace, so this wait polls the run by its ID via
+// GET /apis/v2beta1/runs/{run_id} rather than scanning the paginated runs
+// list, where the run could fall outside the first page.
 func (suite *IntegrationTestSuite) runCreatePVCPipeline(t *testing.T, pipelineID string) {
 	postUrl := fmt.Sprintf("%s/apis/v2beta1/runs", APIServerURL)
 	body := TestUtil.FormatRequestBody(t, pipelineID, pipelineCreatePVCName)
@@ -222,37 +224,32 @@ func (suite *IntegrationTestSuite) runCreatePVCPipeline(t *testing.T, pipelineID
 	runID := TestUtil.RetrieveRunID(t, responseData)
 
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
-		runsResponse, err := suite.Clientmgr.httpClient.Get(fmt.Sprintf("%s/apis/v2beta1/runs", APIServerURL))
+		runResponse, err := suite.Clientmgr.httpClient.Get(fmt.Sprintf("%s/apis/v2beta1/runs/%s", APIServerURL, runID))
 		if !assert.NoError(ct, err) {
 			return
 		}
-		defer runsResponse.Body.Close()
-		runsData, err := io.ReadAll(io.LimitReader(runsResponse.Body, maxHTTPResponseBytes))
+		defer runResponse.Body.Close()
+		runData, err := io.ReadAll(io.LimitReader(runResponse.Body, maxHTTPResponseBytes))
 		if !assert.NoError(ct, err) {
 			return
 		}
-		var runs struct {
-			Runs []struct {
-				RunID string `json:"run_id"`
-				State string `json:"state"`
-			} `json:"runs"`
-		}
-		if !assert.NoError(ct, json.Unmarshal(runsData, &runs)) {
+		if !assert.Equal(ct, 200, runResponse.StatusCode, string(runData)) {
 			return
 		}
-		for _, run := range runs.Runs {
-			if run.RunID != runID {
-				continue
-			}
-			switch run.State {
-			case "SUCCEEDED":
-				return
-			case "SKIPPED", "FAILED", "CANCELING", "CANCELED", "PAUSED":
-				ct.Errorf("pipeline run %s status: %s", runID, run.State)
-				return
-			}
+		var run struct {
+			State string `json:"state"`
 		}
-		ct.Errorf("run %s not found", runID)
+		if !assert.NoError(ct, json.Unmarshal(runData, &run)) {
+			return
+		}
+		switch run.State {
+		case "SUCCEEDED":
+			return
+		case "SKIPPED", "FAILED", "CANCELING", "CANCELED", "PAUSED":
+			ct.Errorf("pipeline run %s status: %s", runID, run.State)
+			return
+		}
+		ct.Errorf("run %s has no terminal state yet: %q", runID, run.State)
 	}, 6*time.Minute, 6*time.Second, "run %s should complete", runID)
 }
 
