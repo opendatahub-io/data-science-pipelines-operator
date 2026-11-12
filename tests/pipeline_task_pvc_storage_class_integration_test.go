@@ -54,6 +54,11 @@ const (
 	maxHTTPResponseBytes = 1 << 20
 )
 
+// taskPVCSuffixes are the PVC name suffixes the CreatePVC pipeline's tasks
+// create. They identify this test's claims: a name matching a suffix and not
+// present in the pre-run snapshot belongs to the current run.
+var taskPVCSuffixes = []string{"-sc-omitted", "-sc-explicit", "-sc-empty"}
+
 // createStorageClassFromDefault creates a StorageClass with the given name
 // reusing the cluster default's provisioner and parameters, so volumes can
 // bind on any provider. StorageClasses this call creates are cluster-scoped
@@ -93,8 +98,10 @@ func (suite *IntegrationTestSuite) createStorageClassFromDefault(t *testing.T, n
 
 // verifyTaskPVCDefaultStorageClassPropagated asserts that the DSPA field,
 // which this suite's DSPA is deployed with, reached the API server
-// deployment and its running pods as DEFAULT_PVC_STORAGE_CLASS.
-func (suite *IntegrationTestSuite) verifyTaskPVCDefaultStorageClassPropagated(t *testing.T) {
+// deployment and its running pods as DEFAULT_PVC_STORAGE_CLASS set to
+// expected. expected is the DSPA's configured value, whatever manifest
+// supplied it, not a hardcoded class name.
+func (suite *IntegrationTestSuite) verifyTaskPVCDefaultStorageClassPropagated(t *testing.T, expected string) {
 	deploymentName := fmt.Sprintf("ds-pipeline-%s", suite.DSPA.Name)
 	require.Eventually(t, func() bool {
 		deployment := &appsv1.Deployment{}
@@ -109,7 +116,7 @@ func (suite *IntegrationTestSuite) verifyTaskPVCDefaultStorageClassPropagated(t 
 				continue
 			}
 			for _, env := range c.Env {
-				if env.Name == "DEFAULT_PVC_STORAGE_CLASS" && env.Value == taskPVCStorageClassName {
+				if env.Name == "DEFAULT_PVC_STORAGE_CLASS" && env.Value == expected {
 					return true
 				}
 			}
@@ -134,7 +141,7 @@ func (suite *IntegrationTestSuite) verifyTaskPVCDefaultStorageClassPropagated(t 
 			if podList.Items[i].Status.Phase != corev1.PodRunning {
 				return false
 			}
-			if !podHasEnv(&podList.Items[i], "DEFAULT_PVC_STORAGE_CLASS", taskPVCStorageClassName) {
+			if !podHasEnv(&podList.Items[i], "DEFAULT_PVC_STORAGE_CLASS", expected) {
 				return false
 			}
 		}
@@ -171,7 +178,7 @@ func (suite *IntegrationTestSuite) snapshotStaleTestPVCs(t *testing.T) map[strin
 	require.NoError(t, err)
 	stale := make(map[string]struct{})
 	for i := range pvcList.Items {
-		for _, suffix := range []string{"-sc-omitted", "-sc-explicit", "-sc-empty"} {
+		for _, suffix := range taskPVCSuffixes {
 			if strings.HasSuffix(pvcList.Items[i].Name, suffix) {
 				stale[pvcList.Items[i].Name] = struct{}{}
 				break
@@ -256,9 +263,9 @@ func (suite *IntegrationTestSuite) runCreatePVCPipeline(t *testing.T, pipelineID
 // getPVCSuffix returns the storageClassName pointer of the PVC whose name
 // ends with suffix, skipping names recorded before the run, and retrying
 // until the driver task has created it. The pointer distinguishes an unset
-// class (nil) from an explicit empty one (""). The PVC is registered for
-// deletion in the test's cleanup: the suite deletes the DSPA but not the
-// namespace, so the claims would otherwise outlive the suite.
+// class (nil) from an explicit empty one (""). Deletion of the run's claims
+// is registered up front by cleanupRunPVCs, not here, so it still happens
+// when an earlier assertion aborts the subtest before this helper runs.
 func (suite *IntegrationTestSuite) getPVCSuffix(t *testing.T, suffix string, stale map[string]struct{}) *string {
 	var storageClass *string
 	require.Eventually(t, func() bool {
@@ -274,18 +281,44 @@ func (suite *IntegrationTestSuite) getPVCSuffix(t *testing.T, suffix string, sta
 			}
 			if strings.HasSuffix(pvcList.Items[i].Name, suffix) {
 				storageClass = pvcList.Items[i].Spec.StorageClassName
-				pvc := pvcList.Items[i]
-				t.Cleanup(func() {
-					if err := suite.Clientmgr.k8sClient.Delete(suite.Ctx, &pvc); err != nil && !apierrors.IsNotFound(err) {
-						t.Errorf("failed to delete PVC %s: %v", pvc.Name, err)
-					}
-				})
 				return true
 			}
 		}
 		return false
 	}, DeployTimeout, PollInterval, "PVC with suffix %s should be created", suffix)
 	return storageClass
+}
+
+// cleanupRunPVCs registers deletion of every PVC the current run created:
+// names matching a task suffix that were absent from the pre-run snapshot.
+// It is registered before the run starts so the claims are deleted even
+// when the run fails or an assertion aborts the subtest early; the suite
+// deletes the DSPA but not the namespace, so they would otherwise outlive
+// the suite.
+func (suite *IntegrationTestSuite) cleanupRunPVCs(t *testing.T, stale map[string]struct{}) {
+	t.Cleanup(func() {
+		pvcList := &corev1.PersistentVolumeClaimList{}
+		err := suite.Clientmgr.k8sClient.List(suite.Ctx, pvcList,
+			client.InNamespace(suite.DSPANamespace))
+		if err != nil {
+			t.Errorf("failed to list PVCs for cleanup: %v", err)
+			return
+		}
+		for i := range pvcList.Items {
+			pvc := pvcList.Items[i]
+			if _, preexisting := stale[pvc.Name]; preexisting {
+				continue
+			}
+			for _, suffix := range taskPVCSuffixes {
+				if strings.HasSuffix(pvc.Name, suffix) {
+					if err := suite.Clientmgr.k8sClient.Delete(suite.Ctx, &pvc); err != nil && !apierrors.IsNotFound(err) {
+						t.Errorf("failed to delete PVC %s: %v", pvc.Name, err)
+					}
+					break
+				}
+			}
+		}
+	})
 }
 
 // clusterDefaultStorageClass returns the name of the cluster's default
@@ -318,17 +351,19 @@ func (suite *IntegrationTestSuite) TestPipelineTaskPVCDefaultStorageClass() {
 		suite.T().Log("PipelineStore is set to kubernetes, skipping CreatePVC default verification")
 		suite.T().SkipNow()
 	}
-	configured := suite.DSPA.Spec.APIServer.PipelineTaskPVCDefaultStorageClass != ""
+	configuredDefault := suite.DSPA.Spec.APIServer.PipelineTaskPVCDefaultStorageClass
+	configured := configuredDefault != ""
 
 	suite.T().Run("should apply DSPA default and task precedence to CreatePVC volumes", func(t *testing.T) {
 		suite.createStorageClassFromDefault(t, taskPVCStorageClassName)
 		suite.createStorageClassFromDefault(t, explicitTaskPVCStorageClassName)
 		if configured {
-			suite.verifyTaskPVCDefaultStorageClassPropagated(t)
+			suite.verifyTaskPVCDefaultStorageClassPropagated(t, configuredDefault)
 		}
 
 		pipelineID := suite.uploadCreatePVCPipeline(t)
 		stale := suite.snapshotStaleTestPVCs(t)
+		suite.cleanupRunPVCs(t, stale)
 		suite.runCreatePVCPipeline(t, pipelineID)
 
 		// Omitted class: with a configured DSPA default it must be selected
@@ -337,7 +372,7 @@ func (suite *IntegrationTestSuite) TestPipelineTaskPVCDefaultStorageClass() {
 		// so the pointer must be set.
 		expectedOmitted := suite.clusterDefaultStorageClass(t)
 		if configured {
-			expectedOmitted = taskPVCStorageClassName
+			expectedOmitted = configuredDefault
 		}
 		omitted := suite.getPVCSuffix(t, "-sc-omitted", stale)
 		require.NotNil(t, omitted)
