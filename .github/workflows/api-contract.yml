@@ -1,0 +1,44 @@
+name: API contract checks
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+# Shared runner: api-contract-tests @latest (tracks the newest release).
+# Release guidance: https://github.com/red-hat-data-services/api-contract-tests/blob/main/docs/releasing.md
+# Scope, exclusions, and enforce mode: https://redhat.atlassian.net/browse/RHOAIENG-103184
+# Initial baseline source: refs/heads/stable (selected release line for this onboarding,
+# resolved 2026-11-09) at 3e9d7f61f5437ccb481f2e03875ed553f462fc74.
+# Moving the baseline requires approval from someone other than the author.
+jobs:
+  crd-contract:
+    uses: red-hat-data-services/api-contract-tests/.github/workflows/provider-crd-check.yml@latest
+    with:
+      crd-glob: config/crd/bases/*.yaml
+      baseline-refs: 3e9d7f61f5437ccb481f2e03875ed553f462fc74
+      mode: enforce
+
+  contract-coverage:
+    uses: red-hat-data-services/api-contract-tests/.github/workflows/provider-coverage-check.yml@latest
+    with:
+      # CRD-only repository: no OpenAPI descriptor is needed.
+      crd-globs: config/crd/bases/*.yaml
+      # The two legacy AIPipelines CRDs and .github/resources/crds/*.yaml
+      # are test fixtures or mocked CRDs.
+      # config/argo/crds/crd.*.yaml bundles deployment CRDs owned by other
+      # projects (app.k8s.io, argoproj.io, and kubeflow.org/Viewer).
+      # config/crd/external/*.yaml contains third-party CRDs vendored for
+      # installation or tests (ServiceMonitor and OpenShift Route).
+      crd-exclude-globs: >-
+        .github/resources/aipipelines/legacy-datasciencecluster-crd.yaml
+        .github/resources/aipipelines/legacy-datasciencepipelines-crd.yaml
+        .github/resources/crds/*.yaml
+        config/argo/crds/crd.*.yaml
+        config/crd/external/*.yaml
+      baseline-refs: 3e9d7f61f5437ccb481f2e03875ed553f462fc74
+      yq-version: "4.45.1"
+      mode: enforce

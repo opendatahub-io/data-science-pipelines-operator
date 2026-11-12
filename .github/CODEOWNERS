@@ -1,0 +1,5 @@
+# API contract configuration is reviewed by the individual approvers in /OWNERS.
+# Keep this ownership rule itself under the same review.
+/.github/CODEOWNERS @hbelmiro @HumairAK @mprahl @alyssacgoins
+/.github/workflows/api-contract.yml @hbelmiro @HumairAK @mprahl @alyssacgoins
+/.rhoai/ @hbelmiro @HumairAK @mprahl @alyssacgoins
