@@ -75,7 +75,7 @@ jobs:
           PR_HEAD_BRANCH: ${{ github.event.pull_request.head.ref || github.ref_name }}
 
       - name: Free up disk space
-        uses: kubeflow/pipelines/.github/actions/github-disk-cleanup@master
+        uses: kubeflow/pipelines/.github/actions/github-disk-cleanup@main
 
       - name: Run test
         id: test
