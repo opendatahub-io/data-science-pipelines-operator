@@ -11,6 +11,8 @@ components:
       parameters:
         access_modes:
           parameterType: LIST
+        annotations:
+          parameterType: STRUCT
         pvc_name_suffix:
           parameterType: STRING
         size:
@@ -28,6 +30,8 @@ components:
       parameters:
         access_modes:
           parameterType: LIST
+        annotations:
+          parameterType: STRUCT
         pvc_name_suffix:
           parameterType: STRING
         size:
@@ -45,6 +49,8 @@ components:
       parameters:
         access_modes:
           parameterType: LIST
+        annotations:
+          parameterType: STRUCT
         pvc_name_suffix:
           parameterType: STRING
         size:
@@ -79,6 +85,10 @@ root:
           name: comp-createpvc-empty
         inputs:
           parameters:
+            annotations:
+              runtimeValue:
+                constant:
+                  test-dspo-owner: createpvc-storage-class
             access_modes:
               runtimeValue:
                 constant:
@@ -101,6 +111,10 @@ root:
           name: comp-createpvc-explicit
         inputs:
           parameters:
+            annotations:
+              runtimeValue:
+                constant:
+                  test-dspo-owner: createpvc-storage-class
             access_modes:
               runtimeValue:
                 constant:
@@ -123,6 +137,10 @@ root:
           name: comp-createpvc-omitted
         inputs:
           parameters:
+            annotations:
+              runtimeValue:
+                constant:
+                  test-dspo-owner: createpvc-storage-class
             access_modes:
               runtimeValue:
                 constant:
