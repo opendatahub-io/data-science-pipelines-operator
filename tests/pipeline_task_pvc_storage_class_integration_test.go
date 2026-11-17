@@ -50,6 +50,12 @@ const (
 	// explicit-class task so preservation can be distinguished from fallback.
 	explicitTaskPVCStorageClassName = "dspa-task-pvc-sc-explicit"
 	pipelineCreatePVCName           = "test-pipeline-createpvc"
+	// createPVCOwnerAnnotation* is stamped by the CreatePVC pipeline's tasks
+	// onto every PVC they create. It proves a claim was created by this
+	// test's pipeline, so cleanup never touches another workload's claims
+	// in a shared namespace.
+	createPVCOwnerAnnotationKey   = "test-dspo-owner"
+	createPVCOwnerAnnotationValue = "createpvc-storage-class"
 	// maxHTTPResponseBytes bounds response reads from the DSP API server.
 	maxHTTPResponseBytes = 1 << 20
 )
@@ -289,13 +295,14 @@ func (suite *IntegrationTestSuite) getPVCSuffix(t *testing.T, suffix string, sta
 	return storageClass
 }
 
-// cleanupRunPVCs registers deletion of every PVC the current run created:
-// names matching a task suffix that were absent from the pre-run snapshot.
-// It is registered before the run starts so the claims are deleted even
-// when the run fails or an assertion aborts the subtest early; the suite
-// deletes the DSPA but not the namespace, so they would otherwise outlive
-// the suite.
-func (suite *IntegrationTestSuite) cleanupRunPVCs(t *testing.T, stale map[string]struct{}) {
+// cleanupRunPVCs registers deletion of every PVC this test's CreatePVC
+// pipeline created, identified by the pipeline's owner annotation rather
+// than by name suffix, so claims owned by other workloads in a shared
+// namespace are never touched. It is registered before the run starts so
+// the claims are deleted even when the run fails or an assertion aborts
+// the subtest early; the suite deletes the DSPA but not the namespace, so
+// they would otherwise outlive the suite.
+func (suite *IntegrationTestSuite) cleanupRunPVCs(t *testing.T) {
 	t.Cleanup(func() {
 		pvcList := &corev1.PersistentVolumeClaimList{}
 		err := suite.Clientmgr.k8sClient.List(suite.Ctx, pvcList,
@@ -306,16 +313,11 @@ func (suite *IntegrationTestSuite) cleanupRunPVCs(t *testing.T, stale map[string
 		}
 		for i := range pvcList.Items {
 			pvc := pvcList.Items[i]
-			if _, preexisting := stale[pvc.Name]; preexisting {
+			if pvc.Annotations[createPVCOwnerAnnotationKey] != createPVCOwnerAnnotationValue {
 				continue
 			}
-			for _, suffix := range taskPVCSuffixes {
-				if strings.HasSuffix(pvc.Name, suffix) {
-					if err := suite.Clientmgr.k8sClient.Delete(suite.Ctx, &pvc); err != nil && !apierrors.IsNotFound(err) {
-						t.Errorf("failed to delete PVC %s: %v", pvc.Name, err)
-					}
-					break
-				}
+			if err := suite.Clientmgr.k8sClient.Delete(suite.Ctx, &pvc); err != nil && !apierrors.IsNotFound(err) {
+				t.Errorf("failed to delete PVC %s: %v", pvc.Name, err)
 			}
 		}
 	})
@@ -363,7 +365,7 @@ func (suite *IntegrationTestSuite) TestPipelineTaskPVCDefaultStorageClass() {
 
 		pipelineID := suite.uploadCreatePVCPipeline(t)
 		stale := suite.snapshotStaleTestPVCs(t)
-		suite.cleanupRunPVCs(t, stale)
+		suite.cleanupRunPVCs(t)
 		suite.runCreatePVCPipeline(t, pipelineID)
 
 		// Omitted class: with a configured DSPA default it must be selected
