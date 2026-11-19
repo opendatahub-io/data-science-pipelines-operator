@@ -230,9 +230,9 @@ func (suite *IntegrationTestSuite) uploadCreatePVCPipeline(t *testing.T) (pipeli
 	response, err := suite.Clientmgr.httpClient.Post(postUrl, contentType, body)
 	require.NoError(t, err)
 	defer response.Body.Close()
-	responseData, err := io.ReadAll(io.LimitReader(response.Body, maxHTTPResponseBytes))
+	_, err = io.Copy(io.Discard, io.LimitReader(response.Body, maxHTTPResponseBytes))
 	require.NoError(t, err)
-	loggr.Info(string(responseData))
+	loggr.Info(fmt.Sprintf("pipeline %s upload response status: %d", pipelineName, response.StatusCode))
 	require.Equal(t, 200, response.StatusCode)
 
 	pipelineID, err = TestUtil.RetrievePipelineId(t, suite.Clientmgr.httpClient, APIServerURL, pipelineName)
@@ -254,9 +254,9 @@ func (suite *IntegrationTestSuite) runCreatePVCPipeline(t *testing.T, pipelineID
 	defer response.Body.Close()
 	responseData, err := io.ReadAll(io.LimitReader(response.Body, maxHTTPResponseBytes))
 	require.NoError(t, err)
-	loggr.Info(string(responseData))
 	require.Equal(t, 200, response.StatusCode)
 	runID := TestUtil.RetrieveRunID(t, responseData)
+	loggr.Info(fmt.Sprintf("created CreatePVC pipeline run %s", runID))
 
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
 		runResponse, err := suite.Clientmgr.httpClient.Get(fmt.Sprintf("%s/apis/v2beta1/runs/%s", APIServerURL, runID))
@@ -268,7 +268,7 @@ func (suite *IntegrationTestSuite) runCreatePVCPipeline(t *testing.T, pipelineID
 		if !assert.NoError(ct, err) {
 			return
 		}
-		if !assert.Equal(ct, 200, runResponse.StatusCode, string(runData)) {
+		if !assert.Equal(ct, 200, runResponse.StatusCode) {
 			return
 		}
 		var run struct {
