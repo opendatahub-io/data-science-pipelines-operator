@@ -27,6 +27,7 @@ import (
 	"math/big"
 	"net/url"
 	"os"
+	"slices"
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -65,6 +66,8 @@ type DSPAParams struct {
 	APIServerDefaultResourceName          string
 	APIServerServiceName                  string
 	APIServerConfigHash                   string
+	APIServerPostgreSQLConfigJSON         string
+	APIServerPostgreSQLEnv                map[string]string
 	KubeRBACProxy                         string
 	SampleConfigJSON                      string
 	ScheduledWorkflow                     *dspa.ScheduledWorkflow
@@ -186,6 +189,8 @@ type DSPAParams struct {
 }
 
 type DBConnection struct {
+	Engine            dspa.DatabaseEngine
+	Schema            string
 	Host              string
 	Port              string
 	Username          string
@@ -375,25 +380,36 @@ func (p *DSPAParams) RetrieveOrCreateObjectStoreSecret(ctx context.Context, clie
 func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePipelinesApplication, client client.Client, log logr.Logger) error {
 
 	usingExternalDB := p.UsingExternalDB(dsp)
+	p.DBConnection.Engine = dspa.DatabaseEngineMySQL
 	if usingExternalDB {
-		// Assume validation for CR ensures these values exist
-		p.DBConnection.Host = dsp.Spec.Database.ExternalDB.Host
-		p.DBConnection.Port = dsp.Spec.Database.ExternalDB.Port
-		p.DBConnection.Username = dsp.Spec.Database.ExternalDB.Username
-		p.DBConnection.DBName = dsp.Spec.Database.ExternalDB.DBName
-		p.DBConnection.CredentialsSecret = dsp.Spec.Database.ExternalDB.PasswordSecret
+		database := dsp.Spec.Database
+		external := database.ExternalDB
+		p.DBConnection.Host = external.Host
+		p.DBConnection.Port = external.Port
+		p.DBConnection.Username = external.Username
+		p.DBConnection.DBName = external.DBName
+		p.DBConnection.CredentialsSecret = external.PasswordSecret
+		if external.PasswordSecret == nil || external.PasswordSecret.Name == "" || external.PasswordSecret.Key == "" {
+			return errors.New("spec.database.externalDB.passwordSecret requires a name and key")
+		}
 
-		// Assume default external connection is tls enabled
-		// user can override this via CustomExtraParams field
-		tlsParams := config.DBExtraParams{
-			"tls": "true",
+		switch external.Engine {
+		case "", dspa.DatabaseEngineMySQL:
+			if external.Schema != "" {
+				return errors.New("spec.database.externalDB.schema requires the postgresql engine")
+			}
+			dbExtraParams, err := config.GetDefaultDBExtraParams(config.DBExtraParams{"tls": "true"}, log)
+			if err != nil {
+				return err
+			}
+			p.DBConnection.ExtraParams = dbExtraParams
+		case dspa.DatabaseEnginePostgreSQL:
+			if err := p.DBConnection.setupPostgreSQL(database); err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("unsupported spec.database.externalDB.engine %q", external.Engine)
 		}
-		dbExtraParams, err := config.GetDefaultDBExtraParams(tlsParams, log)
-		if err != nil {
-			log.Error(err, "Unexpected error encountered while retrieving DBExtraparams")
-			return err
-		}
-		p.DBConnection.ExtraParams = dbExtraParams
 
 		// Retreive DB Password from specified secret.  Ignore error if the secret simply doesn't exist (will be created later)
 		password, err := p.RetrieveSecret(ctx, client, p.DBConnection.CredentialsSecret.Name, p.DBConnection.CredentialsSecret.Key, log)
@@ -470,7 +486,7 @@ func (p *DSPAParams) SetupDBParams(ctx context.Context, dsp *dspa.DataSciencePip
 	// User specified custom Extra parameters will always take precedence.
 	// Parameters are validated against an allow-list to prevent injection
 	// of dangerous driver-level flags (e.g. allowAllFiles).
-	if dsp.Spec.Database.CustomExtraParams != nil {
+	if dsp.Spec.Database != nil && dsp.Spec.Database.CustomExtraParams != nil && p.DBConnection.Engine == dspa.DatabaseEngineMySQL {
 		_, err := config.ValidateDBExtraParams(*dsp.Spec.Database.CustomExtraParams)
 		if err != nil {
 			log.Info(fmt.Sprintf("Rejected CustomExtraParams in DSPA: %v", err))
@@ -1125,6 +1141,11 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 				if len(bytes.TrimSpace(certs)) != 0 {
 					p.APICustomPemCerts = append(p.APICustomPemCerts, certs)
 				}
+			}
+
+			if p.UsingExternalDB(dsp) && dsp.Spec.Database.ExternalDB.Engine == dspa.DatabaseEnginePostgreSQL {
+				// The PostgreSQL rollout hash must use the same stable bundle order as the mounted file.
+				slices.SortFunc(p.APICustomPemCerts, bytes.Compare)
 			}
 
 			p.CustomCABundle = &dspa.CABundle{

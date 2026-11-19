@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ds-pipeline-server-config-postgresql-defaults
+data:
+  config.json: |
+    {
+      "DBConfig": {
+        "PostgreSQLConfig": {"DBName":"pipelines","ExtraParams":{"search_path":"\"public\"","sslmode":"verify-full","sslrootcert":"system"},"Host":"postgres.example.com","Port":"5432","SkipDatabaseCreation":true,"User":"pipelines_user"},
+        "ConMaxLifeTime": "120s"
+      },
+      "ObjectStoreConfig": {
+        "PipelinePath": "pipelines"
+      },
+      "DBDriverName": "pgx",
+      "ARCHIVE_CONFIG_LOG_FILE_NAME": "main.log",
+      "ARCHIVE_CONFIG_LOG_PATH_PREFIX": "/artifacts",
+      "InitConnectionTimeout": "6m"
+    }

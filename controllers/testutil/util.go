@@ -163,14 +163,14 @@ func DirExists(path string) (bool, error) {
 // GenerateDeclarativeTestCases dynamically generate
 // testcases based on resources located in the testdata
 // directory.
-func GenerateDeclarativeTestCases(t *testing.T) []Case {
+func GenerateDeclarativeTestCases(t *testing.T, casesDir string) []Case {
 	var testcases []Case
 
-	cases, err := os.ReadDir(CasesDir)
+	cases, err := os.ReadDir(casesDir)
 	assert.NoError(t, err, "Failed to fetch cases in case dir.")
 	for _, testcase := range cases {
 		caseName := testcase.Name()
-		caseDir := fmt.Sprintf("%s/%s", CasesDir, caseName)
+		caseDir := fmt.Sprintf("%s/%s", casesDir, caseName)
 		newCase := Case{}
 		caseDeployDir := fmt.Sprintf("%s/deploy", caseDir)
 		deploys, err := os.ReadDir(caseDeployDir)
