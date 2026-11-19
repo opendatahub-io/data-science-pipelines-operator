@@ -26,6 +26,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -65,9 +66,12 @@ const (
 
 // createStorageClassFromDefault creates a StorageClass with the given name
 // reusing the cluster default's provisioner and parameters, so volumes can
-// bind on any provider. StorageClasses this call creates are cluster-scoped
-// and outlive the suite's namespace, so they are registered for deletion in
-// the test's cleanup; pre-existing ones (AlreadyExists) are left alone.
+// bind on any provider. The reclaim policy is forced to Delete even when the
+// default uses Retain, so provisioned volumes release their backing storage
+// when cleanup removes the test's claims. StorageClasses this call creates
+// are cluster-scoped and outlive the suite's namespace, so they are
+// registered for deletion in the test's cleanup; pre-existing ones
+// (AlreadyExists) are left alone.
 func (suite *IntegrationTestSuite) createStorageClassFromDefault(t *testing.T, name string) {
 	scList := &storagev1.StorageClassList{}
 	require.NoError(t, suite.Clientmgr.k8sClient.List(suite.Ctx, scList))
@@ -81,11 +85,12 @@ func (suite *IntegrationTestSuite) createStorageClassFromDefault(t *testing.T, n
 	}
 	require.NotNil(t, def, "cluster must have a default StorageClass")
 
+	reclaimDelete := corev1.PersistentVolumeReclaimDelete
 	sc := &storagev1.StorageClass{
 		ObjectMeta:        metav1.ObjectMeta{Name: name},
 		Provisioner:       def.Provisioner,
 		Parameters:        def.Parameters,
-		ReclaimPolicy:     def.ReclaimPolicy,
+		ReclaimPolicy:     &reclaimDelete,
 		VolumeBindingMode: def.VolumeBindingMode,
 	}
 	err := suite.Clientmgr.k8sClient.Create(suite.Ctx, sc)
@@ -311,17 +316,29 @@ func (suite *IntegrationTestSuite) cleanupRunPVCs(t *testing.T, ownerValue strin
 }
 
 // clusterDefaultStorageClass returns the name of the cluster's default
-// StorageClass (the one carrying the is-default-class annotation).
+// StorageClass. When several classes carry the is-default-class annotation,
+// Kubernetes picks the newest, tie-broken by ascending name
+// (k8s.io/kubernetes/pkg/volume/util GetDefaultClass), so the same rule is
+// applied here.
 func (suite *IntegrationTestSuite) clusterDefaultStorageClass(t *testing.T) string {
 	scList := &storagev1.StorageClassList{}
 	require.NoError(t, suite.Clientmgr.k8sClient.List(suite.Ctx, scList))
+	var defaults []*storagev1.StorageClass
 	for i := range scList.Items {
 		if scList.Items[i].Annotations["storageclass.kubernetes.io/is-default-class"] == "true" {
-			return scList.Items[i].Name
+			defaults = append(defaults, &scList.Items[i])
 		}
 	}
-	t.Fatal("cluster must have a default StorageClass")
-	return ""
+	if len(defaults) == 0 {
+		t.Fatal("cluster must have a default StorageClass")
+	}
+	sort.Slice(defaults, func(i, j int) bool {
+		if !defaults[i].CreationTimestamp.Equal(&defaults[j].CreationTimestamp) {
+			return defaults[i].CreationTimestamp.After(defaults[j].CreationTimestamp.Time)
+		}
+		return defaults[i].Name < defaults[j].Name
+	})
+	return defaults[0].Name
 }
 
 // TestPipelineTaskPVCDefaultStorageClass verifies the RHOAIENG-101484
@@ -334,18 +351,20 @@ func (suite *IntegrationTestSuite) clusterDefaultStorageClass(t *testing.T) stri
 // an option because the resulting API server rollout breaks the suite's
 // pod-level port-forward.
 func (suite *IntegrationTestSuite) TestPipelineTaskPVCDefaultStorageClass() {
-	// The pipeline is uploaded through the API, which the Kubernetes
-	// pipeline store does not serve runs for (see TestPipelineSuccessfulRun).
-	if suite.DSPA.Spec.APIServer.PipelineStore == "kubernetes" {
-		suite.T().Log("PipelineStore is set to kubernetes, skipping CreatePVC default verification")
-		suite.T().SkipNow()
-	}
 	// Read the live DSPA rather than the fixture: with -skipDeploy the
 	// fixture need not match the deployed object, and the expected classes
 	// below must follow what is actually deployed.
 	live := &dspav1.DataSciencePipelinesApplication{}
 	require.NoError(suite.T(), suite.Clientmgr.k8sClient.Get(suite.Ctx,
 		types.NamespacedName{Name: suite.DSPA.Name, Namespace: suite.DSPANamespace}, live))
+	// The pipeline is uploaded through the API, which the Kubernetes
+	// pipeline store does not serve runs for (see TestPipelineSuccessfulRun).
+	// Check the live object: a database fixture can be reused against a live
+	// DSPA that actually uses the Kubernetes store.
+	if live.Spec.APIServer.PipelineStore == "kubernetes" {
+		suite.T().Log("PipelineStore is set to kubernetes, skipping CreatePVC default verification")
+		suite.T().SkipNow()
+	}
 	configuredDefault := live.Spec.APIServer.PipelineTaskPVCDefaultStorageClass
 	configured := configuredDefault != ""
 
