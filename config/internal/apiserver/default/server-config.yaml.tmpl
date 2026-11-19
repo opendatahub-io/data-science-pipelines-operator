@@ -10,17 +10,21 @@ data:
   config.json: |
     {
       "DBConfig": {
+        {{- if eq .DBConnection.Engine "postgresql" }}
+        "PostgreSQLConfig": {{ .APIServerPostgreSQLConfigJSON }},
+        {{- else }}
         "MySQLConfig": {
           "ExtraParams": {{ .DBConnection.ExtraParams }},
           "GroupConcatMaxLen": "4194304"
          },
         "PostgreSQLConfig": {},
+        {{- end }}
         "ConMaxLifeTime": "120s"
       },
       "ObjectStoreConfig": {
         "PipelinePath": "pipelines"
       },
-      "DBDriverName": "mysql",
+      "DBDriverName": {{ if eq .DBConnection.Engine "postgresql" }}"pgx"{{ else }}"mysql"{{ end }},
       "ARCHIVE_CONFIG_LOG_FILE_NAME": "main.log",
       "ARCHIVE_CONFIG_LOG_PATH_PREFIX": "/artifacts",
       "InitConnectionTimeout": "6m"{{ if .APIServerWorkspaceJSON }},

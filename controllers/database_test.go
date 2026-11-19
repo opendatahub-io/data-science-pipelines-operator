@@ -18,13 +18,138 @@ limitations under the License.
 package controllers
 
 import (
+	"context"
+	"crypto/tls"
+	"fmt"
+	"os"
 	"testing"
+	"time"
 
+	"github.com/go-logr/logr"
+	"github.com/jackc/pgx/v5/pgconn"
 	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	"github.com/opendatahub-io/data-science-pipelines-operator/controllers/config"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
+
+func TestSetupExternalDatabaseParams(t *testing.T) {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "credentials", Namespace: "pipelines"},
+		Data:       map[string][]byte{"password": []byte("db-password")},
+	}
+	kubeClient := fake.NewClientBuilder().WithObjects(secret).Build()
+	for _, tt := range []struct {
+		name   string
+		engine dspav1.DatabaseEngine
+		port   string
+		schema string
+		extra  string
+		want   DBConnection
+	}{
+		{name: "legacy MySQL", port: "3306", want: DBConnection{Engine: dspav1.DatabaseEngineMySQL, Port: "3306", ExtraParams: `{"tls":"true"}`}},
+		{name: "PostgreSQL defaults", engine: dspav1.DatabaseEnginePostgreSQL, want: DBConnection{Engine: dspav1.DatabaseEnginePostgreSQL, Port: "5432", Schema: "public", ExtraParams: `{"sslmode":"verify-full"}`}},
+		{name: "PostgreSQL custom settings", engine: dspav1.DatabaseEnginePostgreSQL, port: "15432", schema: "tenant", extra: `{"application_name":"dspo","connect_timeout":"4"}`, want: DBConnection{Engine: dspav1.DatabaseEnginePostgreSQL, Port: "15432", Schema: "tenant", ExtraParams: `{"application_name":"dspo","connect_timeout":"4","sslmode":"verify-full"}`}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			db := &dspav1.Database{ExternalDB: &dspav1.ExternalDB{
+				Engine: tt.engine, Host: "database.example.com", Port: tt.port, Schema: tt.schema,
+				Username: "pipeline-user", DBName: "pipeline-db",
+				PasswordSecret: &dspav1.SecretKeyValue{Name: secret.Name, Key: "password"},
+			}}
+			if tt.extra != "" {
+				db.CustomExtraParams = &tt.extra
+			}
+			dspa := &dspav1.DataSciencePipelinesApplication{Spec: dspav1.DSPASpec{Database: db}}
+			params := &DSPAParams{Namespace: secret.Namespace}
+			require.NoError(t, params.SetupDBParams(t.Context(), dspa, kubeClient, logr.Discard()))
+			assert.Equal(t, tt.want.Engine, params.DBConnection.Engine)
+			assert.Equal(t, tt.want.Port, params.DBConnection.Port)
+			assert.Equal(t, tt.want.Schema, params.DBConnection.Schema)
+			assert.JSONEq(t, tt.want.ExtraParams, params.DBConnection.ExtraParams)
+			assert.Equal(t, "db-password", params.DBConnection.DecodedPassword)
+		})
+	}
+}
+
+func TestRejectInvalidPostgreSQLConfiguration(t *testing.T) {
+	for _, tt := range []struct {
+		name   string
+		change func(*dspav1.Database)
+		field  string
+	}{
+		{"missing credentials", func(db *dspav1.Database) { db.ExternalDB.PasswordSecret = nil }, "passwordSecret"},
+		{"managed MariaDB conflict", func(db *dspav1.Database) { db.MariaDB = &dspav1.MariaDB{Deploy: true} }, "mariaDB.deploy"},
+		{"invalid port", func(db *dspav1.Database) { db.Port = "65536" }, "externalDB.port"},
+		{"missing database", func(db *dspav1.Database) { db.ExternalDB.DBName = "" }, "externalDB.pipelineDBName"},
+		{"reserved schema", func(db *dspav1.Database) { db.Schema = "$user" }, "externalDB.schema"},
+		{"MySQL option", func(db *dspav1.Database) { db.CustomExtraParams = new(`{"tls":"true"}`) }, "unsupported PostgreSQL parameter"},
+		{"invalid TLS mode", func(db *dspav1.Database) { db.CustomExtraParams = new(`{"sslmode":"prefer"}`) }, "customExtraParams.sslmode"},
+		{"null option", func(db *dspav1.Database) { db.CustomExtraParams = new(`{"application_name":null}`) }, `value for "application_name" must be a string`},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			db := &dspav1.Database{ExternalDB: &dspav1.ExternalDB{
+				Engine: dspav1.DatabaseEnginePostgreSQL, Host: "database.example.com", Username: "pipeline-user", DBName: "pipeline-db",
+				PasswordSecret: &dspav1.SecretKeyValue{Name: "credentials", Key: "password"},
+			}}
+			tt.change(db)
+			dspa := &dspav1.DataSciencePipelinesApplication{Spec: dspav1.DSPASpec{Database: db}}
+			params := &DSPAParams{}
+			require.ErrorContains(t, params.SetupDBParams(t.Context(), dspa, nil, logr.Discard()), tt.field)
+		})
+	}
+}
+
+func TestPostgreSQLHealthCheckConfig(t *testing.T) {
+	db := DBConnection{Host: "database.example.com", Port: "5432", Username: "db user", DBName: "pipeline/db", Schema: `my"schema`}
+	password := "p@ss# word&!"
+	options := map[string]string{"sslmode": "verify-full"}
+	ca, err := os.ReadFile("testdata/tls/ca-bundle.crt")
+	require.NoError(t, err)
+	cfg, err := postgreSQLHealthCheckConfig(db, password, options, [][]byte{ca})
+	require.NoError(t, err)
+	assert.Equal(t, db.Host, cfg.Host)
+	assert.Equal(t, db.Username, cfg.User)
+	assert.Equal(t, db.DBName, cfg.Database)
+	assert.Equal(t, password, cfg.Password)
+	assert.Equal(t, `"my""schema"`, cfg.RuntimeParams["search_path"])
+	require.NotNil(t, cfg.TLSConfig)
+	assert.Equal(t, db.Host, cfg.TLSConfig.ServerName)
+	assert.False(t, cfg.TLSConfig.InsecureSkipVerify)
+	assert.Empty(t, cfg.Fallbacks)
+	_, err = postgreSQLHealthCheckConfig(db, password, options, [][]byte{[]byte("invalid PEM")})
+	require.ErrorContains(t, err, "invalid CA certificate")
+
+	options = map[string]string{"sslmode": "disable", "connect_timeout": "4", "application_name": "dspo"}
+	cfg, err = postgreSQLHealthCheckConfig(db, password, options, nil)
+	require.NoError(t, err)
+	assert.Nil(t, cfg.TLSConfig)
+	assert.Equal(t, 4*time.Second, cfg.ConnectTimeout)
+	assert.Equal(t, "dspo", cfg.RuntimeParams["application_name"])
+}
+
+func TestPostgreSQLConnectionError(t *testing.T) {
+	for _, tt := range []struct {
+		cause error
+		want  string
+	}{
+		{&pgconn.PgError{Code: "28P01", Message: "sensitive details"}, "authentication failed"},
+		{&pgconn.PgError{Code: "3D000"}, `database "pipelines" does not exist`},
+		{&pgconn.PgError{Code: "42501"}, `role cannot connect to database "pipelines"`},
+		{&tls.CertificateVerificationError{}, "TLS negotiation or certificate verification failed"},
+		{context.DeadlineExceeded, "timed out"},
+	} {
+		t.Run(tt.want, func(t *testing.T) {
+			err := postgreSQLConnectionError(fmt.Errorf("connecting: %w", tt.cause), "pipelines")
+			require.ErrorContains(t, err, tt.want)
+			assert.NotContains(t, err.Error(), "sensitive details")
+		})
+	}
+}
 
 // TestValidateDBExtraParams_AllowedKeys verifies that allowed keys pass validation.
 func TestValidateDBExtraParams_AllowedKeys(t *testing.T) {

@@ -551,6 +551,7 @@ spec:
                       timeTruncate, connectionAttributes, sslmode, connect_timeout, application_name.
                       Any other key (including driver-level flags such as allowAllFiles or
                       allowCleartextPasswords) will be rejected.
+                      PostgreSQL accepts only sslmode, connect_timeout, and application_name.
 
                       If updating post DSPA deployment, then a manual restart of the pipeline server pod will be required
                       so the new configmap may be consumed.
@@ -561,6 +562,12 @@ spec:
                     type: boolean
                   externalDB:
                     properties:
+                      engine:
+                        description: Database engine. Defaults to mysql when omitted.
+                        enum:
+                        - mysql
+                        - postgresql
+                        type: string
                       host:
                         type: string
                       passwordSecret:
@@ -576,6 +583,11 @@ spec:
                       pipelineDBName:
                         type: string
                       port:
+                        description: Database port. Defaults to 5432 for PostgreSQL
+                          when omitted.
+                        type: string
+                      schema:
+                        description: PostgreSQL schema. Defaults to public when omitted.
                         type: string
                       username:
                         type: string
@@ -583,9 +595,14 @@ spec:
                     - host
                     - passwordSecret
                     - pipelineDBName
-                    - port
                     - username
                     type: object
+                    x-kubernetes-validations:
+                    - message: port is required for external MySQL
+                      rule: (has(self.engine) && self.engine == 'postgresql') || has(self.port)
+                    - message: schema requires the postgresql engine
+                      rule: '!has(self.schema) || (has(self.engine) && self.engine
+                        == ''postgresql'')'
                   mariaDB:
                     properties:
                       deploy:

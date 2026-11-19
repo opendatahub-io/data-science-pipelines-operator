@@ -1,0 +1,21 @@
+Images:
+  ApiServer: api-server:test-postgres
+  PersistenceAgent: persistenceagent:test-postgres
+  ScheduledWorkflow: scheduledworkflow:test-postgres
+  ArgoExecImage: argoexec:test-postgres
+  ArgoWorkflowController: argowfcontroller:test-postgres
+  LauncherImage: launcherimage:test-postgres
+  DriverImage: driverimage:test-postgres
+  KubeRBACProxy: kube-rbac-proxy:test-postgres
+  MariaDB: mariadb:test-postgres
+  Minio: minio:test-postgres
+ManagedPipelinesMetadata:
+  Iris:
+    Name: "[Demo] iris-training"
+    Description: "[source code](https://github.com/opendatahub-io/data-science-pipelines/tree/master/samples/iris-sklearn) A simple pipeline to demonstrate a basic ML Training workflow"
+    Filepath: /samples/iris-pipeline-compiled.yaml
+    VersionName: "[Demo] iris-training"
+DSPO:
+  PlatformVersion: v0.0.0
+  ApiServer:
+    IncludeOwnerReference: false

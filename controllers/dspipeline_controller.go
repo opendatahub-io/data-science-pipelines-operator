@@ -524,6 +524,15 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	managedPipelinesRequeue := false
 
 	if dspaPrereqsReady {
+		// The current operands have MySQL-only configuration. Hold PostgreSQL
+		// DSPAs here until the rebased API server and MLMD removal are integrated.
+		if params.DBConnection.Engine == dspav1.DatabaseEnginePostgreSQL {
+			err := errors.New("PostgreSQL pipeline workloads require the DSP rebase and MLMD removal")
+			r.setStatusAsNotReady(config.APIServerReady, err, dspaStatus.SetApiServerStatus)
+			dspaStatus.SetDSPANotReady(err, config.FailingToDeploy)
+			return ctrl.Result{RequeueAfter: requeueTime}, nil
+		}
+
 		// Manage Common Manifests
 		err = r.ReconcileCommon(dspa, params)
 		if err != nil {

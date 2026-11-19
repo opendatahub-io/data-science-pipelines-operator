@@ -225,6 +225,10 @@ func (r *DSPAReconciler) isDatabaseAccessible(dsp *dspav1.DataSciencePipelinesAp
 		log.Info(fmt.Sprintf("Could not parse tls config in ExtraParams, if setting CustomExtraParams, ensure the JSON string is well-formed. Error: %v", err))
 		return false, err
 	}
+	if params.DBConnection.Engine == dspav1.DatabaseEnginePostgreSQL {
+		err := checkPostgreSQL(params.DBConnection, string(decodePass), extraParamsJson, params.APICustomPemCerts, dbConnectionTimeout)
+		return err == nil, err
+	}
 
 	// tls can be true, false, skip-verify, or preferred.
 	// we default to true if it's an externalDB, false otherwise

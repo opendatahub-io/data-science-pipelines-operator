@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -34,6 +35,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -168,6 +170,129 @@ func TestDeployAPIServer(t *testing.T) {
 	apiServerReady, err := reconciler.evaluateCondition(ctx, dspa, params.APIServerDefaultResourceName, config.APIServerReady)
 	assert.Equal(t, "Deploying", apiServerReady.Reason)
 	assert.Nil(t, err)
+}
+
+func TestRenderExternalPostgreSQLAPIServer(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		schema     string
+		port       int32
+		customCA   bool
+		serverFile *dspav1.ScriptConfigMap
+	}{
+		{name: "defaults"},
+		{
+			name: "custom schema port and CA", schema: `Team "$(POD_NAMESPACE)"`, port: 15432, customCA: true,
+			serverFile: &dspav1.ScriptConfigMap{Name: "custom-server-config", Key: "server.json"},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, params, reconciler := CreateNewTestObjects()
+			dspa := testutil.CreateEmptyDSPA()
+			dspa.Spec.APIServer.Deploy = true
+			dspa.Spec.APIServer.CustomServerConfig = tc.serverFile
+			credential := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: "pipeline-db-secret", Namespace: dspa.Namespace},
+				Data:       map[string][]byte{"database-password": []byte("test-postgres-password")},
+			}
+			require.NoError(t, reconciler.Create(ctx, credential))
+			dspa.Spec.Database.ExternalDB = &dspav1.ExternalDB{
+				Engine: dspav1.DatabaseEnginePostgreSQL, Schema: tc.schema,
+				Host: "postgres.example.com", Username: "pipelines", DBName: "pipeline-data",
+				PasswordSecret: &dspav1.SecretKeyValue{Name: credential.Name, Key: "database-password"},
+			}
+			wantPort := tc.port
+			if tc.port > 0 {
+				dspa.Spec.Database.ExternalDB.Port = strconv.Itoa(int(tc.port))
+			} else {
+				wantPort = 5432
+			}
+			wantSSLRootCert, wantSearchPath := "system", `"public"`
+			if tc.customCA {
+				const caFile = "testdata/tls/ca-bundle.crt"
+				pem, err := os.ReadFile(caFile)
+				require.NoError(t, err)
+				t.Setenv("SSL_CERT_FILE", caFile)
+				cert := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Name: "database-ca", Namespace: dspa.Namespace},
+					Data:       map[string]string{"ca.crt": string(pem)},
+				}
+				require.NoError(t, reconciler.Create(ctx, cert))
+				dspa.Spec.APIServer.CABundle = &dspav1.CABundle{ConfigMapName: cert.Name, ConfigMapKey: "ca.crt"}
+				dspa.Spec.APIServer.CABundleFileMountPath = "/postgres-certs"
+				dspa.Spec.APIServer.CABundleFileName = "postgres-ca.crt"
+				wantSSLRootCert, wantSearchPath = "/postgres-certs/postgres-ca.crt", `"Team ""$(POD_NAMESPACE)"""`
+			}
+
+			require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+			require.NoError(t, reconciler.ReconcileDatabase(ctx, dspa, params))
+			managedDBExists, err := reconciler.IsResourceCreated(ctx, &appsv1.Deployment{}, config.MariaDBHostPrefix+"-"+dspa.Name, dspa.Namespace)
+			require.NoError(t, err)
+			assert.False(t, managedDBExists)
+			require.NoError(t, reconciler.ReconcileCommon(dspa, params))
+			require.NoError(t, reconciler.ReconcileAPIServer(ctx, dspa, params))
+
+			serverConfig := &corev1.ConfigMap{}
+			require.NoError(t, reconciler.Get(ctx, types.NamespacedName{Namespace: dspa.Namespace, Name: config.CustomServerConfigMapNamePrefix + dspa.Name}, serverConfig))
+			configJSON := serverConfig.Data[config.CustomServerConfigMapNameKey]
+			var rendered struct {
+				DBDriverName string
+				DBConfig     struct {
+					MySQLConfig      json.RawMessage
+					PostgreSQLConfig struct {
+						Host, Port, User, DBName string
+						SkipDatabaseCreation     bool
+						ExtraParams              map[string]string
+					}
+				}
+			}
+			require.NoError(t, json.Unmarshal([]byte(configJSON), &rendered))
+			assert.Equal(t, "pgx", rendered.DBDriverName)
+			assert.Empty(t, rendered.DBConfig.MySQLConfig)
+			assert.NotContains(t, configJSON, "test-postgres-password")
+			pg := rendered.DBConfig.PostgreSQLConfig
+			assert.Equal(t, "postgres.example.com", pg.Host)
+			assert.Equal(t, strconv.Itoa(int(wantPort)), pg.Port)
+			assert.Equal(t, "pipelines", pg.User)
+			assert.Equal(t, "pipeline-data", pg.DBName)
+			assert.True(t, pg.SkipDatabaseCreation)
+			assert.Equal(t, map[string]string{"sslmode": "verify-full", "sslrootcert": wantSSLRootCert, "search_path": wantSearchPath}, pg.ExtraParams)
+
+			deployment := &appsv1.Deployment{}
+			require.NoError(t, reconciler.Get(ctx, types.NamespacedName{Namespace: dspa.Namespace, Name: params.APIServerDefaultResourceName}, deployment))
+			container := getDSPipelineAPIServerContainer(deployment)
+			require.NotNil(t, container)
+			env := map[string]corev1.EnvVar{}
+			for _, item := range container.Env {
+				env[item.Name] = item
+			}
+			assert.Equal(t, "pgx", env["DBDRIVERNAME"].Value)
+			assert.Equal(t, "true", env["DBCONFIG_POSTGRESQLCONFIG_SKIPDATABASECREATION"].Value)
+			assert.Equal(t, pg.Host, env["DBCONFIG_POSTGRESQLCONFIG_HOST"].Value)
+			assert.Equal(t, pg.Port, env["DBCONFIG_POSTGRESQLCONFIG_PORT"].Value)
+			assert.Equal(t, pg.User, env["DBCONFIG_POSTGRESQLCONFIG_USER"].Value)
+			assert.Equal(t, pg.DBName, env["DBCONFIG_POSTGRESQLCONFIG_DBNAME"].Value)
+			assert.NotContains(t, env, "DBCONFIG_MYSQLCONFIG_PASSWORD")
+			var options map[string]string
+			require.NoError(t, json.Unmarshal([]byte(env["DBCONFIG_POSTGRESQLCONFIG_EXTRAPARAMS"].Value), &options))
+			assert.Equal(t, strings.ReplaceAll(wantSearchPath, "$", "$$"), options["search_path"])
+			assert.Equal(t, wantSSLRootCert, options["sslrootcert"])
+			password := env["DBCONFIG_POSTGRESQLCONFIG_PASSWORD"]
+			assert.Empty(t, password.Value)
+			assert.Equal(t, &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{Name: credential.Name}, Key: "database-password",
+			}}, password.ValueFrom)
+			if tc.customCA {
+				assert.Contains(t, container.VolumeMounts, corev1.VolumeMount{Name: "ca-bundle", MountPath: "/postgres-certs"})
+				assert.Contains(t, container.VolumeMounts, corev1.VolumeMount{Name: "server-config", MountPath: "/config/config.json", SubPath: tc.serverFile.Key})
+			}
+
+			policy := &networkingv1.NetworkPolicy{}
+			require.NoError(t, reconciler.Get(ctx, types.NamespacedName{Namespace: dspa.Namespace, Name: "ds-pipelines-" + dspa.Name}, policy))
+			assertEgressPortOnly(t, policy, corev1.ProtocolTCP, wantPort)
+			assertNoPortOnlyEgress(t, policy, corev1.ProtocolTCP, 3306)
+		})
+	}
 }
 
 func TestDontDeployAPIServer(t *testing.T) {
@@ -1239,6 +1364,49 @@ func TestReconcileAPIServer_ConfigHashIdempotent(t *testing.T) {
 
 	assert.Equal(t, params1.APIServerConfigHash, params2.APIServerConfigHash,
 		"hash should be identical across reconciles with the same input")
+}
+
+func TestReconcileAPIServer_PostgreSQLCABundleRollout(t *testing.T) {
+	ctx, _, reconciler := CreateNewTestObjects()
+	dspa := testutil.CreateEmptyDSPA()
+	dspa.Spec.APIServer.Deploy = true
+	dspa.Spec.Database.ExternalDB = &dspav1.ExternalDB{
+		Engine: dspav1.DatabaseEnginePostgreSQL, Host: "postgres.example.com",
+		Username: "pipelines", DBName: "pipelines",
+		PasswordSecret: &dspav1.SecretKeyValue{Name: "postgres-credentials", Key: "password"},
+	}
+	require.NoError(t, reconciler.Create(ctx, &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "postgres-credentials", Namespace: dspa.Namespace},
+		Data:       map[string][]byte{"password": []byte("test-password")},
+	}))
+	bundle := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Name: config.GlobalODHCaBundleConfigMapName, Namespace: dspa.Namespace},
+		Data:       map[string]string{config.GlobalODHCaBundleConfigMapSystemBundleKey: "z-ca", "odh-ca-bundle.crt": "a-ca"},
+	}
+	require.NoError(t, reconciler.Create(ctx, bundle))
+
+	reconcile := func(wantBundle string) string {
+		t.Helper()
+		params := &DSPAParams{}
+		require.NoError(t, params.ExtractParams(ctx, dspa, reconciler.Client, reconciler.Log))
+		require.NoError(t, reconciler.ReconcileAPIServer(ctx, dspa, params))
+		mountedBundle := &corev1.ConfigMap{}
+		require.NoError(t, reconciler.Get(ctx, types.NamespacedName{
+			Name: params.CustomCABundle.ConfigMapName, Namespace: dspa.Namespace,
+		}, mountedBundle))
+		assert.Equal(t, wantBundle, mountedBundle.Data[params.CustomCABundle.ConfigMapKey])
+		return params.APIServerConfigHash
+	}
+
+	initial := reconcile("a-ca\nz-ca")
+	bundle.Data[config.GlobalODHCaBundleConfigMapSystemBundleKey], bundle.Data["odh-ca-bundle.crt"] =
+		bundle.Data["odh-ca-bundle.crt"], bundle.Data[config.GlobalODHCaBundleConfigMapSystemBundleKey]
+	require.NoError(t, reconciler.Update(ctx, bundle))
+	assert.Equal(t, initial, reconcile("a-ca\nz-ca"))
+
+	bundle.Data["odh-ca-bundle.crt"] = "b-ca"
+	require.NoError(t, reconciler.Update(ctx, bundle))
+	assert.NotEqual(t, initial, reconcile("a-ca\nb-ca"))
 }
 
 func TestAPIServerDeploymentTemplate_StartupProbe(t *testing.T) {

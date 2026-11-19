@@ -75,6 +75,17 @@ spec:
             {{ end }}
             - name: POD_NAMESPACE
               value: "{{.Namespace}}"
+            {{ if eq .DBConnection.Engine "postgresql" }}
+            {{ range $name, $value := .APIServerPostgreSQLEnv }}
+            - name: {{ $name }}
+              value: {{ printf "%q" $value }}
+            {{ end }}
+            - name: DBCONFIG_POSTGRESQLCONFIG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: {{ printf "%q" .DBConnection.CredentialsSecret.Key }}
+                  name: {{ printf "%q" .DBConnection.CredentialsSecret.Name }}
+            {{ else }}
             - name: DBCONFIG_USER
               value: "{{.DBConnection.Username}}"
             - name: DBCONFIG_PASSWORD
@@ -88,6 +99,7 @@ spec:
               value: "{{.DBConnection.Host}}"
             - name: DBCONFIG_PORT
               value: "{{.DBConnection.Port}}"
+            {{ end }}
             {{ if .CustomCABundle }}
             - name: ARTIFACT_COPY_STEP_CABUNDLE_CONFIGMAP_NAME
               value: "{{.CustomCABundle.ConfigMapName}}"
@@ -180,6 +192,7 @@ spec:
             {{ end }}
             - name: EXECUTIONTYPE
               value: Workflow
+            {{ if ne .DBConnection.Engine "postgresql" }}
             - name: DB_DRIVER_NAME
               value: mysql
             - name: DBCONFIG_MYSQLCONFIG_USER
@@ -195,6 +208,7 @@ spec:
               value: "{{.DBConnection.Host}}"
             - name: DBCONFIG_MYSQLCONFIG_PORT
               value: "{{.DBConnection.Port}}"
+            {{ end }}
             - name: CACHEENABLED
               value: "{{.APIServer.CacheEnabled}}"
             {{ if .CompiledPipelineSpecPatch }}

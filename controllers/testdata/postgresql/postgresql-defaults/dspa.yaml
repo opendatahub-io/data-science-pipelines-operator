@@ -1,0 +1,23 @@
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: postgresql-defaults
+  annotations:
+    datasciencepipelinesapplications.opendatahub.io/disable-managed-pipelines: "true"
+spec:
+  podToPodTLS: false
+  apiServer:
+    deploy: true
+  database:
+    disableHealthCheck: true
+    externalDB:
+      engine: postgresql
+      host: postgres.example.com
+      pipelineDBName: pipelines
+      username: pipelines_user
+      passwordSecret:
+        name: postgresql-defaults-credentials
+        key: password
+  objectStorage:
+    minio:
+      image: minio:test-postgres
