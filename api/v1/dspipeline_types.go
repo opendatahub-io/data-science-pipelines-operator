@@ -266,7 +266,13 @@ type APIServer struct {
 	// explicit storage class (including an empty string, which opts out of defaulting),
 	// that value takes precedence. When unset or empty, PVCs without a task-supplied
 	// storage class fall back to the Kubernetes cluster default StorageClass.
+	// A non-empty value must be a valid StorageClass name (a DNS-1123 subdomain).
+	// The setting requires API server and driver images that support the
+	// DEFAULT_PVC_STORAGE_CLASS env var (opendatahub-io/data-science-pipelines#464);
+	// older images ignore it.
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	PipelineTaskPVCDefaultStorageClass string `json:"pipelineTaskPVCDefaultStorageClass,omitempty"`
 }
 

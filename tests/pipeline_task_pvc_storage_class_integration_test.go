@@ -24,10 +24,13 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	TestUtil "github.com/opendatahub-io/data-science-pipelines-operator/tests/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -51,19 +54,14 @@ const (
 	explicitTaskPVCStorageClassName = "dspa-task-pvc-sc-explicit"
 	pipelineCreatePVCName           = "test-pipeline-createpvc"
 	// createPVCOwnerAnnotation* is stamped by the CreatePVC pipeline's tasks
-	// onto every PVC they create. It proves a claim was created by this
-	// test's pipeline, so cleanup never touches another workload's claims
-	// in a shared namespace.
+	// onto every PVC they create. The upload templates the value with a
+	// run-unique suffix, so lookup and cleanup match only the current
+	// run's claims, never another workload's or another run's.
 	createPVCOwnerAnnotationKey   = "test-dspo-owner"
 	createPVCOwnerAnnotationValue = "createpvc-storage-class"
 	// maxHTTPResponseBytes bounds response reads from the DSP API server.
 	maxHTTPResponseBytes = 1 << 20
 )
-
-// taskPVCSuffixes are the PVC name suffixes the CreatePVC pipeline's tasks
-// create. They identify this test's claims: a name matching a suffix and not
-// present in the pre-run snapshot belongs to the current run.
-var taskPVCSuffixes = []string{"-sc-omitted", "-sc-explicit", "-sc-empty"}
 
 // createStorageClassFromDefault creates a StorageClass with the given name
 // reusing the cluster default's provisioner and parameters, so volumes can
@@ -172,36 +170,55 @@ func podHasEnv(pod *corev1.Pod, name, value string) bool {
 	return false
 }
 
-// snapshotStaleTestPVCs records the names of PVCs that already match the test
-// suffixes before the run, so the suffix-based lookups below only match PVCs
-// created by the current run. Nothing is deleted: a suffix match alone does
-// not prove this test owns a claim, and the suite may run against an existing
-// DSPA in a shared namespace.
-func (suite *IntegrationTestSuite) snapshotStaleTestPVCs(t *testing.T) map[string]struct{} {
-	pvcList := &corev1.PersistentVolumeClaimList{}
-	err := suite.Clientmgr.k8sClient.List(suite.Ctx, pvcList,
-		client.InNamespace(suite.DSPANamespace))
-	require.NoError(t, err)
-	stale := make(map[string]struct{})
-	for i := range pvcList.Items {
-		for _, suffix := range taskPVCSuffixes {
-			if strings.HasSuffix(pvcList.Items[i].Name, suffix) {
-				stale[pvcList.Items[i].Name] = struct{}{}
-				break
+// getRunPVC returns the storageClassName pointer of the current run's PVC
+// whose name ends with suffix, retrying until the driver task has created it.
+// Claims are matched by the run-unique owner annotation, so claims of other
+// workloads or runs are never picked up. The pointer distinguishes an unset
+// class (nil) from an explicit empty one ("").
+func (suite *IntegrationTestSuite) getRunPVC(t *testing.T, suffix, ownerValue string) *string {
+	var storageClass *string
+	require.Eventually(t, func() bool {
+		pvcList := &corev1.PersistentVolumeClaimList{}
+		err := suite.Clientmgr.k8sClient.List(suite.Ctx, pvcList,
+			client.InNamespace(suite.DSPANamespace))
+		if err != nil {
+			return false
+		}
+		for i := range pvcList.Items {
+			pvc := pvcList.Items[i]
+			if pvc.Annotations[createPVCOwnerAnnotationKey] != ownerValue {
+				continue
+			}
+			if strings.HasSuffix(pvc.Name, suffix) {
+				storageClass = pvc.Spec.StorageClassName
+				return true
 			}
 		}
-	}
-	return stale
+		return false
+	}, DeployTimeout, PollInterval, "PVC with suffix %s should be created", suffix)
+	return storageClass
 }
 
-// uploadCreatePVCPipeline uploads the compiled CreatePVC pipeline.
-func (suite *IntegrationTestSuite) uploadCreatePVCPipeline(t *testing.T) string {
-	// A run-unique name avoids a 409 on the upload when the suite reuses an
-	// existing DSPA (skipCleanup) that already holds this pipeline.
-	pipelineName := fmt.Sprintf("%s-%d", pipelineCreatePVCName, time.Now().UnixNano())
+// uploadCreatePVCPipeline uploads the compiled CreatePVC pipeline with a
+// run-unique owner annotation stamped on the tasks, and returns the pipeline
+// ID and the annotation value identifying this run's claims. A run-unique
+// pipeline name avoids a 409 on the upload when the suite reuses an existing
+// DSPA (skipCleanup) that already holds this pipeline.
+func (suite *IntegrationTestSuite) uploadCreatePVCPipeline(t *testing.T) (pipelineID, ownerValue string) {
+	unique := time.Now().UnixNano()
+	pipelineName := fmt.Sprintf("%s-%d", pipelineCreatePVCName, unique)
+	ownerValue = fmt.Sprintf("%s-%d", createPVCOwnerAnnotationValue, unique)
+
+	// Template the manifest so each run's claims carry a unique owner value.
+	manifest, err := os.ReadFile("resources/test-pipeline-createpvc.yaml")
+	require.NoError(t, err)
+	manifestPath := filepath.Join(t.TempDir(), "test-pipeline-createpvc.yaml")
+	require.NoError(t, os.WriteFile(manifestPath,
+		[]byte(strings.ReplaceAll(string(manifest), createPVCOwnerAnnotationValue, ownerValue)), 0o644))
+
 	postUrl := fmt.Sprintf("%s/apis/v2beta1/pipelines/upload?name=%s", APIServerURL, url.QueryEscape(pipelineName))
 	vals := map[string]string{
-		"uploadfile": "@resources/test-pipeline-createpvc.yaml",
+		"uploadfile": "@" + manifestPath,
 	}
 	body, contentType := TestUtil.FormFromFile(t, vals)
 
@@ -213,9 +230,9 @@ func (suite *IntegrationTestSuite) uploadCreatePVCPipeline(t *testing.T) string 
 	loggr.Info(string(responseData))
 	require.Equal(t, 200, response.StatusCode)
 
-	pipelineID, err := TestUtil.RetrievePipelineId(t, suite.Clientmgr.httpClient, APIServerURL, pipelineName)
+	pipelineID, err = TestUtil.RetrievePipelineId(t, suite.Clientmgr.httpClient, APIServerURL, pipelineName)
 	require.NoError(t, err)
-	return pipelineID
+	return pipelineID, ownerValue
 }
 
 // runCreatePVCPipeline creates a run of the CreatePVC pipeline and waits for
@@ -266,43 +283,13 @@ func (suite *IntegrationTestSuite) runCreatePVCPipeline(t *testing.T, pipelineID
 	}, 6*time.Minute, 6*time.Second, "run %s should complete", runID)
 }
 
-// getPVCSuffix returns the storageClassName pointer of the PVC whose name
-// ends with suffix, skipping names recorded before the run, and retrying
-// until the driver task has created it. The pointer distinguishes an unset
-// class (nil) from an explicit empty one (""). Deletion of the run's claims
-// is registered up front by cleanupRunPVCs, not here, so it still happens
-// when an earlier assertion aborts the subtest before this helper runs.
-func (suite *IntegrationTestSuite) getPVCSuffix(t *testing.T, suffix string, stale map[string]struct{}) *string {
-	var storageClass *string
-	require.Eventually(t, func() bool {
-		pvcList := &corev1.PersistentVolumeClaimList{}
-		err := suite.Clientmgr.k8sClient.List(suite.Ctx, pvcList,
-			client.InNamespace(suite.DSPANamespace))
-		if err != nil {
-			return false
-		}
-		for i := range pvcList.Items {
-			if _, preexisting := stale[pvcList.Items[i].Name]; preexisting {
-				continue
-			}
-			if strings.HasSuffix(pvcList.Items[i].Name, suffix) {
-				storageClass = pvcList.Items[i].Spec.StorageClassName
-				return true
-			}
-		}
-		return false
-	}, DeployTimeout, PollInterval, "PVC with suffix %s should be created", suffix)
-	return storageClass
-}
-
-// cleanupRunPVCs registers deletion of every PVC this test's CreatePVC
-// pipeline created, identified by the pipeline's owner annotation rather
-// than by name suffix, so claims owned by other workloads in a shared
-// namespace are never touched. It is registered before the run starts so
-// the claims are deleted even when the run fails or an assertion aborts
-// the subtest early; the suite deletes the DSPA but not the namespace, so
-// they would otherwise outlive the suite.
-func (suite *IntegrationTestSuite) cleanupRunPVCs(t *testing.T) {
+// cleanupRunPVCs registers deletion of every PVC the current run created,
+// matched by the run-unique owner annotation, so claims of other workloads
+// or runs are never touched. It is registered before the run starts so the
+// claims are deleted even when the run fails or an assertion aborts the
+// subtest early; the suite deletes the DSPA but not the namespace, so they
+// would otherwise outlive the suite.
+func (suite *IntegrationTestSuite) cleanupRunPVCs(t *testing.T, ownerValue string) {
 	t.Cleanup(func() {
 		pvcList := &corev1.PersistentVolumeClaimList{}
 		err := suite.Clientmgr.k8sClient.List(suite.Ctx, pvcList,
@@ -313,7 +300,7 @@ func (suite *IntegrationTestSuite) cleanupRunPVCs(t *testing.T) {
 		}
 		for i := range pvcList.Items {
 			pvc := pvcList.Items[i]
-			if pvc.Annotations[createPVCOwnerAnnotationKey] != createPVCOwnerAnnotationValue {
+			if pvc.Annotations[createPVCOwnerAnnotationKey] != ownerValue {
 				continue
 			}
 			if err := suite.Clientmgr.k8sClient.Delete(suite.Ctx, &pvc); err != nil && !apierrors.IsNotFound(err) {
@@ -353,7 +340,13 @@ func (suite *IntegrationTestSuite) TestPipelineTaskPVCDefaultStorageClass() {
 		suite.T().Log("PipelineStore is set to kubernetes, skipping CreatePVC default verification")
 		suite.T().SkipNow()
 	}
-	configuredDefault := suite.DSPA.Spec.APIServer.PipelineTaskPVCDefaultStorageClass
+	// Read the live DSPA rather than the fixture: with -skipDeploy the
+	// fixture need not match the deployed object, and the expected classes
+	// below must follow what is actually deployed.
+	live := &dspav1.DataSciencePipelinesApplication{}
+	require.NoError(suite.T(), suite.Clientmgr.k8sClient.Get(suite.Ctx,
+		types.NamespacedName{Name: suite.DSPA.Name, Namespace: suite.DSPANamespace}, live))
+	configuredDefault := live.Spec.APIServer.PipelineTaskPVCDefaultStorageClass
 	configured := configuredDefault != ""
 
 	suite.T().Run("should apply DSPA default and task precedence to CreatePVC volumes", func(t *testing.T) {
@@ -363,9 +356,8 @@ func (suite *IntegrationTestSuite) TestPipelineTaskPVCDefaultStorageClass() {
 			suite.verifyTaskPVCDefaultStorageClassPropagated(t, configuredDefault)
 		}
 
-		pipelineID := suite.uploadCreatePVCPipeline(t)
-		stale := suite.snapshotStaleTestPVCs(t)
-		suite.cleanupRunPVCs(t)
+		pipelineID, ownerValue := suite.uploadCreatePVCPipeline(t)
+		suite.cleanupRunPVCs(t, ownerValue)
 		suite.runCreatePVCPipeline(t, pipelineID)
 
 		// Omitted class: with a configured DSPA default it must be selected
@@ -376,21 +368,21 @@ func (suite *IntegrationTestSuite) TestPipelineTaskPVCDefaultStorageClass() {
 		if configured {
 			expectedOmitted = configuredDefault
 		}
-		omitted := suite.getPVCSuffix(t, "-sc-omitted", stale)
+		omitted := suite.getRunPVC(t, "-sc-omitted", ownerValue)
 		require.NotNil(t, omitted)
 		assert.Equal(t, expectedOmitted, *omitted,
 			"omitted storage class must use the DSPA-configured default when set, else the Kubernetes default")
 
 		// Explicit named class: must be preserved and distinct from the
 		// configured default, proving the backend does not override it.
-		explicit := suite.getPVCSuffix(t, "-sc-explicit", stale)
+		explicit := suite.getRunPVC(t, "-sc-explicit", ownerValue)
 		require.NotNil(t, explicit)
 		assert.Equal(t, explicitTaskPVCStorageClassName, *explicit,
 			"explicit storage class must be preserved")
 
 		// Explicit empty class: opt-out of defaulting must be preserved as
 		// an explicit empty value, not an unset one.
-		empty := suite.getPVCSuffix(t, "-sc-empty", stale)
+		empty := suite.getRunPVC(t, "-sc-empty", ownerValue)
 		require.NotNil(t, empty, "explicit empty storage class must be set, not unset")
 		assert.Equal(t, "", *empty,
 			"explicit empty storage class must opt out of defaulting")
