@@ -20,13 +20,20 @@ package controllers
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	mfc "github.com/manifestival/controller-runtime-client"
 	mf "github.com/manifestival/manifestival"
+	dspav1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1"
 	util "github.com/opendatahub-io/data-science-pipelines-operator/controllers/testutil"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 )
 
 var uc = util.UtilContext{}
@@ -45,7 +52,7 @@ func setup() {
 func (s *ControllerSuite) TestDSPipelineController() {
 	setup()
 
-	testcases := util.GenerateDeclarativeTestCases(s.T())
+	testcases := util.GenerateDeclarativeTestCases(s.T(), util.CasesDir)
 
 	for caseCount, tc := range testcases {
 		// We assign local copies of all looping variables, as they are mutating
@@ -83,6 +90,53 @@ func (s *ControllerSuite) TestDSPipelineController() {
 					util.DeleteResource(uc, p, t)
 				}
 			})
+		})
+	}
+}
+
+func (s *ControllerSuite) TestPostgreSQLDeclarative() {
+	setup()
+
+	reconciler := &DSPAReconciler{
+		Client:        k8sClient,
+		Log:           ctrl.Log.WithName("postgresql-declarative"),
+		Scheme:        k8sClient.Scheme(),
+		TemplatesPath: "../config/internal/",
+	}
+
+	for _, tc := range util.GenerateDeclarativeTestCases(s.T(), "./testdata/postgresql") {
+		s.T().Run(filepath.Base(filepath.Dir(tc.Config)), func(t *testing.T) {
+			t.Setenv("SSL_CERT_FILE", "testdata/tls/ca-bundle.crt")
+			viper.SetConfigFile(tc.Config)
+			require.NoError(t, viper.ReadInConfig())
+			for _, path := range tc.Deploy {
+				util.DeployResource(uc, path, t)
+				t.Cleanup(func() { util.DeleteResource(uc, path, t) })
+			}
+
+			manifest, err := os.ReadFile(filepath.Join(filepath.Dir(tc.Config), "dspa.yaml"))
+			require.NoError(t, err)
+			dspa := &dspav1.DataSciencePipelinesApplication{}
+			require.NoError(t, yaml.UnmarshalStrict(manifest, dspa))
+			dspa.Namespace = uc.Ns
+			typeMeta := dspa.TypeMeta
+			// Exercise CRD validation and defaults without handing the DSPA to
+			// the manager, which still gates PostgreSQL workload deployment.
+			require.NoError(t, k8sClient.Create(ctx, dspa, client.DryRunAll))
+			// The typed client clears type metadata, which owner references need.
+			dspa.TypeMeta = typeMeta
+
+			params := &DSPAParams{}
+			require.NoError(t, params.ExtractParams(ctx, dspa, k8sClient, reconciler.Log))
+			require.NoError(t, reconciler.ReconcileDatabase(ctx, dspa, params))
+			require.NoError(t, reconciler.ReconcileAPIServer(ctx, dspa, params))
+
+			for _, path := range tc.Expected.Created {
+				util.CompareResources(uc, path, t)
+			}
+			for _, path := range tc.Expected.NotCreated {
+				util.ResourceDoesNotExists(uc, path, t)
+			}
 		})
 	}
 }

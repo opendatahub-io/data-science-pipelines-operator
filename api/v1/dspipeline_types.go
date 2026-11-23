@@ -359,6 +359,7 @@ type Database struct {
 	// timeTruncate, connectionAttributes, sslmode, connect_timeout, application_name.
 	// Any other key (including driver-level flags such as allowAllFiles or
 	// allowCleartextPasswords) will be rejected.
+	// PostgreSQL accepts only sslmode, connect_timeout, and application_name.
 	//
 	// If updating post DSPA deployment, then a manual restart of the pipeline server pod will be required
 	// so the new configmap may be consumed.
@@ -402,9 +403,25 @@ type MariaDB struct {
 	ResourceClaims []PodResourceClaim `json:"resourceClaims,omitempty"`
 }
 
+type DatabaseEngine string
+
+const (
+	DatabaseEngineMySQL      DatabaseEngine = "mysql"
+	DatabaseEnginePostgreSQL DatabaseEngine = "postgresql"
+)
+
+// +kubebuilder:validation:XValidation:rule="(has(self.engine) && self.engine == 'postgresql') || has(self.port)",message="port is required for external MySQL"
+// +kubebuilder:validation:XValidation:rule="!has(self.schema) || (has(self.engine) && self.engine == 'postgresql')",message="schema requires the postgresql engine"
 type ExternalDB struct {
+	// Database engine. Defaults to mysql when omitted.
+	// +kubebuilder:validation:Enum=mysql;postgresql
+	Engine DatabaseEngine `json:"engine,omitempty"`
+	// PostgreSQL schema. Defaults to public when omitted.
+	Schema string `json:"schema,omitempty"`
 	// +kubebuilder:validation:Required
-	Host           string          `json:"host"`
+	Host string `json:"host"`
+	// Database port. Defaults to 5432 for PostgreSQL when omitted.
+	// +kubebuilder:validation:Optional
 	Port           string          `json:"port"`
 	Username       string          `json:"username"`
 	DBName         string          `json:"pipelineDBName"`

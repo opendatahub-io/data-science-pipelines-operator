@@ -1,0 +1,23 @@
+pipelineInfo:
+  name: postgresql-smoke
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.11.0
+components:
+  comp-smoke:
+    executorLabel: exec-smoke
+deploymentSpec:
+  executors:
+    exec-smoke:
+      container:
+        image: quay.io/opendatahub/ds-pipelines-ci-executor-image:v1.1
+        command: [sh, -c, 'echo PostgreSQL smoke test']
+root:
+  dag:
+    tasks:
+      smoke:
+        taskInfo:
+          name: smoke
+        componentRef:
+          name: comp-smoke
+        cachingOptions:
+          enableCache: false

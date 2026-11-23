@@ -62,4 +62,27 @@ go test ./... --tags=test_integration -v \
 
 The `skipDeploy` and `skipCleanup` flags are independent, and can be added/left out as needed for your use case.
 
+#### PostgreSQL pipeline run
+
+Use a test cluster with the patched DSP images, MLMD removal, and PostgreSQL
+workload deployment enabled in the operator build. Supply a DSPA manifest with
+`externalDB.engine: postgresql`, a pre-provisioned non-default
+schema, verified TLS, credentials, and working object storage. Use a disposable
+database and schema. The pipeline role needs `CONNECT` on the pipeline database
+and `USAGE, CREATE` on the schema. It must lack `CREATEDB`, superuser privileges,
+and access to the `postgres` maintenance database.
+
+Set `DSPO_TEST_POSTGRES_DSN` to a PostgreSQL URL reachable from the test runner,
+using the same database and role as the DSPA and `sslmode=verify-full`. Set
+`sslrootcert` when supplying a CA file to the runner. The test submits a one-step
+pipeline and checks the returned run ID and successful state in the configured
+schema.
+
+```bash
+go test ./tests -tags=test_integration -count=1 -v \
+  -run '^TestIntegrationTestSuite$/^TestPostgreSQLPipelineRun$' \
+  -kubeconfig="$KUBECONFIG_PATH" -k8sApiServerHost="$TARGET_CLUSTER" \
+  -DSPANamespace="$TARGET_NAMESPACE" -DSPAPath="$POSTGRES_DSPA_PATH"
+```
+
 [kind-workflow]: ../.github/workflows/kind-integration.yml

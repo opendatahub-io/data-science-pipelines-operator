@@ -1,0 +1,30 @@
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: postgresql-custom-ca
+  annotations:
+    datasciencepipelinesapplications.opendatahub.io/disable-managed-pipelines: "true"
+spec:
+  podToPodTLS: false
+  apiServer:
+    deploy: true
+    caBundleFileMountPath: /postgres-certs
+    caBundleFileName: postgres-ca.crt
+    cABundle:
+      configMapName: postgresql-custom-ca-bundle
+      configMapKey: postgres-ca.crt
+  database:
+    disableHealthCheck: true
+    externalDB:
+      engine: postgresql
+      host: postgres.example.com
+      pipelineDBName: pipelines
+      username: pipelines_user
+      schema: pipeline_app
+      port: "6432"
+      passwordSecret:
+        name: postgresql-custom-ca-credentials
+        key: password
+  objectStorage:
+    minio:
+      image: minio:test-postgres

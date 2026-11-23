@@ -16,6 +16,7 @@ limitations under the License.
 package controllers
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/json"
@@ -178,8 +179,15 @@ func (r *DSPAReconciler) ReconcileAPIServer(ctx context.Context, dsp *dspav1.Dat
 		}
 		combinedConfigHashInput = combinedConfigHashInput + string(imgEnv)
 	}
+	if params.DBConnection.Engine == dspav1.DatabaseEnginePostgreSQL {
+		if err := params.setAPIServerPostgreSQLConfig(); err != nil {
+			return err
+		}
+		// PostgreSQL loads its root certificates at startup.
+		combinedConfigHashInput += string(bytes.Join(params.APICustomPemCerts, []byte("\n")))
+	}
 
-	// Config hash for pod rollout when sample config, workspace, plugins, managed pipelines, or platform version change.
+	// Roll out the API server when its mounted configuration or trust changes.
 	params.APIServerConfigHash = fmt.Sprintf("%x", sha256.Sum256([]byte(combinedConfigHashInput)))
 
 	log.Info("Applying APIServer Resources")
