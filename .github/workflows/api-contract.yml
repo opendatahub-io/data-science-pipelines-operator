@@ -1,0 +1,85 @@
+name: API contract checks
+
+# API contract checks for the CRDs this operator owns.
+# Central repository: red-hat-data-services/api-contract-tests (pinned to @latest;
+# see its docs/releasing.md for upgrade and pinning options).
+
+on:
+  pull_request:
+    branches: [main, rhoai-*, stable]
+
+jobs:
+  resolve-baseline:
+    # Resolves the baseline the contract checks compare against.
+    # - opendatahub-io repositories: no GA releases are cut there, so the
+    #   baseline is the main HEAD at run time: "current main is the contract".
+    #   The resolved SHA is printed in the log for traceability.
+    # - other owners: RHOAI release base, resolved at run time as the merge
+    #   base of the newest rhoai-* release branch and main (same rule as
+    #   api-contract-tests cmd/release-baseline).
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      sha: ${{ steps.baseline.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Resolve baseline SHA
+        id: baseline
+        env:
+          REPO_OWNER: ${{ github.repository_owner }}
+        run: |
+          if [ "$REPO_OWNER" = "opendatahub-io" ]; then
+            sha="$(git rev-parse origin/main)"
+          else
+            # RHOAI release base: merge base of the newest rhoai-* release
+            # branch and main.
+            release_branch="$(git for-each-ref --format='%(refname:short)' refs/remotes/origin \
+              | sed 's|^origin/||' | grep -E '^rhoai-[0-9]+(\.[0-9]+)?$' | sort -V | tail -1)"
+            if [ -z "$release_branch" ]; then
+              echo "No rhoai-* release branch found" >&2
+              exit 1
+            fi
+            echo "Release branch: $release_branch"
+            sha="$(git merge-base "origin/$release_branch" origin/main)"
+          fi
+          echo "Baseline: $sha"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+  crd-contract:
+    # CRD compatibility check for the CRDs defined by this repository.
+    # Glob covers only config/crd/bases/: CRDs under config/argo/crds and
+    # config/crd/external belong to other projects (Argo, OpenShift) and are
+    # bundled here for deployment; .github/resources holds test fixtures.
+    needs: resolve-baseline
+    uses: red-hat-data-services/api-contract-tests/.github/workflows/provider-crd-check.yml@latest
+    with:
+      crd-glob: config/crd/bases/*.yaml
+      baseline-refs: ${{ needs.resolve-baseline.outputs.sha }}
+      mode: enforce
+
+  coverage:
+    # Fails when a CRD manifest in the repository matches no crd-glob and no
+    # documented exclusion, so a new CRD cannot silently stay outside the check.
+    needs: resolve-baseline
+    uses: red-hat-data-services/api-contract-tests/.github/workflows/provider-coverage-check.yml@latest
+    with:
+      crd-globs: config/crd/bases/*.yaml
+      # Excluded CRD manifests, with reasons:
+      # - .github/resources/aipipelines/legacy-*-crd.yaml: test fixtures (mocked CRDs for legacy resources)
+      # - .github/resources/crds/*.yaml: test fixtures (OpenShift build APIs mocked for tests)
+      # - config/argo/crds/crd.*.yaml: CRDs of other projects (app.k8s.io, argoproj.io, kubeflow.org Viewer),
+      #   bundled here for deployment
+      # - config/crd/external/*.yaml: CRDs owned by other projects (monitoring.coreos.com, route.openshift.io),
+      #   vendored for install
+      crd-exclude-globs: >-
+        .github/resources/aipipelines/legacy-datasciencecluster-crd.yaml
+        .github/resources/aipipelines/legacy-datasciencepipelines-crd.yaml
+        .github/resources/crds/*.yaml
+        config/argo/crds/crd.*.yaml
+        config/crd/external/*.yaml
+      baseline-refs: ${{ needs.resolve-baseline.outputs.sha }}
+      mode: enforce
+      yq-version: 4.45.1
