@@ -99,6 +99,7 @@ jobs:
             -e RENOVATE_TOKEN \
             -e RENOVATE_PLATFORM=github \
             -e RENOVATE_REPOSITORIES="[\"${REPO}\"]" \
+            -e RENOVATE_CONFIG_VALIDATION_ERROR=true \
             -e LOG_LEVEL \
             -e LOG_FILE=/tmp/renovate-log/renovate.ndjson \
             -e LOG_FILE_LEVEL=debug \
