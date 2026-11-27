@@ -1,0 +1,116 @@
+---
+# Pinned action SHAs and the image digest cannot be wrapped.
+# yamllint disable rule:line-length
+# Self-hosted Renovate runner. Renovate owns version updates for the Go and
+# GitHub Actions ecosystems; see .github/renovate.json5, which extends the
+# shared policy from red-hat-data-services/konflux-central.
+#
+# Authentication uses the RENOVATE_TOKEN secret (a PAT with repo access):
+#   - GITHUB_TOKEN cannot replace it: PRs created with it do not trigger
+#     CI workflows.
+#   - Renovate force-pushes renovate/* branches when rebasing, so those
+#     branches must be excluded from any force-push protection.
+#   - Forks skip the token check; set a fork-level RENOVATE_TOKEN secret to
+#     rehearse there.
+#
+# Schedule: daily 04:17 UTC. "Run workflow" options:
+#   dry_run   — compute everything, write nothing
+#   log_level — console log level; a full debug log is always uploaded
+#               as the renovate-log artifact.
+name: Renovate
+
+on:  # yamllint disable-line rule:truthy
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Dry-run (no branches or PRs created)
+        type: boolean
+        default: false
+      log_level:
+        description: Renovate console log level (debug log is always uploaded)
+        type: choice
+        options: [debug, info, warn, error, fatal]
+        default: info
+  schedule:
+    - cron: '17 4 * * *'
+
+concurrency:
+  group: renovate
+  cancel-in-progress: false
+
+permissions: {}  # authenticated by the RENOVATE_TOKEN PAT, not GITHUB_TOKEN
+
+jobs:
+  renovate:
+    # Scheduled runs only on midstream; manual runs allowed on forks.
+    if: >-
+      github.event_name != 'schedule'
+      || github.repository == 'opendatahub-io/data-science-pipelines-operator'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout (config validation only)
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/renovate.json5
+          sparse-checkout-cone-mode: false
+
+      - name: Run Renovate
+        env:
+          RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          LOG_LEVEL: ${{ inputs.log_level || 'info' }}
+          # Midstream on schedule (guarded above); on dispatch, whatever
+          # repository the run was dispatched from (fork rehearsal).
+          REPO: ${{ github.repository }}
+          # Pinned image — bump version and digest together.
+          RENOVATE_IMAGE: ghcr.io/renovatebot/renovate:45.1.0@sha256:5b61108eec9d45728326d41303abb1f81a8f536039446ba31805de7bf79d9151
+        run: |
+          set -euo pipefail
+
+          if [ -z "$RENOVATE_TOKEN" ]; then
+            echo "::notice::No token available — skipping run."
+            echo "Fork testing: set a fork-level RENOVATE_TOKEN secret."
+            exit 0
+          fi
+
+          mkdir -p "$RUNNER_TEMP/renovate"
+          chmod 777 "$RUNNER_TEMP/renovate"  # container runs as uid 12021
+
+          # Fail fast on an invalid config instead of silently running with
+          # defaults (e.g. an unknown key would otherwise be ignored).
+          docker run --rm \
+            -e RENOVATE_TOKEN \
+            -v "$GITHUB_WORKSPACE/.github/renovate.json5:/tmp/renovate.json5:ro" \
+            --entrypoint renovate-config-validator \
+            "$RENOVATE_IMAGE" --strict /tmp/renovate.json5
+
+          EXTRA_ENV=()
+          if [ "$DRY_RUN" = "true" ]; then
+            EXTRA_ENV+=(-e RENOVATE_DRY_RUN=full)
+            echo "Dry-run mode: no branches or PRs will be created"
+          fi
+
+          # Renovate clones the repository itself; the checkout above is only
+          # for validation. A debug-level JSON log is always written for the
+          # renovate-log artifact, so failures are diagnosable after the fact.
+          docker run --rm \
+            -e RENOVATE_TOKEN \
+            -e RENOVATE_PLATFORM=github \
+            -e RENOVATE_REPOSITORIES="[\"${REPO}\"]" \
+            -e LOG_LEVEL \
+            -e LOG_FILE=/tmp/renovate-log/renovate.ndjson \
+            -e LOG_FILE_LEVEL=debug \
+            -v "$RUNNER_TEMP/renovate:/tmp/renovate-log" \
+            "${EXTRA_ENV[@]}" \
+            "$RENOVATE_IMAGE"
+
+      - name: Upload debug log
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.4.3
+        with:
+          name: renovate-log
+          path: ${{ runner.temp }}/renovate/renovate.ndjson
+          retention-days: 14
+          if-no-files-found: ignore
