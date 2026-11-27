@@ -1,0 +1,11 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    // TODO: switch to the unpinned
+    // "github>red-hat-data-services/konflux-central//renovate/data-science-pipelines-operator-renovate.json5"
+    // once konflux-central#4620 merges. Until then the tag points at the
+    // PR branch on the hbelmiro fork, where the config exists.
+    "github>hbelmiro/konflux-central//renovate/data-science-pipelines-operator-renovate.json5#worktree-wp1-aipipelines-renovate"
+  ],
+  "baseBranchPatterns": ["main"]
+}
